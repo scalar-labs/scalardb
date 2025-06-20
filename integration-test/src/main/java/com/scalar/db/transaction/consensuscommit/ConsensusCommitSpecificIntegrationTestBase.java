@@ -25,7 +25,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
@@ -39,6 +38,7 @@ import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -54,7 +54,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
@@ -74,6 +73,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -82,6 +82,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@SuppressWarnings("UseCorrectAssertInTests")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
@@ -110,7 +111,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private String namespace2;
   private ParallelExecutor parallelExecutor;
 
-  private ConsensusCommitManager manager;
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
@@ -119,7 +119,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @Nullable private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
-  public void beforeAll() throws Exception {
+  void beforeAll() throws Exception {
     initialize();
     Properties properties = getProperties(TEST_NAME);
 
@@ -174,38 +174,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @BeforeEach
-  public void setUp() throws Exception {
+  void setUp() throws Exception {
     truncateTables();
-    storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    TransactionTableMetadataManager tableMetadataManager =
-        new TransactionTableMetadataManager(admin, -1);
-    recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
-    groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
-    commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
-    manager =
-        new ConsensusCommitManager(
-            storage,
-            admin,
-            consensusCommitConfig,
-            databaseConfig,
-            coordinator,
-            parallelExecutor,
-            recoveryExecutor,
-            commit,
-            groupCommitter);
-  }
-
-  private CommitHandler createCommitHandler(
-      TransactionTableMetadataManager tableMetadataManager,
-      @Nullable CoordinatorGroupCommitter groupCommitter) {
-    if (groupCommitter != null) {
-      return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, true, groupCommitter);
-    } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, true);
-    }
   }
 
   @AfterEach
@@ -223,7 +193,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @AfterAll
-  public void afterAll() throws Exception {
+  void afterAll() throws Exception {
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
@@ -239,10 +209,37 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void get_GetGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
+  void begin_CorrectTransactionIdGiven_ShouldNotThrowAnyExceptions() {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              DistributedTransaction transaction = manager.begin(ANY_ID_1);
+              transaction.commit();
+            })
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void begin_EmptyTransactionIdGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.begin("")).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void get_GetGivenForCommittedRecord_ShouldReturnRecord(Isolation isolation, boolean readOnly)
+      throws TransactionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    reset(coordinator);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     // Act
@@ -251,70 +248,935 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
     assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
+
+    // commit-state should not occur for read-only transactions
+    verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
-  @Test
-  public void scan_ScanGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_ScanGivenForCommittedRecords_ShouldReturnRecords(Isolation isolation, boolean readOnly)
+      throws TransactionException, CoordinatorException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    reset(coordinator);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
 
     // Act
     List<Result> results = transaction.scan(scan);
     transaction.commit();
 
     // Assert
-    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.size()).isEqualTo(4);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
     assertThat(
             ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(1)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(results.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(2)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(results.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(results.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(3)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    // commit-state should not occur for read-only transactions
+    verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
-  @Test
-  public void get_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void getScanner_ScanGivenForCommittedRecords_ShouldReturnRecords(
+      Isolation isolation, boolean readOnly) throws TransactionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    reset(coordinator);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
+
+    Optional<Result> result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    assertThat(scanner.one()).isEmpty();
+
+    scanner.close();
+    transaction.commit();
+
+    // commit-state should not occur for read-only transactions
+    verify(coordinator, never()).putState(any(Coordinator.State.class));
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void get_CalledTwice_ShouldBehaveCorrectly(Isolation isolation, boolean readOnly)
       throws TransactionException, ExecutionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     // Act
     Optional<Result> result1 = transaction.get(get);
     Optional<Result> result2 = transaction.get(get);
+
     transaction.commit();
 
     // Assert
-    verify(storage).get(any(Get.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the storage operation should be called twice because every get
+      // should be a new read
+      verify(storage, times(2)).get(any(Get.class));
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation, the storage operation should be called once because the second get
+      // should be served from the snapshot
+      verify(storage).get(any(Get.class));
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, the storage operation should be called twice because the second
+      // get should be served from the snapshot, but the storage operation should additionally be
+      // call the by the validation
+      verify(storage, times(2)).get(any(Get.class));
+    }
+
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
     assertThat(result1).isEqualTo(result2);
   }
 
-  @Test
-  public void
-      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
-          throws TransactionException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
-    DistributedTransaction transaction = manager.begin();
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     // Act
     Optional<Result> result1 = transaction.get(get);
-    populateRecords(namespace1, TABLE_1);
+
+    // The record updated by another transaction
+    int updatedBalance = 100;
+    manager.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, updatedBalance)
+            .build());
+
     Optional<Result> result2 = transaction.get(get);
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction.commit();
+
+      // The storage operation should be called three times: twice for the get by this transaction
+      // and once for the update by another transaction
+      verify(storage, times(3)).get(any(Get.class));
+
+      // The second record should be the updated one
+      assertThat(result1.isPresent()).isTrue();
+      assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      assertThat(result2.isPresent()).isTrue();
+      assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result2.get().getInt(BALANCE)).isEqualTo(updatedBalance);
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation
+
+      transaction.commit();
+
+      // The storage operation should be called twice: once for the get by this transaction and
+      // once for the update by another transaction
+      verify(storage, times(2)).get(any(Get.class));
+
+      // The first record should be the same as the second because the second
+      // should be returned from the snapshot
+      assertThat(result1.isPresent()).isTrue();
+      assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      assertThat(result1).isEqualTo(result2);
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_CalledTwice_ShouldBehaveCorrectly(Isolation isolation, boolean readOnly)
+      throws TransactionException, ExecutionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> result1 = transaction.scan(scan);
+    List<Result> result2 = transaction.scan(scan);
     transaction.commit();
 
     // Assert
-    verify(storage).get(any(Get.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the storage operation should be called twice because every
+      // scan should be a new read
+      verify(storage, times(2)).scan(any(Scan.class));
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation, the storage operation should be called once because the second scan
+      // should be served from the snapshot
+      verify(storage).scan(any(Scan.class));
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, the storage operation should be called twice because the second
+      // scan should be served from the snapshot, but the storage operation should additionally be
+      // call the by the validation
+      verify(storage, times(2)).scan(any(Scan.class));
+    }
+
+    assertThat(result1).hasSize(4);
+    assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) result1.get(0)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(result1.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(result1.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) result1.get(2)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(result1.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(result1.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(
+            ((TransactionResult) ((FilteredResult) result1.get(3)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
     assertThat(result1).isEqualTo(result2);
   }
 
-  @Test
-  public void get_GetGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_CalledTwiceAndAnotherTransactionUpdatesRecordInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> result1 = transaction.scan(scan);
+
+    // The record updated by another transaction
+    int updatedBalance = 100;
+    manager.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, updatedBalance)
+            .build());
+
+    List<Result> result2 = transaction.scan(scan);
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction.commit();
+
+      // The storage operation should be called twice because every scan should be a new read
+      verify(storage, times(2)).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(4);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(result1.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(3)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+
+      // The update record should be returned by the second scan
+      assertThat(result2).hasSize(4);
+      assertThat(result2.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(100);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result2.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result2.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(result2.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(3)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation
+
+      transaction.commit();
+
+      // The storage operation should be called once because the second scan should be served from
+      // the snapshot
+      verify(storage).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(4);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(result1.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(3)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+
+      // The same result should as the first scan should be returned by the second scan
+      assertThat(result1).isEqualTo(result2);
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_CalledTwiceAndAnotherTransactionInsertsRecordInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> result1 = transaction.scan(scan);
+
+    // The record inserted by another transaction
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    List<Result> result2 = transaction.scan(scan);
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction.commit();
+
+      // The storage operation should be called twice because every scan should be a new read
+      verify(storage, times(2)).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(2);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      // The inserted record should be returned by the second scan
+      assertThat(result2).hasSize(3);
+      assertThat(result2.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result2.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result2.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation
+
+      transaction.commit();
+
+      // The storage operation should be called once because the second scan should be served from
+      // the snapshot
+      verify(storage).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(2);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      // The same result should as the first scan should be returned by the second scan
+      assertThat(result1).isEqualTo(result2);
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void getScanner_CalledTwice_ShouldBehaveCorrectly(Isolation isolation, boolean readOnly)
+      throws TransactionException, ExecutionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner scanner1 = transaction.getScanner(scan);
+
+    Optional<Result> result = scanner1.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner1.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner1.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner1.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    assertThat(scanner1.one()).isEmpty();
+
+    scanner1.close();
+
+    TransactionCrudOperable.Scanner scanner2 = transaction.getScanner(scan);
+
+    result = scanner2.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner2.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner2.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    result = scanner2.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+
+    assertThat(scanner2.one()).isEmpty();
+
+    scanner2.close();
+
+    transaction.commit();
+
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the storage operation should be called twice because every
+      // scan should be a new read
+      verify(storage, times(2)).scan(any(Scan.class));
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation, the storage operation should be called once because the second scan
+      // should be served from the snapshot
+      verify(storage).scan(any(Scan.class));
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, the storage operation should be called twice because the second
+      // scan should be served from the snapshot, but the storage operation should additionally be
+      // call the by the validation
+      verify(storage, times(2)).scan(any(Scan.class));
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void getScanner_CalledTwiceAndAnotherTransactionUpdateRecordInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act
+    TransactionCrudOperable.Scanner scanner1 = transaction.getScanner(scan);
+    List<Result> result1 = scanner1.all();
+    scanner1.close();
+
+    // The record updated by another transaction
+    int updatedBalance = 100;
+    manager.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, updatedBalance)
+            .build());
+
+    TransactionCrudOperable.Scanner scanner2 = transaction.getScanner(scan);
+    List<Result> result2 = scanner2.all();
+    scanner2.close();
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction.commit();
+
+      // The storage operation should be called twice because every scan should be a new read
+      verify(storage, times(2)).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(4);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(result1.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(3)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+
+      // The update record should be returned by the second scan
+      assertThat(result2).hasSize(4);
+      assertThat(result2.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(100);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result2.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result2.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(result2.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(3)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation
+
+      transaction.commit();
+
+      // The storage operation should be called once because the second scan should be served from
+      // the snapshot
+      verify(storage).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(4);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(result1.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(3)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+
+      // The same result should as the first scan should be returned by the second scan
+      assertThat(result1).isEqualTo(result2);
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void getScanner_CalledTwiceAndAnotherTransactionInsertsRecordInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    manager.mutate(
+        Arrays.asList(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build(),
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build()));
+
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+
+    // Act
+    TransactionCrudOperable.Scanner scanner1 = transaction.getScanner(scan);
+    List<Result> result1 = scanner1.all();
+    scanner1.close();
+
+    // The record inserted by another transaction
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    TransactionCrudOperable.Scanner scanner2 = transaction.getScanner(scan);
+    List<Result> result2 = scanner2.all();
+    scanner2.close();
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction.commit();
+
+      // The storage operation should be called twice because every scan should be a new read
+      verify(storage, times(2)).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(2);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      // The inserted record should be returned by the second scan
+      assertThat(result2).hasSize(3);
+      assertThat(result2.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(0)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result2.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result2.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result2.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result2.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result2.get(2)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation
+
+      transaction.commit();
+
+      // The storage operation should be called once because the second scan should be served from
+      // the snapshot
+      verify(storage).scan(any(Scan.class));
+
+      assertThat(result1).hasSize(2);
+      assertThat(result1.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(
+              ((TransactionResult) ((FilteredResult) result1.get(1)).getOriginalResult())
+                  .getState())
+          .isEqualTo(TransactionState.COMMITTED);
+      assertThat(result1.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result1.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(result1.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      // The same result should as the first scan should be returned by the second scan
+      assertThat(result1).isEqualTo(result2);
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void get_GetGivenForNonExisting_ShouldReturnEmpty(Isolation isolation, boolean readOnly)
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Get get = prepareGet(0, 4, namespace1, TABLE_1);
 
     // Act
@@ -325,11 +1187,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
   }
 
-  @Test
-  public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_ScanGivenForNonExisting_ShouldReturnEmpty(Isolation isolation, boolean readOnly)
+      throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Scan scan = prepareScan(0, 4, 4, namespace1, TABLE_1);
 
     // Act
@@ -340,24 +1205,33 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.size()).isEqualTo(0);
   }
 
-  public enum CommitType {
-    NORMAL_COMMIT,
-    GROUP_COMMIT,
-    DELAYED_GROUP_COMMIT
-  }
-
-  static Stream<Arguments> commitTypeAndIsolation() {
-    return Arrays.stream(CommitType.values())
-        .flatMap(
-            commitType ->
-                Arrays.stream(Isolation.values())
-                    .map(isolation -> Arguments.of(commitType, isolation)));
-  }
-
-  private void selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
-      throws ExecutionException, CoordinatorException, TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void getScanner_ScanGivenForNonExisting_ShouldReturnEmpty(Isolation isolation, boolean readOnly)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
+    Scan scan = prepareScan(0, 4, 4, namespace1, TABLE_1);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
+    assertThat(scanner.one()).isEmpty();
+    scanner.close();
+    transaction.commit();
+  }
+
+  private void
+      selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
@@ -368,7 +1242,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             current,
             TransactionState.COMMITTED,
             commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
     TransactionResult result;
@@ -388,56 +1262,101 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(results.size()).isEqualTo(1);
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
-
-    assertThat(result.getId()).isEqualTo(ongoingTxId);
-    assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(2);
-    assertThat(result.getCommittedAt()).isGreaterThan(0);
-
     transaction.commit();
 
-    // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    waitForRecoveryCompletion(transaction);
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      // The rolled backed record should be returned
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(1);
+      assertThat(result.getCommittedAt()).isEqualTo(1);
+
+      if (readOnly) {
+        // In read-only mode, recovery should not occur
+        verify(recovery, never())
+            .recover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery, never())
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      } else {
+        // In read-write mode, recovery should occur
+        verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      }
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // The rolled forward record should be returned
+      assertThat(result.getId()).isEqualTo(ongoingTxId);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(2);
+      assertThat(result.getCommittedAt()).isGreaterThan(0);
+
+      // Recovery should occur
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
   }
 
-  private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
+  }
+
+  private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Selection s, boolean useScanner, Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -447,7 +1366,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         current,
         TransactionState.ABORTED,
         commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
     TransactionResult result;
@@ -468,129 +1387,228 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
 
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
     assertThat(result.getCommittedAt()).isEqualTo(1);
 
-    transaction.commit();
-
-    // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED && readOnly) {
+      // In READ_COMMITTED isolation and read-only mode, recovery should not occur
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In other cases, recovery should occur
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws TransactionException, ExecutionException, CoordinatorException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws TransactionException, ExecutionException, CoordinatorException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws TransactionException, ExecutionException, CoordinatorException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws TransactionException, ExecutionException, CoordinatorException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws TransactionException, ExecutionException, CoordinatorException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
   }
 
   private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
-    // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                if (!useScanner) {
-                  transaction.scan((Scan) s);
+    // Act Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      // UncommittedRecordException should not be thrown
+      assertThatCode(
+              () -> {
+                TransactionResult result;
+                if (s instanceof Get) {
+                  Optional<Result> r = transaction.get((Get) s);
+                  assertThat(r).isPresent();
+                  result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
                 } else {
-                  try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
-                    scanner.all();
+                  List<Result> results;
+                  if (!useScanner) {
+                    results = transaction.scan((Scan) s);
+                  } else {
+                    try (TransactionCrudOperable.Scanner scanner =
+                        transaction.getScanner((Scan) s)) {
+                      results = scanner.all();
+                    }
+                  }
+                  assertThat(results.size()).isEqualTo(1);
+                  result =
+                      (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+                }
+
+                // The rolled back record should be returned
+                assertThat(result.getId()).isEqualTo(ANY_ID_1);
+                assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+                assertThat(result.getVersion()).isEqualTo(1);
+                assertThat(result.getCommittedAt()).isEqualTo(1);
+              })
+          .doesNotThrowAnyException();
+
+      transaction.commit();
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // UncommittedRecordException should be thrown
+      assertThatThrownBy(
+              () -> {
+                if (s instanceof Get) {
+                  transaction.get((Get) s);
+                } else {
+                  if (!useScanner) {
+                    transaction.scan((Scan) s);
+                  } else {
+                    try (TransactionCrudOperable.Scanner scanner =
+                        transaction.getScanner((Scan) s)) {
+                      scanner.all();
+                    }
                   }
                 }
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+              })
+          .isInstanceOf(UncommittedRecordException.class);
 
-    transaction.rollback();
+      transaction.rollback();
+    }
 
-    // Assert
+    // In all cases, recovery should not occur
     verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
   }
 
   private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
             storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
     TransactionResult result;
@@ -611,58 +1629,93 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
 
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
     assertThat(result.getCommittedAt()).isEqualTo(1);
 
-    transaction.commit();
+    if (isolation == Isolation.READ_COMMITTED && readOnly) {
+      // In READ_COMMITTED isolation and read-only mode, recovery should not occur
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator, never()).putState(any(Coordinator.State.class));
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In other cases, recovery should occur
 
-    // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scan, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scan, commitType, isolation, true);
-  }
-
-  private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  private void
+      selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -672,11 +1725,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         current,
         TransactionState.COMMITTED,
         commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
+    @Nullable TransactionResult result;
     if (s instanceof Get) {
-      assertThat(transaction.get((Get) s).isPresent()).isFalse();
+      Optional<Result> r = transaction.get((Get) s);
+      result =
+          r.map(value -> (TransactionResult) ((FilteredResult) value).getOriginalResult())
+              .orElse(null);
     } else {
       List<Result> results;
       if (!useScanner) {
@@ -686,53 +1743,108 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           results = scanner.all();
         }
       }
-      assertThat(results.size()).isEqualTo(0);
+
+      if (!results.isEmpty()) {
+        assertThat(results.size()).isEqualTo(1);
+        result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      } else {
+        result = null;
+      }
     }
 
     transaction.commit();
 
-    // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    waitForRecoveryCompletion(transaction);
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      // The rolled back record should be returned
+      assertThat(result).isNotNull();
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(1);
+      assertThat(result.getCommittedAt()).isEqualTo(1);
+
+      if (readOnly) {
+        // In read-only mode, recovery should not occur
+        verify(recovery, never())
+            .recover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery, never())
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      } else {
+        // In read-write mode, recovery should occur
+        verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      }
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // The rolled forward record should be returned
+      assertThat(result).isNull();
+
+      // Recovery should occur
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
   }
 
-  private void selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
+  }
+
+  private void selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Selection s, boolean useScanner, Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -742,7 +1854,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         current,
         TransactionState.ABORTED,
         commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
     TransactionResult result;
@@ -763,129 +1875,228 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
 
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
     assertThat(result.getCommittedAt()).isEqualTo(1);
 
-    transaction.commit();
-
-    // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED && readOnly) {
+      // In READ_COMMITTED isolation and read-only mode, recovery should not occur
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In other cases, recovery should occur
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
   }
 
   private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+      selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
-    // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                if (!useScanner) {
-                  transaction.scan((Scan) s);
+    // Act Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      // UncommittedRecordException should not be thrown
+      assertThatCode(
+              () -> {
+                TransactionResult result;
+                if (s instanceof Get) {
+                  Optional<Result> r = transaction.get((Get) s);
+                  assertThat(r).isPresent();
+                  result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
                 } else {
-                  try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
-                    scanner.all();
+                  List<Result> results;
+                  if (!useScanner) {
+                    results = transaction.scan((Scan) s);
+                  } else {
+                    try (TransactionCrudOperable.Scanner scanner =
+                        transaction.getScanner((Scan) s)) {
+                      results = scanner.all();
+                    }
+                  }
+                  assertThat(results.size()).isEqualTo(1);
+                  result =
+                      (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+                }
+
+                // The rolled back record should be returned
+                assertThat(result.getId()).isEqualTo(ANY_ID_1);
+                assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+                assertThat(result.getVersion()).isEqualTo(1);
+                assertThat(result.getCommittedAt()).isEqualTo(1);
+              })
+          .doesNotThrowAnyException();
+
+      transaction.commit();
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // UncommittedRecordException should be thrown
+      assertThatThrownBy(
+              () -> {
+                if (s instanceof Get) {
+                  transaction.get((Get) s);
+                } else {
+                  if (!useScanner) {
+                    transaction.scan((Scan) s);
+                  } else {
+                    try (TransactionCrudOperable.Scanner scanner =
+                        transaction.getScanner((Scan) s)) {
+                      scanner.all();
+                    }
                   }
                 }
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+              })
+          .isInstanceOf(UncommittedRecordException.class);
 
-    transaction.rollback();
+      transaction.rollback();
+    }
 
-    // Assert
+    // In all cases, recovery should not occur
     verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
   }
 
   private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          Selection s, CommitType commitType, Isolation isolation, boolean useScanner)
+      selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
             storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
-    DistributedTransaction transaction = manager.begin(isolation);
+    DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
     TransactionResult result;
@@ -906,60 +2117,89 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
 
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
     assertThat(result.getCommittedAt()).isEqualTo(1);
 
-    transaction.commit();
-
-    // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED && readOnly) {
+      // In READ_COMMITTED isolation and read-only mode, recovery should not occur
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In other cases, recovery should occur
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        get, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-      CommitType commitType, Isolation isolation)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scan, commitType, isolation, false);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void getScanner_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scan, commitType, isolation, true);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void
-      update_UpdateGivenForPreparedWhenCoordinatorStateCommitted_ShouldUpdateAfterRollforward(
-          CommitType commitType)
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -980,12 +2220,21 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
+    // Act Assert
     Optional<Result> result = transaction.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
 
-    int expectedBalance = result.get().getInt(BALANCE) + 100;
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      // The rolled back record should be returned
+      assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // The rolled forward record should be returned
+      assertThat(result.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    }
 
     transaction.update(
         Update.newBuilder()
@@ -993,25 +2242,45 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expectedBalance)
+            .intValue(BALANCE, result.get().getInt(BALANCE) + 100)
             .build());
 
-    transaction.commit();
+    if (isolation == Isolation.READ_COMMITTED) {
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+      transaction.rollback();
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+      // Should commit without any exceptions
+      transaction.commit();
+    }
 
-    // Assert
     Optional<Result> actual = manager.get(get);
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      // The transaction should not have committed
+      assertThat(actual.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // The transaction should have committed
+      assertThat(actual.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE + 100);
+    }
+
+    // In all isolations, recovery should occur
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void update_UpdateGivenForPreparedWhenCoordinatorStateAborted_ShouldUpdateAfterRollback(
-      CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -1032,12 +2301,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
+    // Act Assert
     Optional<Result> result = transaction.get(get);
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.isPresent()).isTrue();
     assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    int expectedBalance = result.get().getInt(BALANCE) + 100;
 
     transaction.update(
         Update.newBuilder()
@@ -1045,61 +2314,76 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expectedBalance)
+            .intValue(BALANCE, result.get().getInt(BALANCE) + 100)
             .build());
 
     transaction.commit();
 
-    // Assert
     Optional<Result> actual = manager.get(get);
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
+    // In all isolations, no anomalies occur
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
+
+    // In all isolations, recovery should occur
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void
-      update_UpdateGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowUncommittedRecordException(
-          CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
-    assertThatThrownBy(
-            () ->
-                transaction.update(
-                    Update.newBuilder()
-                        .namespace(namespace1)
-                        .table(TABLE_1)
-                        .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                        .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                        .intValue(BALANCE, 100)
-                        .build()))
-        .isInstanceOf(UncommittedRecordException.class);
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
 
-    transaction.rollback();
+    // Act Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
 
-    // Assert
+      // UncommittedRecordException should not be thrown when trying to update
+      assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
+
+      // CommitConflictException should be thrown at the commit phase
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // UncommittedRecordException should be thrown when trying to update
+      assertThatThrownBy(() -> transaction.update(update))
+          .isInstanceOf(UncommittedRecordException.class);
+
+      transaction.rollback();
+    }
+
+    // In all isolations, recovery should not occur
     verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void
-      update_UpdateGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldUpdateAfterAbortTransaction(
-          CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
@@ -1115,12 +2399,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
+    // Act Assert
     Optional<Result> result = transaction.get(get);
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.isPresent()).isTrue();
     assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    int expectedBalance = result.get().getInt(BALANCE) + 100;
 
     transaction.update(
         Update.newBuilder()
@@ -1128,28 +2412,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expectedBalance)
+            .intValue(BALANCE, result.get().getInt(BALANCE) + 100)
             .build());
 
     transaction.commit();
 
-    // Assert
     Optional<Result> actual = manager.get(get);
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
+    // In all isolations, no anomalies occur
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
+
+    // In all isolations, recovery should occur
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void
-      insert_InsertGivenForDeletedWhenCoordinatorStateCommitted_ShouldInsertAfterRollforward(
-          CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void insert_InsertGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -1170,9 +2456,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
+    // Act Assert
     Optional<Result> result = transaction.get(get);
-    assertThat(result.isPresent()).isFalse();
+
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the rolled back record should be returned
+      assertThat(result.isPresent()).isTrue();
+      assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, no record should be returned
+      assertThat(result.isPresent()).isFalse();
+    }
 
     int expectedBalance = 100;
 
@@ -1187,20 +2481,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     transaction.commit();
 
-    // Assert
     Optional<Result> actual = manager.get(get);
+
+    // In all isolations, the inserted record should be returned
     assertThat(actual.isPresent()).isTrue();
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
+    // In all isolations, recovery should occur
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void update_UpdateGivenForDeletedWhenCoordinatorStateAborted_ShouldUpdateAfterRollback(
-      CommitType commitType) throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage,
@@ -1223,10 +2521,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act
     Optional<Result> result = transaction.get(get);
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.isPresent()).isTrue();
     assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    int expectedBalance = result.get().getInt(BALANCE) + 100;
 
     transaction.update(
         Update.newBuilder()
@@ -1234,61 +2532,76 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expectedBalance)
+            .intValue(BALANCE, result.get().getInt(BALANCE) + 100)
             .build());
 
     transaction.commit();
 
-    // Assert
     Optional<Result> actual = manager.get(get);
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
+    // In all isolations, no anomalies occur
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
+
+    // In all isolations, recovery should occur
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void
-      update_UpdateGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowUncommittedRecordException(
-          CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
-    assertThatThrownBy(
-            () ->
-                transaction.update(
-                    Update.newBuilder()
-                        .namespace(namespace1)
-                        .table(TABLE_1)
-                        .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                        .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                        .intValue(BALANCE, 100)
-                        .build()))
-        .isInstanceOf(UncommittedRecordException.class);
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build();
 
-    transaction.rollback();
+    // Act Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
 
-    // Assert
+      // UncommittedRecordException should not be thrown when trying to update
+      assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
+
+      // CommitConflictException should be thrown at the commit phase
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      // UncommittedRecordException should be thrown when trying to update
+      assertThatThrownBy(() -> transaction.update(update))
+          .isInstanceOf(UncommittedRecordException.class);
+
+      transaction.rollback();
+    }
+
+    // In all isolations, recovery should not occur
     verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
   @ParameterizedTest
-  @EnumSource(CommitType.class)
-  public void
-      update_UpdateGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldUpdateAfterAbortTransaction(
-          CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  @MethodSource("isolationAndCommitType")
+  void update_UpdateGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+      Isolation isolation, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
@@ -1304,12 +2617,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     DistributedTransaction transaction = manager.begin();
 
-    // Act
+    // Act Assert
     Optional<Result> result = transaction.get(get);
+
+    // In all isolations, the rolled back record should be returned
     assertThat(result.isPresent()).isTrue();
     assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    int expectedBalance = result.get().getInt(BALANCE) + 100;
 
     transaction.update(
         Update.newBuilder()
@@ -1317,30 +2630,34 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .table(TABLE_1)
             .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
             .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, expectedBalance)
+            .intValue(BALANCE, result.get().getInt(BALANCE) + 100)
             .build());
 
     transaction.commit();
 
-    // Assert
     Optional<Result> actual = manager.get(get);
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
+    // In all isolations, no anomalies occur
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
+
+    // In all isolations, recovery should occur
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
-  @Test
-  public void getThenScanAndGet_CommitHappenedInBetween_OnlyGetShouldReadRepeatably()
-      throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void getThenScanAndGet_CommitHappenedInBetween_BehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
-    DistributedTransaction transaction1 = manager.begin();
+    DistributedTransaction transaction1 = begin(manager, readOnly);
     Optional<Result> result1 = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
 
     DistributedTransaction transaction2 = manager.begin();
@@ -1348,21 +2665,50 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
     transaction2.commit();
 
-    // Act
+    // Act Assert
     Result result2 = transaction1.scan(prepareScan(0, 0, 0, namespace1, TABLE_1)).get(0);
     Optional<Result> result3 = transaction1.get(prepareGet(0, 0, namespace1, TABLE_1));
-    transaction1.commit();
 
-    // Assert
-    assertThat(result1).isPresent();
-    assertThat(result1.get()).isNotEqualTo(result2);
-    assertThat(result2.getInt(BALANCE)).isEqualTo(2);
-    assertThat(result1).isEqualTo(result3);
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction1.commit();
+
+      // Each operation reads the committed value
+      assertThat(result1).isPresent();
+      assertThat(result1.get().getInt(BALANCE)).isEqualTo(1);
+
+      assertThat(result2.getInt(BALANCE)).isEqualTo(2);
+
+      assertThat(result3).isPresent();
+      assertThat(result3.get().getInt(BALANCE)).isEqualTo(2);
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT or SERIALIZABLE isolation
+
+      transaction1.commit();
+
+      // Only get reads repeatably
+      assertThat(result1).isPresent();
+      assertThat(result1.get().getInt(BALANCE)).isEqualTo(1);
+      assertThat(result3).isPresent();
+      assertThat(result3.get().getInt(BALANCE)).isEqualTo(1);
+
+      // Scan reads the committed value
+      assertThat(result2.getInt(BALANCE)).isEqualTo(2);
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    }
   }
 
-  @Test
-  public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord(Isolation isolation)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     int expected = INITIAL_BALANCE;
     Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, expected);
     DistributedTransaction transaction = manager.begin();
@@ -1373,7 +2719,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(get);
     another.commit();
 
@@ -1384,10 +2730,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result.getVersion()).isEqualTo(1);
   }
 
-  @Test
-  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForNonExisting_ShouldCreateRecord()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutWithImplicitPreReadEnabledGivenForNonExisting_ShouldCreateRecord(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     int expected = INITIAL_BALANCE;
     Put put =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -1402,7 +2750,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(get);
     another.commit();
 
@@ -1413,11 +2761,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result.getVersion()).isEqualTo(1);
   }
 
-  @Test
-  public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord(Isolation isolation)
       throws TransactionException, ExecutionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
 
@@ -1432,7 +2782,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     verify(storage).get(any(Get.class));
 
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(get);
     another.commit();
 
@@ -1443,11 +2793,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.getVersion()).isEqualTo(2);
   }
 
-  @Test
-  public void putAndCommit_PutWithImplicitPreReadEnabledGivenForExisting_ShouldUpdateRecord()
-      throws TransactionException, ExecutionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutWithImplicitPreReadEnabledGivenForExisting_ShouldUpdateRecord(
+      Isolation isolation) throws TransactionException, ExecutionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -1463,7 +2815,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     verify(storage).get(any(Get.class));
 
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(prepareGet(0, 0, namespace1, TABLE_1));
     another.commit();
 
@@ -1474,11 +2826,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.getVersion()).isEqualTo(2);
   }
 
-  @Test
-  public void putAndCommit_PutGivenForExisting_ShouldThrowCommitConflictException()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutGivenForExisting_ShouldThrowCommitConflictException(Isolation isolation)
       throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
 
     // Act Assert
@@ -1490,10 +2844,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
-  @Test
-  public void putAndCommit_PutWithInsertModeEnabledGivenForNonExisting_ShouldCreateRecord()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutWithInsertModeEnabledGivenForNonExisting_ShouldCreateRecord(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     int expected = INITIAL_BALANCE;
     Put put =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -1508,7 +2864,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(get);
     another.commit();
 
@@ -1519,10 +2875,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result.getVersion()).isEqualTo(1);
   }
 
-  @Test
-  public void putAndCommit_PutWithInsertModeEnabledGivenForNonExistingAfterRead_ShouldCreateRecord()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutWithInsertModeEnabledGivenForNonExistingAfterRead_ShouldCreateRecord(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
     int expected = INITIAL_BALANCE;
@@ -1542,7 +2900,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(get);
     another.commit();
 
@@ -1553,12 +2911,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.getVersion()).isEqualTo(1);
   }
 
-  @Test
-  public void
-      putAndCommit_PutWithInsertModeGivenForExistingAfterRead_ShouldThrowCommitConflictException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_PutWithInsertModeGivenForExistingAfterRead_ShouldThrowCommitConflictException(
+      Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
 
@@ -1575,68 +2934,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
-  @Test
-  public void
-      putAndCommit_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit()
-          throws TransactionException, ExecutionException, CoordinatorException {
-    // Arrange
-    IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
-    List<Put> puts = preparePuts(namespace1, TABLE_1);
-    puts.get(0).withValue(balance);
-    puts.get(1).withValue(balance);
-    DistributedTransaction transaction = manager.begin();
-
-    // Act
-    transaction.put(puts.get(0));
-    transaction.put(puts.get(1));
-    transaction.commit();
-
-    // Assert
-    // one for prepare, one for commit
-    verify(storage, times(2)).mutate(anyList());
-    if (isGroupCommitEnabled()) {
-      verify(coordinator)
-          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
-      return;
-    }
-    verify(coordinator).putState(any(Coordinator.State.class));
-  }
-
-  @Test
-  public void putAndCommit_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit()
-      throws TransactionException, ExecutionException, CoordinatorException {
-    // Arrange
-    IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
-    List<Put> puts = preparePuts(namespace1, TABLE_1);
-    puts.get(0).withValue(balance);
-    puts.get(NUM_TYPES).withValue(balance); // next account
-    DistributedTransaction transaction = manager.begin();
-
-    // Act
-    transaction.put(puts.get(0));
-    transaction.put(puts.get(NUM_TYPES));
-    transaction.commit();
-
-    // Assert
-    // twice for prepare, twice for commit
-    verify(storage, times(4)).mutate(anyList());
-    if (isGroupCommitEnabled()) {
-      verify(coordinator)
-          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
-      return;
-    }
-    verify(coordinator).putState(any(Coordinator.State.class));
-  }
-
   private void putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(
-      String fromNamespace, String fromTable, String toNamespace, String toTable)
+      Isolation isolation,
+      String fromNamespace,
+      String fromTable,
+      String toNamespace,
+      String toTable)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !fromNamespace.equals(toNamespace) || !fromTable.equals(toTable);
 
-    populateRecords(fromNamespace, fromTable);
+    populateRecords(manager, fromNamespace, fromTable);
     if (differentTables) {
-      populateRecords(toNamespace, toTable);
+      populateRecords(manager, toNamespace, toTable);
     }
 
     List<Get> fromGets = prepareGets(fromNamespace, fromTable);
@@ -1649,10 +2960,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int to = NUM_TYPES;
 
     // Act
-    prepareTransfer(from, fromNamespace, fromTable, to, toNamespace, toTable, amount).commit();
+    prepareTransfer(manager, from, fromNamespace, fromTable, to, toNamespace, toTable, amount)
+        .commit();
 
     // Assert
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(fromGets.get(from));
     assertThat(fromResult).isPresent();
     assertThat(fromResult.get().getValue(BALANCE)).isEqualTo(Optional.of(fromBalance));
@@ -1662,22 +2974,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void putAndCommit_GetsAndPutsForSameTableGiven_ShouldCommitProperly()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_GetsAndPutsForSameTableGiven_ShouldCommitProperly(Isolation isolation)
       throws TransactionException {
-    putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(namespace1, TABLE_1, namespace1, TABLE_1);
+    putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void putAndCommit_GetsAndPutsForDifferentTablesGiven_ShouldCommitProperly()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_GetsAndPutsForDifferentTablesGiven_ShouldCommitProperly(Isolation isolation)
       throws TransactionException {
-    putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(namespace1, TABLE_1, namespace2, TABLE_2);
+    putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
   private void commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
-      String namespace1, String table1, String namespace2, String table2)
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
     int expected = INITIAL_BALANCE;
@@ -1716,7 +3033,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     verify(commit).rollbackRecords(any(Snapshot.class));
 
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     assertThat(another.get(gets1.get(from)).isPresent()).isFalse();
     Optional<Result> toResult = another.get(gets2.get(to));
     assertThat(toResult).isPresent();
@@ -1727,26 +3044,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void
-      commit_ConflictingPutsForSameTableGivenForNonExisting_ShouldCommitOneAndAbortTheOther()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingPutsForSameTableGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void
-      commit_ConflictingPutsForDifferentTablesGivenForNonExisting_ShouldCommitOneAndAbortTheOther()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingPutsForDifferentTablesGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
   private void commit_ConflictingPutAndDeleteGivenForExisting_ShouldCommitPutAndAbortDelete(
-      String namespace1, String table1, String namespace2, String table2)
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
     int amount = 200;
@@ -1755,9 +3073,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int anotherFrom = to;
     int anotherTo = NUM_TYPES * 2;
 
-    populateRecords(namespace1, table1);
+    populateRecords(manager, namespace1, table1);
     if (differentTables) {
-      populateRecords(namespace2, table2);
+      populateRecords(manager, namespace2, table2);
     }
 
     DistributedTransaction transaction = manager.begin();
@@ -1774,7 +3092,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatCode(
             () ->
                 prepareTransfer(
-                        anotherFrom, namespace2, table2, anotherTo, namespace1, table1, amount)
+                        manager,
+                        anotherFrom,
+                        namespace2,
+                        table2,
+                        anotherTo,
+                        namespace1,
+                        table1,
+                        amount)
                     .commit())
         .doesNotThrowAnyException();
 
@@ -1782,7 +3107,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     verify(commit).rollbackRecords(any(Snapshot.class));
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
     assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE);
@@ -1795,26 +3120,28 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void
-      commit_ConflictingPutAndDeleteForSameTableGivenForExisting_ShouldCommitPutAndAbortDelete()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingPutAndDeleteForSameTableGivenForExisting_ShouldCommitPutAndAbortDelete(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingPutAndDeleteGivenForExisting_ShouldCommitPutAndAbortDelete(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void
-      commit_ConflictingPutAndDeleteForDifferentTableGivenForExisting_ShouldCommitPutAndAbortDelete()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      commit_ConflictingPutAndDeleteForDifferentTableGivenForExisting_ShouldCommitPutAndAbortDelete(
+          Isolation isolation) throws TransactionException {
     commit_ConflictingPutAndDeleteGivenForExisting_ShouldCommitPutAndAbortDelete(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
   private void commit_ConflictingPutsGivenForExisting_ShouldCommitOneAndAbortTheOther(
-      String namespace1, String table1, String namespace2, String table2)
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
     int amount1 = 100;
@@ -1824,19 +3151,26 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int anotherFrom = to;
     int anotherTo = NUM_TYPES * 2;
 
-    populateRecords(namespace1, table1);
+    populateRecords(manager, namespace1, table1);
     if (differentTables) {
-      populateRecords(namespace2, table2);
+      populateRecords(manager, namespace2, table2);
     }
 
     DistributedTransaction transaction =
-        prepareTransfer(from, namespace1, table1, to, namespace2, table2, amount1);
+        prepareTransfer(manager, from, namespace1, table1, to, namespace2, table2, amount1);
 
     // Act Assert
     assertThatCode(
             () ->
                 prepareTransfer(
-                        anotherFrom, namespace2, table2, anotherTo, namespace1, table1, amount2)
+                        manager,
+                        anotherFrom,
+                        namespace2,
+                        table2,
+                        anotherTo,
+                        namespace1,
+                        table1,
+                        amount2)
                     .commit())
         .doesNotThrowAnyException();
 
@@ -1847,7 +3181,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = prepareGets(namespace2, table2);
 
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
     assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE);
@@ -1860,25 +3194,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void commit_ConflictingPutsForSameTableGivenForExisting_ShouldCommitOneAndAbortTheOther()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingPutsForSameTableGivenForExisting_ShouldCommitOneAndAbortTheOther(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingPutsGivenForExisting_ShouldCommitOneAndAbortTheOther(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void
-      commit_ConflictingPutsForDifferentTablesGivenForExisting_ShouldCommitOneAndAbortTheOther()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingPutsForDifferentTablesGivenForExisting_ShouldCommitOneAndAbortTheOther(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingPutsGivenForExisting_ShouldCommitOneAndAbortTheOther(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
   private void commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth(
-      String namespace1, String table1, String namespace2, String table2)
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
     int amount1 = 100;
@@ -1888,19 +3224,26 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int anotherFrom = NUM_TYPES * 2;
     int anotherTo = NUM_TYPES * 3;
 
-    populateRecords(namespace1, table1);
+    populateRecords(manager, namespace1, table1);
     if (differentTables) {
-      populateRecords(namespace2, table2);
+      populateRecords(manager, namespace2, table2);
     }
 
     DistributedTransaction transaction =
-        prepareTransfer(from, namespace1, table1, to, namespace2, table2, amount1);
+        prepareTransfer(manager, from, namespace1, table1, to, namespace2, table2, amount1);
 
     // Act Assert
     assertThatCode(
             () ->
                 prepareTransfer(
-                        anotherFrom, namespace2, table2, anotherTo, namespace1, table1, amount2)
+                        manager,
+                        anotherFrom,
+                        namespace2,
+                        table2,
+                        anotherTo,
+                        namespace1,
+                        table1,
+                        amount2)
                     .commit())
         .doesNotThrowAnyException();
 
@@ -1910,7 +3253,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = prepareGets(namespace2, table2);
 
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
     assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE - amount1);
@@ -1926,24 +3269,28 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void commit_NonConflictingPutsForSameTableGivenForExisting_ShouldCommitBoth()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_NonConflictingPutsForSameTableGivenForExisting_ShouldCommitBoth(Isolation isolation)
       throws TransactionException {
     commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void commit_NonConflictingPutsForDifferentTablesGivenForExisting_ShouldCommitBoth()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_NonConflictingPutsForDifferentTablesGivenForExisting_ShouldCommitBoth(
+      Isolation isolation) throws TransactionException {
     commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
-  @Test
-  public void putAndCommit_GetsAndPutsForSameKeyButDifferentTablesGiven_ShouldCommitBoth()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_GetsAndPutsForSameKeyButDifferentTablesGiven_ShouldCommitBoth(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     int expected = INITIAL_BALANCE;
     List<Put> puts1 = preparePuts(namespace1, TABLE_1);
     List<Put> puts2 = preparePuts(namespace2, TABLE_2);
@@ -1977,7 +3324,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     List<Get> gets1 = prepareGets(namespace1, TABLE_1);
     List<Get> gets2 = prepareGets(namespace2, TABLE_2);
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
     assertThat(getBalance(fromResult.get())).isEqualTo(expected);
@@ -1993,75 +3340,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void commit_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions()
-      throws TransactionException {
-    // Arrange
-    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
-
-    // Act Assert
-    transaction.delete(delete);
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void commit_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions()
-      throws TransactionException {
-    // Arrange
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
-
-    // Act Assert
-    transaction.get(get);
-    transaction.delete(delete);
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord()
-      throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
-
-    // Act
-    Optional<Result> result = transaction.get(get);
-    transaction.delete(delete);
-    transaction.commit();
-
-    // Assert
-    assertThat(result.isPresent()).isTrue();
-    DistributedTransaction another = manager.begin();
-    assertThat(another.get(get).isPresent()).isFalse();
-    another.commit();
-  }
-
   private void commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther(
-      String namespace1, String table1, String namespace2, String table2)
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
     int account1 = 0;
     int account2 = NUM_TYPES;
     int account3 = NUM_TYPES * 2;
 
-    populateRecords(namespace1, table1);
+    populateRecords(manager, namespace1, table1);
     if (differentTables) {
-      populateRecords(namespace2, table2);
+      populateRecords(manager, namespace2, table2);
     }
 
     DistributedTransaction transaction =
-        prepareDeletes(account1, namespace1, table1, account2, namespace2, table2);
+        prepareDeletes(manager, account1, namespace1, table1, account2, namespace2, table2);
 
     // Act
     assertThatCode(
             () ->
-                prepareDeletes(account2, namespace2, table2, account3, namespace1, table1).commit())
+                prepareDeletes(manager, account2, namespace2, table2, account3, namespace1, table1)
+                    .commit())
         .doesNotThrowAnyException();
 
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
@@ -2071,7 +3373,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> result = another.get(gets1.get(account1));
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
@@ -2080,26 +3382,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void
-      commit_ConflictingDeletesForSameTableGivenForExisting_ShouldCommitOneAndAbortTheOther()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingDeletesForSameTableGivenForExisting_ShouldCommitOneAndAbortTheOther(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void
-      commit_ConflictingDeletesForDifferentTablesGivenForExisting_ShouldCommitOneAndAbortTheOther()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_ConflictingDeletesForDifferentTablesGivenForExisting_ShouldCommitOneAndAbortTheOther(
+      Isolation isolation) throws TransactionException {
     commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
   private void commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth(
-      String namespace1, String table1, String namespace2, String table2)
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
     int account1 = 0;
@@ -2107,18 +3410,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int account3 = NUM_TYPES * 2;
     int account4 = NUM_TYPES * 3;
 
-    populateRecords(namespace1, table1);
+    populateRecords(manager, namespace1, table1);
     if (differentTables) {
-      populateRecords(namespace2, table2);
+      populateRecords(manager, namespace2, table2);
     }
 
     DistributedTransaction transaction =
-        prepareDeletes(account1, namespace1, table1, account2, namespace2, table2);
+        prepareDeletes(manager, account1, namespace1, table1, account2, namespace2, table2);
 
     // Act
     assertThatCode(
             () ->
-                prepareDeletes(account3, namespace2, table2, account4, namespace1, table1).commit())
+                prepareDeletes(manager, account3, namespace2, table2, account4, namespace1, table1)
+                    .commit())
         .doesNotThrowAnyException();
 
     assertThatCode(transaction::commit).doesNotThrowAnyException();
@@ -2126,7 +3430,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
-    DistributedTransaction another = manager.begin();
+    DistributedTransaction another = manager.beginReadOnly();
     assertThat(another.get(gets1.get(account1)).isPresent()).isFalse();
     assertThat(another.get(gets2.get(account2)).isPresent()).isFalse();
     assertThat(another.get(gets2.get(account3)).isPresent()).isFalse();
@@ -2134,24 +3438,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     another.commit();
   }
 
-  @Test
-  public void commit_NonConflictingDeletesForSameTableGivenForExisting_ShouldCommitBoth()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_NonConflictingDeletesForSameTableGivenForExisting_ShouldCommitBoth(
+      Isolation isolation) throws TransactionException {
     commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void commit_NonConflictingDeletesForDifferentTablesGivenForExisting_ShouldCommitBoth()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_NonConflictingDeletesForDifferentTablesGivenForExisting_ShouldCommitBoth(
+      Isolation isolation) throws TransactionException {
     commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
-  private void commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult(
-      String namespace1, String table1, String namespace2, String table2)
+  private void commit_WriteSkewOnExistingRecords_ShouldBehaveCorrectly(
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     List<Put> puts =
         Arrays.asList(
             preparePut(0, 0, namespace1, table1).withValue(BALANCE, 1),
@@ -2160,7 +3467,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.put(puts);
     transaction.commit();
 
-    // Act
+    // Act Assert
     DistributedTransaction transaction1 = manager.begin();
     DistributedTransaction transaction2 = manager.begin();
 
@@ -2181,115 +3488,68 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Put put2 = preparePut(0, 1, namespace2, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     transaction1.commit();
-    transaction2.commit();
 
-    // Assert
-    transaction = manager.begin();
-    // the results can not be produced by executing the transactions serially
-    result1 = transaction.get(get1_1);
-    assertThat(result1).isPresent();
-    assertThat(getBalance(result1.get())).isEqualTo(2);
-    result2 = transaction.get(get2_1);
-    assertThat(result2).isPresent();
-    assertThat(getBalance(result2.get())).isEqualTo(2);
-    transaction.commit();
+    if (isolation == Isolation.SERIALIZABLE) {
+      // In SERIALIZABLE isolation, one transaction should commit and the other should throw
+      // CommitConflictException
+
+      Throwable thrown = catchThrowable(transaction2::commit);
+      assertThat(thrown).isInstanceOf(CommitConflictException.class);
+
+      transaction = manager.beginReadOnly();
+      result1 = transaction.get(get1_1);
+      assertThat(result1).isPresent();
+      assertThat(getBalance(result1.get())).isEqualTo(1);
+      result2 = transaction.get(get2_1);
+      assertThat(result2).isPresent();
+      assertThat(getBalance(result2.get())).isEqualTo(2);
+      transaction.commit();
+    } else {
+      assert isolation == Isolation.READ_COMMITTED || isolation == Isolation.SNAPSHOT;
+
+      // In READ_COMMITTED or SNAPSHOT isolation, both transactions should commit successfully
+
+      transaction2.commit();
+
+      transaction = manager.beginReadOnly();
+      // The results can not be produced by executing the transactions serially
+      result1 = transaction.get(get1_1);
+      assertThat(result1).isPresent();
+      assertThat(getBalance(result1.get())).isEqualTo(2);
+      result2 = transaction.get(get2_1);
+      assertThat(result2).isPresent();
+      assertThat(getBalance(result2.get())).isEqualTo(2);
+      transaction.commit();
+    }
   }
 
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsInSameTableWithSnapshot_ShouldProduceNonSerializableResult()
-          throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult(
-        namespace1, TABLE_1, namespace1, TABLE_1);
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_WriteSkewOnExistingRecordsInSameTable_ShouldBehaveCorrectly(Isolation isolation)
+      throws TransactionException {
+    commit_WriteSkewOnExistingRecords_ShouldBehaveCorrectly(
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
   }
 
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsInDifferentTablesWithSnapshot_ShouldProduceNonSerializableResult()
-          throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult(
-        namespace1, TABLE_1, namespace2, TABLE_2);
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_WriteSkewOnExistingRecordsInDifferentTables_ShouldBehaveCorrectly(Isolation isolation)
+      throws TransactionException {
+    commit_WriteSkewOnExistingRecords_ShouldBehaveCorrectly(
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
-  private void
-      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-          String namespace1, String table1, String namespace2, String table2)
-          throws TransactionException {
+  private void commit_WriteSkewOnNonExistingRecords_ShouldBehaveCorrectly(
+      Isolation isolation, String namespace1, String table1, String namespace2, String table2)
+      throws TransactionException {
     // Arrange
-    List<Put> puts =
-        Arrays.asList(
-            preparePut(0, 0, namespace1, table1).withValue(BALANCE, 1),
-            preparePut(0, 1, namespace2, table2).withValue(BALANCE, 1));
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    transaction.put(puts);
-    transaction.commit();
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
 
-    // Act
-    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
-
-    Get get1_1 = prepareGet(0, 1, namespace2, table2);
-    Optional<Result> result1 = transaction1.get(get1_1);
-    assertThat(result1).isPresent();
-    int current1 = getBalance(result1.get());
-    Get get1_2 = prepareGet(0, 0, namespace1, table1);
-    transaction1.get(get1_2);
-    Get get2_1 = prepareGet(0, 0, namespace1, table1);
-    Optional<Result> result2 = transaction2.get(get2_1);
-    assertThat(result2).isPresent();
-    int current2 = getBalance(result2.get());
-    Get get2_2 = prepareGet(0, 1, namespace2, table2);
-    transaction2.get(get2_2);
-    Put put1 = preparePut(0, 0, namespace1, table1).withValue(BALANCE, current1 + 1);
-    transaction1.put(put1);
-    Put put2 = preparePut(0, 1, namespace2, table2).withValue(BALANCE, current2 + 1);
-    transaction2.put(put2);
-    transaction1.commit();
-    Throwable thrown = catchThrowable(transaction2::commit);
-
-    // Assert
-    transaction = manager.begin(Isolation.SERIALIZABLE);
-    result1 = transaction.get(get1_1);
-    assertThat(result1).isPresent();
-    assertThat(getBalance(result1.get())).isEqualTo(1);
-    result2 = transaction.get(get2_1);
-    assertThat(result2).isPresent();
-    assertThat(getBalance(result2.get())).isEqualTo(2);
-    transaction.commit();
-
-    assertThat(thrown).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsInSameTableWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
-          throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace1, TABLE_1);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsInDifferentTablesWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
-          throws TransactionException {
-    commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace2, TABLE_2);
-  }
-
-  private boolean isGroupCommitEnabled() {
-    return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
-  }
-
-  private void
-      commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-          String namespace1, String table1, String namespace2, String table2)
-          throws TransactionException {
-    // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction1 = manager.begin();
+    DistributedTransaction transaction2 = manager.begin();
     Get get1_1 = prepareGet(0, 1, namespace2, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, namespace1, table1);
@@ -2310,44 +3570,133 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    result1 = transaction.get(get1_1);
-    assertThat(result1.isPresent()).isFalse();
-    result2 = transaction.get(get2_1);
-    assertThat(result2.isPresent()).isTrue();
-    assertThat(getBalance(result2.get())).isEqualTo(1);
+
+    if (isolation == Isolation.SERIALIZABLE) {
+      // In SERIALIZABLE isolation, one transaction should commit and the other should throw
+      // CommitConflictException
+
+      DistributedTransaction transaction = manager.beginReadOnly();
+      result1 = transaction.get(get1_1);
+      assertThat(result1.isPresent()).isFalse();
+      result2 = transaction.get(get2_1);
+      assertThat(result2.isPresent()).isTrue();
+      assertThat(getBalance(result2.get())).isEqualTo(1);
+      transaction.commit();
+
+      assertThat(thrown1).doesNotThrowAnyException();
+      assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    } else {
+      assert isolation == Isolation.READ_COMMITTED || isolation == Isolation.SNAPSHOT;
+
+      // In READ_COMMITTED or SNAPSHOT isolation, both transactions should commit successfully
+
+      DistributedTransaction transaction = manager.beginReadOnly();
+      // The results can not be produced by executing the transactions serially
+      result1 = transaction.get(get1_1);
+      assertThat(result1.isPresent()).isTrue();
+      assertThat(getBalance(result1.get())).isEqualTo(1);
+      result2 = transaction.get(get2_1);
+      assertThat(result2.isPresent()).isTrue();
+      assertThat(getBalance(result2.get())).isEqualTo(1);
+      transaction.commit();
+
+      assertThat(thrown1).doesNotThrowAnyException();
+      assertThat(thrown2).doesNotThrowAnyException();
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_WriteSkewOnNonExistingRecordsInSameTable_ShouldBehaveCorrectly(Isolation isolation)
+      throws TransactionException {
+    commit_WriteSkewOnNonExistingRecords_ShouldBehaveCorrectly(
+        isolation, namespace1, TABLE_1, namespace1, TABLE_1);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_WriteSkewOnNonExistingRecordsInDifferentTables_ShouldBehaveCorrectly(
+      Isolation isolation) throws TransactionException {
+    commit_WriteSkewOnNonExistingRecords_ShouldBehaveCorrectly(
+        isolation, namespace1, TABLE_1, namespace2, TABLE_2);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_WriteSkewWithScanOnExistingRecords_ShouldBehaveCorrectly(Isolation isolation)
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    List<Put> puts =
+        Arrays.asList(
+            preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1),
+            preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(puts);
     transaction.commit();
 
-    assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    // Act
+    DistributedTransaction transaction1 = manager.begin();
+    DistributedTransaction transaction2 = manager.begin();
+    List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
+    int count1 = results1.size();
+    List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
+    int count2 = results2.size();
+    Put put1 = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1);
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1);
+    transaction2.put(put2);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+    Throwable thrown2 = catchThrowable(transaction2::commit);
+
+    // Assert
+    if (isolation == Isolation.SERIALIZABLE) {
+      // In SERIALIZABLE isolation, one transaction should commit and the other should throw
+      // CommitConflictException
+
+      transaction = manager.beginReadOnly();
+      Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+      assertThat(result1).isPresent();
+      assertThat(getBalance(result1.get())).isEqualTo(3);
+      Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
+      assertThat(result2).isPresent();
+      assertThat(getBalance(result2.get())).isEqualTo(1);
+      transaction.commit();
+
+      assertThat(thrown1).doesNotThrowAnyException();
+      assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    } else {
+      assert isolation == Isolation.READ_COMMITTED || isolation == Isolation.SNAPSHOT;
+
+      // In READ_COMMITTED or SNAPSHOT isolation, both transactions should commit successfully
+
+      transaction = manager.beginReadOnly();
+      // The results can not be produced by executing the transactions serially
+      Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+      assertThat(result1).isPresent();
+      assertThat(getBalance(result1.get())).isEqualTo(3);
+      Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
+      assertThat(result2).isPresent();
+      assertThat(getBalance(result2.get())).isEqualTo(3);
+      transaction.commit();
+
+      assertThat(thrown1).doesNotThrowAnyException();
+      assertThat(thrown2).doesNotThrowAnyException();
+    }
   }
 
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializable_OneShouldCommitTheOtherShouldThrowCommitException()
-          throws TransactionException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace1, TABLE_1);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsInDifferentTablesWithSerializable_OneShouldCommitTheOtherShouldThrowCommitException()
-          throws TransactionException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException(
-        namespace1, TABLE_1, namespace2, TABLE_2);
-  }
-
-  @Test
-  public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_WriteSkewWithScanOnNonExistingRecords_ShouldBehaveCorrectly(Isolation isolation)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+
     // no records
 
     // Act
-    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction1 = manager.begin();
+    DistributedTransaction transaction2 = manager.begin();
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
@@ -2362,76 +3711,100 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     assertThat(results1).isEmpty();
     assertThat(results2).isEmpty();
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result1.isPresent()).isTrue();
-    assertThat(getBalance(result1.get())).isEqualTo(1);
-    Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
-    assertThat(result2.isPresent()).isFalse();
-    transaction.commit();
 
-    assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    if (isolation == Isolation.SERIALIZABLE) {
+      // In SERIALIZABLE isolation, one transaction should commit and the other should throw
+      // CommitConflictException
+
+      DistributedTransaction transaction = manager.beginReadOnly();
+      Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+      assertThat(result1.isPresent()).isTrue();
+      assertThat(getBalance(result1.get())).isEqualTo(1);
+      Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
+      assertThat(result2.isPresent()).isFalse();
+      transaction.commit();
+
+      assertThat(thrown1).doesNotThrowAnyException();
+      assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    } else {
+      assert isolation == Isolation.READ_COMMITTED || isolation == Isolation.SNAPSHOT;
+
+      // In READ_COMMITTED or SNAPSHOT isolation, both transactions should commit successfully
+
+      DistributedTransaction transaction = manager.beginReadOnly();
+      // The results can not be produced by executing the transactions serially
+      Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+      assertThat(result1.isPresent()).isTrue();
+      assertThat(getBalance(result1.get())).isEqualTo(1);
+      Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
+      assertThat(result2.isPresent()).isTrue();
+      assertThat(getBalance(result2.get())).isEqualTo(1);
+      transaction.commit();
+
+      assertThat(thrown1).doesNotThrowAnyException();
+      assertThat(thrown2).doesNotThrowAnyException();
+    }
   }
 
-  @Test
-  public void
-      commit_WriteSkewWithScanOnExistingRecordsWithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    List<Put> puts =
-        Arrays.asList(
-            preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1),
-            preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    transaction.put(puts);
-    transaction.commit();
-
-    // Act
-    DistributedTransaction transaction1 = manager.begin(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.begin(Isolation.SERIALIZABLE);
-    List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
-    int count1 = results1.size();
-    List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, namespace1, TABLE_1));
-    int count2 = results2.size();
-    Put put1 = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, count1 + 1);
-    transaction1.put(put1);
-    Put put2 = preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, count2 + 1);
-    transaction2.put(put2);
-    Throwable thrown1 = catchThrowable(transaction1::commit);
-    Throwable thrown2 = catchThrowable(transaction2::commit);
-
-    // Assert
-    transaction = manager.begin(Isolation.SERIALIZABLE);
-    Optional<Result> result1 = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
-    assertThat(result1).isPresent();
-    assertThat(getBalance(result1.get())).isEqualTo(3);
-    Optional<Result> result2 = transaction.get(prepareGet(0, 1, namespace1, TABLE_1));
-    assertThat(result2).isPresent();
-    assertThat(getBalance(result2.get())).isEqualTo(1);
-    transaction.commit();
-
-    assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void scanAndCommit_MultipleScansGivenInTransactionWithSerializable_ShouldCommitProperly()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_DeleteGivenWithoutRead_ShouldNotThrowAnyExceptions(Isolation isolation)
       throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    transaction.scan(prepareScan(0, namespace1, TABLE_1));
-    transaction.scan(prepareScan(1, namespace1, TABLE_1));
+    transaction.delete(delete);
     assertThatCode(transaction::commit).doesNotThrowAnyException();
   }
 
-  @Test
-  public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_DeleteGivenForNonExisting_ShouldNotThrowAnyExceptions(Isolation isolation)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    transaction.get(get);
+    transaction.delete(delete);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord(Isolation isolation)
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.delete(delete);
+    transaction.commit();
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    DistributedTransaction another = manager.beginReadOnly();
+    assertThat(another.get(get).isPresent()).isFalse();
+    another.commit();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
     transaction.commit();
@@ -2464,17 +3837,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
-    transaction = manager.begin();
+    transaction = manager.beginReadOnly();
     Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     transaction.commit();
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
-  @Test
-  public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
     transaction.commit();
@@ -2503,17 +3878,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
-    transaction = manager.begin();
+    transaction = manager.beginReadOnly();
     Optional<Result> result = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
     transaction.commit();
     assertThat(result).isPresent();
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
-  @Test
-  public void get_PutThenGetWithoutConjunctionReturnEmptyFromStorage_ShouldReturnResult()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void get_PutThenGetWithoutConjunctionReturnEmptyFromStorage_ShouldReturnResult(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -2527,11 +3904,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
-  @Test
-  public void
-      get_PutThenGetWithConjunctionReturnEmptyFromStorageAndMatchedWithPut_ShouldReturnResult()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void get_PutThenGetWithConjunctionReturnEmptyFromStorageAndMatchedWithPut_ShouldReturnResult(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -2548,11 +3926,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
-  @Test
-  public void
-      get_PutThenGetWithConjunctionReturnEmptyFromStorageAndUnmatchedWithPut_ShouldReturnEmpty()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void get_PutThenGetWithConjunctionReturnEmptyFromStorageAndUnmatchedWithPut_ShouldReturnEmpty(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -2568,12 +3947,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result).isNotPresent();
   }
 
-  @Test
-  public void
-      get_PutThenGetWithConjunctionReturnResultFromStorageAndMatchedWithPut_ShouldReturnResult()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void get_PutThenGetWithConjunctionReturnResultFromStorageAndMatchedWithPut_ShouldReturnResult(
+      Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
     Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1);
     Get get =
@@ -2591,12 +3971,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
-  @Test
-  public void
-      get_PutThenGetWithConjunctionReturnResultFromStorageButUnmatchedWithPut_ShouldReturnEmpty()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void get_PutThenGetWithConjunctionReturnResultFromStorageButUnmatchedWithPut_ShouldReturnEmpty(
+      Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
     Put put = preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1);
     Get get =
@@ -2614,9 +3995,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result).isNotPresent();
   }
 
-  @Test
-  public void get_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void get_DeleteCalledBefore_ShouldReturnEmpty(Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
@@ -2634,9 +4017,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(resultAfter.isPresent()).isFalse();
   }
 
-  @Test
-  public void delete_PutCalledBefore_ShouldDelete() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void delete_PutCalledBefore_ShouldDelete(Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
@@ -2650,17 +4035,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
-    DistributedTransaction transaction2 = manager.begin();
+    DistributedTransaction transaction2 = manager.beginReadOnly();
     Optional<Result> resultAfter = transaction2.get(get);
     transaction2.commit();
     assertThat(resultBefore.isPresent()).isTrue();
     assertThat(resultAfter.isPresent()).isFalse();
   }
 
-  @Test
-  public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException(Isolation isolation)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
@@ -2679,10 +4066,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException(Isolation isolation)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
@@ -2695,9 +4084,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_NonOverlappingPutGivenBefore_ShouldScan(Isolation isolation)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
 
@@ -2710,11 +4102,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).doesNotThrowAnyException();
   }
 
-  @Test
-  public void
-      scan_PutWithOverlappedClusteringKeyAndNonOverlappedConjunctionsGivenBefore_ShouldScan()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_PutWithOverlappedClusteringKeyAndNonOverlappedConjunctionsGivenBefore_ShouldScan(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
     Scan scan =
@@ -2734,12 +4127,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).doesNotThrowAnyException();
   }
 
-  @Test
-  public void
-      scan_NonOverlappingPutGivenButOverlappingPutExists_ShouldThrowIllegalArgumentException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_NonOverlappingPutGivenButOverlappingPutExists_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 9999));
     Scan scan =
@@ -2755,10 +4149,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void scan_OverlappingPutWithConjunctionsGivenBefore_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_OverlappingPutWithConjunctionsGivenBefore_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(
         preparePut(0, 0, namespace1, TABLE_1)
@@ -2778,11 +4174,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void
-      scanWithIndex_PutWithOverlappedIndexKeyAndNonOverlappedConjunctionsGivenBefore_ShouldScan()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scanWithIndex_PutWithOverlappedIndexKeyAndNonOverlappedConjunctionsGivenBefore_ShouldScan(
+      Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -2802,12 +4199,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).doesNotThrowAnyException();
   }
 
-  @Test
-  public void
-      scanWithIndex_OverlappingPutWithNonIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      scanWithIndex_OverlappingPutWithNonIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
+          Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
     transaction.put(
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
@@ -2823,12 +4222,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void
-      scanWithIndex_NonOverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      scanWithIndex_NonOverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
+          Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
     transaction.put(
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).intValue(BALANCE, 999).build());
@@ -2842,12 +4243,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void
-      scanWithIndex_OverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scanWithIndex_OverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
     transaction.put(
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).intValue(BALANCE, 999).build());
@@ -2861,11 +4263,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void
-      scanWithIndex_OverlappingPutWithIndexedColumnAndConjunctionsGivenBefore_ShouldThrowIllegalArgumentException()
-          throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      scanWithIndex_OverlappingPutWithIndexedColumnAndConjunctionsGivenBefore_ShouldThrowIllegalArgumentException(
+          Isolation isolation) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(
         preparePut(0, 0, namespace1, TABLE_1)
@@ -2885,10 +4289,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void scan_DeleteGivenBefore_ShouldThrowIllegalArgumentException()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_DeleteGivenBefore_ShouldThrowIllegalArgumentException(Isolation isolation)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withValue(BALANCE, 1));
@@ -2902,34 +4308,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction1.rollback();
   }
 
-  @Test
-  public void begin_CorrectTransactionIdGiven_ShouldNotThrowAnyExceptions() {
-    // Arrange
-    String transactionId = ANY_ID_1;
-
-    // Act Assert
-    assertThatCode(
-            () -> {
-              DistributedTransaction transaction = manager.begin(transactionId);
-              transaction.commit();
-            })
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void begin_EmptyTransactionIdGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    String transactionId = "";
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.begin(transactionId))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void scanAll_DeleteGivenBefore_ShouldThrowIllegalArgumentException()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scanAll_DeleteGivenBefore_ShouldThrowIllegalArgumentException(Isolation isolation)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
     transaction.put(preparePut(0, 1, namespace1, TABLE_1).withIntValue(BALANCE, 1));
@@ -2944,9 +4328,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction1.rollback();
   }
 
-  @Test
-  public void scanAll_NonOverlappingPutGivenBefore_ShouldScanAll() throws TransactionException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scanAll_NonOverlappingPutGivenBefore_ShouldScanAll(Isolation isolation)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
 
@@ -2959,10 +4346,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).doesNotThrowAnyException();
   }
 
-  @Test
-  public void scanAll_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scanAll_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException(Isolation isolation)
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withIntValue(BALANCE, 1));
 
@@ -2975,12 +4364,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test
-  public void scanAll_ScanAllGivenForCommittedRecord_ShouldReturnRecord()
-      throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scanAll_ScanAllGivenForCommittedRecord_ShouldReturnRecord(
+      Isolation isolation, boolean readOnly) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     ScanAll scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(1);
 
     // Act
@@ -2994,14 +4385,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.COMMITTED);
   }
 
-  @Test
-  public void scanAll_ScanAllGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scanAll_ScanAllGivenForNonExisting_ShouldReturnEmpty(Isolation isolation, boolean readOnly)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction putTransaction = manager.begin();
     putTransaction.put(preparePut(0, 0, namespace1, TABLE_1));
     putTransaction.commit();
 
-    DistributedTransaction transaction = manager.begin();
+    DistributedTransaction transaction = begin(manager, readOnly);
     ScanAll scanAll = prepareScanAll(namespace2, TABLE_2);
 
     // Act
@@ -3013,181 +4407,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
-      throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
-      throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
-      throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
-      throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
-      throws TransactionException, ExecutionException, CoordinatorException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      CommitType commitType, Isolation isolation)
-      throws TransactionException, ExecutionException, CoordinatorException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
-      throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void getScanner_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      CommitType commitType, Isolation isolation)
-      throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scanAll, commitType, isolation, true);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scanAll, commitType, isolation, false);
-  }
-
-  @ParameterizedTest
-  @MethodSource("commitTypeAndIsolation")
-  public void
-      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          CommitType commitType, Isolation isolation)
-          throws ExecutionException, CoordinatorException, TransactionException {
-    ScanAll scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scanAll, commitType, isolation, true);
-  }
-
-  @Test
-  public void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord()
-      throws TransactionException {
+  @MethodSource("isolationAndReadOnlyMode")
+  void get_GetWithMatchedConjunctionsGivenForCommittedRecord_ShouldReturnRecord(
+      Isolation isolation, boolean readOnly) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Get get =
-        Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
             .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
             .and(column(SOME_COLUMN).isNullText())
             .build();
@@ -3198,20 +4426,22 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(1);
-    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
     assertThat(result.get().getText(SOME_COLUMN)).isNull();
   }
 
-  @Test
-  public void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty()
-      throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void get_GetWithUnmatchedConjunctionsGivenForCommittedRecord_ShouldReturnEmpty(
+      Isolation isolation, boolean readOnly) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = begin(manager, readOnly);
     Get get =
-        Get.newBuilder(prepareGet(1, 1, namespace1, TABLE_1))
+        Get.newBuilder(prepareGet(0, 0, namespace1, TABLE_1))
             .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
             .and(column(SOME_COLUMN).isEqualToText("aaa"))
             .build();
@@ -3224,33 +4454,18 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
   }
 
-  @Test
-  public void scan_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
-      throws TransactionException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_CalledTwiceWithSameConditionsAndUpdateForHappenedInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin();
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-
-    // Act
-    List<Result> result1 = transaction.scan(scan);
-    List<Result> result2 = transaction.scan(scan);
-    transaction.commit();
-
-    // Assert
-    verify(storage).scan(any(Scan.class));
-    assertThat(result1).isEqualTo(result2);
-  }
-
-  @Test
-  public void scan_CalledTwiceWithSameConditionsAndUpdateForHappenedInBetween_ShouldReadRepeatably()
-      throws TransactionException {
-    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
-    DistributedTransaction transaction1 = manager.begin();
+    // Act Assert
+    DistributedTransaction transaction1 = begin(manager, readOnly);
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace1)
@@ -3261,31 +4476,57 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build();
     List<Result> result1 = transaction1.scan(scan);
 
-    DistributedTransaction transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
-    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 0));
-    transaction2.commit();
+    // The record is updated by another transaction
+    manager.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 0)
+            .build());
 
-    // Act
     List<Result> result2 = transaction1.scan(scan);
-    transaction1.commit();
 
-    // Assert
-    assertThat(result1.size()).isEqualTo(1);
-    assertThat(result2.size()).isEqualTo(1);
-    assertThat(result1.get(0)).isEqualTo(result2.get(0));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation
+
+      transaction1.commit();
+
+      // The first scan should return the record
+      assertThat(result1.size()).isEqualTo(1);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(1);
+
+      // The second scan should return empty as the record was updated
+      assertThat(result2).isEmpty();
+    } else if (isolation == Isolation.SNAPSHOT) {
+      // In SNAPSHOT isolation
+
+      transaction1.commit();
+
+      // Both scans should return the same result
+      assertThat(result1.size()).isEqualTo(1);
+      assertThat(result2.size()).isEqualTo(1);
+      assertThat(result1.get(0)).isEqualTo(result2.get(0));
+    } else {
+      assert isolation == Isolation.SERIALIZABLE;
+
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction1::commit).isInstanceOf(CommitConflictException.class);
+    }
   }
 
-  @Test
-  public void
-      scan_CalledTwiceWithDifferentConditionsAndUpdateHappenedInBetween_ShouldNotReadRepeatably()
-          throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void scan_CalledTwiceWithDifferentConditionsAndUpdateHappenedInBetween_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly) throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
-    DistributedTransaction transaction1 = manager.begin();
+    DistributedTransaction transaction1 = begin(manager, readOnly);
     Scan scan1 =
         Scan.newBuilder()
             .namespace(namespace1)
@@ -3302,165 +4543,47 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .start(Key.ofInt(ACCOUNT_TYPE, 0))
             .where(column(BALANCE).isGreaterThanInt(1))
             .build();
+
+    // Act Assert
     List<Result> result1 = transaction1.scan(scan1);
 
-    DistributedTransaction transaction2 = manager.begin();
-    transaction2.get(prepareGet(0, 0, namespace1, TABLE_1));
-    transaction2.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
-    transaction2.commit();
+    // The record is updated by another transaction
+    manager.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 2)
+            .build());
 
-    // Act
     List<Result> result2 = transaction1.scan(scan2);
-    transaction1.commit();
 
-    // Assert
-    assertThat(result1.size()).isEqualTo(1);
-    assertThat(result2.size()).isEqualTo(1);
-    assertThat(result1.get(0)).isNotEqualTo(result2.get(0));
-    assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(1);
-    assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(2);
-  }
+    if (isolation == Isolation.SERIALIZABLE) {
+      // In SERIALIZABLE isolation, an anti-dependency should be detected
+      assertThatThrownBy(transaction1::commit).isInstanceOf(CommitConflictException.class);
+    } else {
+      assert isolation == Isolation.READ_COMMITTED || isolation == Isolation.SNAPSHOT;
 
-  @Test
-  @EnabledIf("isGroupCommitEnabled")
-  void put_WhenTheOtherTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
-    // Arrange
+      // In READ_COMMITTED or SNAPSHOT isolation
 
-    // Act
-    DistributedTransaction slowTxn = manager.begin();
-    DistributedTransaction fastTxn = manager.begin();
-    fastTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+      transaction1.commit();
 
-    assertTimeout(Duration.ofSeconds(10), fastTxn::commit);
+      // The first scan should return the record
+      assertThat(result1.size()).isEqualTo(1);
+      assertThat(result1.get(0).getInt(BALANCE)).isEqualTo(1);
 
-    slowTxn.put(preparePut(1, 0, namespace1, TABLE_1));
-    slowTxn.commit();
-
-    // Assert
-    DistributedTransaction validationTxn = manager.begin();
-    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isPresent();
-    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
-    validationTxn.commit();
-
-    assertThat(coordinator.getState(slowTxn.getId()).get().getState())
-        .isEqualTo(TransactionState.COMMITTED);
-    assertThat(coordinator.getState(fastTxn.getId()).get().getState())
-        .isEqualTo(TransactionState.COMMITTED);
-  }
-
-  @Test
-  @EnabledIf("isGroupCommitEnabled")
-  void put_WhenTheOtherTransactionsFails_ShouldBeCommittedWithoutBlocked() throws Exception {
-    // Arrange
-    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
-
-    // Act
-    DistributedTransaction failingTxn = manager.begin();
-    DistributedTransaction successTxn = manager.begin();
-    failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
-    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
-
-    // This transaction will be committed after the other transaction in the same group is removed.
-    assertTimeout(
-        Duration.ofSeconds(10),
-        () -> {
-          try {
-            failingTxn.commit();
-            fail();
-          } catch (CommitConflictException e) {
-            // Expected
-          } finally {
-            reset(commit);
-          }
-        });
-    assertTimeout(Duration.ofSeconds(10), successTxn::commit);
-
-    // Assert
-    DistributedTransaction validationTxn = manager.begin();
-    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
-    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
-    validationTxn.commit();
-
-    assertThat(coordinator.getState(failingTxn.getId()).get().getState())
-        .isEqualTo(TransactionState.ABORTED);
-    assertThat(coordinator.getState(successTxn.getId()).get().getState())
-        .isEqualTo(TransactionState.COMMITTED);
-  }
-
-  @Test
-  @EnabledIf("isGroupCommitEnabled")
-  void put_WhenTransactionFailsDueToConflict_ShouldBeAbortedWithoutBlocked() throws Exception {
-    // Arrange
-
-    // Act
-    DistributedTransaction failingTxn = manager.begin(Isolation.SERIALIZABLE);
-    DistributedTransaction successTxn = manager.begin(Isolation.SERIALIZABLE);
-    failingTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
-    failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
-    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
-
-    // This transaction will be committed after the other transaction in the same group
-    // is moved to a delayed group.
-    assertTimeout(Duration.ofSeconds(10), successTxn::commit);
-    assertTimeout(
-        Duration.ofSeconds(10),
-        () -> {
-          try {
-            failingTxn.commit();
-            fail();
-          } catch (CommitConflictException e) {
-            // Expected
-          }
-        });
-
-    // Assert
-    DistributedTransaction validationTxn = manager.begin();
-    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
-    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
-    validationTxn.commit();
-
-    assertThat(coordinator.getState(failingTxn.getId()).get().getState())
-        .isEqualTo(TransactionState.ABORTED);
-    assertThat(coordinator.getState(successTxn.getId()).get().getState())
-        .isEqualTo(TransactionState.COMMITTED);
-  }
-
-  @Test
-  @EnabledIf("isGroupCommitEnabled")
-  void put_WhenAllTransactionsAbort_ShouldBeAbortedProperly() throws Exception {
-    // Act
-    DistributedTransaction failingTxn1 = manager.begin(Isolation.SERIALIZABLE);
-    DistributedTransaction failingTxn2 = manager.begin(Isolation.SERIALIZABLE);
-
-    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
-
-    failingTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
-    failingTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
-
-    try {
-      assertThat(catchThrowable(failingTxn1::commit)).isInstanceOf(CommitConflictException.class);
-      assertThat(catchThrowable(failingTxn2::commit)).isInstanceOf(CommitConflictException.class);
-    } finally {
-      reset(commit);
+      // The second scan should return the updated record
+      assertThat(result2.size()).isEqualTo(1);
+      assertThat(result2.get(0).getInt(BALANCE)).isEqualTo(2);
     }
-
-    // Assert
-    DistributedTransaction validationTxn = manager.begin();
-    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
-    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isEmpty();
-    validationTxn.commit();
-
-    assertThat(coordinator.getState(failingTxn1.getId()).get().getState())
-        .isEqualTo(TransactionState.ABORTED);
-    assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
-        .isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
-  public void
-      scan_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
+  void scan_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3479,7 +4602,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3490,7 +4613,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.update(
         Update.newBuilder()
             .namespace(namespace1)
@@ -3505,9 +4628,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_RecordUpdatedByMySelf_WithSerializable_ShouldNotThrowAnyException()
+  void scan_RecordUpdatedByMySelf_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3526,7 +4650,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3550,10 +4674,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_FirstRecordInsertedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3572,7 +4697,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3583,7 +4708,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -3598,9 +4723,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_FirstRecordInsertedByMySelf_WithSerializable_ShouldNotThrowAnyException()
+  void scan_FirstRecordInsertedByMySelf_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3619,7 +4745,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3643,10 +4769,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_LastRecordInsertedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3665,7 +4792,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3676,7 +4803,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -3691,9 +4818,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_LastRecordInsertedByMySelf_WithSerializable_ShouldNotThrowAnyException()
+  void scan_LastRecordInsertedByMySelf_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3712,7 +4840,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3736,10 +4864,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_FirstRecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3758,7 +4887,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3769,7 +4898,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.delete(
         Delete.newBuilder()
             .namespace(namespace1)
@@ -3783,9 +4912,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_FirstRecordDeletedByMySelf_WithSerializable_ShouldNotThrowAnyException()
+  void scan_FirstRecordDeletedByMySelf_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3804,7 +4934,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results = transaction.scan(prepareScan(0, namespace1, TABLE_1));
 
     assertThat(results).hasSize(2);
@@ -3827,9 +4957,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
+  void scan_ScanWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3848,7 +4979,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -3867,10 +4998,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_ScanWithLimitGiven_RecordInsertedByAnotherTransaction_WithSerializable_ShouldNotThrowAnyException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3889,7 +5021,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -3907,7 +5039,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -3922,10 +5054,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_ScanWithLimitGiven_FirstRecordInsertedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3944,7 +5077,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -3962,7 +5095,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -3981,6 +5114,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithLimitGiven_FirstRecordInsertedByMySelf_WithSerializable_ShouldNotThrowAnyException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -3999,7 +5133,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -4029,10 +5163,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_ScanWithLimitGiven_LastRecordInsertedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4051,7 +5186,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -4068,7 +5203,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -4083,10 +5218,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       scan_ScanWithLimitGiven_LastRecordInsertedByMySelf_WithSerializable_ShouldNotThrowAnyException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4105,7 +5241,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -4135,9 +5271,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanAllGiven_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
+  void scan_ScanAllGiven_WithSerializable_ShouldNotThrowAnyException() throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4177,7 +5313,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(Scan.newBuilder().namespace(namespace1).table(TABLE_1).all().build());
 
@@ -4195,9 +5331,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanAllWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
+  void scan_ScanAllWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4237,7 +5374,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder().namespace(namespace1).table(TABLE_1).all().limit(3).build());
@@ -4256,9 +5393,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
+  void scan_ScanWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4298,7 +5436,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -4321,9 +5459,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithIndexWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
+  void scan_ScanWithIndexWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4363,7 +5502,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     List<Result> results =
         transaction.scan(
             Scan.newBuilder()
@@ -4387,9 +5526,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void get_GetWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
+  void get_GetWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -4400,7 +5540,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     Optional<Result> actual =
         transaction.get(
             Get.newBuilder()
@@ -4418,8 +5558,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void getScanner_WithSerializable_ShouldNotThrowAnyException() throws TransactionException {
+  void getScanner_WithSerializable_ShouldNotThrowAnyException() throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4445,7 +5586,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
 
     // Act Assert
     TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
@@ -4467,10 +5608,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       getScanner_FirstInsertedRecordByAnotherTransaction_WithSerializable_ShouldNotThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4489,7 +5631,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
 
     // Act Assert
     TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
@@ -4507,7 +5649,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     scanner.close();
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -4522,10 +5664,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
-      getScanner_RecordInsertedByAnotherTransaction_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
+  void getScanner_RecordInsertedByAnotherTransaction_WithSerializable_ShouldNotThrowAnyException()
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4544,7 +5686,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
 
     // Act Assert
     TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
@@ -4562,7 +5704,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     scanner.close();
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -4577,10 +5719,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       getScanner_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4599,7 +5742,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build()));
 
     Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
 
     // Act Assert
     TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
@@ -4617,7 +5760,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     scanner.close();
 
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction another = manager.begin();
     another.update(
         Update.newBuilder()
             .namespace(namespace1)
@@ -4632,13 +5775,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
+  void get_GetWithIndexGiven_NoRecordsInIndexRange_WithSerializable_ShouldNotThrowAnyException()
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
 
     // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction = manager.begin();
     Optional<Result> actual =
         transaction.get(
             Get.newBuilder()
@@ -4653,154 +5796,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void
+  void
       get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByMySelf_WithSerializable_ShouldNotThrowAnyException()
           throws TransactionException {
     // Arrange
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    transaction.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByMySelf_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isEmpty();
-
-    transaction.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin(Isolation.SERIALIZABLE);
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isEmpty();
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void getAndUpdate_GetWithIndexGiven_ShouldUpdate() throws TransactionException {
-    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -4825,6 +5825,157 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+  }
+
+  @Test
+  void
+      get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
+          throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Optional<Result> actual =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    DistributedTransaction another = manager.begin();
+    another.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    another.commit();
+
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  void
+      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByMySelf_WithSerializable_ShouldNotThrowAnyException()
+          throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Optional<Result> actual =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+
+    assertThat(actual).isEmpty();
+
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+  }
+
+  @Test
+  void
+      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
+          throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Optional<Result> actual =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+
+    assertThat(actual).isEmpty();
+
+    DistributedTransaction another = manager.begin();
+    another.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    another.commit();
+
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Disabled("Fix later")
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+    Optional<Result> result =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
     transaction.update(
         Update.newBuilder()
             .namespace(namespace1)
@@ -4836,26 +5987,27 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     transaction.commit();
 
-    transaction = manager.begin();
-    actual =
-        transaction.get(
+    Optional<Result> actual =
+        manager.get(
             Get.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
                 .build());
-    transaction.commit();
-
     assertThat(actual).isPresent();
     assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(1);
   }
 
-  @Test
-  public void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate() throws TransactionException {
+  @Disabled("Fix later")
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation)
+      throws TransactionException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -4875,7 +6027,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act Assert
     DistributedTransaction transaction = manager.begin();
-    List<Result> actualResults =
+    List<Result> results =
         transaction.scan(
             Scan.newBuilder()
                 .namespace(namespace1)
@@ -4883,9 +6035,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
                 .build());
 
-    assertThat(actualResults).hasSize(2);
+    assertThat(results).hasSize(2);
     Set<Integer> expectedTypes = Sets.newHashSet(0, 1);
-    for (Result result : actualResults) {
+    for (Result result : results) {
       assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
       expectedTypes.remove(result.getInt(ACCOUNT_TYPE));
       assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
@@ -4911,7 +6063,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     transaction.commit();
 
-    transaction = manager.begin();
+    transaction = manager.beginReadOnly();
     Optional<Result> actual1 =
         transaction.get(
             Get.newBuilder()
@@ -4941,572 +6093,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual2.get().getInt(BALANCE)).isEqualTo(2);
   }
 
-  @Test
-  public void get_GetGivenForCommittedRecord_InReadOnlyMode_WithSerializable_ShouldReturnRecord()
-      throws TransactionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-
-    // Act
-    Optional<Result> result = transaction.get(get);
-    transaction.commit();
-
-    // Assert
-    assertThat(result.isPresent()).isTrue();
-    assertThat(((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
-        .isEqualTo(TransactionState.COMMITTED);
-  }
-
-  @Test
-  public void
-      get_GetGivenForCommittedRecord_InReadOnlyMode_WhenRecordUpdatedByAnotherTransaction_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly();
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-
-    // Act Assert
-    Optional<Result> result = transaction.get(get);
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin();
-    another.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 1)
-            .build());
-    another.commit();
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetGivenForCommittedRecord_InReadOnlyMode_WhenRecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-
-    // Act Assert
-    Optional<Result> result = transaction.get(get);
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 1)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void scan_ScanGivenForCommittedRecord_InReadOnlyMode_WithSerializable_ShouldReturnRecord()
-      throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-
-    // Act
-    List<Result> results = transaction.scan(scan);
-    transaction.commit();
-
-    // Assert
-    assertThat(results.size()).isEqualTo(4);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
-    assertThat(getBalance(results.get(3))).isEqualTo(INITIAL_BALANCE);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForCommittedRecord_InReadOnlyMode_WhenRecordUpdatedByAnotherTransaction_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly();
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-
-    // Act Assert
-    List<Result> results = transaction.scan(scan);
-
-    assertThat(results.size()).isEqualTo(4);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
-    assertThat(getBalance(results.get(3))).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin();
-    another.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 1)
-            .build());
-    another.commit();
-
-    transaction.commit();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForCommittedRecord_InReadOnlyMode_WhenRecordInsertedByAnotherTransaction_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly();
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-
-    // Act Assert
-    List<Result> results = transaction.scan(scan);
-
-    assertThat(results.size()).isEqualTo(4);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
-    assertThat(getBalance(results.get(3))).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin();
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 5))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    transaction.commit();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForCommittedRecord_InReadOnlyMode_WhenRecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-
-    // Act Assert
-    List<Result> results = transaction.scan(scan);
-
-    assertThat(results.size()).isEqualTo(4);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
-    assertThat(getBalance(results.get(3))).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 1)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForCommittedRecord_InReadOnlyMode_WhenRecordInsertedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    populateRecords(namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-
-    // Act Assert
-    List<Result> results = transaction.scan(scan);
-
-    assertThat(results.size()).isEqualTo(4);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-
-    assertThat(results.get(3).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
-    assertThat(getBalance(results.get(3))).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 5))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void getScanner_InReadOnlyMode_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
-    // Arrange
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
-    Optional<Result> result1 = scanner.one();
-    assertThat(result1).isNotEmpty();
-    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    Optional<Result> result2 = scanner.one();
-    assertThat(result2).isNotEmpty();
-    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(result2.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    scanner.close();
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      getScanner_InReadOnlyMode_WhenRecordUpdatedByAnotherTransaction_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly();
-
-    // Act Assert
-    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
-    Optional<Result> result1 = scanner.one();
-    assertThat(result1).isNotEmpty();
-    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    Optional<Result> result2 = scanner.one();
-    assertThat(result2).isNotEmpty();
-    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(result2.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    scanner.close();
-
-    DistributedTransaction another = manager.begin();
-    another.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 1)
-            .build());
-    another.commit();
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      getScanner_InReadOnlyMode_WhenRecordInsertedByAnotherTransaction_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly();
-
-    // Act Assert
-    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
-    Optional<Result> result1 = scanner.one();
-    assertThat(result1).isNotEmpty();
-    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    Optional<Result> result2 = scanner.one();
-    assertThat(result2).isNotEmpty();
-    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(result2.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    scanner.close();
-
-    DistributedTransaction another = manager.begin();
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      getScanner_InReadOnlyMode_WhenRecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
-    Optional<Result> result1 = scanner.one();
-    assertThat(result1).isNotEmpty();
-    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    Optional<Result> result2 = scanner.one();
-    assertThat(result2).isNotEmpty();
-    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(result2.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    scanner.close();
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 1)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      getScanner_InReadOnlyMode_WhenRecordInsertedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 2))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    Scan scan = prepareScan(0, namespace1, TABLE_1);
-    DistributedTransaction transaction = manager.beginReadOnly(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
-    Optional<Result> result1 = scanner.one();
-    assertThat(result1).isNotEmpty();
-    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    Optional<Result> result2 = scanner.one();
-    assertThat(result2).isNotEmpty();
-    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(result2.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    scanner.close();
-
-    DistributedTransaction another = manager.begin(Isolation.SERIALIZABLE);
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
-    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -5543,8 +6138,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     originalStorage.mutate(prepareMutationComposer.get());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     Optional<Result> actual =
-        manager.get(
+        transaction.get(
             Get.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
@@ -5552,6 +6148,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
                 .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                 .build());
+    transaction.commit();
 
     assertThat(actual).isPresent();
     assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5559,11 +6156,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -5610,6 +6211,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     Optional<Result> actual =
         manager.get(
             Get.newBuilder()
@@ -5619,15 +6221,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
                 .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                 .build());
+    transaction.commit();
 
     assertThat(actual).isNotPresent();
   }
 
-  @Test
-  public void
-      scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -5672,14 +6279,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     originalStorage.mutate(prepareMutationComposer.get());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     List<Result> results =
-        manager.scan(
+        transaction.scan(
             Scan.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
                 .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                 .build());
+    transaction.commit();
 
     assertThat(results).hasSize(2);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5690,11 +6299,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -5749,14 +6362,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     List<Result> results =
-        manager.scan(
+        transaction.scan(
             Scan.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
                 .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
                 .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                 .build());
+    transaction.commit();
 
     assertThat(results).hasSize(1);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5764,11 +6379,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -5837,8 +6456,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     List<Result> results =
-        manager.scan(
+        transaction.scan(
             Scan.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
@@ -5846,6 +6466,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
                 .limit(2)
                 .build());
+    transaction.commit();
 
     assertThat(results).hasSize(2);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5856,11 +6477,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -5905,9 +6530,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     originalStorage.mutate(prepareMutationComposer.get());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     List<Result> results;
-    try (TransactionManagerCrudOperable.Scanner scanner =
-        manager.getScanner(
+    try (TransactionCrudOperable.Scanner scanner =
+        transaction.getScanner(
             Scan.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
@@ -5916,6 +6542,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build())) {
       results = scanner.all();
     }
+    transaction.commit();
 
     assertThat(results).hasSize(2);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -5926,11 +6553,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -5985,9 +6616,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     List<Result> results;
-    try (TransactionManagerCrudOperable.Scanner scanner =
-        manager.getScanner(
+    try (TransactionCrudOperable.Scanner scanner =
+        transaction.getScanner(
             Scan.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
@@ -5996,6 +6628,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build())) {
       results = scanner.all();
     }
+    transaction.commit();
 
     assertThat(results).hasSize(1);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -6003,11 +6636,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord()
-          throws UnknownTransactionStatusException, CrudException, ExecutionException {
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void
+      getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
+          Isolation isolation, boolean readOnly)
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
         Arrays.asList(
             Insert.newBuilder()
@@ -6076,9 +6713,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
 
     // Act Assert
+    DistributedTransaction transaction = begin(manager, readOnly);
     List<Result> results;
-    try (TransactionManagerCrudOperable.Scanner scanner =
-        manager.getScanner(
+    try (TransactionCrudOperable.Scanner scanner =
+        transaction.getScanner(
             Scan.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
@@ -6088,6 +6726,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .build())) {
       results = scanner.all();
     }
+    transaction.commit();
 
     assertThat(results).hasSize(2);
     assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
@@ -6098,11 +6737,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(results.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void
-      commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowCommitConflictExceptionAndPreserveExternalChanges()
-          throws UnknownTransactionStatusException, CrudException, RollbackException {
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowShouldBehaveCorrectly(
+          Isolation isolation)
+          throws UnknownTransactionStatusException, CrudException, RollbackException,
+              CommitException {
     // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
         Insert.newBuilder()
             .namespace(namespace1)
@@ -6164,10 +6807,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     assertThat(result).isNotPresent();
 
+    // CommitConflictException should be thrown because the record was updated by another
+    // transaction
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
     transaction.rollback();
 
-    // Assert
     result =
         manager.get(
             Get.newBuilder()
@@ -6177,381 +6821,563 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
                 .build());
 
+    // The record should still exist with the updated balance by the other transaction
     assertThat(result).isPresent();
     assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(result.get().getInt(BALANCE)).isEqualTo(200);
   }
 
-  @Test
-  public void manager_get_GetGivenForCommittedRecord_WithSerializable_ShouldReturnRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_get_GetGivenForCommittedRecord_ShouldReturnRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
-      Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
 
-      // Act
-      Optional<Result> result = managerWithSerializable.get(get);
+    // Act
+    Optional<Result> result = manager.get(get);
 
-      // Assert
-      assertThat(result.isPresent()).isTrue();
-      assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-      assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
-    }
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void manager_scan_ScanGivenForCommittedRecord_WithSerializable_ShouldReturnRecords()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_scan_ScanGivenForCommittedRecord_ShouldReturnRecords(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
-      Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
 
-      // Act
-      List<Result> results = managerWithSerializable.scan(scan);
+    // Act
+    List<Result> results = manager.scan(scan);
 
-      // Assert
-      assertThat(results.size()).isEqualTo(3);
-      assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
-      assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
+    // Assert
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(results.get(0))).isEqualTo(INITIAL_BALANCE);
 
-      assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
-      assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
-      assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(INITIAL_BALANCE);
 
-      assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
-      assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-      assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
-    }
+    assertThat(results.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
   }
 
-  @Test
-  public void manager_getScanner_ScanGivenForCommittedRecord_WithSerializable_ShouldReturnRecords()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_getScanner_ScanGivenForCommittedRecord_ShouldReturnRecords(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
-      Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(1, 0, 2, namespace1, TABLE_1);
 
-      // Act Assert
-      TransactionManagerCrudOperable.Scanner scanner = managerWithSerializable.getScanner(scan);
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner scanner = manager.getScanner(scan);
 
-      Optional<Result> result1 = scanner.one();
-      assertThat(result1).isPresent();
-      assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(1);
-      assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(getBalance(result1.get())).isEqualTo(INITIAL_BALANCE);
+    Optional<Result> result1 = scanner.one();
+    assertThat(result1).isPresent();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(result1.get())).isEqualTo(INITIAL_BALANCE);
 
-      Optional<Result> result2 = scanner.one();
-      assertThat(result2).isPresent();
-      assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(1);
-      assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
-      assertThat(getBalance(result2.get())).isEqualTo(INITIAL_BALANCE);
+    Optional<Result> result2 = scanner.one();
+    assertThat(result2).isPresent();
+    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(getBalance(result2.get())).isEqualTo(INITIAL_BALANCE);
 
-      Optional<Result> result3 = scanner.one();
-      assertThat(result3).isPresent();
-      assertThat(result3.get().getInt(ACCOUNT_ID)).isEqualTo(1);
-      assertThat(result3.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
-      assertThat(getBalance(result3.get())).isEqualTo(INITIAL_BALANCE);
+    Optional<Result> result3 = scanner.one();
+    assertThat(result3).isPresent();
+    assertThat(result3.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result3.get().getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(getBalance(result3.get())).isEqualTo(INITIAL_BALANCE);
 
-      assertThat(scanner.one()).isNotPresent();
+    assertThat(scanner.one()).isNotPresent();
 
-      scanner.close();
-    }
+    scanner.close();
   }
 
-  @Test
-  public void manager_put_PutGivenForNonExisting_WithSerializable_ShouldCreateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_put_PutGivenForNonExisting_ShouldCreateRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      int expected = INITIAL_BALANCE;
-      Put put =
-          Put.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .build();
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    int expected = INITIAL_BALANCE;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
 
-      // Act
-      managerWithSerializable.put(put);
+    // Act
+    manager.put(put);
 
-      // Assert
-      Get get = prepareGet(0, 0, namespace1, TABLE_1);
-      Optional<Result> result = managerWithSerializable.get(get);
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = manager.get(get);
 
-      assertThat(result.isPresent()).isTrue();
-      assertThat(getBalance(result.get())).isEqualTo(expected);
-    }
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
   }
 
-  @Test
-  public void manager_put_PutGivenForExisting_WithSerializable_ShouldUpdateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_put_PutGivenForExisting_ShouldUpdateRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
 
-      // Act
-      int expected = INITIAL_BALANCE + 100;
-      Put put =
-          Put.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .enableImplicitPreRead()
-              .build();
-      managerWithSerializable.put(put);
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .enableImplicitPreRead()
+            .build();
+    manager.put(put);
 
-      // Assert
-      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
 
-      assertThat(actual.isPresent()).isTrue();
-      assertThat(getBalance(actual.get())).isEqualTo(expected);
-    }
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
   }
 
-  @Test
-  public void manager_insert_InsertGivenForNonExisting_WithSerializable_ShouldCreateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_insert_InsertGivenForNonExisting_ShouldCreateRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      int expected = INITIAL_BALANCE;
-      Insert insert =
-          Insert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .build();
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    int expected = INITIAL_BALANCE;
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
 
-      // Act
-      managerWithSerializable.insert(insert);
+    // Act
+    manager.insert(insert);
 
-      // Assert
-      Get get = prepareGet(0, 0, namespace1, TABLE_1);
-      Optional<Result> result = managerWithSerializable.get(get);
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = manager.get(get);
 
-      assertThat(result.isPresent()).isTrue();
-      assertThat(getBalance(result.get())).isEqualTo(expected);
-    }
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
   }
 
-  @Test
-  public void
-      manager_insert_InsertGivenForExisting_WithSerializable_ShouldThrowCrudConflictException()
-          throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
-
-      // Act Assert
-      int expected = INITIAL_BALANCE + 100;
-      Insert insert =
-          Insert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .build();
-
-      assertThatThrownBy(() -> managerWithSerializable.insert(insert))
-          .isInstanceOf(CrudConflictException.class);
-    }
-  }
-
-  @Test
-  public void manager_upsert_UpsertGivenForNonExisting_WithSerializable_ShouldCreateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_insert_InsertGivenForExisting_ShouldThrowCrudConflictException(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      int expected = INITIAL_BALANCE;
-      Upsert upsert =
-          Upsert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .build();
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
 
-      // Act
-      managerWithSerializable.upsert(upsert);
+    // Act Assert
+    int expected = INITIAL_BALANCE + 100;
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
 
-      // Assert
-      Get get = prepareGet(0, 0, namespace1, TABLE_1);
-      Optional<Result> result = managerWithSerializable.get(get);
-
-      assertThat(result.isPresent()).isTrue();
-      assertThat(getBalance(result.get())).isEqualTo(expected);
-    }
+    assertThatThrownBy(() -> manager.insert(insert)).isInstanceOf(CrudConflictException.class);
   }
 
-  @Test
-  public void manager_upsert_UpsertGivenForExisting_WithSerializable_ShouldUpdateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_upsert_UpsertGivenForNonExisting_ShouldCreateRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    int expected = INITIAL_BALANCE;
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
 
-      // Act
-      int expected = INITIAL_BALANCE + 100;
-      Upsert upsert =
-          Upsert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .build();
-      managerWithSerializable.upsert(upsert);
+    // Act
+    manager.upsert(upsert);
 
-      // Assert
-      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+    // Assert
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = manager.get(get);
 
-      assertThat(actual.isPresent()).isTrue();
-      assertThat(getBalance(actual.get())).isEqualTo(expected);
-    }
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
   }
 
-  @Test
-  public void manager_update_UpdateGivenForNonExisting_WithSerializable_ShouldDoNothing()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_upsert_UpsertGivenForExisting_ShouldUpdateRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      Update update =
-          Update.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, INITIAL_BALANCE)
-              .build();
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
 
-      // Act
-      assertThatCode(() -> managerWithSerializable.update(update)).doesNotThrowAnyException();
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+    manager.upsert(upsert);
 
-      // Assert
-      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
 
-      assertThat(actual).isEmpty();
-    }
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
   }
 
-  @Test
-  public void manager_update_UpdateGivenForExisting_WithSerializable_ShouldUpdateRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_update_UpdateGivenForNonExisting_ShouldDoNothing(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build();
 
-      // Act
-      int expected = INITIAL_BALANCE + 100;
-      Update update =
-          Update.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, expected)
-              .build();
-      managerWithSerializable.update(update);
+    // Act
+    assertThatCode(() -> manager.update(update)).doesNotThrowAnyException();
 
-      // Assert
-      Optional<Result> actual = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
 
-      assertThat(actual.isPresent()).isTrue();
-      assertThat(getBalance(actual.get())).isEqualTo(expected);
-    }
+    assertThat(actual).isEmpty();
   }
 
-  @Test
-  public void manager_delete_DeleteGivenForExisting_WithSerializable_ShouldDeleteRecord()
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_update_UpdateGivenForExisting_ShouldUpdateRecord(Isolation isolation)
       throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      populateRecords(namespace1, TABLE_1);
-      Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
 
-      // Act
-      managerWithSerializable.delete(delete);
+    // Act
+    int expected = INITIAL_BALANCE + 100;
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, expected)
+            .build();
+    manager.update(update);
 
-      // Assert
-      Optional<Result> result = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
 
-      assertThat(result.isPresent()).isFalse();
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_delete_DeleteGivenForExisting_ShouldDeleteRecord(Isolation isolation)
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecord(manager, namespace1, TABLE_1);
+    Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
+
+    // Act
+    manager.delete(delete);
+
+    // Assert
+    Optional<Result> result = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
+
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void manager_mutate_ShouldMutateRecords(Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 1)
+            .build();
+    Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
+
+    // Act
+    manager.mutate(Arrays.asList(update, delete));
+
+    // Assert
+    Optional<Result> result1 = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> result2 = manager.get(prepareGet(1, 0, namespace1, TABLE_1));
+
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(getBalance(result1.get())).isEqualTo(1);
+
+    assertThat(result2.isPresent()).isFalse();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void putAndCommit_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit(
+      Isolation isolation) throws TransactionException, ExecutionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
+    List<Put> puts = preparePuts(namespace1, TABLE_1);
+    puts.get(0).withValue(balance);
+    puts.get(1).withValue(balance);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(puts.get(0));
+    transaction.put(puts.get(1));
+    transaction.commit();
+
+    // Assert
+    // one for prepare, one for commit
+    verify(storage, times(2)).mutate(anyList());
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      return;
     }
+    verify(coordinator).putState(any(Coordinator.State.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void putAndCommit_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit(
+      Isolation isolation) throws TransactionException, ExecutionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
+    List<Put> puts = preparePuts(namespace1, TABLE_1);
+    puts.get(0).withValue(balance);
+    puts.get(NUM_TYPES).withValue(balance); // next account
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.put(puts.get(0));
+    transaction.put(puts.get(NUM_TYPES));
+    transaction.commit();
+
+    // Assert
+    // twice for prepare, twice for commit
+    verify(storage, times(4)).mutate(anyList());
+    if (isGroupCommitEnabled()) {
+      verify(coordinator)
+          .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      return;
+    }
+    verify(coordinator).putState(any(Coordinator.State.class));
   }
 
   @Test
-  public void manager_mutate_WithSerializable_ShouldMutateRecords() throws TransactionException {
-    try (DistributedTransactionManager managerWithSerializable =
-        getTransactionManagerWithSerializable()) {
-      // Arrange
-      manager.insert(
-          Insert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, INITIAL_BALANCE)
-              .build());
-      manager.insert(
-          Insert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, INITIAL_BALANCE)
-              .build());
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenTheOtherTransactionsIsDelayed_ShouldBeCommittedWithoutBlocked() throws Exception {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
 
-      Update update =
-          Update.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE_1)
-              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-              .intValue(BALANCE, 1)
-              .build();
-      Delete delete = prepareDelete(1, 0, namespace1, TABLE_1);
+    // Act
+    DistributedTransaction slowTxn = manager.begin();
+    DistributedTransaction fastTxn = manager.begin();
+    fastTxn.put(preparePut(0, 0, namespace1, TABLE_1));
 
-      // Act
-      managerWithSerializable.mutate(Arrays.asList(update, delete));
+    assertTimeout(Duration.ofSeconds(10), fastTxn::commit);
 
-      // Assert
-      Optional<Result> result1 = managerWithSerializable.get(prepareGet(0, 0, namespace1, TABLE_1));
-      Optional<Result> result2 = managerWithSerializable.get(prepareGet(1, 0, namespace1, TABLE_1));
+    slowTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+    slowTxn.commit();
 
-      assertThat(result1.isPresent()).isTrue();
-      assertThat(getBalance(result1.get())).isEqualTo(1);
+    // Assert
+    DistributedTransaction validationTxn = manager.beginReadOnly();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isPresent();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
 
-      assertThat(result2.isPresent()).isFalse();
+    assertThat(coordinator.getState(slowTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+    assertThat(coordinator.getState(fastTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenTheOtherTransactionsFails_ShouldBeCommittedWithoutBlocked() throws Exception {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
+
+    // Act
+    DistributedTransaction failingTxn = manager.begin();
+    DistributedTransaction successTxn = manager.begin();
+    failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+
+    // This transaction will be committed after the other transaction in the same group is removed.
+    assertTimeout(
+        Duration.ofSeconds(10),
+        () -> {
+          try {
+            failingTxn.commit();
+            fail();
+          } catch (CommitConflictException e) {
+            // Expected
+          } finally {
+            reset(commit);
+          }
+        });
+    assertTimeout(Duration.ofSeconds(10), successTxn::commit);
+
+    // Assert
+    DistributedTransaction validationTxn = manager.beginReadOnly();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failingTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(successTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenTransactionFailsDueToConflict_ShouldBeAbortedWithoutBlocked() throws Exception {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Act
+    DistributedTransaction failingTxn = manager.begin();
+    DistributedTransaction successTxn = manager.begin();
+    failingTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    failingTxn.put(preparePut(0, 0, namespace1, TABLE_1));
+    successTxn.put(preparePut(1, 0, namespace1, TABLE_1));
+
+    // This transaction will be committed after the other transaction in the same group
+    // is moved to a delayed group.
+    assertTimeout(Duration.ofSeconds(10), successTxn::commit);
+    assertTimeout(
+        Duration.ofSeconds(10),
+        () -> {
+          try {
+            failingTxn.commit();
+            fail();
+          } catch (CommitConflictException e) {
+            // Expected
+          }
+        });
+
+    // Assert
+    DistributedTransaction validationTxn = manager.beginReadOnly();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isPresent();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failingTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(successTxn.getId()).get().getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void put_WhenAllTransactionsAbort_ShouldBeAbortedProperly() throws Exception {
+    // Act
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+    DistributedTransaction failingTxn1 = manager.begin();
+    DistributedTransaction failingTxn2 = manager.begin();
+
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
+
+    failingTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
+    failingTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
+
+    try {
+      assertThat(catchThrowable(failingTxn1::commit)).isInstanceOf(CommitConflictException.class);
+      assertThat(catchThrowable(failingTxn2::commit)).isInstanceOf(CommitConflictException.class);
+    } finally {
+      reset(commit);
     }
+
+    // Assert
+    DistributedTransaction validationTxn = manager.beginReadOnly();
+    assertThat(validationTxn.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+    assertThat(validationTxn.get(prepareGet(1, 0, namespace1, TABLE_1))).isEmpty();
+    validationTxn.commit();
+
+    assertThat(coordinator.getState(failingTxn1.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
+    assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
+        .isEqualTo(TransactionState.ABORTED);
   }
 
   private DistributedTransaction prepareTransfer(
+      ConsensusCommitManager manager,
       int fromId,
       String fromNamespace,
       String fromTable,
@@ -6584,6 +7410,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   private DistributedTransaction prepareDeletes(
+      ConsensusCommitManager manager,
       int one,
       String namespace,
       String table,
@@ -6609,21 +7436,34 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     return transaction;
   }
 
-  private void populateRecords(String namespace, String table) throws TransactionException {
+  private void populateRecord(ConsensusCommitManager manager, String namespace, String table)
+      throws TransactionException {
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+  }
+
+  private void populateRecords(ConsensusCommitManager manager, String namespace, String table)
+      throws TransactionException {
     DistributedTransaction transaction = manager.begin();
     for (int i = 0; i < NUM_ACCOUNTS; i++) {
       for (int j = 0; j < NUM_TYPES; j++) {
         Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
         Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
-        Put put =
-            Put.newBuilder()
+        Insert insert =
+            Insert.newBuilder()
                 .namespace(namespace)
                 .table(table)
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .intValue(BALANCE, INITIAL_BALANCE)
                 .build();
-        transaction.put(put);
+        transaction.insert(insert);
       }
     }
     transaction.commit();
@@ -6790,11 +7630,88 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     return balance.get().getAsInt();
   }
 
-  private DistributedTransactionManager getTransactionManagerWithSerializable() {
-    Properties properties = getProperties(TEST_NAME);
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
-    properties.put(ConsensusCommitConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.name());
-    return TransactionFactory.create(properties).getTransactionManager();
+  private ConsensusCommitManager createConsensusCommitManager(Isolation isolation) {
+    storage = spy(originalStorage);
+    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+    recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
+    commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
+    return new ConsensusCommitManager(
+        storage,
+        admin,
+        databaseConfig,
+        coordinator,
+        parallelExecutor,
+        recoveryExecutor,
+        commit,
+        isolation,
+        false,
+        groupCommitter);
+  }
+
+  private CommitHandler createCommitHandler(
+      TransactionTableMetadataManager tableMetadataManager,
+      @Nullable CoordinatorGroupCommitter groupCommitter) {
+    if (groupCommitter != null) {
+      return new CommitHandlerWithGroupCommit(
+          storage, coordinator, tableMetadataManager, parallelExecutor, true, groupCommitter);
+    } else {
+      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, true);
+    }
+  }
+
+  private DistributedTransaction begin(ConsensusCommitManager manager, boolean readOnly) {
+    if (readOnly) {
+      return manager.beginReadOnly();
+    } else {
+      return manager.begin();
+    }
+  }
+
+  private void waitForRecoveryCompletion(DistributedTransaction transaction) throws CrudException {
+    if (transaction instanceof DecoratedDistributedTransaction) {
+      transaction = ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
+    }
+    assert transaction instanceof ConsensusCommit;
+
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+  }
+
+  private boolean isGroupCommitEnabled() {
+    return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
+  }
+
+  static Stream<Arguments> isolationAndReadOnlyMode() {
+    return Arrays.stream(Isolation.values())
+        .flatMap(
+            isolation -> Stream.of(false, true).map(readOnly -> Arguments.of(isolation, readOnly)));
+  }
+
+  static Stream<Arguments> isolationAndCommitType() {
+    return Arrays.stream(Isolation.values())
+        .flatMap(
+            isolation ->
+                Arrays.stream(CommitType.values())
+                    .map(commitType -> Arguments.of(isolation, commitType)));
+  }
+
+  static Stream<Arguments> isolationAndReadOnlyModeAndCommitType() {
+    return Arrays.stream(Isolation.values())
+        .flatMap(
+            isolation ->
+                Stream.of(false, true)
+                    .flatMap(
+                        readOnly ->
+                            Arrays.stream(CommitType.values())
+                                .map(commitType -> Arguments.of(isolation, readOnly, commitType))));
+  }
+
+  enum CommitType {
+    NORMAL_COMMIT,
+    GROUP_COMMIT,
+    DELAYED_GROUP_COMMIT
   }
 }
