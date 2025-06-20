@@ -36,6 +36,16 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "github-actions"
+    target-branch: "3.16"
+    groups:
+      actions on branch 3.16:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
     target-branch: "3.15"
     groups:
       actions on branch 3.15:
@@ -69,16 +79,6 @@ updates:
     target-branch: "3.12"
     groups:
       actions on branch 3.12:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "github-actions"
-    target-branch: "3.11"
-    groups:
-      actions on branch 3.11:
         patterns:
           - "*"
     directory: "/"
