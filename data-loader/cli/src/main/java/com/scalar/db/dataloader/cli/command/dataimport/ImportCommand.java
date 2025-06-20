@@ -5,7 +5,7 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
@@ -55,15 +55,12 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
-        spec.commandLine(), dataChunkSize, CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE);
+        spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
     validatePositiveValue(
-        spec.commandLine(), transactionSize, CoreError.DATA_LOADER_INVALID_TRANSACTION_SIZE);
+        spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
+    validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
     validatePositiveValue(
-        spec.commandLine(), maxThreads, CoreError.DATA_LOADER_INVALID_MAX_THREADS);
-    validatePositiveValue(
-        spec.commandLine(),
-        dataChunkQueueSize,
-        CoreError.DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE);
+        spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
     ImportOptions importOptions = createImportOptions(controlFile);
     ImportLoggerConfig config =
@@ -192,7 +189,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     if (StringUtils.isBlank(controlFilePath)
         && (StringUtils.isBlank(namespace) || StringUtils.isBlank(tableName))) {
       throw new ParameterException(
-          spec.commandLine(), CoreError.DATA_LOADER_IMPORT_TARGET_MISSING.buildMessage());
+          spec.commandLine(), DataLoaderError.IMPORT_TARGET_MISSING.buildMessage());
     }
 
     // Make sure the control file exists when a path is provided
@@ -201,7 +198,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       if (!Files.exists(path)) {
         throw new ParameterException(
             spec.commandLine(),
-            CoreError.DATA_LOADER_MISSING_IMPORT_FILE.buildMessage(
+            DataLoaderError.MISSING_IMPORT_FILE.buildMessage(
                 controlFilePath, FILE_OPTION_NAME_LONG_FORMAT));
       }
     }
@@ -224,7 +221,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         if (!Files.isWritable(logDirectoryPath)) {
           throw new ParameterException(
               spec.commandLine(),
-              CoreError.DATA_LOADER_LOG_DIRECTORY_CREATION_FAILED.buildMessage(
+              DataLoaderError.LOG_DIRECTORY_CREATION_FAILED.buildMessage(
                   logDirectoryPath.toAbsolutePath()));
         }
       } else {
@@ -234,7 +231,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         } catch (IOException e) {
           throw new ParameterException(
               spec.commandLine(),
-              CoreError.DATA_LOADER_LOG_DIRECTORY_CREATION_FAILED.buildMessage(
+              DataLoaderError.LOG_DIRECTORY_CREATION_FAILED.buildMessage(
                   logDirectoryPath.toAbsolutePath()));
         }
       }
@@ -248,7 +245,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     if (!Files.isWritable(logDirectoryPath)) {
       throw new ParameterException(
           spec.commandLine(),
-          CoreError.DATA_LOADER_LOG_DIRECTORY_WRITE_ACCESS_DENIED.buildMessage(
+          DataLoaderError.LOG_DIRECTORY_WRITE_ACCESS_DENIED.buildMessage(
               logDirectoryPath.toAbsolutePath()));
     }
   }
@@ -271,8 +268,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       return Optional.of(controlFile);
     } catch (IOException e) {
       throw new ParameterException(
-          spec.commandLine(),
-          CoreError.DATA_LOADER_INVALID_CONTROL_FILE.buildMessage(controlFilePath));
+          spec.commandLine(), DataLoaderError.INVALID_CONTROL_FILE.buildMessage(controlFilePath));
     }
   }
 

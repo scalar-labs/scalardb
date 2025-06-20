@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.task.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.DatabaseKeyType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.Set;
@@ -72,8 +72,8 @@ public class ImportSourceRecordValidator {
       if (!sourceRecord.has(columnName)) {
         String errorMessageFormat =
             keyType == DatabaseKeyType.PARTITION
-                ? CoreError.DATA_LOADER_MISSING_PARTITION_KEY_COLUMN.buildMessage(columnName)
-                : CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN.buildMessage(columnName);
+                ? DataLoaderError.MISSING_PARTITION_KEY_COLUMN.buildMessage(columnName)
+                : DataLoaderError.MISSING_CLUSTERING_KEY_COLUMN.buildMessage(columnName);
         validationResult.addErrorMessage(columnName, errorMessageFormat);
       }
     }
@@ -100,7 +100,7 @@ public class ImportSourceRecordValidator {
           && !ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata)
           && !sourceRecord.has(columnName)) {
         validationResult.addErrorMessage(
-            columnName, CoreError.DATA_LOADER_MISSING_COLUMN.buildMessage(columnName));
+            columnName, DataLoaderError.MISSING_COLUMN.buildMessage(columnName));
       }
     }
   }

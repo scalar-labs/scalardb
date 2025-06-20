@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
@@ -106,7 +106,7 @@ public abstract class ImportProcessor {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new RuntimeException(
-          CoreError.DATA_LOADER_DATA_CHUNK_PROCESS_FAILED.buildMessage(e.getMessage()), e);
+          DataLoaderError.DATA_CHUNK_PROCESS_FAILED.buildMessage(e.getMessage()), e);
     } finally {
       shutdownExecutorGracefully(dataChunkReaderExecutor);
       shutdownExecutorGracefully(dataChunkProcessorExecutor);

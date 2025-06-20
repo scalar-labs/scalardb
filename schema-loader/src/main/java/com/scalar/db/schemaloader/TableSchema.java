@@ -7,7 +7,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -65,8 +64,8 @@ public class TableSchema {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE
-              .buildMessage(tableFullName));
+          SchemaLoaderError.PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE.buildMessage(
+              tableFullName));
     }
     namespace = fullName[0];
     tableName = fullName[1];
@@ -80,7 +79,7 @@ public class TableSchema {
     // Add partition keys
     if (!tableDefinition.keySet().contains(PARTITION_KEY)) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_PARSE_ERROR_PARTITION_KEY_MUST_BE_SPECIFIED.buildMessage(
+          SchemaLoaderError.PARSE_ERROR_PARTITION_KEY_MUST_BE_SPECIFIED.buildMessage(
               tableFullName));
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
@@ -108,7 +107,7 @@ public class TableSchema {
           tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(order.toUpperCase()));
         } else {
           throw new IllegalArgumentException(
-              CoreError.SCHEMA_LOADER_PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT.buildMessage(
+              SchemaLoaderError.PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT.buildMessage(
                   tableFullName, clusteringKeyRaw.getAsString()));
         }
       }
@@ -122,7 +121,7 @@ public class TableSchema {
     // Add columns
     if (!tableDefinition.keySet().contains(COLUMNS)) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_PARSE_ERROR_COLUMNS_NOT_SPECIFIED.buildMessage(tableFullName));
+          SchemaLoaderError.PARSE_ERROR_COLUMNS_NOT_SPECIFIED.buildMessage(tableFullName));
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
@@ -138,7 +137,7 @@ public class TableSchema {
       DataType dataType = DATA_MAP_TYPE.get(columnDataType.toUpperCase());
       if (dataType == null) {
         throw new IllegalArgumentException(
-            CoreError.SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE.buildMessage(
+            SchemaLoaderError.PARSE_ERROR_INVALID_COLUMN_TYPE.buildMessage(
                 tableFullName, columnName, column.getValue().getAsString()));
       }
 

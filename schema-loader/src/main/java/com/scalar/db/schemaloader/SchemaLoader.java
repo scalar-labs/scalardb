@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonParseException;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
@@ -855,7 +854,7 @@ public class SchemaLoader {
         return new SchemaOperator(config.getLeft());
       } catch (IOException e) {
         throw new SchemaLoaderException(
-            CoreError.SCHEMA_LOADER_READING_CONFIG_FILE_FAILED.buildMessage(
+            SchemaLoaderError.READING_CONFIG_FILE_FAILED.buildMessage(
                 config.getLeft().toAbsolutePath()),
             e);
       }
@@ -874,7 +873,7 @@ public class SchemaLoader {
         return schemaParser.parse();
       } catch (IllegalArgumentException | IllegalStateException | JsonParseException e) {
         throw new SchemaLoaderException(
-            CoreError.SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED.buildMessage(e.getMessage()), e);
+            SchemaLoaderError.PARSING_SCHEMA_JSON_FAILED.buildMessage(e.getMessage()), e);
       }
     }
     return Collections.emptyList();
@@ -891,7 +890,7 @@ public class SchemaLoader {
         return new SchemaParser(schema.getLeft(), options);
       } catch (IOException e) {
         throw new SchemaLoaderException(
-            CoreError.SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED.buildMessage(
+            SchemaLoaderError.READING_SCHEMA_FILE_FAILED.buildMessage(
                 schema.getLeft().toAbsolutePath()),
             e);
       }
@@ -909,7 +908,7 @@ public class SchemaLoader {
         return schemaParser.parse();
       } catch (IllegalArgumentException | IllegalStateException | JsonParseException e) {
         throw new SchemaLoaderException(
-            CoreError.SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED.buildMessage(e.getMessage()), e);
+            SchemaLoaderError.PARSING_SCHEMA_JSON_FAILED.buildMessage(e.getMessage()), e);
       }
     }
     return Collections.emptyList();
@@ -926,7 +925,7 @@ public class SchemaLoader {
         return new ImportSchemaParser(schema.getLeft(), options);
       } catch (IOException e) {
         throw new SchemaLoaderException(
-            CoreError.SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED.buildMessage(
+            SchemaLoaderError.READING_SCHEMA_FILE_FAILED.buildMessage(
                 schema.getLeft().toAbsolutePath()),
             e);
       }

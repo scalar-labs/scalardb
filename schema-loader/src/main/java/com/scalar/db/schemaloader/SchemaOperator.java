@@ -5,7 +5,6 @@ import com.google.common.base.Suppliers;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.schemaloader.alteration.TableMetadataAlteration;
@@ -296,7 +295,7 @@ public class SchemaOperator implements AutoCloseable {
       try {
         if (!tableExists(namespace, table, isTransactional)) {
           throw new IllegalArgumentException(
-              CoreError.TABLE_NOT_FOUND.buildMessage(
+              SchemaLoaderError.TABLE_NOT_FOUND.buildMessage(
                   ScalarDbUtils.getFullTableName(namespace, table)));
         }
         TableMetadata currentMetadata = getCurrentTableMetadata(namespace, table, isTransactional);

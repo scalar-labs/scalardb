@@ -4,7 +4,7 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Map;
 import java.util.Properties;
