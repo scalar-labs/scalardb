@@ -1241,6 +1241,8 @@ public enum CoreError implements ScalarDbError {
       "Getting the storage information failed. Namespace: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
+      Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category
