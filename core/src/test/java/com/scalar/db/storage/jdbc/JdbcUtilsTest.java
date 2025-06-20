@@ -51,7 +51,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.mysql.cj.jdbc.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
-    when(rdbEngine.getConnectionProperties()).thenReturn(Collections.emptyMap());
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
@@ -95,7 +95,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new org.postgresql.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
-    when(rdbEngine.getConnectionProperties()).thenReturn(Collections.emptyMap());
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
@@ -135,7 +135,7 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
     when(rdbEngine.getDriver()).thenReturn(driver);
-    when(rdbEngine.getConnectionProperties())
+    when(rdbEngine.getConnectionProperties(config))
         .thenReturn(ImmutableMap.of("prop1", "prop1Value", "prop2", "prop2Value"));
 
     try (MockedStatic<JdbcUtils> jdbcUtils =
