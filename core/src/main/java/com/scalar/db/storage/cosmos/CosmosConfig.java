@@ -2,7 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.config.ConfigUtils.getString;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Optional;
 import javax.annotation.Nullable;

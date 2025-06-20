@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.controlfile;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.RuntimeUtil;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import java.util.HashSet;
@@ -40,7 +40,7 @@ public class ControlFileValidator {
       // Make sure that multiple table mappings for one table do not exist
       if (uniqueTables.contains(lookupKey)) {
         throw new ControlFileValidationException(
-            CoreError.DATA_LOADER_DUPLICATE_DATA_MAPPINGS.buildMessage(lookupKey));
+            DataLoaderError.DUPLICATE_DATA_MAPPINGS.buildMessage(lookupKey));
       }
       uniqueTables.add(lookupKey);
 
@@ -88,7 +88,7 @@ public class ControlFileValidator {
     for (String columnName : columnNames) {
       if (!mappedTargetColumns.contains(columnName)) {
         throw new ControlFileValidationException(
-            CoreError.DATA_LOADER_MISSING_COLUMN_MAPPING.buildMessage(
+            DataLoaderError.MISSING_COLUMN_MAPPING.buildMessage(
                 columnName, TableMetadataUtil.getTableLookupKey(controlFileTable)));
       }
     }
@@ -105,7 +105,7 @@ public class ControlFileValidator {
     // Make sure data mapping for at least one table is provided
     if (controlFile.getTables().isEmpty()) {
       throw new ControlFileValidationException(
-          CoreError.DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS.buildMessage());
+          DataLoaderError.CONTROL_FILE_MISSING_DATA_MAPPINGS.buildMessage());
     }
   }
 
@@ -124,7 +124,7 @@ public class ControlFileValidator {
     String lookupKey = TableMetadataUtil.getTableLookupKey(controlFileTable);
     if (!tableMetadataMap.containsKey(lookupKey)) {
       throw new ControlFileValidationException(
-          CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(
+          DataLoaderError.MISSING_NAMESPACE_OR_TABLE.buildMessage(
               controlFileTable.getNamespace(), controlFileTable.getTable()));
     }
   }
@@ -147,7 +147,7 @@ public class ControlFileValidator {
       // Make sure the target fields are found in the table metadata
       if (!columnNames.contains(mapping.getTargetColumn())) {
         throw new ControlFileValidationException(
-            CoreError.DATA_LOADER_TARGET_COLUMN_NOT_FOUND.buildMessage(
+            DataLoaderError.TARGET_COLUMN_NOT_FOUND.buildMessage(
                 mapping.getTargetColumn(), mapping.getSourceField(), lookupKey));
       }
     }
@@ -171,7 +171,7 @@ public class ControlFileValidator {
     for (String partitionKeyName : partitionKeyNames) {
       if (!mappedTargetColumns.contains(partitionKeyName)) {
         throw new ControlFileValidationException(
-            CoreError.DATA_LOADER_MISSING_PARTITION_KEY.buildMessage(
+            DataLoaderError.MISSING_PARTITION_KEY.buildMessage(
                 partitionKeyName, TableMetadataUtil.getTableLookupKey(controlFileTable)));
       }
     }
@@ -195,7 +195,7 @@ public class ControlFileValidator {
     for (String clusteringKeyName : clusteringKeyNames) {
       if (!mappedTargetColumns.contains(clusteringKeyName)) {
         throw new ControlFileValidationException(
-            CoreError.DATA_LOADER_MISSING_CLUSTERING_KEY.buildMessage(
+            DataLoaderError.MISSING_CLUSTERING_KEY.buildMessage(
                 clusteringKeyName, TableMetadataUtil.getTableLookupKey(controlFileTable)));
       }
     }
@@ -215,7 +215,7 @@ public class ControlFileValidator {
     for (ControlFileTableFieldMapping mapping : controlFileTable.getMappings()) {
       if (!mappedTargetColumns.add(mapping.getTargetColumn())) {
         throw new ControlFileValidationException(
-            CoreError.DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND.buildMessage(
+            DataLoaderError.MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND.buildMessage(
                 mapping.getTargetColumn(), TableMetadataUtil.getTableLookupKey(controlFileTable)));
       }
     }

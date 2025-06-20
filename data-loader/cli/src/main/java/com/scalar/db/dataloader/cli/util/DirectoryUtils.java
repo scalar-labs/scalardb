@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.cli.util;
 
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,7 +26,7 @@ public final class DirectoryUtils {
     // Check if the current working directory is writable
     if (!Files.isWritable(workingDirectoryPath)) {
       throw new DirectoryValidationException(
-          CoreError.DATA_LOADER_DIRECTORY_WRITE_ACCESS.buildMessage(
+          DataLoaderError.DIRECTORY_WRITE_ACCESS.buildMessage(
               workingDirectoryPath.toAbsolutePath()));
     }
   }
@@ -42,7 +42,7 @@ public final class DirectoryUtils {
       throws DirectoryValidationException {
     if (StringUtils.isBlank(directoryPath)) {
       throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_MISSING_DIRECTORY_NOT_ALLOWED.buildMessage());
+          DataLoaderError.MISSING_DIRECTORY_NOT_ALLOWED.buildMessage());
     }
 
     Path path = Paths.get(directoryPath);
@@ -50,12 +50,11 @@ public final class DirectoryUtils {
     if (Files.exists(path)) {
       if (!Files.isDirectory(path)) {
         throw new DirectoryValidationException(
-            CoreError.DATA_LOADER_PATH_IS_NOT_A_DIRECTORY.buildMessage(path));
+            DataLoaderError.PATH_IS_NOT_A_DIRECTORY.buildMessage(path));
       }
       if (!Files.isWritable(path)) {
         throw new DirectoryValidationException(
-            CoreError.DATA_LOADER_DIRECTORY_WRITE_ACCESS_NOT_ALLOWED.buildMessage(
-                path.toAbsolutePath()));
+            DataLoaderError.DIRECTORY_WRITE_ACCESS_NOT_ALLOWED.buildMessage(path.toAbsolutePath()));
       }
 
     } else {
@@ -64,7 +63,7 @@ public final class DirectoryUtils {
         Files.createDirectories(path);
       } catch (IOException e) {
         throw new DirectoryValidationException(
-            CoreError.DATA_LOADER_DIRECTORY_CREATE_FAILED.buildMessage(
+            DataLoaderError.DIRECTORY_CREATE_FAILED.buildMessage(
                 path.toAbsolutePath(), e.getMessage()));
       }
     }
