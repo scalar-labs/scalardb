@@ -337,18 +337,19 @@ public class MutationsGrouperTest {
   }
 
   @Test
-  public void canBeGroupedTogether_WithEmptyCollection_ShouldReturnTrue()
+  public void canBeGroupedAltogether_WithEmptyCollection_ShouldReturnTrue()
       throws ExecutionException {
     // Act
-    boolean result = grouper.canBeGroupedTogether(Collections.emptyList());
+    boolean result = grouper.canBeGroupedAltogether(Collections.emptyList());
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void canBeGroupedTogether_WithAllMutationsInSameGroupForRecordAtomicity_ShouldReturnTrue()
-      throws ExecutionException {
+  public void
+      canBeGroupedAltogether_WithAllMutationsInSameGroupForRecordAtomicity_ShouldReturnTrue()
+          throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "table";
@@ -368,7 +369,7 @@ public class MutationsGrouperTest {
         createMutation(namespace, table, partitionKey1, Optional.of(clusteringKey1));
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isTrue();
@@ -376,7 +377,7 @@ public class MutationsGrouperTest {
 
   @Test
   public void
-      canBeGroupedTogether_WithAllMutationsInSameGroupForPartitionAtomicity_ShouldReturnTrue()
+      canBeGroupedAltogether_WithAllMutationsInSameGroupForPartitionAtomicity_ShouldReturnTrue()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -398,14 +399,14 @@ public class MutationsGrouperTest {
         createMutation(namespace, table, partitionKey1, Optional.of(clusteringKey2));
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void canBeGroupedTogether_WithAllMutationsInSameGroupForTableAtomicity_ShouldReturnTrue()
+  public void canBeGroupedAltogether_WithAllMutationsInSameGroupForTableAtomicity_ShouldReturnTrue()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -424,7 +425,7 @@ public class MutationsGrouperTest {
     Mutation mutation2 = createMutation(namespace, table, partitionKey2, Optional.empty());
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isTrue();
@@ -432,7 +433,7 @@ public class MutationsGrouperTest {
 
   @Test
   public void
-      canBeGroupedTogether_WithAllMutationsInSameGroupForNamespaceAtomicity_ShouldReturnTrue()
+      canBeGroupedAltogether_WithAllMutationsInSameGroupForNamespaceAtomicity_ShouldReturnTrue()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -452,15 +453,16 @@ public class MutationsGrouperTest {
     Mutation mutation2 = createMutation(namespace, table2, partitionKey2, Optional.empty());
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void canBeGroupedTogether_WithAllMutationsInSameGroupForStorageAtomicity_ShouldReturnTrue()
-      throws ExecutionException {
+  public void
+      canBeGroupedAltogether_WithAllMutationsInSameGroupForStorageAtomicity_ShouldReturnTrue()
+          throws ExecutionException {
     // Arrange
     String namespace1 = "ns1";
     String namespace2 = "ns2";
@@ -482,14 +484,14 @@ public class MutationsGrouperTest {
     Mutation mutation2 = createMutation(namespace2, table2, partitionKey2, Optional.empty());
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void canBeGroupedTogether_WithMutationsInDifferentGroups_ShouldReturnFalse()
+  public void canBeGroupedAltogether_WithMutationsInDifferentGroups_ShouldReturnFalse()
       throws ExecutionException {
     // Arrange
     String namespace1 = "ns1";
@@ -518,7 +520,7 @@ public class MutationsGrouperTest {
     Mutation mutation2 = createMutation(namespace2, table2, partitionKey2, Optional.empty());
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isFalse();
@@ -526,7 +528,7 @@ public class MutationsGrouperTest {
 
   @Test
   public void
-      canBeGroupedTogether_WithMutationsInDifferentTables_ShouldReturnFalseForTableAtomicity()
+      canBeGroupedAltogether_WithMutationsInDifferentTables_ShouldReturnFalseForTableAtomicity()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -547,7 +549,7 @@ public class MutationsGrouperTest {
     Mutation mutation2 = createMutation(namespace, table2, partitionKey2, Optional.empty());
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isFalse();
@@ -555,7 +557,7 @@ public class MutationsGrouperTest {
 
   @Test
   public void
-      canBeGroupedTogether_WithMutationsInDifferentPartitions_ShouldReturnFalseForPartitionAtomicity()
+      canBeGroupedAltogether_WithMutationsInDifferentPartitions_ShouldReturnFalseForPartitionAtomicity()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -575,14 +577,15 @@ public class MutationsGrouperTest {
     Mutation mutation2 = createMutation(namespace, table, partitionKey2, Optional.empty());
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(Arrays.asList(mutation1, mutation2));
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
 
     // Assert
     assertThat(result).isFalse();
   }
 
   @Test
-  public void canBeGroupedTogether_WithOverMaxCount_ShouldReturnFalse() throws ExecutionException {
+  public void canBeGroupedAltogether_WithOverMaxCount_ShouldReturnFalse()
+      throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "table";
@@ -601,7 +604,7 @@ public class MutationsGrouperTest {
     }
 
     // Act
-    boolean result = grouper.canBeGroupedTogether(mutations);
+    boolean result = grouper.canBeGroupedAltogether(mutations);
 
     // Assert
     assertThat(result).isFalse();

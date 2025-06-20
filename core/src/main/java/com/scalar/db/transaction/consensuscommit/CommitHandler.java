@@ -222,9 +222,9 @@ public class CommitHandler {
     }
 
     try {
-      // If the mutations can be grouped together, the mutations can be done in a single mutate API
-      // call, so we can one-phase commit the transaction
-      return mutationsGrouper.canBeGroupedTogether(
+      // If the mutations can be grouped altogether, the mutations can be done in a single mutate
+      // API call, so we can one-phase commit the transaction
+      return mutationsGrouper.canBeGroupedAltogether(
           Stream.concat(snapshot.getPutsInWriteSet().stream(), deletesInDeleteSet.stream())
               .collect(Collectors.toList()));
     } catch (ExecutionException e) {

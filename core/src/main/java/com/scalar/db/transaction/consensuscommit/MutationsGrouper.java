@@ -51,7 +51,7 @@ public class MutationsGrouper {
     return groupToBatches.values().stream().flatMap(List::stream).collect(Collectors.toList());
   }
 
-  public boolean canBeGroupedTogether(Collection<Mutation> mutations) throws ExecutionException {
+  public boolean canBeGroupedAltogether(Collection<Mutation> mutations) throws ExecutionException {
     if (mutations.size() <= 1) {
       return true;
     }

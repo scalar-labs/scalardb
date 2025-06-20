@@ -974,7 +974,7 @@ public class CommitHandlerTest {
 
     // Assert
     assertThat(actual).isFalse();
-    verify(mutationsGrouper, never()).canBeGroupedTogether(anyList());
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -988,7 +988,7 @@ public class CommitHandlerTest {
 
     // Assert
     assertThat(actual).isFalse();
-    verify(mutationsGrouper, never()).canBeGroupedTogether(anyList());
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -1002,7 +1002,7 @@ public class CommitHandlerTest {
 
     // Assert
     assertThat(actual).isFalse();
-    verify(mutationsGrouper, never()).canBeGroupedTogether(anyList());
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -1022,7 +1022,7 @@ public class CommitHandlerTest {
 
     // Assert
     assertThat(actual).isFalse();
-    verify(mutationsGrouper, never()).canBeGroupedTogether(anyList());
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -1036,14 +1036,14 @@ public class CommitHandlerTest {
     TransactionResult result = mock(TransactionResult.class);
     snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
 
-    doReturn(true).when(mutationsGrouper).canBeGroupedTogether(anyList());
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     // Act
     boolean actual = handler.canOnePhaseCommit(snapshot);
 
     // Assert
     assertThat(actual).isTrue();
-    verify(mutationsGrouper).canBeGroupedTogether(anyList());
+    verify(mutationsGrouper).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -1057,14 +1057,14 @@ public class CommitHandlerTest {
     TransactionResult result = mock(TransactionResult.class);
     snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
 
-    doReturn(false).when(mutationsGrouper).canBeGroupedTogether(anyList());
+    doReturn(false).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     // Act
     boolean actual = handler.canOnePhaseCommit(snapshot);
 
     // Assert
     assertThat(actual).isFalse();
-    verify(mutationsGrouper).canBeGroupedTogether(anyList());
+    verify(mutationsGrouper).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -1079,7 +1079,7 @@ public class CommitHandlerTest {
     TransactionResult result = mock(TransactionResult.class);
     snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
 
-    doThrow(ExecutionException.class).when(mutationsGrouper).canBeGroupedTogether(anyList());
+    doThrow(ExecutionException.class).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     // Act Assert
     assertThatThrownBy(() -> handler.canOnePhaseCommit(snapshot))
