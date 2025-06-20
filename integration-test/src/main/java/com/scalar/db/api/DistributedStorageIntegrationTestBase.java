@@ -47,19 +47,19 @@ public abstract class DistributedStorageIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "storage";
-  private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private static final String TABLE = "test_table";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
+  protected static final String TEST_NAME = "storage";
+  protected static final String NAMESPACE = "int_test_" + TEST_NAME;
+  protected static final String TABLE = "test_table";
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String COL_NAME5 = "c5";
+  protected static final String COL_NAME6 = "c6";
 
-  private DistributedStorage storage;
-  private DistributedStorageAdmin admin;
-  private String namespace;
+  protected DistributedStorage storage;
+  protected DistributedStorageAdmin admin;
+  protected String namespace;
 
   @BeforeAll
   public void beforeAll() throws Exception {

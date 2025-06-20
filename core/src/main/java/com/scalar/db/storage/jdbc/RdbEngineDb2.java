@@ -403,7 +403,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties() {
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
     ImmutableMap.Builder<String, String> props = new ImmutableMap.Builder<>();
     // With this Db2 will return a textual description of the error when
     // calling JDBC `SQLException.getMessage` instead of a short message containing only error codes
