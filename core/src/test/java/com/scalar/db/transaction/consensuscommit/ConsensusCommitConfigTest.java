@@ -28,6 +28,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse();
     assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isTrue();
+    assertThat(config.isOnePhaseCommitEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
   }
@@ -167,6 +168,19 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isFalse();
+  }
+
+  @Test
+  public void constructor_PropertiesWithOnePhaseCommitEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.ONE_PHASE_COMMIT_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isOnePhaseCommitEnabled()).isTrue();
   }
 
   @Test
