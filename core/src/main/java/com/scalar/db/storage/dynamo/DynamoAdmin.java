@@ -1341,6 +1341,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createTableInternal(nonPrefixedNamespace, table, metadata, true, options);
+      for (String indexColumnName : metadata.getSecondaryIndexNames()) {
+        createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+      }
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
