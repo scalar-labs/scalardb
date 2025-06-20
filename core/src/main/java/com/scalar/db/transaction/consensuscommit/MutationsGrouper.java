@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -27,29 +28,15 @@ public class MutationsGrouper {
   public List<List<Mutation>> groupMutations(Collection<Mutation> mutations)
       throws ExecutionException {
     // MutationGroup mutations by their storage info and atomicity unit
-    List<MutationGroup> groups = new ArrayList<>();
     Map<MutationGroup, List<List<Mutation>>> groupToBatches = new LinkedHashMap<>();
 
     for (Mutation mutation : mutations) {
       assert mutation.forNamespace().isPresent();
       StorageInfo storageInfo = storageInfoProvider.getStorageInfo(mutation.forNamespace().get());
 
-      MutationGroup matchedGroup = null;
-      for (MutationGroup group : groups) {
-        if (group.isSameGroup(mutation, storageInfo)) {
-          matchedGroup = group;
-          break;
-        }
-      }
-      if (matchedGroup == null) {
-        // If no matching group is found, create a new one
-        matchedGroup = new MutationGroup(mutation, storageInfo);
-        groups.add(matchedGroup);
-      }
-
-      List<List<Mutation>> batches =
-          groupToBatches.computeIfAbsent(matchedGroup, g -> new ArrayList<>());
-      int maxCount = matchedGroup.storageInfo.getMaxAtomicMutationsCount();
+      MutationGroup group = new MutationGroup(mutation, storageInfo);
+      List<List<Mutation>> batches = groupToBatches.computeIfAbsent(group, g -> new ArrayList<>());
+      int maxCount = group.storageInfo.getMaxAtomicMutationsCount();
 
       if (batches.isEmpty() || batches.get(batches.size() - 1).size() >= maxCount) {
         // If the last batch is full or there are no batches yet, create a new batch
@@ -70,7 +57,7 @@ public class MutationsGrouper {
     @Nullable public final Key partitionKey;
     @Nullable public final Optional<Key> clusteringKey;
 
-    public MutationGroup(Mutation mutation, StorageInfo storageInfo) {
+    private MutationGroup(Mutation mutation, StorageInfo storageInfo) {
       assert mutation.forNamespace().isPresent() && mutation.forTable().isPresent();
 
       switch (storageInfo.getMutationAtomicityUnit()) {
@@ -115,41 +102,26 @@ public class MutationsGrouper {
       }
     }
 
-    boolean isSameGroup(Mutation otherMutation, StorageInfo otherStorageInfo) {
-      assert otherMutation.forNamespace().isPresent() && otherMutation.forTable().isPresent();
-
-      switch (storageInfo.getMutationAtomicityUnit()) {
-        case RECORD:
-          if (!otherMutation.getClusteringKey().equals(this.clusteringKey)) {
-            return false;
-          }
-          // Fall through
-        case PARTITION:
-          if (!otherMutation.getPartitionKey().equals(this.partitionKey)) {
-            return false;
-          }
-          // Fall through
-        case TABLE:
-          if (!otherMutation.forTable().get().equals(this.table)) {
-            return false;
-          }
-          // Fall through
-        case NAMESPACE:
-          if (!otherMutation.forNamespace().get().equals(this.namespace)) {
-            return false;
-          }
-          // Fall through
-        case STORAGE:
-          if (!otherStorageInfo.getStorageName().equals(this.storageInfo.getStorageName())) {
-            return false;
-          }
-          break;
-        default:
-          throw new AssertionError(
-              "Unknown mutation atomicity unit: " + storageInfo.getMutationAtomicityUnit());
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
       }
+      if (!(o instanceof MutationGroup)) {
+        return false;
+      }
+      MutationGroup that = (MutationGroup) o;
+      return Objects.equals(storageInfo.getStorageName(), that.storageInfo.getStorageName())
+          && Objects.equals(namespace, that.namespace)
+          && Objects.equals(table, that.table)
+          && Objects.equals(partitionKey, that.partitionKey)
+          && Objects.equals(clusteringKey, that.clusteringKey);
+    }
 
-      return true;
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          storageInfo.getStorageName(), namespace, table, partitionKey, clusteringKey);
     }
   }
 }
