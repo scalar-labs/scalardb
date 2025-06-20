@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -795,6 +796,43 @@ public class CassandraAdminTest {
               String.format(
                   "CREATE INDEX IF NOT EXISTS tbl_index_%1$s ON sample_ns.tbl(%1$s)", index));
     }
+  }
+
+  @Test
+  public void repairTable_WhenTableAlreadyExistsWithoutIndex_ShouldCreateIndex()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addClusteringKey("c4")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BLOB)
+            .addColumn("c4", DataType.INT)
+            .addColumn("c5", DataType.BOOLEAN)
+            .addSecondaryIndex("c2")
+            .addSecondaryIndex("c4")
+            .build();
+    // The table already exists
+    when(clusterManager.getMetadata(namespace, table))
+        .thenReturn(mock(com.datastax.driver.core.TableMetadata.class));
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTable(table))
+        .thenReturn(mock(com.datastax.driver.core.TableMetadata.class));
+
+    CassandraAdmin adminSpy = spy(cassandraAdmin);
+
+    // Act
+    adminSpy.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy)
+        .createSecondaryIndexes(namespace, table, tableMetadata.getSecondaryIndexNames(), true);
   }
 
   @Test

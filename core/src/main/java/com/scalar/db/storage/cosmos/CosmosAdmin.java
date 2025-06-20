@@ -588,6 +588,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createTableInternal(namespace, table, metadata, true);
+      updateIndexingPolicy(namespace, table, metadata);
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (Exception e) {

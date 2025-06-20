@@ -889,7 +889,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createIndex(
+  @VisibleForTesting
+  void createIndex(
       Connection connection, String schema, String table, String indexedColumn, boolean ifNotExists)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
