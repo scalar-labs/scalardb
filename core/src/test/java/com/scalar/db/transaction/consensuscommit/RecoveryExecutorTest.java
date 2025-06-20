@@ -320,15 +320,23 @@ public class RecoveryExecutorTest {
   }
 
   @Test
-  public void execute_CoordinatorExceptionByCoordinatorState_ShouldThrowCrudException()
-      throws CoordinatorException, ExecutionException {
+  public void
+      execute_ReturnLatestResultAndRecoverType_CoordinatorExceptionByCoordinatorState_ShouldThrowCrudException()
+          throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult transactionResult = mock(TransactionResult.class);
     when(transactionResult.getId()).thenReturn(ANY_ID_1);
     when(coordinator.getState(ANY_ID_1)).thenThrow(new CoordinatorException("error"));
 
     // Act Assert
-    assertThatThrownBy(() -> executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3))
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    transactionResult,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .isInstanceOf(CrudException.class);
 
     // Verify no recovery attempted
@@ -337,7 +345,7 @@ public class RecoveryExecutorTest {
 
   @Test
   public void
-      execute_TransactionNotExpiredAndNoCoordinatorState_ShouldThrowUncommittedRecordException()
+      execute_ReturnLatestResultAndRecoverType_TransactionNotExpiredAndNoCoordinatorState_ShouldThrowUncommittedRecordException()
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult transactionResult = mock(TransactionResult.class);
@@ -346,7 +354,14 @@ public class RecoveryExecutorTest {
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(false);
 
     // Act Assert
-    assertThatThrownBy(() -> executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3))
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    transactionResult,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .isInstanceOf(UncommittedRecordException.class);
 
     // Verify no recovery attempted
@@ -354,7 +369,9 @@ public class RecoveryExecutorTest {
   }
 
   @Test
-  public void execute_TransactionExpiredAndNoCoordinatorState_ShouldRollback() throws Exception {
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_ShouldRollback()
+          throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
@@ -362,7 +379,12 @@ public class RecoveryExecutorTest {
 
     // Act
     RecoveryExecutor.Result result =
-        executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3);
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
 
     // Wait for recovery to complete
     result.recoveryFuture.get();
@@ -374,7 +396,7 @@ public class RecoveryExecutorTest {
 
   @Test
   public void
-      execute_TransactionExpiredAndNoCoordinatorState_RecordWithoutBeforeImage_ShouldRollback()
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordWithoutBeforeImage_ShouldRollback()
           throws Exception {
     // Arrange
     TransactionResult transactionResult =
@@ -384,7 +406,12 @@ public class RecoveryExecutorTest {
 
     // Act
     RecoveryExecutor.Result result =
-        executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3);
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
 
     // Wait for recovery to complete
     result.recoveryFuture.get();
@@ -395,7 +422,8 @@ public class RecoveryExecutorTest {
   }
 
   @Test
-  public void execute_CoordinatorStateIsAborted_ShouldRollback() throws Exception {
+  public void execute_ReturnLatestResultAndRecoverType_CoordinatorStateIsAborted_ShouldRollback()
+      throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
@@ -403,7 +431,12 @@ public class RecoveryExecutorTest {
 
     // Act
     RecoveryExecutor.Result result =
-        executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3);
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
 
     // Wait for recovery to complete
     result.recoveryFuture.get();
@@ -414,8 +447,9 @@ public class RecoveryExecutorTest {
   }
 
   @Test
-  public void execute_CoordinatorStateIsAborted_RecordWithoutBeforeImage_ShouldRollback()
-      throws Exception {
+  public void
+      execute_ReturnLatestResultAndRecoverType_CoordinatorStateIsAborted_RecordWithoutBeforeImage_ShouldRollback()
+          throws Exception {
     // Arrange
     TransactionResult transactionResult =
         prepareResultWithoutBeforeImage(TransactionState.PREPARED);
@@ -424,7 +458,12 @@ public class RecoveryExecutorTest {
 
     // Act
     RecoveryExecutor.Result result =
-        executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3);
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
 
     // Wait for recovery to complete
     result.recoveryFuture.get();
@@ -435,8 +474,9 @@ public class RecoveryExecutorTest {
   }
 
   @Test
-  public void execute_CoordinatorStateIsCommitted_RecordWithPreparedState_ShouldCommit()
-      throws Exception {
+  public void
+      execute_ReturnLatestResultAndRecoverType_CoordinatorStateIsCommitted_RecordWithPreparedState_ShouldCommit()
+          throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
@@ -447,7 +487,12 @@ public class RecoveryExecutorTest {
 
     // Act
     RecoveryExecutor.Result result =
-        executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3);
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
 
     // Wait for recovery to complete
     result.recoveryFuture.get();
@@ -458,18 +503,22 @@ public class RecoveryExecutorTest {
   }
 
   @Test
-  public void execute_CoordinatorStateIsCommitted_RecordWithDeletedState_ShouldCommit()
-      throws Exception {
+  public void
+      execute_ReturnLatestResultAndRecoverType_CoordinatorStateIsCommitted_RecordWithDeletedState_ShouldCommit()
+          throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.DELETED);
     Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
 
-    executor = spy(executor);
-
     // Act
     RecoveryExecutor.Result result =
-        executor.execute(snapshotKey, selection, transactionResult, ANY_ID_3);
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
 
     // Wait for recovery to complete
     result.recoveryFuture.get();
@@ -477,5 +526,301 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).isNotPresent();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_CoordinatorExceptionByCoordinatorState_ShouldThrowExecutionExceptionCausedByCrudExceptionByRecoveryFuture()
+          throws CoordinatorException, ExecutionException, CrudException {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenThrow(new CoordinatorException("error"));
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Assert
+    assertThatThrownBy(result.recoveryFuture::get)
+        .isInstanceOf(java.util.concurrent.ExecutionException.class)
+        .hasCauseInstanceOf(CrudException.class);
+
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+
+    // Verify no recovery attempted
+    verify(recovery, never()).recover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_TransactionNotExpiredAndNoCoordinatorState_ShouldThrowExecutionExceptionCauseByUncommittedRecordException()
+          throws CoordinatorException, ExecutionException, CrudException {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(false);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Assert
+    assertThatThrownBy(result.recoveryFuture::get)
+        .isInstanceOf(java.util.concurrent.ExecutionException.class)
+        .hasCauseInstanceOf(UncommittedRecordException.class);
+
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+
+    // Verify no recovery attempted
+    verify(recovery, never()).recover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_ShouldRollback()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordWithoutBeforeImage_ShouldRollback()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult =
+        prepareResultWithoutBeforeImage(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).isEmpty();
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
+  }
+
+  @Test
+  public void execute_ReturnCommittedResultAndRecoverType_CoordinatorStateIsAborted_ShouldRollback()
+      throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(abortedState));
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_CoordinatorStateIsAborted_RecordWithoutBeforeImage_ShouldRollback()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult =
+        prepareResultWithoutBeforeImage(TransactionState.PREPARED);
+    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(abortedState));
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).isEmpty();
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_CoordinatorStateIsCommitted_RecordWithPreparedState_ShouldCommit()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
+
+    executor = spy(executor);
+    doReturn(ANY_TIME_MILLIS_4).when(executor).getCommittedAt();
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndRecoverType_CoordinatorStateIsCommitted_RecordWithDeletedState_ShouldCommit()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.DELETED);
+    Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndNotRecoverType_RecordWithoutBeforeImage_ShouldNotRecover()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult =
+        prepareResultWithoutBeforeImage(TransactionState.PREPARED);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).isEmpty();
+
+    // Verify no recovery attempted
+    verify(recovery, never()).recover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndNotRecoverType_RecordWithPreparedState_ShouldNotRecover()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+
+    // Verify no recovery attempted
+    verify(recovery, never()).recover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnCommittedResultAndNotRecoverType_RecordWithDeletedState_ShouldNotRecover()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.DELETED);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER);
+
+    // Wait for recovery to complete
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+
+    // Verify no recovery attempted
+    verify(recovery, never()).recover(any(), any(), any());
   }
 }
