@@ -1,5 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -1032,6 +1034,28 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
   }
 
+  private boolean indexExistsInternal(String nonPrefixedNamespace, String table, String indexName) {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    String globalIndexName =
+        String.join(
+            ".",
+            getFullTableName(namespace, table),
+            DynamoAdmin.GLOBAL_INDEX_NAME_PREFIX,
+            indexName);
+    DescribeTableResponse response =
+        client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
+    for (GlobalSecondaryIndexDescription globalSecondaryIndex :
+        response.table().globalSecondaryIndexes()) {
+      if (globalSecondaryIndex.indexName().equals(globalIndexName)) {
+        if (globalSecondaryIndex.indexStatus() == IndexStatus.ACTIVE) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   private void waitForIndexCreation(Namespace namespace, String table, String columnName)
       throws ExecutionException {
     try {
@@ -1367,7 +1391,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       createTableInternal(nonPrefixedNamespace, table, metadata, true, options);
       for (String indexColumnName : metadata.getSecondaryIndexNames()) {
-        createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+        if (!indexExistsInternal(nonPrefixedNamespace, table, indexColumnName)) {
+          createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+        }
       }
     } catch (RuntimeException e) {
       throw new ExecutionException(
