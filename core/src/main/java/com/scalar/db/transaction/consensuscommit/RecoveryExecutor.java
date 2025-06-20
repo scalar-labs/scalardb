@@ -3,14 +3,15 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ResultImpl;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.BigIntColumn;
@@ -62,22 +63,65 @@ public class RecoveryExecutor implements AutoCloseable {
   }
 
   public Result execute(
-      Snapshot.Key key, Selection selection, TransactionResult result, String transactionId)
+      Snapshot.Key key,
+      Selection selection,
+      TransactionResult result,
+      String transactionId,
+      RecoveryType recoveryType)
       throws CrudException {
     assert !result.isCommitted();
 
-    Optional<Coordinator.State> state = getCoordinatorState(result.getId());
+    Optional<TransactionResult> recoveredResult;
+    Future<Void> future;
 
-    Optional<TransactionResult> recoveredResult =
-        createRecoveredResult(state, selection, result, transactionId);
+    switch (recoveryType) {
+      case RETURN_LATEST_RESULT_AND_RECOVER:
+        Optional<Coordinator.State> state = getCoordinatorState(result.getId());
 
-    // Recover the record
-    Future<Void> future =
-        executorService.submit(
-            () -> {
-              recovery.recover(selection, result, state);
-              return null;
-            });
+        throwUncommittedRecordExceptionIfTransactionNotExpired(
+            state, selection, result, transactionId);
+
+        // Return the latest result
+        recoveredResult = createRecoveredResult(state, selection, result, transactionId);
+
+        // Recover the record
+        future =
+            executorService.submit(
+                () -> {
+                  recovery.recover(selection, result, state);
+                  return null;
+                });
+
+        break;
+      case RETURN_COMMITTED_RESULT_AND_RECOVER:
+        // Return the committed result
+        recoveredResult = createRecordFromBeforeImage(selection, result, transactionId);
+
+        // Recover the record
+        future =
+            executorService.submit(
+                () -> {
+                  Optional<Coordinator.State> s = getCoordinatorState(result.getId());
+
+                  throwUncommittedRecordExceptionIfTransactionNotExpired(
+                      s, selection, result, transactionId);
+
+                  recovery.recover(selection, result, s);
+                  return null;
+                });
+
+        break;
+      case RETURN_COMMITTED_RESULT_AND_NOT_RECOVER:
+        // Return the committed result
+        recoveredResult = createRecordFromBeforeImage(selection, result, transactionId);
+
+        // No need to recover the record
+        future = Futures.immediateFuture(null);
+
+        break;
+      default:
+        throw new AssertionError("Unknown recovery type: " + recoveryType);
+    }
 
     return new Result(key, recoveredResult, future);
   }
@@ -97,8 +141,6 @@ public class RecoveryExecutor implements AutoCloseable {
       TransactionResult result,
       String transactionId)
       throws CrudException {
-    throwUncommittedRecordExceptionIfTransactionNotExpired(state, selection, result, transactionId);
-
     if (!state.isPresent() || state.get().getState() == TransactionState.ABORTED) {
       return createRecordFromBeforeImage(selection, result, transactionId);
     } else {
@@ -271,5 +313,11 @@ public class RecoveryExecutor implements AutoCloseable {
       this.recoveredResult = recoveredResult;
       this.recoveryFuture = recoveryFuture;
     }
+  }
+
+  public enum RecoveryType {
+    RETURN_LATEST_RESULT_AND_RECOVER,
+    RETURN_COMMITTED_RESULT_AND_RECOVER,
+    RETURN_COMMITTED_RESULT_AND_NOT_RECOVER
   }
 }

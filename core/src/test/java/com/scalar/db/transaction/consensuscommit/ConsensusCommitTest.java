@@ -573,6 +573,18 @@ public class ConsensusCommitTest {
 
   @Test
   public void
+      commit_CrudConflictExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowCommitConflictException()
+          throws CrudException {
+    // Arrange
+    when(crud.getSnapshot()).thenReturn(snapshot);
+    doThrow(CrudConflictException.class).when(crud).waitForRecoveryCompletionIfNecessary();
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
       commit_CrudExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowCommitException()
           throws CrudException {
     // Arrange

@@ -1,6 +1,6 @@
 package com.scalar.db.dataloader.core.util;
 
-import static com.scalar.db.common.error.CoreError.DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT;
+import com.scalar.db.dataloader.core.DataLoaderError;
 
 /** Utils for runtime checks */
 public class RuntimeUtil {
@@ -14,7 +14,7 @@ public class RuntimeUtil {
   public static void checkNotNull(Object... values) {
     for (Object value : values) {
       if (value == null) {
-        throw new NullPointerException(DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT.buildMessage());
+        throw new NullPointerException(DataLoaderError.ERROR_METHOD_NULL_ARGUMENT.buildMessage());
       }
     }
   }

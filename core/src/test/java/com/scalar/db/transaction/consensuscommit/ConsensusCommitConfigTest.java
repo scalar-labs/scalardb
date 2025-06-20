@@ -62,7 +62,7 @@ public class ConsensusCommitConfigTest {
   public void constructor_UnsupportedIsolationGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_COMMITTED");
+    props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_UNCOMMITTED");
 
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))

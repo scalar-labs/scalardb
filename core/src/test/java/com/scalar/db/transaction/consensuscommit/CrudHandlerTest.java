@@ -12,6 +12,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -119,6 +120,11 @@ public class CrudHandlerTest {
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
     when(tableMetadataManager.getTransactionTableMetadata(any(), any()))
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+
+    // Default behavior for snapshot isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(true);
+    when(snapshot.isValidationRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.SNAPSHOT);
   }
 
   private Get prepareGet() {
@@ -400,8 +406,90 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ShouldCallRecoveryExecutor()
-      throws ExecutionException, CrudException {
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_ReadCommittedIsolation_ShouldReturnFromStorageAndUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = Get.newBuilder(prepareGet()).build();
+    Get getForStorage = toGetForStorageFrom(get);
+
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(any())).thenReturn(expected);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot).putIntoReadSet(key, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_ReadCommittedIsolation_InReadOnlyMode_ShouldReturnFromStorageAndNotUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            false);
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = Get.newBuilder(prepareGet()).build();
+    Get getForStorage = toGetForStorageFrom(get);
+
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(any())).thenReturn(expected);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
     // Arrange
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -421,7 +509,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, getForStorage, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            getForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -429,9 +522,146 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(getForStorage);
-    verify(recoveryExecutor).execute(key, getForStorage, new TransactionResult(result), ANY_ID_1);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot).putIntoGetSet(getForStorage, Optional.of(recoveredResult));
+
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false)));
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ReadCommittedIsolation_ShouldCallRecoveryExecutorWithReturnCommittedResultAndNotRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            false);
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    Get getForStorage = toGetForStorageFrom(get);
+    result = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult expected = mock(TransactionResult.class);
+    when(expected.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(expected.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    TransactionResult transactionResult = new TransactionResult(result);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    when(snapshot.mergeResult(key, Optional.of(recoveredResult), getForStorage.getConjunctions()))
+        .thenReturn(Optional.of(expected));
+
+    // Act
+    Optional<Result> actual = handler.get(get);
+
+    // Assert
+    verify(storage).get(getForStorage);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false)));
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ReadCommittedIsolation_InReadOnlyMode_ShouldCallRecoveryExecutorWithReturnCommittedResultAndRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    Get getForStorage = toGetForStorageFrom(get);
+    result = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult expected = mock(TransactionResult.class);
+    when(expected.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(expected.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    TransactionResult transactionResult = new TransactionResult(result);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    when(snapshot.mergeResult(key, Optional.of(recoveredResult), getForStorage.getConjunctions()))
+        .thenReturn(Optional.of(expected));
+
+    // Act
+    Optional<Result> actual = handler.get(get);
+
+    // Assert
+    verify(storage).get(getForStorage);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot, never()).putIntoGetSet(any(), any());
 
     assertThat(actual)
         .isEqualTo(
@@ -501,6 +731,43 @@ public class CrudHandlerTest {
   }
 
   @Test
+  public void get_CalledTwice_ReadCommittedIsolation_BothShouldReturnFromStorage()
+      throws ExecutionException, CrudException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get originalGet = prepareGet();
+    Get getForStorage = toGetForStorageFrom(originalGet);
+    Get get1 = prepareGet();
+    Get get2 = prepareGet();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.mergeResult(
+            key, Optional.of(new TransactionResult(result)), getForStorage.getConjunctions()))
+        .thenReturn(expected);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> results1 = handler.get(get1);
+    Optional<Result> results2 = handler.get(get2);
+
+    // Assert
+    verify(storage, times(2)).get(getForStorage);
+    verify(snapshot, times(2)).putIntoReadSet(key, expected);
+    assertThat(results1)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    assertThat(results1).isEqualTo(results2);
+  }
+
+  @Test
   public void get_CalledTwiceUnderRealSnapshot_SecondTimeShouldReturnTheSameFromSnapshot()
       throws ExecutionException, CrudException {
     // Arrange
@@ -536,6 +803,44 @@ public class CrudHandlerTest {
     assertThat(results1).isEqualTo(results2);
     verify(storage, never()).get(originalGet);
     verify(storage).get(getForStorage);
+  }
+
+  @Test
+  public void get_CalledTwiceUnderRealSnapshot_ReadCommittedIsolation_BothShouldReturnFromStorage()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get originalGet = prepareGet();
+    Get getForStorage = toGetForStorageFrom(originalGet);
+    Get get1 = prepareGet();
+    Get get2 = prepareGet();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
+    snapshot =
+        new Snapshot(ANY_TX_ID, Isolation.READ_COMMITTED, tableMetadataManager, parallelExecutor);
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            parallelExecutor,
+            false,
+            false);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> results1 = handler.get(get1);
+    Optional<Result> results2 = handler.get(get2);
+
+    // Assert
+    verify(storage, times(2)).get(getForStorage);
+    assertThat(results1)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    assertThat(results1).isEqualTo(results2);
   }
 
   @Test
@@ -754,8 +1059,9 @@ public class CrudHandlerTest {
 
   @ParameterizedTest
   @EnumSource(ScanType.class)
-  void scanOrGetScanner_PreparedResultGivenFromStorage_ShouldCallRecoveryExecutor(ScanType scanType)
-      throws ExecutionException, IOException, CrudException {
+  void
+      scanOrGetScanner_PreparedResultGivenFromStorage_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -779,7 +1085,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, scanForStorage, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -792,6 +1103,127 @@ public class CrudHandlerTest {
         .putIntoScanSet(
             scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
     verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, recoveredResult));
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_PreparedResultGivenFromStorage_ReadCommittedIsolation_ShouldCallRecoveryExecutorWithReturnCommittedResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+
+    result = prepareResult(TransactionState.PREPARED);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(recoveredResult.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(scanner).close();
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot, never()).putIntoScanSet(any(), any());
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, recoveredResult));
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_PreparedResultGivenFromStorage_ReadCommittedIsolation_InReadOnlyMode_ShouldCallRecoveryExecutorWithReturnCommittedResultAndNotRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            false);
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+
+    result = prepareResult(TransactionState.PREPARED);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(recoveredResult.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(scanner).close();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoScanSet(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
 
     assertThat(results)
         .containsExactly(
@@ -1072,7 +1504,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
-      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_RecoveredRecordMatchesConjunction_ShouldCallRecoveryExecutor(
+      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_RecoveredRecordMatchesConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
           ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
@@ -1099,7 +1531,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, scanForStorage, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -1128,7 +1565,7 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
-      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_RecoveredRecordDoesNotMatchConjunction_ShouldCallRecoveryExecutor(
+      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_RecoveredRecordDoesNotMatchConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
           ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
@@ -1155,7 +1592,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, scanForStorage, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -1265,8 +1707,9 @@ public class CrudHandlerTest {
 
   @ParameterizedTest
   @EnumSource(ScanType.class)
-  void scanOrGetScanner_WithLimit_UncommittedResult_ShouldCallRecoveryExecutor(ScanType scanType)
-      throws ExecutionException, IOException, CrudException {
+  void
+      scanOrGetScanner_WithLimit_UncommittedResult_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scanWithoutLimit = prepareScan();
     Scan scanWithLimit = Scan.newBuilder(scanWithoutLimit).limit(2).build();
@@ -1313,14 +1756,26 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
 
     when(recoveryExecutor.execute(
-            key1, scanForStorageWithLimit, new TransactionResult(uncommittedResult1), ANY_ID_1))
+            key1,
+            scanForStorageWithLimit,
+            new TransactionResult(uncommittedResult1),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key1, Optional.empty(), recoveryFuture));
     when(recoveryExecutor.execute(
-            key2, scanForStorageWithLimit, new TransactionResult(uncommittedResult2), ANY_ID_1))
+            key2,
+            scanForStorageWithLimit,
+            new TransactionResult(uncommittedResult2),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(
             new RecoveryExecutor.Result(key2, Optional.of(recoveredResult1), recoveryFuture));
     when(recoveryExecutor.execute(
-            key3, scanForStorageWithLimit, new TransactionResult(uncommittedResult3), ANY_ID_1))
+            key3,
+            scanForStorageWithLimit,
+            new TransactionResult(uncommittedResult3),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(
             new RecoveryExecutor.Result(key3, Optional.of(recoveredResult2), recoveryFuture));
 
@@ -1900,7 +2355,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldCallRecoveryExecutor()
+      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
           throws ExecutionException, CrudException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -1924,7 +2379,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, getForKey, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -1932,14 +2392,20 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(getForKey);
-    verify(recoveryExecutor).execute(key, getForKey, new TransactionResult(result), ANY_ID_1);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot).putIntoGetSet(getForKey, Optional.of(recoveredResult));
   }
 
   @Test
   public void
-      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordIsEmpty_ShouldCallRecoveryExecutor()
+      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordIsEmpty_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
           throws ExecutionException, CrudException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -1963,7 +2429,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, getForKey, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, recoveredRecord, recoveryFuture));
 
     // Act
@@ -1971,14 +2442,20 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(getForKey);
-    verify(recoveryExecutor).execute(key, getForKey, new TransactionResult(result), ANY_ID_1);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot).putIntoReadSet(key, recoveredRecord);
     verify(snapshot).putIntoGetSet(getForKey, recoveredRecord);
   }
 
   @Test
   public void
-      readUnread_GetWithConjunctionGiven_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordMatchesConjunction_ShouldCallRecoveryExecutor()
+      readUnread_GetWithConjunctionGiven_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordMatchesConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
           throws ExecutionException, CrudException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -2008,7 +2485,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, getWithConjunction, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -2023,14 +2505,19 @@ public class CrudHandlerTest {
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .build());
     verify(recoveryExecutor)
-        .execute(key, getWithConjunction, new TransactionResult(result), ANY_ID_1);
+        .execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot).putIntoGetSet(getWithConjunction, Optional.of(recoveredResult));
   }
 
   @Test
   public void
-      readUnread_GetWithConjunctionGiven_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordDoesNotMatchConjunction_ShouldCallRecoveryExecutor()
+      readUnread_GetWithConjunctionGiven_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordDoesNotMatchConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
           throws ExecutionException, CrudException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
@@ -2060,7 +2547,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, getWithConjunction, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -2075,7 +2567,12 @@ public class CrudHandlerTest {
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .build());
     verify(recoveryExecutor)
-        .execute(key, getWithConjunction, new TransactionResult(result), ANY_ID_1);
+        .execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoGetSet(getWithConjunction, Optional.empty());
   }
@@ -2134,7 +2631,7 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldCallRecoveryExecutor()
+      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
           throws ExecutionException, CrudException {
     // Arrange
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
@@ -2157,7 +2654,12 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
 
-    when(recoveryExecutor.execute(key, getWithIndex, new TransactionResult(result), ANY_ID_1))
+    when(recoveryExecutor.execute(
+            key,
+            getWithIndex,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
 
     // Act
@@ -2165,7 +2667,13 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(getWithIndex);
-    verify(recoveryExecutor).execute(key, getWithIndex, new TransactionResult(result), ANY_ID_1);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getWithIndex,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(recoveredResult));
   }

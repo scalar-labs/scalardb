@@ -3,8 +3,8 @@ package com.scalar.db.dataloader.core.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
@@ -133,17 +133,17 @@ public final class ColumnUtils {
       }
     } catch (NumberFormatException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
+          DataLoaderError.INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
               value, columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     } catch (DateTimeParseException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
+          DataLoaderError.INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
               value, columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     } catch (IllegalArgumentException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
+          DataLoaderError.INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
               value, columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     }

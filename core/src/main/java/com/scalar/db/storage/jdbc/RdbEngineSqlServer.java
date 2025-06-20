@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
