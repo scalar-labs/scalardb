@@ -17,6 +17,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,13 +58,13 @@ public class ParallelExecutorTest {
   }
 
   @Test
-  public void prepare_ParallelPreparationNotEnabled_ShouldExecuteTasksSerially()
+  public void prepareRecords_ParallelPreparationNotEnabled_ShouldExecuteTasksSerially()
       throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(false);
 
     // Act
-    parallelExecutor.prepare(tasks, TX_ID);
+    parallelExecutor.prepareRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -72,14 +73,14 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      prepare_ParallelPreparationNotEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
+      prepareRecords_ParallelPreparationNotEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(false);
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.prepare(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.prepareRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, only()).run();
@@ -87,13 +88,13 @@ public class ParallelExecutorTest {
   }
 
   @Test
-  public void prepare_ParallelPreparationEnabled_ShouldExecuteTasksInParallel()
+  public void prepareRecords_ParallelPreparationEnabled_ShouldExecuteTasksInParallel()
       throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.prepare(tasks, TX_ID);
+    parallelExecutor.prepareRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -101,29 +102,16 @@ public class ParallelExecutorTest {
   }
 
   @Test
-  public void
-      prepare_ParallelPreparationEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
-          throws ExecutionException, ValidationConflictException, CrudException {
-    // Arrange
-    when(config.isParallelPreparationEnabled()).thenReturn(true);
-    doThrow(ExecutionException.class).when(task).run();
-
-    // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.prepare(tasks, TX_ID))
-        .isInstanceOf(ExecutionException.class);
-
-    verify(task, times(tasks.size())).run();
-    verify(parallelExecutorService, times(tasks.size())).execute(any());
-  }
-
-  @Test
-  public void validate_ParallelValidationNotEnabled_ShouldExecuteTasksSerially()
+  public void prepareRecords_ParallelPreparationEnabled_SingleTaskGiven_ShouldExecuteTasksSerially()
       throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
-    when(config.isParallelValidationEnabled()).thenReturn(false);
+    when(config.isParallelPreparationEnabled()).thenReturn(true);
+
+    // A single task
+    tasks = Collections.singletonList(task);
 
     // Act
-    parallelExecutor.validate(tasks, TX_ID);
+    parallelExecutor.prepareRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -132,14 +120,44 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      validate_ParallelValidationNotEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
+      prepareRecords_ParallelPreparationEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelPreparationEnabled()).thenReturn(true);
+    doThrow(ExecutionException.class).when(task).run();
+
+    // Act Assert
+    assertThatThrownBy(() -> parallelExecutor.prepareRecords(tasks, TX_ID))
+        .isInstanceOf(ExecutionException.class);
+
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void validateRecords_ParallelValidationNotEnabled_ShouldExecuteTasksSerially()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelValidationEnabled()).thenReturn(false);
+
+    // Act
+    parallelExecutor.validateRecords(tasks, TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void
+      validateRecords_ParallelValidationNotEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(false);
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.validateRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, only()).run();
@@ -148,14 +166,14 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      validate_ParallelValidationNotEnabled_ValidationConflictExceptionThrownByTask_ShouldStopRunningTasks()
+      validateRecords_ParallelValidationNotEnabled_ValidationConflictExceptionThrownByTask_ShouldStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(false);
     doThrow(ValidationConflictException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.validateRecords(tasks, TX_ID))
         .isInstanceOf(ValidationConflictException.class);
 
     verify(task, only()).run();
@@ -163,13 +181,13 @@ public class ParallelExecutorTest {
   }
 
   @Test
-  public void validate_ParallelValidationEnabled_ShouldExecuteTasksInParallel()
+  public void validateRecords_ParallelValidationEnabled_ShouldExecuteTasksInParallel()
       throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(true);
 
     // Act
-    parallelExecutor.validate(tasks, TX_ID);
+    parallelExecutor.validateRecords(tasks, TX_ID);
 
     // Assert
     verify(task, times(tasks.size())).run();
@@ -177,15 +195,32 @@ public class ParallelExecutorTest {
   }
 
   @Test
+  public void validateRecords_ParallelValidationEnabled_SingleTaskGiven_ShouldExecuteTasksSerially()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelValidationEnabled()).thenReturn(true);
+
+    // A single task
+    tasks = Collections.singletonList(task);
+
+    // Act
+    parallelExecutor.validateRecords(tasks, TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
   public void
-      validate_ParallelValidationEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
+      validateRecords_ParallelValidationEnabled_ExecutionExceptionThrownByTask_ShouldStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(true);
     doThrow(ExecutionException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.validateRecords(tasks, TX_ID))
         .isInstanceOf(ExecutionException.class);
 
     verify(task, atMost(tasks.size())).run();
@@ -194,14 +229,14 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      validate_ParallelValidationEnabled_ValidationConflictExceptionThrownByTask_ShouldStopRunningTasks()
+      validateRecords_ParallelValidationEnabled_ValidationConflictExceptionThrownByTask_ShouldStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
     when(config.isParallelValidationEnabled()).thenReturn(true);
     doThrow(ValidationConflictException.class).when(task).run();
 
     // Act Assert
-    assertThatThrownBy(() -> parallelExecutor.validate(tasks, TX_ID))
+    assertThatThrownBy(() -> parallelExecutor.validateRecords(tasks, TX_ID))
         .isInstanceOf(ValidationConflictException.class);
 
     verify(task, atMost(tasks.size())).run();
@@ -256,6 +291,25 @@ public class ParallelExecutorTest {
 
   @Test
   public void
+      commitRecords_ParallelCommitEnabledAndAsyncCommitNotEnabled_SingleTaskGiven_ShouldExecuteTasksSerially()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelCommitEnabled()).thenReturn(true);
+    when(config.isAsyncCommitEnabled()).thenReturn(false);
+
+    // A single task
+    tasks = Collections.singletonList(task);
+
+    // Act
+    parallelExecutor.commitRecords(tasks, TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void
       commitRecords_ParallelCommitEnabledAndAsyncCommitNotEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
@@ -278,6 +332,25 @@ public class ParallelExecutorTest {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
     when(config.isAsyncCommitEnabled()).thenReturn(true);
+
+    // Act
+    parallelExecutor.commitRecords(tasks, TX_ID);
+
+    // Assert
+    verify(task, atMost(tasks.size())).run();
+    verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      commitRecords_ParallelCommitEnabledAndAsyncCommitEnabled_SingleTaskGiven_ShouldExecuteTasksInParallelAndAsynchronously()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelCommitEnabled()).thenReturn(true);
+    when(config.isAsyncCommitEnabled()).thenReturn(true);
+
+    // A single task
+    tasks = Collections.singletonList(task);
 
     // Act
     parallelExecutor.commitRecords(tasks, TX_ID);
@@ -351,6 +424,25 @@ public class ParallelExecutorTest {
 
   @Test
   public void
+      rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackNotEnabled_SingleTaskGiven_ShouldExecuteTasksSerially()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelRollbackEnabled()).thenReturn(true);
+    when(config.isAsyncRollbackEnabled()).thenReturn(false);
+
+    // A single task
+    tasks = Collections.singletonList(task);
+
+    // Act
+    parallelExecutor.rollbackRecords(tasks, TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void
       rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackNotEnabled_ExecutionExceptionThrownByTask_ShouldNotStopRunningTasks()
           throws ExecutionException, ValidationConflictException, CrudException {
     // Arrange
@@ -373,6 +465,25 @@ public class ParallelExecutorTest {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
     when(config.isAsyncRollbackEnabled()).thenReturn(true);
+
+    // Act
+    parallelExecutor.rollbackRecords(tasks, TX_ID);
+
+    // Assert
+    verify(task, atMost(tasks.size())).run();
+    verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      rollbackRecords_ParallelRollbackEnabledAndAsyncRollbackEnabled_SingleTaskGiven_ShouldExecuteTasksInParallelAndAsynchronously()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelRollbackEnabled()).thenReturn(true);
+    when(config.isAsyncRollbackEnabled()).thenReturn(true);
+
+    // A single task
+    tasks = Collections.singletonList(task);
 
     // Act
     parallelExecutor.rollbackRecords(tasks, TX_ID);

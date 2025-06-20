@@ -107,6 +107,8 @@ public class JdbcConfig {
   // is 1970-01-01.
   public static final String DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
 
+  private final DatabaseConfig databaseConfig;
+
   private final String jdbcUrl;
   @Nullable private final String username;
   @Nullable private final String password;
@@ -136,6 +138,7 @@ public class JdbcConfig {
   private final LocalDate db2TimeColumnDefaultDateComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
+    this.databaseConfig = databaseConfig;
     String storage = databaseConfig.getStorage();
     String transactionManager = databaseConfig.getTransactionManager();
     if (!storage.equals(STORAGE_NAME) && !transactionManager.equals(TRANSACTION_MANAGER_NAME)) {
@@ -276,6 +279,10 @@ public class JdbcConfig {
     } else {
       metadataSchema = databaseConfig.getSystemNamespaceName();
     }
+  }
+
+  public DatabaseConfig getDatabaseConfig() {
+    return databaseConfig;
   }
 
   public String getJdbcUrl() {

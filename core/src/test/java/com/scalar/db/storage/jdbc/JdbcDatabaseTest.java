@@ -62,7 +62,7 @@ public class JdbcDatabaseTest {
             databaseConfig,
             dataSource,
             tableMetadataDataSource,
-            RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL),
+            RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
             jdbcService);
   }
 
@@ -382,7 +382,7 @@ public class JdbcDatabaseTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.mutate(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(

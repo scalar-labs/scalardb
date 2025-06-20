@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -217,6 +218,22 @@ public class Snapshot {
     return getSet.containsKey(get);
   }
 
+  public boolean containsKeyInWriteSet(Key key) {
+    return writeSet.containsKey(key);
+  }
+
+  public boolean containsKeyInDeleteSet(Key key) {
+    return deleteSet.containsKey(key);
+  }
+
+  public boolean hasWritesOrDeletes() {
+    return !writeSet.isEmpty() || !deleteSet.isEmpty();
+  }
+
+  public boolean hasReads() {
+    return !getSet.isEmpty() || !scanSet.isEmpty() || !scannerSet.isEmpty();
+  }
+
   public Optional<TransactionResult> getResult(Key key) throws CrudException {
     Optional<TransactionResult> result = readSet.getOrDefault(key, Optional.empty());
     return mergeResult(key, result);
@@ -227,8 +244,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan)
-      throws CrudException {
+  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -249,18 +265,22 @@ public class Snapshot {
     }
   }
 
-  private Optional<TransactionResult> mergeResult(
+  public Optional<TransactionResult> mergeResult(
       Key key, Optional<TransactionResult> result, Set<Conjunction> conjunctions)
       throws CrudException {
-    return mergeResult(key, result)
-        .filter(
-            r ->
-                // We need to apply conditions if it is a merged result because the transaction’s
-                // write makes the record no longer match the conditions. Of course, we can just
-                // return the result without checking the condition if there is no condition.
-                !r.isMergedResult()
-                    || conjunctions.isEmpty()
-                    || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
+    Optional<TransactionResult> ret = mergeResult(key, result);
+
+    if (conjunctions.isEmpty()) {
+      // We can just return the result without checking the condition if there is no condition.
+      return ret;
+    }
+
+    return ret.filter(
+        r ->
+            // We need to apply conditions if it is a merged result because the transaction’s write
+            // makes the record no longer match the conditions.
+            !r.isMergedResult()
+                || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -536,7 +556,7 @@ public class Snapshot {
       }
     }
 
-    parallelExecutor.validate(tasks, getId());
+    parallelExecutor.validateRecords(tasks, getId());
   }
 
   /**
@@ -711,13 +731,9 @@ public class Snapshot {
   }
 
   private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(operation);
-    if (metadata == null) {
-      assert operation.forFullTableName().isPresent();
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
-    }
-    return metadata.getTableMetadata();
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, operation);
+    return transactionTableMetadata.getTableMetadata();
   }
 
   private boolean isChanged(
