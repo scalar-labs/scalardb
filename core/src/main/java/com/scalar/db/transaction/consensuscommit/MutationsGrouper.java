@@ -52,7 +52,7 @@ public class MutationsGrouper {
   }
 
   public boolean canBeGroupedTogether(Collection<Mutation> mutations) throws ExecutionException {
-    if (mutations.isEmpty()) {
+    if (mutations.size() <= 1) {
       return true;
     }
 
