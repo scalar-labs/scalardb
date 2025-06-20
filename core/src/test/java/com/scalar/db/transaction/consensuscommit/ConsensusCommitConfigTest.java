@@ -27,8 +27,8 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isTrue();
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse();
-    assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isTrue();
+    assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
   }
 

@@ -62,7 +62,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Mock private DatabaseConfig databaseConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
-  @Mock private RecoveryHandler recovery;
+  @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CommitHandler commit;
 
   private TwoPhaseConsensusCommitManager manager;
@@ -82,7 +82,7 @@ public class TwoPhaseConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit);
   }
 
@@ -127,9 +127,6 @@ public class TwoPhaseConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test
@@ -206,9 +203,6 @@ public class TwoPhaseConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test
