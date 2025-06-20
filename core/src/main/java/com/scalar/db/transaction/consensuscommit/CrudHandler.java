@@ -450,6 +450,34 @@ public class CrudHandler {
     return (Get) prepareStorageSelection(buildableGet.build());
   }
 
+  /**
+   * Waits for the completion of recovery tasks if necessary.
+   *
+   * <p>This method is expected to be called before committing the transaction.
+   *
+   * <p>We wait for the completion of recovery tasks when the recovered records are either in the
+   * write set or delete set, or when serializable validation is required.
+   *
+   * <p>This is necessary because:
+   *
+   * <ul>
+   *   <li>For records in the write set or delete set, if we don’t wait for recovery tasks for them
+   *       to complete, we might attempt to perform prepare-records on records whose status is still
+   *       PREPARED or DELETED.
+   *       <ul>
+   *         <li>If we perform prepare-records on records that should be rolled forward, the
+   *             prepare-records will succeed. However, it will create a PREPARED-state before
+   *             image, which is unexpected. While this may not affect correctness, it’s something
+   *             we should avoid.
+   *         <li>If we perform prepare-records on records that should be rolled back, the
+   *             prepare-records will always fail, causing the transaction to abort.
+   *       </ul>
+   *   <li>When serializable validation is required, if we don’t wait for recovery tasks to
+   *       complete, the validation could fail due to records with PREPARED or DELETED status.
+   * </ul>
+   *
+   * @throws CrudException if any recovery task fails
+   */
   public void waitForRecoveryCompletionIfNecessary() throws CrudException {
     for (RecoveryExecutor.Result recoveryResult : recoveryResults) {
       try {
