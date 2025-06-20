@@ -29,6 +29,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       CoordinatorGroupCommitter groupCommitter) {
     super(
@@ -36,8 +37,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         coordinator,
         tableMetadataManager,
         parallelExecutor,
+        mutationsGrouper,
         coordinatorWriteOmissionOnReadOnlyEnabled);
-
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
     groupCommitter.setEmitter(new Emitter(coordinator));

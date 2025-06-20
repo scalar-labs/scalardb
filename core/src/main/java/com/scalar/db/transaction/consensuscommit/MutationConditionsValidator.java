@@ -11,7 +11,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import java.util.List;

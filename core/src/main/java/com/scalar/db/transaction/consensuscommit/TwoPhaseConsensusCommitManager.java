@@ -20,7 +20,8 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransactionManager;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -81,6 +82,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
+            new MutationsGrouper(new StorageInfoProvider(admin)),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -105,6 +107,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
+            new MutationsGrouper(new StorageInfoProvider(admin)),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);

@@ -7,7 +7,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
