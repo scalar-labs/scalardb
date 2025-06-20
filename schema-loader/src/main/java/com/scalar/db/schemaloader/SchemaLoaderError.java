@@ -12,31 +12,31 @@ public enum SchemaLoaderError implements ScalarDbError {
   ALTERING_PARTITION_KEYS_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0001",
-      "The partition keys of the table %s.%s were modified, but altering partition keys is not supported",
+      "The partition keys for the table %s.%s were modified, but altering partition keys is not supported",
       "",
       ""),
   ALTERING_CLUSTERING_KEYS_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0002",
-      "The clustering keys of the table %s.%s were modified, but altering clustering keys is not supported",
+      "The clustering keys for the table %s.%s were modified, but altering clustering keys is not supported",
       "",
       ""),
   ALTERING_CLUSTERING_ORDER_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0003",
-      "The clustering ordering of the table %s.%s were modified, but altering clustering ordering is not supported",
+      "The clustering order of the table %s.%s were modified, but altering the clustering order is not supported",
       "",
       ""),
   DELETING_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0004",
-      "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table",
+      "The column %s in the table %s.%s has been deleted. Column deletion is not supported when altering a table",
       "",
       ""),
   ALTERING_COLUMN_DATA_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0005",
-      "The data type of the column %s of the table %s.%s was modified, but altering data types is not supported",
+      "The data type for the column %s in the table %s.%s was modified, but altering data types is not supported",
       "",
       ""),
   SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL(
