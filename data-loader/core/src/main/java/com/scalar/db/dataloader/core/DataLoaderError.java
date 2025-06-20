@@ -27,7 +27,7 @@ public enum DataLoaderError implements ScalarDbError {
   MISSING_FILE_EXTENSION(
       Category.USER_ERROR,
       "0004",
-      "No file extension was found on the provided file name %s",
+      "No file extension was found in the provided file name %s",
       "",
       ""),
   INVALID_FILE_EXTENSION(
@@ -68,13 +68,13 @@ public enum DataLoaderError implements ScalarDbError {
   CLUSTERING_KEY_ORDER_MISMATCH(
       Category.USER_ERROR,
       "0013",
-      "The provided clustering key order does not match the table schema. Required order: %s",
+      "The provided clustering-key order does not match the table schema. Required order: %s",
       "",
       ""),
   PARTITION_KEY_ORDER_MISMATCH(
       Category.USER_ERROR,
       "0014",
-      "The provided partition key order does not match the table schema. Required order: %s",
+      "The provided partition-key order does not match the table schema. Required order: %s",
       "",
       ""),
   MISSING_NAMESPACE_OR_TABLE(
@@ -156,7 +156,7 @@ public enum DataLoaderError implements ScalarDbError {
   MISSING_SOURCE_FIELD(
       Category.USER_ERROR,
       "0035",
-      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "The data mapping source field '%s' for table '%s' is missing in the JSON data record",
       "",
       ""),
   CSV_DATA_MISMATCH(
@@ -166,7 +166,7 @@ public enum DataLoaderError implements ScalarDbError {
   IMPORT_TARGET_MISSING(
       Category.USER_ERROR,
       "0038",
-      "Missing option: either '--namespace' and'--table' or '--control-file' options must be specified",
+      "Missing option: either the '--namespace' and '--table' options or the '--control-file' option must be specified",
       "",
       ""),
   MISSING_IMPORT_FILE(
@@ -199,7 +199,7 @@ public enum DataLoaderError implements ScalarDbError {
       "",
       ""),
   NULL_OR_EMPTY_KEY_VALUE_INPUT(
-      Category.USER_ERROR, "0049", "Key-value cannot be null or empty", "", ""),
+      Category.USER_ERROR, "0049", "Key value cannot be null or empty", "", ""),
   INVALID_KEY_VALUE_INPUT(Category.USER_ERROR, "0050", "Invalid key-value format: %s", "", ""),
   SPLIT_INPUT_VALUE_NULL(Category.USER_ERROR, "0051", "Value must not be null", "", ""),
   SPLIT_INPUT_DELIMITER_NULL(Category.USER_ERROR, "0052", "Delimiter must not be null", "", ""),
@@ -217,13 +217,13 @@ public enum DataLoaderError implements ScalarDbError {
   ERROR_CRUD_EXCEPTION(
       Category.INTERNAL_ERROR,
       "0000",
-      "Something went wrong while trying to save the data. Details: %s",
+      "A problem occurred while trying to save the data. Details: %s",
       "",
       ""),
   ERROR_SCAN(
       Category.INTERNAL_ERROR,
       "0001",
-      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
+      "A problem occurred while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
       "",
       ""),
   CSV_FILE_READ_FAILED(
