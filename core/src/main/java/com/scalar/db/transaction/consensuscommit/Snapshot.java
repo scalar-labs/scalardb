@@ -25,7 +25,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
@@ -303,8 +302,7 @@ public class Snapshot {
     }
   }
 
-  public void to(MutationComposer composer)
-      throws ExecutionException, PreparationConflictException {
+  public void to(MutationComposer composer) throws ExecutionException {
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
