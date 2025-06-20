@@ -43,7 +43,7 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
 
   @Test
   public void get_InStreamingMode_ShouldRetrieveSingleResult() throws ExecutionException {
-    if (!JdbcTestUtils.isMysql(rdbEngine)) {
+    if (!JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
       // MySQL is the only RDB engine that supports streaming mode
       return;
     }
@@ -83,7 +83,7 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
 
   @Test
   public void scan_InStreamingMode_ShouldRetrieveResults() throws IOException, ExecutionException {
-    if (!JdbcTestUtils.isMysql(rdbEngine)) {
+    if (!JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
       // MySQL is the only RDB engine that supports streaming mode
       return;
     }
