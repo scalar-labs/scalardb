@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
@@ -83,7 +83,7 @@ public class CsvImportProcessor extends ImportProcessor {
         String[] dataArray = line.split(delimiter);
         if (headerArray.length != dataArray.length) {
           throw new IllegalArgumentException(
-              CoreError.DATA_LOADER_CSV_DATA_MISMATCH.buildMessage(line, header));
+              DataLoaderError.CSV_DATA_MISMATCH.buildMessage(line, header));
         }
         JsonNode jsonNode = combineHeaderAndData(headerArray, dataArray);
         if (jsonNode.isEmpty()) continue;
@@ -97,7 +97,7 @@ public class CsvImportProcessor extends ImportProcessor {
       if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
       throw new RuntimeException(
-          CoreError.DATA_LOADER_CSV_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
+          DataLoaderError.CSV_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -126,7 +126,7 @@ public class CsvImportProcessor extends ImportProcessor {
       return reader.readLine();
     } catch (IOException e) {
       throw new UncheckedIOException(
-          CoreError.DATA_LOADER_CSV_FILE_HEADER_READ_FAILED.buildMessage(e.getMessage()), e);
+          DataLoaderError.CSV_FILE_HEADER_READ_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 

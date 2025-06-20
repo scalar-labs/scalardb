@@ -8,7 +8,7 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Locale;
 import java.util.Map;

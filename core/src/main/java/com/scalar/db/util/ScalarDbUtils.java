@@ -22,7 +22,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
