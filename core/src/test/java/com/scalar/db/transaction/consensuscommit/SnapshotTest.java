@@ -1645,7 +1645,7 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
-    // Simulate that the first and second records were updated by another transaction
+    // Simulate that the first and third records were updated by another transaction
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
 
@@ -1678,7 +1678,7 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
-    // Simulate that the first and second records were updated by myself
+    // Simulate that the first and third records were updated by myself
     snapshot.putIntoWriteSet(key1, preparePut(ANY_TEXT_1, ANY_TEXT_1));
     snapshot.putIntoWriteSet(key3, preparePut(ANY_TEXT_3, ANY_TEXT_1));
     Scanner scanner = mock(Scanner.class);
@@ -1712,7 +1712,7 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
-    // Simulate that the first and second records were deleted by myself
+    // Simulate that the first and third records were deleted by myself
     snapshot.putIntoDeleteSet(key1, prepareDelete(ANY_TEXT_1, ANY_TEXT_1));
     snapshot.putIntoDeleteSet(key3, prepareDelete(ANY_TEXT_3, ANY_TEXT_1));
     Scanner scanner = mock(Scanner.class);
