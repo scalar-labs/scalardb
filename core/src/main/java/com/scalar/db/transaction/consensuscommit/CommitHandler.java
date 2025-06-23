@@ -2,11 +2,13 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.LazyInit;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -24,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -36,6 +40,9 @@ public class CommitHandler {
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+  private final MutationsGrouper mutationsGrouper;
+  protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  private final boolean onePhaseCommitEnabled;
 
   @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
 
@@ -44,11 +51,17 @@ public class CommitHandler {
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      MutationsGrouper mutationsGrouper,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean onePhaseCommitEnabled) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.mutationsGrouper = checkNotNull(mutationsGrouper);
+    this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
+    this.onePhaseCommitEnabled = onePhaseCommitEnabled;
   }
 
   /**
@@ -106,42 +119,118 @@ public class CommitHandler {
     }
   }
 
-  public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
+  public void commit(Snapshot snapshot, boolean readOnly)
+      throws CommitException, UnknownTransactionStatusException {
+    boolean hasWritesOrDeletesInSnapshot = !readOnly && snapshot.hasWritesOrDeletes();
+
     Optional<Future<Void>> snapshotHookFuture = invokeBeforePreparationSnapshotHook(snapshot);
-    try {
-      prepare(snapshot);
-    } catch (PreparationException e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      abortState(snapshot.getId());
-      rollbackRecords(snapshot);
-      if (e instanceof PreparationConflictException) {
-        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+
+    if (canOnePhaseCommit(snapshot)) {
+      try {
+        onePhaseCommitRecords(snapshot);
+        return;
+      } catch (Exception e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        throw e;
       }
-      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (Exception e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      throw e;
     }
 
-    try {
-      validate(snapshot);
-    } catch (ValidationException e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      abortState(snapshot.getId());
-      rollbackRecords(snapshot);
-      if (e instanceof ValidationConflictException) {
-        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    if (hasWritesOrDeletesInSnapshot) {
+      try {
+        prepareRecords(snapshot);
+      } catch (PreparationException e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        abortState(snapshot.getId());
+        rollbackRecords(snapshot);
+        if (e instanceof PreparationConflictException) {
+          throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        }
+        throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+      } catch (Exception e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        throw e;
       }
-      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (Exception e) {
-      safelyCallOnFailureBeforeCommit(snapshot);
-      throw e;
+    }
+
+    if (snapshot.hasReads()) {
+      try {
+        validateRecords(snapshot);
+      } catch (ValidationException e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+
+        // If the transaction has no writes and deletes, we don't need to abort-state and
+        // rollback-records since there are no changes to be made.
+        if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+          abortState(snapshot.getId());
+        }
+        if (hasWritesOrDeletesInSnapshot) {
+          rollbackRecords(snapshot);
+        }
+
+        if (e instanceof ValidationConflictException) {
+          throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        }
+        throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+      } catch (Exception e) {
+        safelyCallOnFailureBeforeCommit(snapshot);
+        throw e;
+      }
     }
 
     waitBeforePreparationSnapshotHookFuture(snapshot, snapshotHookFuture.orElse(null));
 
-    commitState(snapshot);
-    commitRecords(snapshot);
+    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+      commitState(snapshot);
+    }
+    if (hasWritesOrDeletesInSnapshot) {
+      commitRecords(snapshot);
+    }
+  }
+
+  @VisibleForTesting
+  boolean canOnePhaseCommit(Snapshot snapshot) throws CommitException {
+    if (!onePhaseCommitEnabled) {
+      return false;
+    }
+
+    // If validation is required (in SERIALIZABLE isolation), we cannot one-phase commit the
+    // transaction
+    if (snapshot.isValidationRequired()) {
+      return false;
+    }
+
+    // If the snapshot has no write and deletes, we do not one-phase commit the transaction
+    if (!snapshot.hasWritesOrDeletes()) {
+      return false;
+    }
+
+    List<Delete> deletesInDeleteSet = snapshot.getDeletesInDeleteSet();
+
+    // If a record corresponding to a delete in the delete set does not exist in the storage,　we
+    // cannot one-phase commit the transaction. This is because the storage does not support
+    // delete-if-not-exists semantics, so we cannot detect conflicts with other transactions.
+    for (Delete delete : deletesInDeleteSet) {
+      Optional<TransactionResult> result = snapshot.getFromReadSet(new Snapshot.Key(delete));
+
+      // For deletes, we always perform implicit pre-reads if the result does not exit in the read
+      // set. So the result should always exist in the read set.
+      assert result != null;
+
+      if (!result.isPresent()) {
+        return false;
+      }
+    }
+
+    try {
+      // If the mutations can be grouped altogether, the mutations can be done in a single mutate
+      // API call, so we can one-phase commit the transaction
+      return mutationsGrouper.canBeGroupedAltogether(
+          Stream.concat(snapshot.getPutsInWriteSet().stream(), deletesInDeleteSet.stream())
+              .collect(Collectors.toList()));
+    } catch (ExecutionException e) {
+      throw new CommitException(
+          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
+    }
   }
 
   protected void handleCommitConflict(Snapshot snapshot, Exception cause)
@@ -171,9 +260,42 @@ public class CommitHandler {
     }
   }
 
-  public void prepare(Snapshot snapshot) throws PreparationException {
+  @VisibleForTesting
+  void onePhaseCommitRecords(Snapshot snapshot) throws CommitException {
     try {
-      prepareRecords(snapshot);
+      OnePhaseCommitMutationComposer composer =
+          new OnePhaseCommitMutationComposer(snapshot.getId(), tableMetadataManager);
+      snapshot.to(composer);
+
+      // One-phase commit does not require grouping mutations and using the parallel executor since
+      // it is always executed in a single mutate API call.
+      storage.mutate(composer.get());
+    } catch (NoMutationException e) {
+      throw new CommitConflictException(
+          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
+    } catch (RetriableExecutionException e) {
+      throw new CommitConflictException(
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS.buildMessage(),
+          e,
+          snapshot.getId());
+    } catch (ExecutionException e) {
+      throw new CommitException(
+          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
+    }
+  }
+
+  public void prepareRecords(Snapshot snapshot) throws PreparationException {
+    try {
+      PrepareMutationComposer composer =
+          new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
+      snapshot.to(composer);
+      List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
+
+      List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        tasks.add(() -> storage.mutate(mutations));
+      }
+      parallelExecutor.prepareRecords(tasks, snapshot.getId());
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
@@ -188,22 +310,7 @@ public class CommitHandler {
     }
   }
 
-  private void prepareRecords(Snapshot snapshot)
-      throws ExecutionException, PreparationConflictException {
-    PrepareMutationComposer composer =
-        new PrepareMutationComposer(snapshot.getId(), tableMetadataManager);
-    snapshot.to(composer);
-    PartitionedMutations mutations = new PartitionedMutations(composer.get());
-
-    ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-    List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-    for (PartitionedMutations.Key key : orderedKeys) {
-      tasks.add(() -> storage.mutate(mutations.get(key)));
-    }
-    parallelExecutor.prepare(tasks, snapshot.getId());
-  }
-
-  public void validate(Snapshot snapshot) throws ValidationException {
+  public void validateRecords(Snapshot snapshot) throws ValidationException {
     try {
       // validation is executed when SERIALIZABLE is chosen.
       snapshot.toSerializable(storage);
@@ -234,12 +341,11 @@ public class CommitHandler {
       CommitMutationComposer composer =
           new CommitMutationComposer(snapshot.getId(), tableMetadataManager);
       snapshot.to(composer);
-      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+      List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
-      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-      for (PartitionedMutations.Key key : orderedKeys) {
-        tasks.add(() -> storage.mutate(mutations.get(key)));
+      List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        tasks.add(() -> storage.mutate(mutations));
       }
       parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
@@ -282,12 +388,11 @@ public class CommitHandler {
       RollbackMutationComposer composer =
           new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
       snapshot.to(composer);
-      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+      List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
-      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-      for (PartitionedMutations.Key key : orderedKeys) {
-        tasks.add(() -> storage.mutate(mutations.get(key)));
+      List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        tasks.add(() -> storage.mutate(mutations));
       }
       parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {

@@ -10,7 +10,7 @@ import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.WriteTimeoutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;

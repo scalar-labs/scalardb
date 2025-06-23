@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
@@ -375,7 +375,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties() {
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to it to false by default in a future driver release.
     return ImmutableMap.of("sendTimeAsDatetime", "false");

@@ -12,9 +12,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -44,13 +44,20 @@ public class JdbcService {
   private final OperationChecker operationChecker;
   private final RdbEngineStrategy rdbEngine;
   private final QueryBuilder queryBuilder;
+  private final int scanFetchSize;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
-      RdbEngineStrategy rdbEngine) {
-    this(tableMetadataManager, operationChecker, rdbEngine, new QueryBuilder(rdbEngine));
+      RdbEngineStrategy rdbEngine,
+      int scanFetchSize) {
+    this(
+        tableMetadataManager,
+        operationChecker,
+        rdbEngine,
+        new QueryBuilder(rdbEngine),
+        scanFetchSize);
   }
 
   @VisibleForTesting
@@ -58,11 +65,13 @@ public class JdbcService {
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
       RdbEngineStrategy rdbEngine,
-      QueryBuilder queryBuilder) {
+      QueryBuilder queryBuilder,
+      int scanFetchSize) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.operationChecker = Objects.requireNonNull(operationChecker);
     this.rdbEngine = Objects.requireNonNull(rdbEngine);
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
+    this.scanFetchSize = scanFetchSize;
   }
 
   public Optional<Result> get(Get get, Connection connection)
@@ -102,7 +111,8 @@ public class JdbcService {
   }
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
-  public Scanner getScanner(Scan scan, Connection connection, boolean closeConnectionOnScannerClose)
+  public Scanner getScanner(
+      Scan scan, Connection connection, boolean commitAndCloseConnectionOnScannerClose)
       throws SQLException, ExecutionException {
     operationChecker.check(scan);
 
@@ -111,13 +121,14 @@ public class JdbcService {
     SelectQuery selectQuery = buildSelectQuery(scan, tableMetadata);
     PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql());
     selectQuery.bind(preparedStatement);
+    preparedStatement.setFetchSize(scanFetchSize);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
         new ResultInterpreter(scan.getProjections(), tableMetadata, rdbEngine),
         connection,
         preparedStatement,
         resultSet,
-        closeConnectionOnScannerClose);
+        commitAndCloseConnectionOnScannerClose);
   }
 
   public List<Result> scan(Scan scan, Connection connection)

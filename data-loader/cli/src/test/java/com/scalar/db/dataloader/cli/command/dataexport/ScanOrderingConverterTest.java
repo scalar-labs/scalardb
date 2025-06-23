@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.scalar.db.api.Scan;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,23 +22,22 @@ public class ScanOrderingConverterTest {
             () -> scanOrderingConverter.convert(value),
             "Expected to throw exception");
     Assertions.assertEquals(
-        CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage(value), thrown.getMessage());
+        DataLoaderError.INVALID_KEY_VALUE_INPUT.buildMessage(value), thrown.getMessage());
   }
 
   @Test
   void callConvert_withValidValueAndOrderAscending_shouldReturnScanOrdering() {
     String value = "id=ASC,age=DESC";
     List<Scan.Ordering> expectedOrder = new ArrayList<>();
-    expectedOrder.add(new Scan.Ordering("id", Scan.Ordering.Order.ASC));
-    expectedOrder.add(new Scan.Ordering("age", Scan.Ordering.Order.DESC));
+    expectedOrder.add(Scan.Ordering.asc("id"));
+    expectedOrder.add(Scan.Ordering.desc("age"));
     Assertions.assertEquals(expectedOrder, scanOrderingConverter.convert(value));
   }
 
   @Test
   void callConvert_withValidValueAndOrderDescending_shouldReturnScanOrdering() {
     String value = "id=desc";
-    List<Scan.Ordering> expectedOrder =
-        Collections.singletonList(new Scan.Ordering("id", Scan.Ordering.Order.DESC));
+    List<Scan.Ordering> expectedOrder = Collections.singletonList(Scan.Ordering.desc("id"));
     Assertions.assertEquals(expectedOrder, scanOrderingConverter.convert(value));
   }
 }

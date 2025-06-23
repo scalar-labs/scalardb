@@ -1,8 +1,8 @@
 package com.scalar.db.schemaloader.command;
 
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.schemaloader.SchemaLoader;
+import com.scalar.db.schemaloader.SchemaLoaderError;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
@@ -63,6 +63,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private boolean coordinator;
 
   @Option(
+      names = "--replication-tables",
+      description = "Create/delete/repair replication tables",
+      defaultValue = "false")
+  private boolean replicationTables;
+
+  @Option(
       names = {"-f", "--schema-file"},
       description = "Path to the schema json file")
   private Path schemaFile;
@@ -115,7 +121,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     if (mode == null) {
       createTables();
     } else if (mode.deleteTables) {
-      SchemaLoader.unload(configPath, schemaFile, coordinator);
+      SchemaLoader.unload(configPath, schemaFile, coordinator, replicationTables);
     } else if (mode.repairAll) {
       repairAll();
     } else if (mode.alterTables) {
@@ -130,23 +136,22 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   private void createTables() throws SchemaLoaderException {
     Map<String, String> options = prepareAllOptions();
-    SchemaLoader.load(configPath, schemaFile, options, coordinator);
+    SchemaLoader.load(configPath, schemaFile, options, coordinator, replicationTables);
   }
 
   private void repairAll() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL
-              .buildMessage());
+          SchemaLoaderError.SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL.buildMessage());
     }
     Map<String, String> options = prepareAllOptions();
-    SchemaLoader.repairAll(configPath, schemaFile, options, coordinator);
+    SchemaLoader.repairAll(configPath, schemaFile, options, coordinator, replicationTables);
   }
 
   private void alterTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_ALTER.buildMessage());
+          SchemaLoaderError.SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_ALTER.buildMessage());
     }
     Map<String, String> options = prepareOptions(DynamoAdmin.NO_SCALING);
     SchemaLoader.alterTables(configPath, schemaFile, options);
@@ -155,12 +160,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   private void importTables() throws SchemaLoaderException {
     if (schemaFile == null) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_IMPORT.buildMessage());
+          SchemaLoaderError.SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_IMPORT.buildMessage());
     }
 
     if (coordinator) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_SPECIFYING_COORDINATOR_WITH_IMPORT_NOT_ALLOWED.buildMessage());
+          SchemaLoaderError.SPECIFYING_COORDINATOR_WITH_IMPORT_NOT_ALLOWED.buildMessage());
     }
     Map<String, String> options = prepareAllOptions();
     SchemaLoader.importTables(configPath, schemaFile, options);

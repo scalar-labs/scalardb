@@ -28,7 +28,7 @@ import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -71,6 +71,20 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
 
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+            .buildMessage());
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+            .buildMessage());
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
             .buildMessage());

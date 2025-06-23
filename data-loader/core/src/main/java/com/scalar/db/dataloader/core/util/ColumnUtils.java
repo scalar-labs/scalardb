@@ -3,8 +3,8 @@ package com.scalar.db.dataloader.core.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.io.BigIntColumn;
@@ -133,18 +133,18 @@ public final class ColumnUtils {
       }
     } catch (NumberFormatException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
-              columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
+          DataLoaderError.INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
+              value, columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     } catch (DateTimeParseException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
-              columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
+          DataLoaderError.INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
+              value, columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     } catch (IllegalArgumentException e) {
       throw new ColumnParsingException(
-          CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
-              columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
+          DataLoaderError.INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
+              value, columnName, columnInfo.getTableName(), columnInfo.getNamespace()),
           e);
     }
   }
@@ -166,6 +166,8 @@ public final class ColumnUtils {
    * @param sourceRecord the source data in JSON format to compare against
    * @param ignoreNullValues if true, null values will be excluded from the result
    * @param tableMetadata metadata about the table structure and column types
+   * @param namespace namespace in which the table is present
+   * @param table table name to which data is to be imported
    * @return a List of Column objects representing the processed data
    * @throws Base64Exception if there's an error processing base64 encoded BLOB data
    * @throws ColumnParsingException if there's an error parsing column values
@@ -174,7 +176,9 @@ public final class ColumnUtils {
       Result scalarDBResult,
       JsonNode sourceRecord,
       boolean ignoreNullValues,
-      TableMetadata tableMetadata)
+      TableMetadata tableMetadata,
+      String namespace,
+      String table)
       throws Base64Exception, ColumnParsingException {
 
     List<Column<?>> columns = new ArrayList<>();
@@ -193,7 +197,9 @@ public final class ColumnUtils {
               sourceRecord,
               columnName,
               ignoreNullValues,
-              tableMetadata.getColumnDataTypes());
+              tableMetadata.getColumnDataTypes(),
+              namespace,
+              table);
 
       if (column != null) {
         columns.add(column);
@@ -242,6 +248,8 @@ public final class ColumnUtils {
    * @param columnName the name of the column to retrieve
    * @param ignoreNullValues whether to ignore null values in the result
    * @param dataTypesByColumns mapping of column names to their data types
+   * @param namespace namespace in which the table is present
+   * @param table table name to which data is to be imported
    * @return the Column object containing the value, or null if ignored
    * @throws ColumnParsingException if there's an error parsing the column value
    */
@@ -250,13 +258,15 @@ public final class ColumnUtils {
       JsonNode sourceRecord,
       String columnName,
       boolean ignoreNullValues,
-      Map<String, DataType> dataTypesByColumns)
+      Map<String, DataType> dataTypesByColumns,
+      String namespace,
+      String table)
       throws ColumnParsingException {
     if (scalarDBResult != null && !sourceRecord.has(columnName)) {
       return getColumnFromResult(scalarDBResult, columnName);
     } else {
       return getColumnFromSourceRecord(
-          sourceRecord, columnName, ignoreNullValues, dataTypesByColumns);
+          sourceRecord, columnName, ignoreNullValues, dataTypesByColumns, namespace, table);
     }
   }
 
@@ -279,6 +289,8 @@ public final class ColumnUtils {
    * @param columnName column name
    * @param ignoreNullValues ignore null values or not
    * @param dataTypesByColumns data types of columns
+   * @param namespace namespace in which the table is present
+   * @param table table name to which data is to be imported
    * @return column data
    * @throws ColumnParsingException if an error occurs while parsing the column
    */
@@ -286,7 +298,9 @@ public final class ColumnUtils {
       JsonNode sourceRecord,
       String columnName,
       boolean ignoreNullValues,
-      Map<String, DataType> dataTypesByColumns)
+      Map<String, DataType> dataTypesByColumns,
+      String namespace,
+      String table)
       throws ColumnParsingException {
     DataType dataType = dataTypesByColumns.get(columnName);
     String columnValue =
@@ -294,7 +308,8 @@ public final class ColumnUtils {
             ? sourceRecord.get(columnName).asText()
             : null;
     if (!ignoreNullValues || columnValue != null) {
-      ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+      ColumnInfo columnInfo =
+          ColumnInfo.builder().columnName(columnName).tableName(table).namespace(namespace).build();
       return createColumnFromValue(dataType, columnInfo, columnValue);
     }
     return null;

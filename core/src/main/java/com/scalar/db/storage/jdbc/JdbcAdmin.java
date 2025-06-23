@@ -12,8 +12,10 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -59,6 +61,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final String INDEX_NAME_PREFIX = "index";
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "jdbc",
+          StorageInfo.MutationAtomicityUnit.STORAGE,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
 
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
@@ -438,7 +446,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement preparedStatement =
           connection.prepareStatement(getSelectColumnsStatement())) {
@@ -510,7 +518,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
@@ -608,7 +616,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement preparedStatement =
           connection.prepareStatement(selectTablesOfNamespaceStatement)) {
@@ -644,7 +652,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + enclose(NAMESPACE_COL_NAMESPACE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       try (PreparedStatement statement = connection.prepareStatement(selectQuery)) {
         statement.setString(1, namespace);
@@ -992,7 +1000,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
 
       String selectQuery =
           "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
@@ -1160,6 +1168,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       throw new ExecutionException("Importing the namespace names of existing tables failed", e);
     }
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 
   @FunctionalInterface

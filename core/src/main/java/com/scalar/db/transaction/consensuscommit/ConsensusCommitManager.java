@@ -22,6 +22,8 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
+import com.scalar.db.common.ReadOnlyDistributedTransaction;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -47,12 +49,12 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
-  private final ConsensusCommitConfig config;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
-  private final RecoveryHandler recovery;
+  private final RecoveryExecutor recoveryExecutor;
   protected final CommitHandler commit;
+  private final Isolation isolation;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
@@ -64,15 +66,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
-    config = new ConsensusCommitConfig(databaseConfig);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit = createCommitHandler();
+    commit = createCommitHandler(config);
+    isolation = config.getIsolation();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -83,15 +87,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     storage = storageFactory.getStorage();
     admin = storageFactory.getStorageAdmin();
 
-    config = new ConsensusCommitConfig(databaseConfig);
+    ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
-    commit = createCommitHandler();
+    commit = createCommitHandler(config);
+    isolation = config.getIsolation();
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -101,62 +107,91 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   ConsensusCommitManager(
       DistributedStorage storage,
       DistributedStorageAdmin admin,
-      ConsensusCommitConfig config,
       DatabaseConfig databaseConfig,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
-      RecoveryHandler recovery,
+      RecoveryExecutor recoveryExecutor,
       CommitHandler commit,
+      Isolation isolation,
+      boolean isIncludeMetadataEnabled,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
     this.admin = admin;
-    this.config = config;
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
-    this.recovery = recovery;
+    this.recoveryExecutor = recoveryExecutor;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
-    this.isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    this.isolation = isolation;
+    this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
   // `groupCommitter` must be set before calling this method.
-  private CommitHandler createCommitHandler() {
+  private CommitHandler createCommitHandler(ConsensusCommitConfig config) {
+    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, groupCommitter);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+          config.isOnePhaseCommitEnabled(),
+          groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+      return new CommitHandler(
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+          config.isOnePhaseCommitEnabled());
     }
   }
 
   @Override
   public DistributedTransaction begin() {
-    return begin(config.getIsolation());
+    String txId = UUID.randomUUID().toString();
+    return begin(txId);
   }
 
   @Override
   public DistributedTransaction begin(String txId) {
-    return begin(txId, config.getIsolation());
+    return begin(txId, isolation, false, false);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly() {
+    String txId = UUID.randomUUID().toString();
+    return beginReadOnly(txId);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) {
+    return begin(txId, isolation, true, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(com.scalar.db.api.Isolation isolation) {
-    return begin(Isolation.valueOf(isolation.name()));
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, com.scalar.db.api.Isolation isolation) {
-    return begin(txId, Isolation.valueOf(isolation.name()));
+    return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -164,14 +199,16 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Override
   public DistributedTransaction start(
       com.scalar.db.api.Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(Isolation.valueOf(isolation.name()));
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public DistributedTransaction start(com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(Isolation.SERIALIZABLE);
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, Isolation.SERIALIZABLE, false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -179,7 +216,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @Override
   public DistributedTransaction start(
       String txId, com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(txId, Isolation.SERIALIZABLE);
+    return begin(txId, Isolation.SERIALIZABLE, false, false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -189,24 +226,19 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId,
       com.scalar.db.api.Isolation isolation,
       com.scalar.db.api.SerializableStrategy strategy) {
-    return begin(txId, Isolation.valueOf(isolation.name()));
+    return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
   @VisibleForTesting
-  DistributedTransaction begin(Isolation isolation) {
-    String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation);
-  }
-
-  @VisibleForTesting
-  DistributedTransaction begin(String txId, Isolation isolation) {
+  DistributedTransaction begin(
+      String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    if (isGroupCommitEnabled()) {
+    if (!readOnly && isGroupCommitEnabled()) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
     }
-    if (!config.getIsolation().equals(isolation)) {
+    if (!this.isolation.equals(isolation)) {
       logger.warn(
           "Setting different isolation level from the one in DatabaseConfig might cause unexpected "
               + "anomalies");
@@ -214,27 +246,42 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
-    ConsensusCommit consensus =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
-    getNamespace().ifPresent(consensus::withNamespace);
-    getTable().ifPresent(consensus::withTable);
-    return consensus;
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            isIncludeMetadataEnabled,
+            parallelExecutor,
+            readOnly,
+            oneOperation);
+    DistributedTransaction transaction =
+        new ConsensusCommit(crud, commit, mutationOperationChecker, groupCommitter);
+    if (readOnly) {
+      transaction = new ReadOnlyDistributedTransaction(transaction);
+    }
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
+    return transaction;
+  }
+
+  private DistributedTransaction beginOneOperation(boolean readOnly) {
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, isolation, readOnly, true);
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)), true);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)), true);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    DistributedTransaction transaction = begin();
+    DistributedTransaction transaction = beginOneOperation(true);
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -321,7 +368,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.put(copyAndSetTargetToIfNot(put));
           return null;
-        });
+        },
+        false);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -332,7 +380,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.put(copyAndSetTargetToIfNot(puts));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -341,7 +390,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.insert(copyAndSetTargetToIfNot(insert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -350,7 +400,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.upsert(copyAndSetTargetToIfNot(upsert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -359,7 +410,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.update(copyAndSetTargetToIfNot(update));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -368,7 +420,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.delete(copyAndSetTargetToIfNot(delete));
           return null;
-        });
+        },
+        false);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -379,7 +432,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.delete(copyAndSetTargetToIfNot(deletes));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -389,13 +443,16 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         t -> {
           t.mutate(copyAndSetTargetToIfNot(mutations));
           return null;
-        });
+        },
+        false);
   }
 
   private <R> R executeTransaction(
-      ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction)
+      ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction,
+      boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
-    DistributedTransaction transaction = begin();
+    DistributedTransaction transaction = beginOneOperation(readOnly);
+
     try {
       R result = throwableFunction.apply(transaction);
       transaction.commit();
@@ -457,6 +514,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     storage.close();
     admin.close();
     parallelExecutor.close();
+    recoveryExecutor.close();
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       groupCommitter.close();

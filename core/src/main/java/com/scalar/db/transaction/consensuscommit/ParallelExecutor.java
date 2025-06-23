@@ -60,7 +60,7 @@ public class ParallelExecutor {
     this.parallelExecutorService = parallelExecutorService;
   }
 
-  public void prepare(List<ParallelExecutorTask> tasks, String transactionId)
+  public void prepareRecords(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException {
     try {
       // When parallel preparation is disabled, we stop running the tasks when one of them fails
@@ -85,7 +85,7 @@ public class ParallelExecutor {
     }
   }
 
-  public void validate(List<ParallelExecutorTask> tasks, String transactionId)
+  public void validateRecords(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException, ValidationConflictException {
     try {
       executeTasks(
@@ -155,6 +155,13 @@ public class ParallelExecutor {
       String taskName,
       String transactionId)
       throws ExecutionException, ValidationConflictException, CrudException {
+    if (tasks.size() == 1 && !noWait) {
+      // If there is only one task and noWait is false, we can run it directly without parallel
+      // execution.
+      executeTasksSerially(tasks, stopOnError, taskName, transactionId);
+      return;
+    }
+
     if (parallel) {
       executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {

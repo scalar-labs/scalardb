@@ -14,10 +14,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
@@ -57,12 +58,15 @@ public class Cosmos extends AbstractDistributedStorage {
 
     client = CosmosUtils.buildCosmosClient(config);
 
+    CosmosAdmin cosmosAdmin = new CosmosAdmin(client, config);
     TableMetadataManager metadataManager =
-        new TableMetadataManager(
-            new CosmosAdmin(client, config), databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new CosmosOperationChecker(databaseConfig, metadataManager);
+        new TableMetadataManager(cosmosAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    operationChecker =
+        new CosmosOperationChecker(
+            databaseConfig, metadataManager, new StorageInfoProvider(cosmosAdmin));
 
-    selectStatementHandler = new SelectStatementHandler(client, metadataManager);
+    selectStatementHandler =
+        new SelectStatementHandler(client, metadataManager, databaseConfig.getScanFetchSize());
     putStatementHandler = new PutStatementHandler(client, metadataManager);
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);

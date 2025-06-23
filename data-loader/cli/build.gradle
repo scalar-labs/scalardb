@@ -9,11 +9,13 @@ application {
     mainClass = 'com.scalar.db.dataloader.cli.DataLoaderCli'
 }
 
-archivesBaseName = "scalardb-data-loader-cli"
+base {
+    archivesName = "scalardb-data-loader-cli"
+}
 
 dependencies {
     implementation project(':core')
-    implementation project(':data-loader:core')
+    implementation project(':data-loader:data-loader-core')
     implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
     implementation "info.picocli:picocli:${picocliVersion}"
 
@@ -32,6 +34,7 @@ javadoc {
 
 // Build a fat jar
 shadowJar {
+    mustRunAfter distZip, distTar
     archiveClassifier.set("")
     manifest {
         attributes 'Main-Class': 'com.scalar.db.dataloader.DataLoaderCli'
@@ -57,3 +60,23 @@ spotbugsTest.reports {
     html.enabled = true
 }
 spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
+
+task dockerfileLint(type: Exec) {
+    description 'Lint the Dockerfile'
+    commandLine "${project.rootDir}/ci/dockerfile_lint.sh"
+}
+
+task copyFilesToDockerBuildContextDir(type: Copy) {
+    description 'Copy files to a temporary folder to build the Docker image'
+    dependsOn shadowJar
+    from("Dockerfile")
+    from(tasks.shadowJar.archiveFile)
+    into('build/docker')
+}
+
+task docker(type: Exec) {
+    description 'Build ScalarDB Data Loader Docker CLI image'
+    dependsOn copyFilesToDockerBuildContextDir
+    workingDir 'build/docker'
+    commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-data-loader-cli:${project.version}", "."
+}

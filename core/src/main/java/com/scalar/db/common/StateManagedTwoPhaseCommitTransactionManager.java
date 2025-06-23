@@ -12,7 +12,6 @@ import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -22,7 +21,9 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class StateManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {
 
@@ -181,9 +182,12 @@ public class StateManagedTwoPhaseCommitTransactionManager
 
     @Override
     public void rollback() throws RollbackException {
-      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
+      if (status == Status.ROLLED_BACK) {
+        return;
+      }
+      if (status == Status.COMMITTED) {
         throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
+            CoreError.TRANSACTION_ALREADY_COMMITTED.buildMessage(status));
       }
       try {
         super.rollback();
@@ -194,9 +198,12 @@ public class StateManagedTwoPhaseCommitTransactionManager
 
     @Override
     public void abort() throws AbortException {
-      if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
+      if (status == Status.ROLLED_BACK) {
+        return;
+      }
+      if (status == Status.COMMITTED) {
         throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED_OR_ROLLED_BACK.buildMessage(status));
+            CoreError.TRANSACTION_ALREADY_COMMITTED.buildMessage(status));
       }
       try {
         super.abort();

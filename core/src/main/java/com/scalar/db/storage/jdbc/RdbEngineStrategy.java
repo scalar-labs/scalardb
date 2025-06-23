@@ -205,9 +205,10 @@ public interface RdbEngineStrategy {
   /**
    * Return the connection properties for the underlying database.
    *
+   * @param config the JDBC configuration
    * @return a map where key=property_name and value=property_value
    */
-  default Map<String, String> getConnectionProperties() {
+  default Map<String, String> getConnectionProperties(JdbcConfig config) {
     return Collections.emptyMap();
   }
 
@@ -230,7 +231,8 @@ public interface RdbEngineStrategy {
     // Do nothing
   }
 
-  default void setReadOnly(Connection connection, boolean readOnly) throws SQLException {
+  default void setConnectionToReadOnly(Connection connection, boolean readOnly)
+      throws SQLException {
     connection.setReadOnly(readOnly);
   }
 }

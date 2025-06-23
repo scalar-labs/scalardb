@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataexport.producer;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.io.DataType;
@@ -34,6 +34,7 @@ public class CsvProducerTask extends ProducerTask {
    * Class constructor
    *
    * @param includeMetadata Include metadata in the exported data
+   * @param projectColumns list of columns that is required in export data
    * @param tableMetadata Metadata for a single ScalarDB table
    * @param columnDataTypes Map of data types for the all columns in a ScalarDB table
    * @param delimiter Delimiter used in csv content
@@ -107,8 +108,7 @@ public class CsvProducerTask extends ProducerTask {
 
       return stringBuilder.toString();
     } catch (UnsupportedOperationException e) {
-      logger.error(
-          CoreError.DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED.buildMessage(e.getMessage()));
+      logger.error(DataLoaderError.VALUE_TO_STRING_CONVERSION_FAILED.buildMessage(e.getMessage()));
     }
     return "";
   }

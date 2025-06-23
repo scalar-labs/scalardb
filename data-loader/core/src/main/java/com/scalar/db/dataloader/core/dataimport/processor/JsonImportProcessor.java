@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
@@ -38,6 +38,11 @@ public class JsonImportProcessor extends ImportProcessor {
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
   private final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
 
+  /**
+   * Creates a new JsonImportProcessor with the specified parameters.
+   *
+   * @param params Configuration parameters for the import processor
+   */
   public JsonImportProcessor(ImportProcessorParams params) {
     super(params);
   }
@@ -62,7 +67,7 @@ public class JsonImportProcessor extends ImportProcessor {
       BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
     try (JsonParser jsonParser = new JsonFactory().createParser(reader)) {
       if (jsonParser.nextToken() != JsonToken.START_ARRAY) {
-        throw new IOException(CoreError.DATA_LOADER_JSON_CONTENT_START_ERROR.buildMessage());
+        throw new IOException(DataLoaderError.JSON_CONTENT_START_ERROR.buildMessage());
       }
 
       List<ImportRow> currentDataChunk = new ArrayList<>();
@@ -80,7 +85,7 @@ public class JsonImportProcessor extends ImportProcessor {
       if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
       throw new RuntimeException(
-          CoreError.DATA_LOADER_JSON_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
+          DataLoaderError.JSON_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 

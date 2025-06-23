@@ -27,8 +27,10 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isTrue();
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse();
-    assertThat(config.isIncludeMetadataEnabled()).isFalse();
+    assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isTrue();
+    assertThat(config.isOnePhaseCommitEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
+    assertThat(config.isIncludeMetadataEnabled()).isFalse();
   }
 
   @Test
@@ -61,7 +63,7 @@ public class ConsensusCommitConfigTest {
   public void constructor_UnsupportedIsolationGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_COMMITTED");
+    props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_UNCOMMITTED");
 
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
@@ -154,16 +156,31 @@ public class ConsensusCommitConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithIncludeMetadataEnabledGiven_ShouldLoadProperly() {
+  public void
+      constructor_PropertiesWithCoordinatorWriteOmissionOnReadOnlyEnabledGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+    props.setProperty(
+        ConsensusCommitConfig.COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED, "false");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.isIncludeMetadataEnabled()).isTrue();
+    assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isFalse();
+  }
+
+  @Test
+  public void constructor_PropertiesWithOnePhaseCommitEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.ONE_PHASE_COMMIT_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isOnePhaseCommitEnabled()).isTrue();
   }
 
   @Test
@@ -177,5 +194,18 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isParallelImplicitPreReadEnabled()).isFalse();
+  }
+
+  @Test
+  public void constructor_PropertiesWithIncludeMetadataEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isIncludeMetadataEnabled()).isTrue();
   }
 }

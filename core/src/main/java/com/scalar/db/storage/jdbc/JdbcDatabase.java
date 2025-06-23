@@ -11,9 +11,10 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -53,13 +54,16 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     dataSource = JdbcUtils.initDataSource(config, rdbEngine);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config);
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(
-            new JdbcAdmin(tableMetadataDataSource, config),
-            databaseConfig.getMetadataCacheExpirationTimeSecs());
+        new TableMetadataManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    OperationChecker operationChecker =
+        new OperationChecker(
+            databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin));
 
-    OperationChecker operationChecker = new OperationChecker(databaseConfig, tableMetadataManager);
-    jdbcService = new JdbcService(tableMetadataManager, operationChecker, rdbEngine);
+    jdbcService =
+        new JdbcService(
+            tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
   }
 
   @VisibleForTesting
@@ -82,7 +86,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      rdbEngine.setReadOnly(connection, true);
+      rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.get(get, connection);
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -98,12 +102,32 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      rdbEngine.setReadOnly(connection, true);
+      connection.setAutoCommit(false);
+      rdbEngine.setConnectionToReadOnly(connection, true);
       return jdbcService.getScanner(scan, connection);
     } catch (SQLException e) {
+      try {
+        if (connection != null) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
+
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
+    } catch (Exception e) {
+      try {
+        if (connection != null) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
+
+      close(connection);
+      throw e;
     }
   }
 
@@ -173,6 +197,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       close(connection);
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
+    } catch (Exception e) {
+      close(connection);
+      throw e;
     }
 
     try {

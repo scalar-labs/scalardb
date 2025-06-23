@@ -1,16 +1,17 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.cli.util.FileUtils;
 import com.scalar.db.dataloader.cli.util.InvalidFilePathException;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.CsvExportManager;
@@ -44,7 +45,6 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "export", description = "export data from a ScalarDB table")
 public class ExportCommand extends ExportCommandOptions implements Callable<Integer> {
 
-  private static final String EXPORT_FILE_NAME_FORMAT = "export.%s.%s.%s.%s";
   private static final Logger logger = LoggerFactory.getLogger(ExportCommand.class);
 
   @Spec CommandSpec spec;
@@ -56,6 +56,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     try {
       validateOutputDirectory();
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
+      validatePositiveValue(
+          spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
+      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
@@ -106,8 +109,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   private String getScalarDbPropertiesFilePath() {
     if (StringUtils.isBlank(configFilePath)) {
-      throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage());
+      throw new IllegalArgumentException(DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage());
     }
     return Objects.equals(configFilePath, DEFAULT_CONFIG_FILE_NAME)
         ? Paths.get("").toAbsolutePath().resolve(DEFAULT_CONFIG_FILE_NAME).toString()
@@ -164,11 +166,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     String fileName =
         StringUtils.isBlank(outputFileName)
             ? String.format(
-                EXPORT_FILE_NAME_FORMAT,
-                namespace,
-                table,
-                System.nanoTime(),
-                outputFormat.toString().toLowerCase())
+                "export.%s.%s.%s.%s",
+                namespace, table, System.nanoTime(), outputFormat.toString().toLowerCase())
             : outputFileName;
 
     if (StringUtils.isBlank(outputDirectory)) {

@@ -7,7 +7,17 @@ import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import java.io.IOException;
 import java.io.Writer;
 
+/** Export manager implementation which manages the export task that exports data in JSON format */
 public class JsonExportManager extends ExportManager {
+
+  /**
+   * Constructs a {@code JsonExportManager} with the specified {@link DistributedStorage}, {@link
+   * ScalarDbDao}, and {@link ProducerTaskFactory}.
+   *
+   * @param storage the {@code DistributedStorage} instance used to read data from the database
+   * @param dao the {@code ScalarDbDao} used to execute export-related database operations
+   * @param producerTaskFactory the factory used to create producer tasks for exporting data
+   */
   public JsonExportManager(
       DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
     super(storage, dao, producerTaskFactory);

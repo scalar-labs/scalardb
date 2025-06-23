@@ -14,10 +14,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
@@ -56,7 +57,7 @@ public class Cassandra extends AbstractDistributedStorage {
 
     handlers =
         StatementHandlerManager.builder()
-            .select(new SelectStatementHandler(session))
+            .select(new SelectStatementHandler(session, config.getScanFetchSize()))
             .insert(new InsertStatementHandler(session))
             .update(new UpdateStatementHandler(session))
             .delete(new DeleteStatementHandler(session))
@@ -65,11 +66,11 @@ public class Cassandra extends AbstractDistributedStorage {
     batch = new BatchHandler(session, handlers);
     logger.info("Cassandra object is created properly");
 
+    CassandraAdmin cassandraAdmin = new CassandraAdmin(clusterManager, config);
     metadataManager =
-        new TableMetadataManager(
-            new CassandraAdmin(clusterManager, config),
-            config.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(config, metadataManager);
+        new TableMetadataManager(cassandraAdmin, config.getMetadataCacheExpirationTimeSecs());
+    operationChecker =
+        new OperationChecker(config, metadataManager, new StorageInfoProvider(cassandraAdmin));
   }
 
   @VisibleForTesting

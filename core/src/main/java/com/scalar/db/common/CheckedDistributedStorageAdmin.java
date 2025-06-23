@@ -1,8 +1,8 @@
 package com.scalar.db.common;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -370,6 +370,20 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       admin.upgrade(options);
     } catch (ExecutionException e) {
       throw new ExecutionException(CoreError.UPGRADING_SCALAR_DB_ENV_FAILED.buildMessage(), e);
+    }
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
+    if (!namespaceExists(namespace)) {
+      throw new IllegalArgumentException(CoreError.NAMESPACE_NOT_FOUND.buildMessage(namespace));
+    }
+
+    try {
+      return admin.getStorageInfo(namespace);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.GETTING_STORAGE_INFO_FAILED.buildMessage(namespace), e);
     }
   }
 

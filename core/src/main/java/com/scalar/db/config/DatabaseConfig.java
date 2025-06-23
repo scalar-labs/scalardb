@@ -8,7 +8,7 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,6 +38,7 @@ public class DatabaseConfig {
   private boolean crossPartitionScanFilteringEnabled;
   private boolean crossPartitionScanOrderingEnabled;
   private String systemNamespaceName;
+  private int scanFetchSize;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -56,9 +57,11 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN_FILTERING = SCAN_PREFIX + "filtering.enabled";
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
+  public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
+  public static final int DEFAULT_SCAN_FETCH_SIZE = 10;
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     try (FileInputStream stream = new FileInputStream(propertiesFile)) {
@@ -118,6 +121,8 @@ public class DatabaseConfig {
     }
 
     systemNamespaceName = getSystemNamespaceName(getProperties());
+
+    scanFetchSize = getInt(getProperties(), SCAN_FETCH_SIZE, DEFAULT_SCAN_FETCH_SIZE);
   }
 
   public List<String> getContactPoints() {
@@ -170,6 +175,10 @@ public class DatabaseConfig {
 
   public String getSystemNamespaceName() {
     return systemNamespaceName;
+  }
+
+  public int getScanFetchSize() {
+    return scanFetchSize;
   }
 
   public static String getTransactionManager(Properties properties) {

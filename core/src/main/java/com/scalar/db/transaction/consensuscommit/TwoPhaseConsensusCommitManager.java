@@ -20,7 +20,8 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransactionManager;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -55,7 +56,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final TransactionTableMetadataManager tableMetadataManager;
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
-  private final RecoveryHandler recovery;
+  private final RecoveryExecutor recoveryExecutor;
   private final CommitHandler commit;
   private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
@@ -73,8 +74,17 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    commit =
+        new CommitHandler(
+            storage,
+            coordinator,
+            tableMetadataManager,
+            parallelExecutor,
+            new MutationsGrouper(new StorageInfoProvider(admin)),
+            config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+            config.isOnePhaseCommitEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -90,8 +100,17 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
+    RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    commit =
+        new CommitHandler(
+            storage,
+            coordinator,
+            tableMetadataManager,
+            parallelExecutor,
+            new MutationsGrouper(new StorageInfoProvider(admin)),
+            config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+            config.isOnePhaseCommitEnabled());
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -105,7 +124,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       DatabaseConfig databaseConfig,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
-      RecoveryHandler recovery,
+      RecoveryExecutor recoveryExecutor,
       CommitHandler commit) {
     super(databaseConfig);
     this.storage = storage;
@@ -116,7 +135,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
-    this.recovery = recovery;
+    this.recoveryExecutor = recoveryExecutor;
     this.commit = commit;
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
@@ -148,10 +167,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     return begin(txId, isolation);
   }
 
-  @VisibleForTesting
-  TwoPhaseCommitTransaction begin(String txId, Isolation isolation) {
+  private TwoPhaseCommitTransaction begin(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation);
+    return begin(txId, isolation, false, false);
   }
 
   @Override
@@ -163,35 +181,48 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @VisibleForTesting
   TwoPhaseCommitTransaction join(String txId, Isolation isolation) {
     throwIfGroupCommitIsEnabled();
-    return createNewTransaction(txId, isolation);
+    return begin(txId, isolation, false, false);
   }
 
-  private TwoPhaseCommitTransaction createNewTransaction(String txId, Isolation isolation) {
+  @VisibleForTesting
+  TwoPhaseCommitTransaction begin(
+      String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
     CrudHandler crud =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, isIncludeMetadataEnabled, parallelExecutor);
-
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            isIncludeMetadataEnabled,
+            parallelExecutor,
+            readOnly,
+            oneOperation);
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
+        new TwoPhaseConsensusCommit(crud, commit, mutationOperationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return transaction;
   }
 
+  private TwoPhaseCommitTransaction beginOneOperation(boolean readOnly) {
+    String txId = UUID.randomUUID().toString();
+    return begin(txId, config.getIsolation(), readOnly, true);
+  }
+
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)));
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)), true);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
+    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)), true);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    TwoPhaseCommitTransaction transaction = begin();
+    TwoPhaseCommitTransaction transaction = beginOneOperation(true);
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -282,7 +313,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.put(copyAndSetTargetToIfNot(put));
           return null;
-        });
+        },
+        false);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -293,7 +325,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.put(copyAndSetTargetToIfNot(puts));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -302,7 +335,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.insert(copyAndSetTargetToIfNot(insert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -311,7 +345,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.upsert(copyAndSetTargetToIfNot(upsert));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -320,7 +355,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.update(copyAndSetTargetToIfNot(update));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -329,7 +365,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.delete(copyAndSetTargetToIfNot(delete));
           return null;
-        });
+        },
+        false);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -340,7 +377,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.delete(copyAndSetTargetToIfNot(deletes));
           return null;
-        });
+        },
+        false);
   }
 
   @Override
@@ -350,13 +388,15 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         t -> {
           t.mutate(copyAndSetTargetToIfNot(mutations));
           return null;
-        });
+        },
+        false);
   }
 
   private <R> R executeTransaction(
-      ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction)
+      ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction,
+      boolean readOnly)
       throws CrudException, UnknownTransactionStatusException {
-    TwoPhaseCommitTransaction transaction = begin();
+    TwoPhaseCommitTransaction transaction = beginOneOperation(readOnly);
     try {
       R result = throwableFunction.apply(transaction);
       transaction.prepare();
@@ -417,5 +457,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     storage.close();
     admin.close();
     parallelExecutor.close();
+    recoveryExecutor.close();
   }
 }

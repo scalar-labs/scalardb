@@ -88,6 +88,15 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
   void addRawColumnToTable(String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException;
 
+  /**
+   * Returns the storage information.
+   *
+   * @param namespace the namespace to get the storage information for
+   * @return the storage information
+   * @throws ExecutionException if the operation fails
+   */
+  StorageInfo getStorageInfo(String namespace) throws ExecutionException;
+
   /** Closes connections to the storage. */
   @Override
   void close();

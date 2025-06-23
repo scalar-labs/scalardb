@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.only;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
@@ -18,6 +20,7 @@ import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -385,12 +388,82 @@ public class StateManagedTwoPhaseCommitTransactionManagerTest {
     }
 
     @Test
-    public void rollback_Twice_ShouldThrowIllegalStateException() throws RollbackException {
+    public void rollback_Twice_ShouldNotThrowAnyExceptionAndCallWrappedTransactionRollbackOnlyOnce()
+        throws RollbackException {
       // Arrange
       transaction.rollback();
 
       // Act Assert
-      assertThatThrownBy(() -> transaction.rollback()).isInstanceOf(IllegalStateException.class);
+      assertThatCode(() -> transaction.rollback()).doesNotThrowAnyException();
+
+      verify(wrappedTransaction, only()).rollback();
+    }
+
+    @Test
+    public void abort_ShouldNotThrowAnyException() {
+      // Arrange
+
+      // Act Assert
+      assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+    }
+
+    @Test
+    public void abort_AfterCommitFailed_ShouldNotThrowAnyException()
+        throws PreparationException, CommitException, UnknownTransactionStatusException {
+      // Arrange
+      doThrow(CommitException.class).when(wrappedTransaction).commit();
+
+      transaction.prepare();
+      assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
+
+      // Act Assert
+      assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+    }
+
+    @Test
+    public void abort_AfterPrepareFailed_ShouldNotThrowAnyException() throws PreparationException {
+      // Arrange
+      doThrow(PreparationException.class).when(wrappedTransaction).prepare();
+      assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(PreparationException.class);
+
+      // Act Assert
+      assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+    }
+
+    @Test
+    public void abort_AfterValidateFailed_ShouldNotThrowAnyException()
+        throws PreparationException, ValidationException {
+      // Arrange
+      doThrow(ValidationException.class).when(wrappedTransaction).validate();
+
+      transaction.prepare();
+      assertThatThrownBy(() -> transaction.validate()).isInstanceOf(ValidationException.class);
+
+      // Act Assert
+      assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+    }
+
+    @Test
+    public void abort_AfterCommit_ShouldThrowIllegalStateException()
+        throws PreparationException, CommitException, UnknownTransactionStatusException {
+      // Arrange
+      transaction.prepare();
+      transaction.commit();
+
+      // Act Assert
+      assertThatThrownBy(() -> transaction.abort()).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void abort_Twice_ShouldNotThrowAnyExceptionAndCallWrappedTransactionAbortOnlyOnce()
+        throws AbortException {
+      // Arrange
+      transaction.abort();
+
+      // Act Assert
+      assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+
+      verify(wrappedTransaction, only()).abort();
     }
   }
 }

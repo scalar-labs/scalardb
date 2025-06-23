@@ -1,10 +1,11 @@
 package com.scalar.db.dataloader.cli.util;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
+import picocli.CommandLine;
 
 public class CommandLineInputUtils {
 
@@ -12,20 +13,20 @@ public class CommandLineInputUtils {
    * Parses a single key-value pair from a string in the format "key=value".
    *
    * @param keyValue the key-value string to parse
-   * @return a {@link Map.Entry} representing the parsed key-value pair
+   * @return a {@link java.util.Map.Entry} representing the parsed key-value pair
    * @throws IllegalArgumentException if the input is null, empty, or not in the expected format
    */
   public static Map.Entry<String, String> parseKeyValue(String keyValue) {
     if (StringUtils.isBlank(keyValue)) {
       throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
+          DataLoaderError.NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
     }
 
     String[] parts = splitByDelimiter(keyValue, "=", 2);
 
     if (parts.length != 2 || parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) {
       throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_INVALID_KEY_VALUE_INPUT.buildMessage(keyValue));
+          DataLoaderError.INVALID_KEY_VALUE_INPUT.buildMessage(keyValue));
     }
     return new AbstractMap.SimpleEntry<>(parts[0].trim(), parts[1].trim());
   }
@@ -41,9 +42,23 @@ public class CommandLineInputUtils {
    * @throws NullPointerException if value or delimiter is null
    */
   public static String[] splitByDelimiter(String value, String delimiter, int limit) {
-    Objects.requireNonNull(value, CoreError.DATA_LOADER_SPLIT_INPUT_VALUE_NULL.buildMessage());
-    Objects.requireNonNull(
-        delimiter, CoreError.DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL.buildMessage());
+    Objects.requireNonNull(value, DataLoaderError.SPLIT_INPUT_VALUE_NULL.buildMessage());
+    Objects.requireNonNull(delimiter, DataLoaderError.SPLIT_INPUT_DELIMITER_NULL.buildMessage());
     return value.split(delimiter, limit);
+  }
+
+  /**
+   * Validates that a given integer value is positive. If the value is less than 1, it throws a
+   * {@link picocli.CommandLine.ParameterException} with the specified error message.
+   *
+   * @param commandLine the {@link CommandLine} instance used to provide context for the exception
+   * @param value the integer value to validate
+   * @param error the error that is thrown when the value is invalid
+   */
+  public static void validatePositiveValue(
+      CommandLine commandLine, int value, DataLoaderError error) {
+    if (value < 1) {
+      throw new CommandLine.ParameterException(commandLine, error.buildMessage());
+    }
   }
 }

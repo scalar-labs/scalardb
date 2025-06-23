@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.groupcommit.Emittable;
@@ -28,13 +29,32 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      MutationsGrouper mutationsGrouper,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean onePhaseCommitEnabled,
       CoordinatorGroupCommitter groupCommitter) {
-    super(storage, coordinator, tableMetadataManager, parallelExecutor);
-
+    super(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        mutationsGrouper,
+        coordinatorWriteOmissionOnReadOnlyEnabled,
+        onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
     groupCommitter.setEmitter(new Emitter(coordinator));
     this.groupCommitter = groupCommitter;
+  }
+
+  @Override
+  public void commit(Snapshot snapshot, boolean readOnly)
+      throws CommitException, UnknownTransactionStatusException {
+    if (!readOnly && !snapshot.hasWritesOrDeletes() && coordinatorWriteOmissionOnReadOnlyEnabled) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
+    }
+
+    super.commit(snapshot, readOnly);
   }
 
   @Override

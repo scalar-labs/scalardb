@@ -1,8 +1,7 @@
 package com.scalar.db.api;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
-import java.util.Collections;
 import java.util.Map;
 
 /** An administrative interface for the replication feature. */
@@ -31,10 +30,7 @@ public interface ReplicationAdmin {
    */
   default void createReplicationTables(boolean ifNotExist, Map<String, String> options)
       throws ExecutionException {
-    if (ifNotExist && replicationTablesExist()) {
-      return;
-    }
-    createReplicationTables(options);
+    throw new UnsupportedOperationException(CoreError.REPLICATION_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -48,10 +44,7 @@ public interface ReplicationAdmin {
    * @throws ExecutionException if the operation fails
    */
   default void createReplicationTables(boolean ifNotExist) throws ExecutionException {
-    if (ifNotExist && replicationTablesExist()) {
-      return;
-    }
-    createReplicationTables(Collections.emptyMap());
+    throw new UnsupportedOperationException(CoreError.REPLICATION_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -60,7 +53,7 @@ public interface ReplicationAdmin {
    * @throws ExecutionException if the operation fails
    */
   default void createReplicationTables() throws ExecutionException {
-    createReplicationTables(Collections.emptyMap());
+    throw new UnsupportedOperationException(CoreError.REPLICATION_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -83,10 +76,7 @@ public interface ReplicationAdmin {
    * @throws ExecutionException if the operation fails
    */
   default void dropReplicationTables(boolean ifExist) throws ExecutionException {
-    if (ifExist && !replicationTablesExist()) {
-      return;
-    }
-    dropReplicationTables();
+    throw new UnsupportedOperationException(CoreError.REPLICATION_NOT_ENABLED.buildMessage());
   }
 
   /**

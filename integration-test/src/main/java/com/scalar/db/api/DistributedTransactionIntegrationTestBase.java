@@ -198,6 +198,22 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void get_GetGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecord()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.beginReadOnly();
+    Get get = prepareGet(2, 3);
+
+    // Act
+    Optional<Result> result = transaction.get(get);
+    transaction.commit();
+
+    // Assert
+    assertResult(2, 3, result);
+  }
+
+  @Test
   public void get_GetWithProjectionGivenForCommittedRecord_ShouldReturnRecord()
       throws TransactionException {
     // Arrange
@@ -282,6 +298,26 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
+    Scan scan = prepareScan(1, 0, 2);
+
+    // Act
+    List<Result> results = scanOrGetScanner(transaction, scan, scanType);
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(3);
+    assertResult(1, 0, results.get(0));
+    assertResult(1, 1, results.get(1));
+    assertResult(1, 2, results.get(2));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  public void scanOrGetScanner_ScanGivenForCommittedRecord_InReadOnlyMode_ShouldReturnRecords(
+      ScanType scanType) throws TransactionException {
+    // Arrange
+    populateRecords();
+    DistributedTransaction transaction = manager.beginReadOnly();
     Scan scan = prepareScan(1, 0, 2);
 
     // Act
@@ -2314,6 +2350,49 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Optional<Result> result = manager.get(prepareGet(0, 0));
 
     assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void manager_mutate_ShouldMutateRecords() throws TransactionException {
+    // Arrange
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    manager.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 1)
+            .build();
+    Delete delete = prepareDelete(1, 0);
+
+    // Act
+    manager.mutate(Arrays.asList(update, delete));
+
+    // Assert
+    Optional<Result> result1 = manager.get(prepareGet(0, 0));
+    Optional<Result> result2 = manager.get(prepareGet(1, 0));
+
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(getBalance(result1.get())).isEqualTo(1);
+
+    assertThat(result2.isPresent()).isFalse();
   }
 
   @Test

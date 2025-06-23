@@ -56,8 +56,9 @@ jobs:
       - name: Push containers
         run: |
           docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
+          docker push ghcr.io/scalar-labs/scalardb-data-loader-cli:${{ steps.version.outputs.version }}
 
-      - name: Upload scalardb, scalardb-schema-loader, and scalardb-integration-test to Maven Central Repository
+      - name: Upload scalardb, scalardb-schema-loader, scalardb-data-loader-core, and scalardb-integration-test to Maven Central Repository
         run: |
           echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
           ./gradlew publish \
