@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,8 +17,8 @@ class ConsoleExportProgressReporterTest {
   private final PrintStream originalOut = System.out;
 
   @BeforeEach
-  void setUpStreams() {
-    System.setOut(new PrintStream(outContent));
+  void setUpStreams() throws UnsupportedEncodingException {
+    System.setOut(new PrintStream(outContent, true, "UTF-8"));
   }
 
   @AfterEach
@@ -26,22 +27,23 @@ class ConsoleExportProgressReporterTest {
   }
 
   @Test
-  void testStartMessageIncludesExportFilePath() {
+  void testStartMessageIncludesExportFilePath() throws UnsupportedEncodingException {
     new ConsoleExportProgressReporter("output/test.csv");
-    String output = outContent.toString();
+    String output = outContent.toString("UTF-8");
     assertTrue(output.contains("📤 Starting export"), "Expected start message");
     assertTrue(
         output.contains("📁 Exporting data to file: output/test.csv"), "Expected file path info");
   }
 
   @Test
-  void testCompletionMessageIncludesFilePathAndDuration() throws InterruptedException {
+  void testCompletionMessageIncludesFilePathAndDuration()
+      throws InterruptedException, UnsupportedEncodingException {
     ConsoleExportProgressReporter reporter = new ConsoleExportProgressReporter("target/output.csv");
 
     Thread.sleep(100); // Simulate work
 
     reporter.reportCompletion(12345);
-    String output = outContent.toString();
+    String output = outContent.toString("UTF-8");
 
     assertTrue(
         output.contains("✅ Export completed: 12,345 records exported to target/output.csv"),
@@ -50,22 +52,23 @@ class ConsoleExportProgressReporterTest {
   }
 
   @Test
-  void testCompletionOnlyPrintedOnce() {
+  void testCompletionOnlyPrintedOnce() throws UnsupportedEncodingException {
     ConsoleExportProgressReporter reporter = new ConsoleExportProgressReporter("target/output.csv");
 
     reporter.reportCompletion(100);
     reporter.reportCompletion(999999); // Should be ignored
 
-    String output = outContent.toString();
+    String output = outContent.toString("UTF-8");
     int count = output.split("Export completed").length - 1;
     assertEquals(1, count, "Expected completion to be printed only once");
   }
 
   @Test
-  void testReportError_shouldPrintErrorMessageWithExceptionMessage() {
+  void testReportError_shouldPrintErrorMessageWithExceptionMessage()
+      throws UnsupportedEncodingException {
     ByteArrayOutputStream errContent = new ByteArrayOutputStream();
     PrintStream originalErr = System.err;
-    System.setErr(new PrintStream(errContent));
+    System.setErr(new PrintStream(errContent, true, "UTF-8"));
 
     try {
       String errorMessage = "Something went wrong";
@@ -73,7 +76,7 @@ class ConsoleExportProgressReporterTest {
 
       ConsoleExportProgressReporter.reportError(errorMessage, cause);
 
-      String output = errContent.toString();
+      String output = errContent.toString("UTF-8");
       assertTrue(
           output.contains("❌ Export failed: " + errorMessage), "Expected main error message");
       assertTrue(output.contains("Cause: " + cause.getMessage()), "Expected exception message");
@@ -83,17 +86,18 @@ class ConsoleExportProgressReporterTest {
   }
 
   @Test
-  void testReportError_shouldPrintMessageWithoutExceptionWhenNull() {
+  void testReportError_shouldPrintMessageWithoutExceptionWhenNull()
+      throws UnsupportedEncodingException {
     ByteArrayOutputStream errContent = new ByteArrayOutputStream();
     PrintStream originalErr = System.err;
-    System.setErr(new PrintStream(errContent));
+    System.setErr(new PrintStream(errContent, true, "UTF-8"));
 
     try {
       String errorMessage = "Directory not found";
 
       ConsoleExportProgressReporter.reportError(errorMessage, null);
 
-      String output = errContent.toString();
+      String output = errContent.toString("UTF-8");
       assertTrue(output.contains("❌ Export failed: " + errorMessage), "Expected error message");
       assertFalse(
           output.contains("Cause:"), "Should not print exception cause when throwable is null");

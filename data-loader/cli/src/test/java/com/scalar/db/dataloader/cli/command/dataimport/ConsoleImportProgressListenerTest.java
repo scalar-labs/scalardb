@@ -10,6 +10,7 @@ import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransacti
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -24,8 +25,8 @@ class ConsoleImportProgressListenerTest {
   private ConsoleImportProgressListener listener;
 
   @BeforeEach
-  void setUp() {
-    System.setOut(new PrintStream(outContent));
+  void setUp() throws UnsupportedEncodingException {
+    System.setOut(new PrintStream(outContent, true, "UTF-8"));
     listener = new ConsoleImportProgressListener(Duration.ofMillis(100));
   }
 
@@ -36,7 +37,7 @@ class ConsoleImportProgressListenerTest {
 
   @Test
   void testOnDataChunkStartedAndCompleted_shouldTrackSuccessAndFailureCounts()
-      throws InterruptedException {
+      throws InterruptedException, UnsupportedEncodingException {
     int chunkId = 1;
     Instant start = Instant.now();
     TimeUnit.MILLISECONDS.sleep(50);
@@ -75,7 +76,7 @@ class ConsoleImportProgressListenerTest {
     TimeUnit.MILLISECONDS.sleep(200); // Allow render
     listener.onAllDataChunksCompleted();
 
-    String output = outContent.toString();
+    String output = outContent.toString("UTF-8");
 
     assertTrue(output.contains("✓ Chunk 1"), "Expected chunk log line");
     assertTrue(output.contains("90 records imported successfully"), "Expected success count");
@@ -87,7 +88,7 @@ class ConsoleImportProgressListenerTest {
 
   @Test
   void testOnTransactionBatchFailed_shouldAccumulateFailuresInChunkFailureLogs()
-      throws InterruptedException {
+      throws InterruptedException, UnsupportedEncodingException {
     // Arrange: Build dummy failed batch
     ImportTaskResult task =
         ImportTaskResult.builder()
@@ -117,7 +118,7 @@ class ConsoleImportProgressListenerTest {
     TimeUnit.MILLISECONDS.sleep(500);
 
     // Assert
-    String output = outContent.toString();
+    String output = outContent.toString("UTF-8");
     System.out.println("OUTPUT:\n" + output); // Useful for debug
     assertTrue(
         output.contains("❌ Chunk id: 7, Transaction batch id: 2 failed"),
@@ -129,9 +130,10 @@ class ConsoleImportProgressListenerTest {
   }
 
   @Test
-  void testOnAllDataChunksCompleted_shouldShutdownAndPrintFinalSummary() {
+  void testOnAllDataChunksCompleted_shouldShutdownAndPrintFinalSummary()
+      throws UnsupportedEncodingException {
     listener.onAllDataChunksCompleted();
-    String output = outContent.toString();
+    String output = outContent.toString("UTF-8");
     assertTrue(output.contains("✅ Import completed"), "Should print completion summary");
   }
 
