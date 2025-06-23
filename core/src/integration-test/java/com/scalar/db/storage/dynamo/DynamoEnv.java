@@ -51,6 +51,35 @@ public final class DynamoEnv {
     return properties;
   }
 
+  /**
+   * Returns properties for tests that require real DynamoDB (not the emulator) to be used.
+   *
+   * <p>These properties are used in tests that require real DynamoDB (not the emulator) to be used.
+   */
+  public static Properties getPropertiesForNonEmulator(String testName) {
+    String region = System.getProperty(PROP_DYNAMO_REGION, DEFAULT_DYNAMO_REGION);
+    String accessKeyId =
+        System.getProperty(PROP_DYNAMO_ACCESS_KEY_ID, DEFAULT_DYNAMO_ACCESS_KEY_ID);
+    String secretAccessKey =
+        System.getProperty(PROP_DYNAMO_SECRET_ACCESS_KEY, DEFAULT_DYNAMO_SECRET_ACCESS_KEY);
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    properties.setProperty(DatabaseConfig.USERNAME, accessKeyId);
+    properties.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
+    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+
+    // Add testName as a metadata namespace suffix
+    properties.setProperty(
+        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
+    return properties;
+  }
+
   public static Map<String, String> getCreationOptions() {
     String createOptionsString = System.getProperty(PROP_DYNAMO_CREATE_OPTIONS);
     if (createOptionsString == null) {
