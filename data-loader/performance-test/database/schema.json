@@ -1,0 +1,25 @@
+{
+	"test.all_columns": {
+	    "transaction": true,
+	    "partition-key": [
+	      "col1"
+	    ],
+	    "clustering-key": [
+	    	"col2",
+	    	"col3"
+	    ],
+	    "columns": {
+	      "col1": "BIGINT",
+	      "col2": "INT",
+	      "col3": "BOOLEAN",
+	      "col4": "FLOAT",
+	      "col5": "DOUBLE",
+	      "col6": "TEXT",
+	      "col7": "BLOB",
+	      "col8": "DATE",
+	      "col9": "TIME",
+	      "col10": "TIMESTAMP",
+	      "col11": "TIMESTAMPTZ"
+	    }
+	  }
+}
