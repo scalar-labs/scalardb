@@ -42,21 +42,28 @@ public class ConsoleImportProgressListener implements ImportEventListener {
 
   @Override
   public void onDataChunkCompleted(ImportDataChunkStatus status) {
-    long elapsed = status.getEndTime().toEpochMilli() - status.getStartTime().toEpochMilli();
-    totalRecords.addAndGet(status.getTotalRecords());
-    totalSuccess.addAndGet(status.getSuccessCount());
-    totalFailures.addAndGet(status.getFailureCount());
-    if (status.getSuccessCount() > 0) {
-      chunkLogs.put(
-          status.getDataChunkId(),
-          String.format(
-              "✓ Chunk %d: %d records imported (%.1fs), %d records imported successfully, import of %d records failed",
-              status.getDataChunkId(),
-              status.getTotalRecords(),
-              elapsed / 1000.0,
-              status.getSuccessCount(),
-              status.getFailureCount()));
-    }
+    long elapsedMillis = status.getEndTime().toEpochMilli() - status.getStartTime().toEpochMilli();
+    double elapsedSeconds = elapsedMillis / 1000.0;
+
+    int chunkId = status.getDataChunkId();
+    int total = status.getTotalRecords();
+    int success = status.getSuccessCount();
+    int failure = status.getFailureCount();
+
+    totalRecords.addAndGet(total);
+    totalSuccess.addAndGet(success);
+    totalFailures.addAndGet(failure);
+
+    String message =
+        (failure == 0)
+            ? String.format(
+                "✓ Chunk %d: %d records imported (%.1fs), %d records imported successfully",
+                chunkId, total, elapsedSeconds, success)
+            : String.format(
+                "✓ Chunk %d: %d records imported (%.1fs), %d records imported successfully, import of %d records failed",
+                chunkId, total, elapsedSeconds, success, failure);
+
+    chunkLogs.put(chunkId, message);
   }
 
   @Override
