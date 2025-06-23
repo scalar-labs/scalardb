@@ -29,7 +29,7 @@ import com.scalar.db.api.OperationBuilder.TableBuilder;
 import com.scalar.db.api.OperationBuilder.WhereAnd;
 import com.scalar.db.api.OperationBuilder.WhereOr;
 import com.scalar.db.api.Selection.Conjunction;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -1,8 +1,8 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.util.CommandLineInputUtils;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +37,7 @@ public class MultiColumnKeyValueConverter
   public List<ColumnKeyValue> convert(String keyValue) {
     if (keyValue == null || keyValue.trim().isEmpty()) {
       throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
+          DataLoaderError.NULL_OR_EMPTY_KEY_VALUE_INPUT.buildMessage());
     }
     return Arrays.stream(CommandLineInputUtils.splitByDelimiter(keyValue, ",", 0))
         .map(CommandLineInputUtils::parseKeyValue)

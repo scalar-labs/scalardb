@@ -12,7 +12,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionManagerCrudOperable;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -112,7 +112,7 @@ public class ScalarDbDao {
       transaction.put(put);
     } catch (CrudException e) {
       throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
+          DataLoaderError.ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -140,7 +140,7 @@ public class ScalarDbDao {
       storage.put(put);
     } catch (ExecutionException e) {
       throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
+          DataLoaderError.ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -177,8 +177,7 @@ public class ScalarDbDao {
         return scanner.all();
       }
     } catch (ExecutionException | IOException e) {
-      throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -217,8 +216,7 @@ public class ScalarDbDao {
     } catch (CrudException | NoSuchElementException e) {
       // No such element Exception is thrown when the scan is done in transaction mode but
       // ScalarDB is running in storage mode
-      throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -245,8 +243,7 @@ public class ScalarDbDao {
     try {
       return storage.scan(scan);
     } catch (ExecutionException e) {
-      throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -273,8 +270,7 @@ public class ScalarDbDao {
     try {
       return transaction.getScanner(scan);
     } catch (CrudException e) {
-      throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
@@ -307,8 +303,7 @@ public class ScalarDbDao {
     try {
       return storage.scan(scan);
     } catch (ExecutionException e) {
-      throw new ScalarDbDaoException(
-          CoreError.DATA_LOADER_ERROR_SCAN.buildMessage(e.getMessage()), e);
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 

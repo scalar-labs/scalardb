@@ -1,8 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 class RdbEngineMariaDB extends RdbEngineMysql {
@@ -27,5 +31,15 @@ class RdbEngineMariaDB extends RdbEngineMysql {
       return super.getDataTypeForScalarDbInternal(
           type, typeName, columnSize, digits, columnDescription, overrideDataType);
     }
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
+    return Collections.emptyMap();
+  }
+
+  @Override
+  public void setConnectionToReadOnly(Connection connection, boolean readOnly) throws SQLException {
+    connection.setReadOnly(readOnly);
   }
 }

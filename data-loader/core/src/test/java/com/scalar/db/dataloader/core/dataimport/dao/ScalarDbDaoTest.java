@@ -1,6 +1,14 @@
 package com.scalar.db.dataloader.core.dataimport.dao;
 
-import static com.scalar.db.dataloader.core.UnitTestUtils.*;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_COLUMN_1_PK;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_COLUMN_2_CK;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_COLUMN_4;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_COLUMN_5;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_COLUMN_6;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_NAMESPACE;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_TABLE_NAME;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_VALUE_INT;
+import static com.scalar.db.dataloader.core.UnitTestUtils.TEST_VALUE_LONG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -18,7 +26,9 @@ import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

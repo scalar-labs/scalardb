@@ -1,7 +1,7 @@
 package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.TextColumn;
 import java.util.Objects;
 import javax.annotation.Nonnull;

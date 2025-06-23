@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import com.ibm.db2.jcc.DB2BaseDataSource;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -432,7 +432,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties() {
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
     ImmutableMap.Builder<String, String> props = new ImmutableMap.Builder<>();
     // With this Db2 will return a textual description of the error when
     // calling JDBC `SQLException.getMessage` instead of a short message containing only error codes

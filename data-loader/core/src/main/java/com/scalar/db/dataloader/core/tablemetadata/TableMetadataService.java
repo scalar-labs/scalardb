@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.core.tablemetadata;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import java.util.Collection;
 import java.util.HashMap;
@@ -28,7 +28,7 @@ public abstract class TableMetadataService {
     TableMetadata metadata = getTableMetadataInternal(namespace, tableName);
     if (metadata == null) {
       throw new TableMetadataException(
-          CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
+          DataLoaderError.MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
     }
     return metadata;
   }

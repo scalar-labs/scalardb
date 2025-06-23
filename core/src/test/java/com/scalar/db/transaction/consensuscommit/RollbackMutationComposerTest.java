@@ -393,7 +393,6 @@ public class RollbackMutationComposerTest {
   public void add_GetAndPreparedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
     TransactionResult result = prepareResult(TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Get get = prepareGet();
 
     // Act
@@ -436,14 +435,12 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
   public void add_GetAndDeletedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
     TransactionResult result = prepareResult(TransactionState.DELETED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Get get = prepareGet();
 
     // Act
@@ -485,7 +482,54 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
+  }
+
+  @Test
+  public void add_GetAndPreparedResultWithNullMetadataByThisGiven_ShouldComposePut()
+      throws ExecutionException {
+    // Arrange
+    TransactionResult result = prepareResultWithNullMetadata(TransactionState.PREPARED);
+    Get get = prepareGet();
+
+    // Act
+    composer.add(get, result);
+
+    // Assert
+    Put actual = (Put) composer.get().get(0);
+    PutBuilder.Buildable builder =
+        Put.newBuilder()
+            .namespace(get.forNamespace().get())
+            .table(get.forTable().get())
+            .partitionKey(get.getPartitionKey())
+            .clusteringKey(get.getClusteringKey().get())
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build());
+    extractAfterColumns(prepareInitialResultWithNullMetadata()).forEach(builder::value);
+    Put expected =
+        builder
+            .textValue(BEFORE_ID, null)
+            .intValue(BEFORE_STATE, null)
+            .intValue(BEFORE_VERSION, null)
+            .bigIntValue(BEFORE_PREPARED_AT, null)
+            .bigIntValue(BEFORE_COMMITTED_AT, null)
+            .intValue(BEFORE_PREFIX + ANY_NAME_3, null)
+            .booleanValue(BEFORE_PREFIX + ANY_NAME_4, null)
+            .bigIntValue(BEFORE_PREFIX + ANY_NAME_5, null)
+            .floatValue(BEFORE_PREFIX + ANY_NAME_6, null)
+            .doubleValue(BEFORE_PREFIX + ANY_NAME_7, null)
+            .textValue(BEFORE_PREFIX + ANY_NAME_8, null)
+            .blobValue(BEFORE_PREFIX + ANY_NAME_9, (byte[]) null)
+            .dateValue(BEFORE_PREFIX + ANY_NAME_10, null)
+            .timeValue(BEFORE_PREFIX + ANY_NAME_11, null)
+            .timestampValue(BEFORE_PREFIX + ANY_NAME_12, null)
+            .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
+            .build();
+    assertThat(actual).isEqualTo(expected);
   }
 
   @Test
@@ -658,7 +702,6 @@ public class RollbackMutationComposerTest {
   public void add_ScanAndPreparedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
     TransactionResult result = prepareResult(TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Scan scan = prepareScan();
 
     // Act
@@ -701,14 +744,12 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
   public void add_ScanAndDeletedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
     TransactionResult result = prepareResult(TransactionState.DELETED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Scan scan = prepareScan();
 
     // Act
@@ -750,7 +791,6 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
@@ -758,7 +798,6 @@ public class RollbackMutationComposerTest {
       throws ExecutionException {
     // Arrange
     TransactionResult result = prepareInitialResult(ANY_ID_2, TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Scan scan = prepareScan();
 
     // Act
@@ -777,73 +816,5 @@ public class RollbackMutationComposerTest {
             new ConditionalExpression(
                 STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
-  }
-
-  @Test
-  public void add_GetAndPreparedResultWithNullMetadataByThisGiven_ShouldComposePut()
-      throws ExecutionException {
-    // Arrange
-    TransactionResult result = prepareResultWithNullMetadata(TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
-    Get get = prepareGet();
-
-    // Act
-    composer.add(get, result);
-
-    // Assert
-    Put actual = (Put) composer.get().get(0);
-    PutBuilder.Buildable builder =
-        Put.newBuilder()
-            .namespace(get.forNamespace().get())
-            .table(get.forTable().get())
-            .partitionKey(get.getPartitionKey())
-            .clusteringKey(get.getClusteringKey().get())
-            .consistency(Consistency.LINEARIZABLE)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
-                    .and(
-                        ConditionBuilder.column(STATE)
-                            .isEqualToInt(TransactionState.PREPARED.get()))
-                    .build());
-    extractAfterColumns(prepareInitialResultWithNullMetadata()).forEach(builder::value);
-    Put expected =
-        builder
-            .textValue(BEFORE_ID, null)
-            .intValue(BEFORE_STATE, null)
-            .intValue(BEFORE_VERSION, null)
-            .bigIntValue(BEFORE_PREPARED_AT, null)
-            .bigIntValue(BEFORE_COMMITTED_AT, null)
-            .intValue(BEFORE_PREFIX + ANY_NAME_3, null)
-            .booleanValue(BEFORE_PREFIX + ANY_NAME_4, null)
-            .bigIntValue(BEFORE_PREFIX + ANY_NAME_5, null)
-            .floatValue(BEFORE_PREFIX + ANY_NAME_6, null)
-            .doubleValue(BEFORE_PREFIX + ANY_NAME_7, null)
-            .textValue(BEFORE_PREFIX + ANY_NAME_8, null)
-            .blobValue(BEFORE_PREFIX + ANY_NAME_9, (byte[]) null)
-            .dateValue(BEFORE_PREFIX + ANY_NAME_10, null)
-            .timeValue(BEFORE_PREFIX + ANY_NAME_11, null)
-            .timestampValue(BEFORE_PREFIX + ANY_NAME_12, null)
-            .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
-            .build();
-    assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
-  }
-
-  @Test
-  public void add_GetAndInitialResultWithNullMetadataGivenFromStorage_ShouldDoNothing()
-      throws ExecutionException {
-    // Arrange
-    TransactionResult obtainedResult = prepareResultWithNullMetadata(TransactionState.PREPARED);
-    TransactionResult currentResult = prepareInitialResultWithNullMetadata();
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(currentResult));
-    Get get = prepareGet();
-
-    // Act
-    composer.add(get, obtainedResult);
-
-    // Assert
-    assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
   }
 }

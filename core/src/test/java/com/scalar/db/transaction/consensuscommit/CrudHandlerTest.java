@@ -12,6 +12,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +53,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -87,12 +89,11 @@ public class CrudHandlerTest {
               .addClusteringKey(ANY_NAME_2)
               .addSecondaryIndex(ANY_NAME_3)
               .build());
-  private static final TransactionTableMetadata TRANSACTION_TABLE_METADATA =
-      new TransactionTableMetadata(TABLE_METADATA);
 
   private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
+  @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private Scanner scanner;
@@ -106,6 +107,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -118,6 +120,11 @@ public class CrudHandlerTest {
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
     when(tableMetadataManager.getTransactionTableMetadata(any(), any()))
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+
+    // Default behavior for snapshot isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(true);
+    when(snapshot.isValidationRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.SNAPSHOT);
   }
 
   private Get prepareGet() {
@@ -129,11 +136,7 @@ public class CrudHandlerTest {
   }
 
   private Get toGetForStorageFrom(Get get) {
-    return Get.newBuilder(get)
-        .clearProjections()
-        .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
-        .consistency(Consistency.LINEARIZABLE)
-        .build();
+    return Get.newBuilder(get).clearProjections().consistency(Consistency.LINEARIZABLE).build();
   }
 
   private Scan prepareScan() {
@@ -151,11 +154,7 @@ public class CrudHandlerTest {
   }
 
   private Scan toScanForStorageFrom(Scan scan) {
-    return Scan.newBuilder(scan)
-        .clearProjections()
-        .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
-        .consistency(Consistency.LINEARIZABLE)
-        .build();
+    return Scan.newBuilder(scan).clearProjections().consistency(Consistency.LINEARIZABLE).build();
   }
 
   private TransactionResult prepareResult(TransactionState state) {
@@ -240,6 +239,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -279,6 +279,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -320,6 +321,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -361,6 +363,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -404,29 +407,266 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ShouldThrowUncommittedRecordException()
-          throws ExecutionException {
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_ReadCommittedIsolation_ShouldReturnFromStorageAndUpdateSnapshot()
+          throws CrudException, ExecutionException {
     // Arrange
-    Get get = prepareGet();
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = Get.newBuilder(prepareGet()).build();
     Get getForStorage = toGetForStorageFrom(get);
-    result = prepareResult(TransactionState.PREPARED);
-    Optional<Result> expected = Optional.of(result);
+
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
     when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
-    when(storage.get(getForStorage)).thenReturn(expected);
+    when(storage.get(any())).thenReturn(expected);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
 
-    // Act Assert
-    assertThatThrownBy(() -> handler.get(get))
-        .isInstanceOf(UncommittedRecordException.class)
-        .satisfies(
-            e -> {
-              UncommittedRecordException exception = (UncommittedRecordException) e;
-              assertThat(exception.getSelection()).isEqualTo(get);
-              assertThat(exception.getResults().size()).isEqualTo(1);
-              assertThat(exception.getResults().get(0)).isEqualTo(result);
-            });
+    // Act
+    Optional<Result> result = handler.get(get);
 
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
+    verify(snapshot).putIntoReadSet(key, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageCommitted_ReadCommittedIsolation_InReadOnlyMode_ShouldReturnFromStorageAndNotUpdateSnapshot()
+          throws CrudException, ExecutionException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            false);
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = Get.newBuilder(prepareGet()).build();
+    Get getForStorage = toGetForStorageFrom(get);
+
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
+    Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(storage.get(any())).thenReturn(expected);
+    when(snapshot.mergeResult(key, transactionResult, getForStorage.getConjunctions()))
+        .thenReturn(transactionResult);
+
+    // Act
+    Optional<Result> result = handler.get(get);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage).get(getForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    Get getForStorage = toGetForStorageFrom(get);
+    result = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult expected = mock(TransactionResult.class);
+    when(expected.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(expected.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    when(snapshot.getResult(key, getForStorage)).thenReturn(Optional.of(expected));
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    Optional<Result> actual = handler.get(get);
+
+    // Assert
+    verify(storage).get(getForStorage);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot).putIntoGetSet(getForStorage, Optional.of(recoveredResult));
+
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false)));
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ReadCommittedIsolation_ShouldCallRecoveryExecutorWithReturnCommittedResultAndNotRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            false);
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    Get getForStorage = toGetForStorageFrom(get);
+    result = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult expected = mock(TransactionResult.class);
+    when(expected.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(expected.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    TransactionResult transactionResult = new TransactionResult(result);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    when(snapshot.mergeResult(key, Optional.of(recoveredResult), getForStorage.getConjunctions()))
+        .thenReturn(Optional.of(expected));
+
+    // Act
+    Optional<Result> actual = handler.get(get);
+
+    // Assert
+    verify(storage).get(getForStorage);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false)));
+  }
+
+  @Test
+  public void
+      get_GetNotExistsInSnapshotAndRecordInStorageNotCommitted_ReadCommittedIsolation_InReadOnlyMode_ShouldCallRecoveryExecutorWithReturnCommittedResultAndRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get get = prepareGet();
+    Snapshot.Key key = new Snapshot.Key(get);
+    Get getForStorage = toGetForStorageFrom(get);
+    result = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult expected = mock(TransactionResult.class);
+    when(expected.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(expected.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    TransactionResult transactionResult = new TransactionResult(result);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    when(snapshot.mergeResult(key, Optional.of(recoveredResult), getForStorage.getConjunctions()))
+        .thenReturn(Optional.of(expected));
+
+    // Act
+    Optional<Result> actual = handler.get(get);
+
+    // Assert
+    verify(storage).get(getForStorage);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForStorage,
+            transactionResult,
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false)));
   }
 
   @Test
@@ -491,6 +731,43 @@ public class CrudHandlerTest {
   }
 
   @Test
+  public void get_CalledTwice_ReadCommittedIsolation_BothShouldReturnFromStorage()
+      throws ExecutionException, CrudException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Get originalGet = prepareGet();
+    Get getForStorage = toGetForStorageFrom(originalGet);
+    Get get1 = prepareGet();
+    Get get2 = prepareGet();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
+    Snapshot.Key key = new Snapshot.Key(getForStorage);
+    when(snapshot.containsKeyInGetSet(getForStorage)).thenReturn(false);
+    when(snapshot.mergeResult(
+            key, Optional.of(new TransactionResult(result)), getForStorage.getConjunctions()))
+        .thenReturn(expected);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> results1 = handler.get(get1);
+    Optional<Result> results2 = handler.get(get2);
+
+    // Assert
+    verify(storage, times(2)).get(getForStorage);
+    verify(snapshot, times(2)).putIntoReadSet(key, expected);
+    assertThat(results1)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    assertThat(results1).isEqualTo(results2);
+  }
+
+  @Test
   public void get_CalledTwiceUnderRealSnapshot_SecondTimeShouldReturnTheSameFromSnapshot()
       throws ExecutionException, CrudException {
     // Arrange
@@ -503,7 +780,14 @@ public class CrudHandlerTest {
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            parallelExecutor,
+            false,
+            false);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
 
     // Act
@@ -519,6 +803,44 @@ public class CrudHandlerTest {
     assertThat(results1).isEqualTo(results2);
     verify(storage, never()).get(originalGet);
     verify(storage).get(getForStorage);
+  }
+
+  @Test
+  public void get_CalledTwiceUnderRealSnapshot_ReadCommittedIsolation_BothShouldReturnFromStorage()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get originalGet = prepareGet();
+    Get getForStorage = toGetForStorageFrom(originalGet);
+    Get get1 = prepareGet();
+    Get get2 = prepareGet();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
+    snapshot =
+        new Snapshot(ANY_TX_ID, Isolation.READ_COMMITTED, tableMetadataManager, parallelExecutor);
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            parallelExecutor,
+            false,
+            false);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> results1 = handler.get(get1);
+    Optional<Result> results2 = handler.get(get2);
+
+    // Assert
+    verify(storage, times(2)).get(getForStorage);
+    assertThat(results1)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(
+                    expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    assertThat(results1).isEqualTo(results2);
   }
 
   @Test
@@ -551,7 +873,6 @@ public class CrudHandlerTest {
     Get getForStorage2 =
         Get.newBuilder(get2)
             .clearProjections()
-            .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
             .clearConditions()
             .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
             .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
@@ -619,6 +940,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -660,6 +982,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -701,6 +1024,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -736,11 +1060,12 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
-      scanOrGetScanner_PreparedResultGivenFromStorage_ShouldNeverUpdateSnapshotThrowUncommittedRecordException(
-          ScanType scanType) throws ExecutionException, IOException {
+      scanOrGetScanner_PreparedResultGivenFromStorage_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
+
     result = prepareResult(TransactionState.PREPARED);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -749,20 +1074,160 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    // Act Assert
-    assertThatThrownBy(() -> scanOrGetScanner(scan, scanType))
-        .isInstanceOf(UncommittedRecordException.class)
-        .satisfies(
-            e -> {
-              UncommittedRecordException exception = (UncommittedRecordException) e;
-              assertThat(exception.getSelection()).isEqualTo(scan);
-              assertThat(exception.getResults().size()).isEqualTo(1);
-              assertThat(exception.getResults().get(0)).isEqualTo(result);
-            });
+    Snapshot.Key key = new Snapshot.Key(scan, result);
 
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(recoveredResult.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(scanner).close();
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot)
+        .putIntoScanSet(
+            scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, recoveredResult));
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_PreparedResultGivenFromStorage_ReadCommittedIsolation_ShouldCallRecoveryExecutorWithReturnCommittedResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
+    // Arrange
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+
+    result = prepareResult(TransactionState.PREPARED);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(recoveredResult.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
+    verify(scanner).close();
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot, never()).putIntoScanSet(any(), any());
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, recoveredResult));
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_PreparedResultGivenFromStorage_ReadCommittedIsolation_InReadOnlyMode_ShouldCallRecoveryExecutorWithReturnCommittedResultAndNotRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            true,
+            false);
+
+    // For READ_COMMITTED isolation
+    when(snapshot.isSnapshotReadRequired()).thenReturn(false);
+    when(snapshot.getIsolation()).thenReturn(Isolation.READ_COMMITTED);
+
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+
+    result = prepareResult(TransactionState.PREPARED);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    Snapshot.Key key = new Snapshot.Key(scan, result);
+
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_1));
+    when(recoveredResult.getAsObject(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scan, scanType);
+
+    // Assert
     verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScanSet(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult, Collections.emptyList(), TABLE_METADATA, false));
   }
 
   @ParameterizedTest
@@ -818,7 +1283,14 @@ public class CrudHandlerTest {
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            parallelExecutor,
+            false,
+            false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -887,7 +1359,14 @@ public class CrudHandlerTest {
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
     handler =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            parallelExecutor,
+            false,
+            false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -954,7 +1433,14 @@ public class CrudHandlerTest {
             new ArrayList<>());
     handler =
         new CrudHandler(
-            storage, snapshot, tableMetadataManager, false, parallelExecutor, false, false);
+            storage,
+            snapshot,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            parallelExecutor,
+            false,
+            false);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     } else {
@@ -1018,11 +1504,15 @@ public class CrudHandlerTest {
   @ParameterizedTest
   @EnumSource(ScanType.class)
   void
-      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_ShouldNeverUpdateSnapshotNorVerifyNoOverlapButThrowUncommittedRecordException(
-          ScanType scanType) throws ExecutionException, IOException {
+      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_RecoveredRecordMatchesConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+
     result = prepareResult(TransactionState.PREPARED);
+    Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1030,21 +1520,103 @@ public class CrudHandlerTest {
     }
     when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
 
-    // Act Assert
-    assertThatThrownBy(() -> scanOrGetScanner(scan, scanType))
-        .isInstanceOf(UncommittedRecordException.class)
-        .satisfies(
-            e -> {
-              UncommittedRecordException exception = (UncommittedRecordException) e;
-              assertThat(exception.getSelection()).isEqualTo(scan);
-              assertThat(exception.getResults().size()).isEqualTo(1);
-              assertThat(exception.getResults().get(0)).isEqualTo(result);
-            });
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_3));
+    when(recoveredResult.getAsObject(ANY_NAME_3)).thenReturn(ANY_TEXT_3);
+    when(recoveredResult.getColumns())
+        .thenReturn(ImmutableMap.of(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3)));
 
+    when(snapshot.getResult(key)).thenReturn(Optional.of(new TransactionResult(result)));
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanForStorage, scanType);
+
+    // Assert
+    verify(storage)
+        .scan(
+            Scan.newBuilder(scanForStorage)
+                .clearConditions()
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .build());
     verify(scanner).close();
-    verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), any());
-    verify(snapshot, never()).putIntoScannerSet(any(Scan.class), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot)
+        .putIntoScanSet(
+            scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, recoveredResult));
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void
+      scanOrGetScanner_CrossPartitionScanAndPreparedResultFromStorageGiven_RecoveredRecordDoesNotMatchConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
+    // Arrange
+    Scan scan = prepareCrossPartitionScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+
+    result = prepareResult(TransactionState.PREPARED);
+    Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+    if (scanType == ScanType.SCAN) {
+      when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    } else {
+      when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    }
+    when(storage.scan(any(ScanAll.class))).thenReturn(scanner);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_3));
+    when(recoveredResult.getAsObject(ANY_NAME_3)).thenReturn(ANY_TEXT_4);
+    when(recoveredResult.getColumns())
+        .thenReturn(ImmutableMap.of(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_4)));
+
+    when(snapshot.getResult(key)).thenReturn(Optional.of(new TransactionResult(result)));
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            scanForStorage,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanForStorage, scanType);
+
+    // Assert
+    verify(storage)
+        .scan(
+            Scan.newBuilder(scanForStorage)
+                .clearConditions()
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .build());
+    verify(scanner).close();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoScanSet(scanForStorage, Maps.newLinkedHashMap());
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of());
+
+    assertThat(results).isEmpty();
   }
 
   @ParameterizedTest
@@ -1135,30 +1707,99 @@ public class CrudHandlerTest {
 
   @ParameterizedTest
   @EnumSource(ScanType.class)
-  void scanOrGetScanner_WithLimit_UncommittedResult_ShouldThrowUncommittedRecordException(
-      ScanType scanType) throws ExecutionException, IOException {
+  void
+      scanOrGetScanner_WithLimit_UncommittedResult_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover(
+          ScanType scanType) throws ExecutionException, IOException, CrudException {
     // Arrange
     Scan scanWithoutLimit = prepareScan();
-    Scan scanWithLimit = Scan.newBuilder(scanWithoutLimit).limit(3).build();
-    Scan scanForStorage = toScanForStorageFrom(scanWithoutLimit);
+    Scan scanWithLimit = Scan.newBuilder(scanWithoutLimit).limit(2).build();
+    Scan scanForStorageWithLimit = toScanForStorageFrom(scanWithLimit);
+    Scan scanForStorageWithoutLimit = toScanForStorageFrom(scanWithoutLimit);
 
-    Result uncommittedResult = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.PREPARED);
+    Result uncommittedResult1 = prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.DELETED);
+    Result uncommittedResult2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.PREPARED);
+    Result uncommittedResult3 = prepareResult(ANY_TEXT_1, ANY_TEXT_4, TransactionState.PREPARED);
+
+    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, uncommittedResult1);
+    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, uncommittedResult2);
+    Snapshot.Key key3 = new Snapshot.Key(scanWithLimit, uncommittedResult3);
 
     // Set up mock scanner to return one committed and one uncommitted result
     if (scanType == ScanType.SCAN) {
-      when(scanner.iterator()).thenReturn(Collections.singletonList(uncommittedResult).iterator());
+      when(scanner.iterator())
+          .thenReturn(
+              Arrays.asList(uncommittedResult1, uncommittedResult2, uncommittedResult3).iterator());
     } else {
-      when(scanner.one()).thenReturn(Optional.of(uncommittedResult)).thenReturn(Optional.empty());
+      when(scanner.one())
+          .thenReturn(Optional.of(uncommittedResult1))
+          .thenReturn(Optional.of(uncommittedResult2))
+          .thenReturn(Optional.of(uncommittedResult3))
+          .thenReturn(Optional.empty());
     }
-    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(storage.scan(scanForStorageWithoutLimit)).thenReturn(scanner);
 
-    // Act & Assert
-    assertThatThrownBy(() -> scanOrGetScanner(scanWithLimit, scanType))
-        .isInstanceOf(UncommittedRecordException.class);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
 
+    TransactionResult recoveredResult1 = mock(TransactionResult.class);
+    when(recoveredResult1.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_3));
+    when(recoveredResult1.getAsObject(ANY_NAME_3)).thenReturn(ANY_TEXT_3);
+    when(recoveredResult1.getColumns())
+        .thenReturn(ImmutableMap.of(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3)));
+
+    TransactionResult recoveredResult2 = mock(TransactionResult.class);
+    when(recoveredResult1.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_3));
+    when(recoveredResult1.getAsObject(ANY_NAME_3)).thenReturn(ANY_TEXT_4);
+    when(recoveredResult1.getColumns())
+        .thenReturn(ImmutableMap.of(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_4)));
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key1,
+            scanForStorageWithLimit,
+            new TransactionResult(uncommittedResult1),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key1, Optional.empty(), recoveryFuture));
+    when(recoveryExecutor.execute(
+            key2,
+            scanForStorageWithLimit,
+            new TransactionResult(uncommittedResult2),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(
+            new RecoveryExecutor.Result(key2, Optional.of(recoveredResult1), recoveryFuture));
+    when(recoveryExecutor.execute(
+            key3,
+            scanForStorageWithLimit,
+            new TransactionResult(uncommittedResult3),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(
+            new RecoveryExecutor.Result(key3, Optional.of(recoveredResult2), recoveryFuture));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanWithLimit, scanType);
+
+    // Assert
+    verify(storage).scan(scanForStorageWithoutLimit);
     verify(scanner).close();
-    verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot, never()).putIntoScanSet(any(), any());
+    verify(snapshot).putIntoReadSet(key2, Optional.of(recoveredResult1));
+    verify(snapshot).putIntoReadSet(key3, Optional.of(recoveredResult2));
+    verify(snapshot)
+        .putIntoScanSet(
+            scanForStorageWithLimit,
+            Maps.newLinkedHashMap(ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2)));
+    verify(snapshot)
+        .verifyNoOverlap(
+            scanForStorageWithLimit,
+            ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2));
+
+    assertThat(results)
+        .containsExactly(
+            new FilteredResult(recoveredResult1, Collections.emptyList(), TABLE_METADATA, false),
+            new FilteredResult(recoveredResult2, Collections.emptyList(), TABLE_METADATA, false));
   }
 
   @Test
@@ -1269,6 +1910,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -1311,6 +1953,7 @@ public class CrudHandlerTest {
         new CrudHandler(
             storage,
             snapshot,
+            recoveryExecutor,
             tableMetadataManager,
             false,
             mutationConditionsValidator,
@@ -1712,8 +2355,8 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
-          throws ExecutionException {
+      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot.Key key = mock(Snapshot.Key.class);
     when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
@@ -1730,17 +2373,208 @@ public class CrudHandlerTest {
             .partitionKey(key.getPartitionKey())
             .build();
     when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
 
-    // Act Assert
-    assertThatThrownBy(() -> handler.readUnread(key, getForKey))
-        .isInstanceOf(UncommittedRecordException.class)
-        .satisfies(
-            e -> {
-              UncommittedRecordException exception = (UncommittedRecordException) e;
-              assertThat(exception.getSelection()).isEqualTo(getForKey);
-              assertThat(exception.getResults().size()).isEqualTo(1);
-              assertThat(exception.getResults().get(0)).isEqualTo(result);
-            });
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    handler.readUnread(key, getForKey);
+
+    // Assert
+    verify(storage).get(getForKey);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot).putIntoGetSet(getForKey, Optional.of(recoveredResult));
+  }
+
+  @Test
+  public void
+      readUnread_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordIsEmpty_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getForKey =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .build();
+    when(snapshot.containsKeyInGetSet(getForKey)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    Optional<TransactionResult> recoveredRecord = Optional.empty();
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, recoveredRecord, recoveryFuture));
+
+    // Act
+    handler.readUnread(key, getForKey);
+
+    // Assert
+    verify(storage).get(getForKey);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getForKey,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, recoveredRecord);
+    verify(snapshot).putIntoGetSet(getForKey, recoveredRecord);
+  }
+
+  @Test
+  public void
+      readUnread_GetWithConjunctionGiven_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordMatchesConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getWithConjunction =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build();
+    when(snapshot.containsKeyInGetSet(getWithConjunction)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_3));
+    when(recoveredResult.getAsObject(ANY_NAME_3)).thenReturn(ANY_TEXT_3);
+    when(recoveredResult.getColumns())
+        .thenReturn(ImmutableMap.of(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3)));
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    handler.readUnread(key, getWithConjunction);
+
+    // Assert
+    verify(storage)
+        .get(
+            Get.newBuilder(getWithConjunction)
+                .clearConditions()
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .build());
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot).putIntoGetSet(getWithConjunction, Optional.of(recoveredResult));
+  }
+
+  @Test
+  public void
+      readUnread_GetWithConjunctionGiven_GetNotContainedInGetSet_UncommittedRecordReturnedByStorage_RecoveredRecordDoesNotMatchConjunction_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot.Key key = mock(Snapshot.Key.class);
+    when(key.getNamespace()).thenReturn(ANY_NAMESPACE_NAME);
+    when(key.getTable()).thenReturn(ANY_TABLE_NAME);
+    when(key.getPartitionKey()).thenReturn(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(storage.get(any())).thenReturn(Optional.of(result));
+
+    Get getWithConjunction =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey())
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build();
+    when(snapshot.containsKeyInGetSet(getWithConjunction)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    when(recoveredResult.getContainedColumnNames()).thenReturn(Collections.singleton(ANY_NAME_3));
+    when(recoveredResult.getAsObject(ANY_NAME_3)).thenReturn(ANY_TEXT_4);
+    when(recoveredResult.getColumns())
+        .thenReturn(ImmutableMap.of(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_4)));
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    handler.readUnread(key, getWithConjunction);
+
+    // Assert
+    verify(storage)
+        .get(
+            Get.newBuilder(getWithConjunction)
+                .clearConditions()
+                .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+                .build());
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getWithConjunction,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(getWithConjunction, Optional.empty());
   }
 
   @Test
@@ -1797,10 +2631,12 @@ public class CrudHandlerTest {
 
   @Test
   public void
-      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldThrowUncommittedRecordException()
-          throws ExecutionException {
+      readUnread_NullKeyAndGetWithIndexNotContainedInGetSet_UncommittedRecordReturnedByStorage_ShouldCallRecoveryExecutorWithReturnLatestResultAndRecover()
+          throws ExecutionException, CrudException {
     // Arrange
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
+    when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
     when(storage.get(any())).thenReturn(Optional.of(result));
 
     Get getWithIndex =
@@ -1810,17 +2646,36 @@ public class CrudHandlerTest {
             .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
             .build();
     when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
+    when(snapshot.getId()).thenReturn(ANY_ID_1);
 
-    // Act Assert
-    assertThatThrownBy(() -> handler.readUnread(null, getWithIndex))
-        .isInstanceOf(UncommittedRecordException.class)
-        .satisfies(
-            e -> {
-              UncommittedRecordException exception = (UncommittedRecordException) e;
-              assertThat(exception.getSelection()).isEqualTo(getWithIndex);
-              assertThat(exception.getResults().size()).isEqualTo(1);
-              assertThat(exception.getResults().get(0)).isEqualTo(result);
-            });
+    Snapshot.Key key = new Snapshot.Key(getWithIndex, result);
+
+    TransactionResult recoveredResult = mock(TransactionResult.class);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getWithIndex,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+
+    // Act
+    handler.readUnread(key, getWithIndex);
+
+    // Assert
+    verify(storage).get(getWithIndex);
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getWithIndex,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(recoveredResult));
   }
 
   @Test
@@ -2049,7 +2904,6 @@ public class CrudHandlerTest {
                 .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
                 .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2068,7 +2922,6 @@ public class CrudHandlerTest {
                             column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                         .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(10))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2082,7 +2935,6 @@ public class CrudHandlerTest {
                 .or(column(ANY_NAME_4).isEqualToInt(20))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(20))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2113,7 +2965,6 @@ public class CrudHandlerTest {
                         .and(
                             column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(40))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2161,7 +3012,6 @@ public class CrudHandlerTest {
                             column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
                         .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(60))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2175,7 +3025,6 @@ public class CrudHandlerTest {
                 .or(column(ANY_NAME_3).isLikeText(ANY_TEXT_4))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_3))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_4))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
   }
@@ -2276,7 +3125,6 @@ public class CrudHandlerTest {
                 .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
                 .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2294,7 +3142,6 @@ public class CrudHandlerTest {
                             column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                         .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(10))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2307,7 +3154,6 @@ public class CrudHandlerTest {
                 .or(column(ANY_NAME_4).isEqualToInt(20))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(20))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2337,7 +3183,6 @@ public class CrudHandlerTest {
                         .and(
                             column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isLessThanOrEqualToInt(40))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2384,7 +3229,6 @@ public class CrudHandlerTest {
                             column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
                         .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isGreaterThanInt(60))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2397,7 +3241,6 @@ public class CrudHandlerTest {
                 .or(column(ANY_NAME_3).isLikeText(ANY_TEXT_4))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_3))
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isLikeText(ANY_TEXT_4))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2408,7 +3251,6 @@ public class CrudHandlerTest {
                 .all()
                 .where(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
                 .and(column(ANY_NAME_2).isLessThanOrEqualToText(ANY_TEXT_4))
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
     verify(storage)
@@ -2425,7 +3267,6 @@ public class CrudHandlerTest {
                     condition(column(ANY_NAME_1).isGreaterThanText(ANY_TEXT_3))
                         .and(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_4))
                         .build())
-                .projections(TRANSACTION_TABLE_METADATA.getAfterImageColumnNames())
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
   }
