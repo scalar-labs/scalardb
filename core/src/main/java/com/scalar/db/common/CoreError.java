@@ -783,6 +783,8 @@ public enum CoreError implements ScalarDbError {
       "A transaction conflict occurred in the Insert operation",
       "",
       ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS(
+      Category.CONCURRENCY_ERROR, "0026", "A conflict occurred when committing records", "", ""),
 
   //
   // Errors for the internal error category
@@ -935,6 +937,8 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
+  CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
+      Category.INTERNAL_ERROR, "0058", "Committing records failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category

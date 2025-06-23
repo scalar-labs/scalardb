@@ -25,7 +25,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
@@ -303,8 +302,7 @@ public class Snapshot {
     }
   }
 
-  public void to(MutationComposer composer)
-      throws ExecutionException, PreparationConflictException {
+  public void to(MutationComposer composer) throws ExecutionException {
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
@@ -640,6 +638,15 @@ public class Snapshot {
 
         // Compare the records of the original scan results and the latest scan results
         if (!originalResultEntry.getKey().equals(key)) {
+          if (writeSet.containsKey(originalResultEntry.getKey())
+              || deleteSet.containsKey(originalResultEntry.getKey())) {
+            // The record is inserted/deleted/updated by this transaction
+
+            // Skip the record of the original scan results
+            originalResultEntry = Iterators.getNext(originalResultIterator, null);
+            continue;
+          }
+
           // The record is inserted/deleted by another transaction
           throwExceptionDueToAntiDependency();
         }
@@ -653,9 +660,21 @@ public class Snapshot {
         originalResultEntry = Iterators.getNext(originalResultIterator, null);
       }
 
-      if (originalResultEntry != null) {
-        // Some of the records of the scan results are deleted by another transaction
-        throwExceptionDueToAntiDependency();
+      while (originalResultEntry != null) {
+        if (writeSet.containsKey(originalResultEntry.getKey())
+            || deleteSet.containsKey(originalResultEntry.getKey())) {
+          // The record is inserted/deleted/updated by this transaction
+
+          // Skip the record of the original scan results
+          originalResultEntry = Iterators.getNext(originalResultIterator, null);
+        } else {
+          // The record is inserted/deleted by another transaction
+          throwExceptionDueToAntiDependency();
+        }
+      }
+
+      if (!latestResult.isPresent()) {
+        return;
       }
 
       if (scan.getLimit() != 0 && results.size() == scan.getLimit()) {
