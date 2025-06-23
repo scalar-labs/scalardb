@@ -6,12 +6,12 @@ import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.cli.util.FileUtils;
 import com.scalar.db.dataloader.cli.util.InvalidFilePathException;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.CsvExportManager;
@@ -54,9 +54,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       validateOutputDirectory();
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
-          spec.commandLine(), dataChunkSize, CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE);
-      validatePositiveValue(
-          spec.commandLine(), maxThreads, CoreError.DATA_LOADER_INVALID_MAX_THREADS);
+          spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
+      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
@@ -107,8 +106,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   private String getScalarDbPropertiesFilePath() {
     if (StringUtils.isBlank(configFilePath)) {
-      throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage());
+      throw new IllegalArgumentException(DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage());
     }
     return Objects.equals(configFilePath, DEFAULT_CONFIG_FILE_NAME)
         ? Paths.get("").toAbsolutePath().resolve(DEFAULT_CONFIG_FILE_NAME).toString()

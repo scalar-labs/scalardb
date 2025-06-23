@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
 import java.sql.JDBCType;
 import javax.annotation.Nullable;

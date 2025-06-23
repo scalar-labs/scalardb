@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.Consistency;
@@ -21,6 +20,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -75,6 +75,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
+  private RecoveryExecutor recoveryExecutor;
   @Nullable private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
@@ -138,29 +139,46 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
+            consensusCommitConfig.getIsolation(),
+            false,
             groupCommitter);
   }
 
   private CommitHandler createCommitHandler(
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
+    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
-          storage, coordinator, tableMetadataManager, parallelExecutor, true, groupCommitter);
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          true,
+          false,
+          groupCommitter);
     } else {
-      return new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor, true);
+      return new CommitHandler(
+          storage,
+          coordinator,
+          tableMetadataManager,
+          parallelExecutor,
+          mutationsGrouper,
+          true,
+          false);
     }
   }
 
@@ -183,6 +201,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     consensusCommitAdmin.close();
     originalStorage.close();
     parallelExecutor.close();
+    recoveryExecutor.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -489,19 +508,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -512,12 +518,20 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       assertThat(results.size()).isEqualTo(1);
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
-    transaction.commit();
 
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
     assertThat(result.getCommittedAt()).isGreaterThan(0);
+
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+
+    // Assert
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @Test
@@ -543,19 +557,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -566,12 +567,20 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       assertThat(results.size()).isEqualTo(1);
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
-    transaction.commit();
 
     assertThat(result.getId()).isNull();
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(0);
     assertThat(result.getCommittedAt()).isEqualTo(0);
+
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+
+    // Assert
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @Test
@@ -608,12 +617,12 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             })
         .isInstanceOf(UncommittedRecordException.class);
 
+    transaction.rollback();
+
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
-
-    transaction.commit();
   }
 
   @Test
@@ -644,20 +653,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -668,12 +663,21 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       assertThat(results.size()).isEqualTo(1);
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
-    transaction.commit();
 
     assertThat(result.getId()).isNull();
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(0);
     assertThat(result.getCommittedAt()).isEqualTo(0);
+
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+
+    // Assert
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @Test
@@ -693,161 +697,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
         scan);
   }
 
-  private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-          Selection s) throws ExecutionException, CoordinatorException, TransactionException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage,
-        namespace1,
-        TABLE_1,
-        TransactionState.PREPARED,
-        current,
-        TransactionState.COMMITTED);
-
-    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
-
-    transaction.setBeforeRecoveryHook(
-        () ->
-            assertThatThrownBy(
-                    () -> {
-                      DistributedTransaction another = manager.begin();
-                      if (s instanceof Get) {
-                        another.get((Get) s);
-                      } else {
-                        another.scan((Scan) s);
-                      }
-                      another.commit();
-                    })
-                .isInstanceOf(UncommittedRecordException.class));
-
-    // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2))
-        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result;
-    if (s instanceof Get) {
-      Optional<Result> r = transaction.get((Get) s);
-      assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
-    } else {
-      List<Result> results = transaction.scan((Scan) s);
-      assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
-    }
-    transaction.commit();
-
-    assertThat(result.getId()).isEqualTo(ANY_ID_1);
-    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(1);
-    assertThat(result.getCommittedAt()).isGreaterThan(0);
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        get);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        scan);
-  }
-
-  private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-          Selection s) throws ExecutionException, CoordinatorException, TransactionException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
-
-    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
-
-    transaction.setBeforeRecoveryHook(
-        () ->
-            assertThatThrownBy(
-                    () -> {
-                      DistributedTransaction another = manager.begin();
-                      if (s instanceof Get) {
-                        another.get((Get) s);
-                      } else {
-                        another.scan((Scan) s);
-                      }
-                      another.commit();
-                    })
-                .isInstanceOf(UncommittedRecordException.class));
-
-    // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    // rollback called twice but executed once actually
-    TransactionResult result;
-    if (s instanceof Get) {
-      Optional<Result> r = transaction.get((Get) s);
-      assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
-    } else {
-      List<Result> results = transaction.scan((Scan) s);
-      assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
-    }
-    transaction.commit();
-
-    assertThat(result.getId()).isNull();
-    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(0);
-    assertThat(result.getCommittedAt()).isEqualTo(0);
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        get);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        scan);
-  }
-
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
@@ -862,26 +711,21 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(0);
     }
+
     transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+
+    // Assert
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @Test
@@ -907,19 +751,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -930,12 +761,20 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       assertThat(results.size()).isEqualTo(1);
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
-    transaction.commit();
 
     assertThat(result.getId()).isNull();
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(0);
     assertThat(result.getCommittedAt()).isEqualTo(0);
+
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+
+    // Assert
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @Test
@@ -972,12 +811,12 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             })
         .isInstanceOf(UncommittedRecordException.class);
 
+    transaction.rollback();
+
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
-
-    transaction.commit();
   }
 
   @Test
@@ -1008,20 +847,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     DistributedTransaction transaction = manager.begin();
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -1032,12 +857,21 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       assertThat(results.size()).isEqualTo(1);
       result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
-    transaction.commit();
 
     assertThat(result.getId()).isNull();
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(0);
     assertThat(result.getCommittedAt()).isEqualTo(0);
+
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+
+    // Assert
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   @Test
@@ -1054,152 +888,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scan);
-  }
-
-  private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-          Selection s) throws ExecutionException, CoordinatorException, TransactionException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage,
-        namespace1,
-        TABLE_1,
-        TransactionState.DELETED,
-        current,
-        TransactionState.COMMITTED);
-
-    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
-
-    transaction.setBeforeRecoveryHook(
-        () ->
-            assertThatThrownBy(
-                    () -> {
-                      DistributedTransaction another = manager.begin();
-                      if (s instanceof Get) {
-                        another.get((Get) s);
-                      } else {
-                        another.scan((Scan) s);
-                      }
-                      another.commit();
-                    })
-                .isInstanceOf(UncommittedRecordException.class));
-
-    // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2))
-        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
-    if (s instanceof Get) {
-      assertThat(transaction.get((Get) s).isPresent()).isFalse();
-    } else {
-      List<Result> results = transaction.scan((Scan) s);
-      assertThat(results.size()).isEqualTo(0);
-    }
-    transaction.commit();
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        get);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        scan);
-  }
-
-  private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-          Selection s) throws ExecutionException, CoordinatorException, TransactionException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
-
-    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
-
-    transaction.setBeforeRecoveryHook(
-        () ->
-            assertThatThrownBy(
-                    () -> {
-                      DistributedTransaction another = manager.begin();
-                      if (s instanceof Get) {
-                        another.get((Get) s);
-                      } else {
-                        another.scan((Scan) s);
-                      }
-                      another.commit();
-                    })
-                .isInstanceOf(UncommittedRecordException.class));
-
-    // Act
-    assertThatThrownBy(
-            () -> {
-              if (s instanceof Get) {
-                transaction.get((Get) s);
-              } else {
-                transaction.scan((Scan) s);
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    // rollback called twice but executed once actually
-    TransactionResult result;
-    if (s instanceof Get) {
-      Optional<Result> r = transaction.get((Get) s);
-      assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
-    } else {
-      List<Result> results = transaction.scan((Scan) s);
-      assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
-    }
-    transaction.commit();
-
-    assertThat(result.getId()).isNull();
-    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(0);
-    assertThat(result.getCommittedAt()).isEqualTo(0);
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        get);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scan);
   }
 
@@ -1434,28 +1122,10 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   @Test
-  public void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        scanAll);
-  }
-
-  @Test
   public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
-  }
-
-  @Test
-  public void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        scanAll);
   }
 
   @Test
@@ -1484,28 +1154,10 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   @Test
-  public void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        scanAll);
-  }
-
-  @Test
   public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
-  }
-
-  @Test
-  public void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        scanAll);
   }
 
   @Test

@@ -1,7 +1,7 @@
 package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.TextColumn;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -16,8 +16,9 @@ public class LikeExpression extends ConditionalExpression {
    * Constructs a {@code LikeExpression} with the specified column and operator. For the escape
    * character, the default one ("\", i.e., backslash) is used.
    *
-   * @param column a target column used to compare
-   * @param operator an operator used to compare the target column
+   * @param column a target text column used to compare
+   * @param operator an operator used to compare the target text column. The operator must be either
+   *     LIKE or NOT_LIKE.
    */
   LikeExpression(TextColumn column, Operator operator) {
     this(column, operator, DEFAULT_ESCAPE_CHAR);
@@ -28,8 +29,9 @@ public class LikeExpression extends ConditionalExpression {
    * The escape character must be a string of a single character or an empty string. If an empty
    * string is specified, the escape character is disabled.
    *
-   * @param column a target column used to compare
-   * @param operator an operator used to compare the target column
+   * @param column a target text column used to compare
+   * @param operator an operator used to compare the target text column. The operator must be either
+   *     LIKE or NOT_LIKE.
    * @param escape an escape character for the like operator
    */
   LikeExpression(TextColumn column, Operator operator, String escape) {
@@ -73,6 +75,11 @@ public class LikeExpression extends ConditionalExpression {
                 .buildMessage());
       }
     }
+  }
+
+  @Override
+  public TextColumn getColumn() {
+    return (TextColumn) super.getColumn();
   }
 
   /**

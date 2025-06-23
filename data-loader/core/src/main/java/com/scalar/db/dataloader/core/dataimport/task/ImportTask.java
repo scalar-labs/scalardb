@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataimport.task;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
@@ -117,7 +117,7 @@ public abstract class ImportTask {
         if (!mutableSourceRecord.has(mapping.getSourceField())
             && !mutableSourceRecord.has(mapping.getTargetColumn())) {
           String errorMessage =
-              CoreError.DATA_LOADER_MISSING_SOURCE_FIELD.buildMessage(
+              DataLoaderError.MISSING_SOURCE_FIELD.buildMessage(
                   mapping.getSourceField(), controlFileTable.getTable());
 
           ImportTargetResult targetResult =
@@ -182,9 +182,7 @@ public abstract class ImportTask {
           .namespace(namespace)
           .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
-          .errors(
-              Collections.singletonList(
-                  CoreError.DATA_LOADER_TABLE_METADATA_MISSING.buildMessage()))
+          .errors(Collections.singletonList(DataLoaderError.TABLE_METADATA_MISSING.buildMessage()))
           .build();
     }
 
@@ -224,7 +222,7 @@ public abstract class ImportTask {
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(
               Collections.singletonList(
-                  CoreError.DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY.buildMessage()))
+                  DataLoaderError.COULD_NOT_FIND_PARTITION_KEY.buildMessage()))
           .build();
     }
     Optional<Key> optionalClusteringKey = Optional.empty();
@@ -239,7 +237,7 @@ public abstract class ImportTask {
             .status(ImportTargetResultStatus.VALIDATION_FAILED)
             .errors(
                 Collections.singletonList(
-                    CoreError.DATA_LOADER_COULD_NOT_FIND_CLUSTERING_KEY.buildMessage()))
+                    DataLoaderError.COULD_NOT_FIND_CLUSTERING_KEY.buildMessage()))
             .build();
       }
     }
@@ -274,7 +272,7 @@ public abstract class ImportTask {
             .status(ImportTargetResultStatus.MISSING_COLUMNS)
             .errors(
                 Collections.singletonList(
-                    CoreError.DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS.buildMessage()))
+                    DataLoaderError.UPSERT_INSERT_MISSING_COLUMNS.buildMessage()))
             .build();
       }
     }
@@ -286,8 +284,7 @@ public abstract class ImportTask {
           .importedRecord(mutableSourceRecord)
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_ALREADY_EXISTS)
-          .errors(
-              Collections.singletonList(CoreError.DATA_LOADER_DATA_ALREADY_EXISTS.buildMessage()))
+          .errors(Collections.singletonList(DataLoaderError.DATA_ALREADY_EXISTS.buildMessage()))
           .build();
     }
 
@@ -298,7 +295,7 @@ public abstract class ImportTask {
           .importedRecord(mutableSourceRecord)
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_NOT_FOUND)
-          .errors(Collections.singletonList(CoreError.DATA_LOADER_DATA_NOT_FOUND.buildMessage()))
+          .errors(Collections.singletonList(DataLoaderError.DATA_NOT_FOUND.buildMessage()))
           .build();
     }
 

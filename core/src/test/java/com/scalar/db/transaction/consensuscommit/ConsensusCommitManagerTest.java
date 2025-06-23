@@ -60,10 +60,9 @@ public class ConsensusCommitManagerTest {
   @Mock private DistributedStorage storage;
   @Mock private DistributedStorageAdmin admin;
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
-  @Mock private RecoveryHandler recovery;
+  @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CommitHandler commit;
 
   private ConsensusCommitManager manager;
@@ -76,15 +75,14 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
+            Isolation.SNAPSHOT,
+            false,
             null);
-
-    when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
   }
 
   @Test
@@ -127,12 +125,13 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
+            Isolation.SNAPSHOT,
+            false,
             groupCommitter);
 
     // Act
@@ -158,12 +157,13 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
             commit,
+            Isolation.SNAPSHOT,
+            false,
             groupCommitter);
 
     // Act
@@ -196,9 +196,6 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test
@@ -309,9 +306,6 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test

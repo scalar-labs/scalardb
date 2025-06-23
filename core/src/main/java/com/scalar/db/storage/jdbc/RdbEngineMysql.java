@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TimestampTZColumn;
@@ -11,6 +11,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -448,7 +449,19 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties() {
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
+    if (config.getDatabaseConfig().getScanFetchSize() == Integer.MIN_VALUE) {
+      // If the scan fetch size is set to Integer.MIN_VALUE, use the streaming mode.
+      return Collections.emptyMap();
+    }
+
+    // Otherwise, use the cursor fetch mode.
     return Collections.singletonMap("useCursorFetch", "true");
+  }
+
+  @Override
+  public void setConnectionToReadOnly(Connection connection, boolean readOnly) throws SQLException {
+    // Observed performance degradation when using read-only connections in MySQL. So we do not
+    // set the read-only mode for MySQL connections.
   }
 }

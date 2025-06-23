@@ -11,7 +11,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -25,8 +24,8 @@ public class ImportTableSchema {
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length != 2) {
       throw new IllegalArgumentException(
-          CoreError.SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE
-              .buildMessage(tableFullName));
+          SchemaLoaderError.PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE.buildMessage(
+              tableFullName));
     }
     namespace = fullName[0];
     tableName = fullName[1];
@@ -52,7 +51,7 @@ public class ImportTableSchema {
       DataType dataType = TableSchema.DATA_MAP_TYPE.get(columnDataType.toUpperCase());
       if (dataType == null) {
         throw new IllegalArgumentException(
-            CoreError.SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE.buildMessage(
+            SchemaLoaderError.PARSE_ERROR_INVALID_COLUMN_TYPE.buildMessage(
                 tableFullName, columnName, column.getValue().getAsString()));
       }
       columnsBuilder.put(columnName, dataType);

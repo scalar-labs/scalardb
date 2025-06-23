@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.MutationCondition;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.TableMetadata;
@@ -11,9 +12,12 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -313,5 +317,39 @@ public final class ConsensusCommitUtils {
     } else {
       return currentTxVersion + 1;
     }
+  }
+
+  static void createAfterImageColumnsFromBeforeImage(
+      Map<String, Column<?>> columns,
+      TransactionResult result,
+      Set<String> beforeImageColumnNames) {
+    result
+        .getColumns()
+        .forEach(
+            (k, v) -> {
+              if (beforeImageColumnNames.contains(k)) {
+                String columnName = k.substring(Attribute.BEFORE_PREFIX.length());
+                if (columnName.equals(Attribute.VERSION) && v.getIntValue() == 0) {
+                  // Since we use version 0 instead of copying NULL for before_version when updating
+                  // a NULL-transaction-metadata record, we conversely change 0 to NULL for
+                  // rollback. See also PrepareMutationComposer.
+                  columns.put(columnName, IntColumn.ofNull(Attribute.VERSION));
+                } else {
+                  columns.put(columnName, v.copyWith(columnName));
+                }
+              }
+            });
+  }
+
+  static TransactionTableMetadata getTransactionTableMetadata(
+      TransactionTableMetadataManager tableMetadataManager, Operation operation)
+      throws ExecutionException {
+    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(operation);
+    if (metadata == null) {
+      assert operation.forFullTableName().isPresent();
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
+    }
+    return metadata;
   }
 }

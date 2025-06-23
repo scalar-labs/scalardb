@@ -7,8 +7,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
@@ -160,7 +160,7 @@ class ColumnUtilsTest {
             ColumnParsingException.class,
             () -> ColumnUtils.createColumnFromValue(DataType.INT, columnInfo, value));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
+        DataLoaderError.INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE.buildMessage(
             value, columnName, "table", "ns"),
         exception.getMessage());
   }
@@ -180,7 +180,7 @@ class ColumnUtilsTest {
             ColumnParsingException.class,
             () -> ColumnUtils.createColumnFromValue(DataType.BLOB, columnInfo, value));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
+        DataLoaderError.INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE.buildMessage(
             value, columnName, "table", "ns"),
         exception.getMessage());
   }
@@ -199,7 +199,7 @@ class ColumnUtilsTest {
             ColumnParsingException.class,
             () -> ColumnUtils.createColumnFromValue(DataType.TIMESTAMP, columnInfo, value));
     assertEquals(
-        CoreError.DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
+        DataLoaderError.INVALID_DATE_TIME_FOR_COLUMN_VALUE.buildMessage(
             value, columnName, "table", "ns"),
         exception.getMessage());
   }

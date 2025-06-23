@@ -22,6 +22,8 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -67,7 +69,9 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         coordinator,
         tableMetadataManager,
         parallelExecutor,
+        new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        false,
         groupCommitter);
   }
 
@@ -194,4 +198,71 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Assert
     verify(groupCommitter, never()).remove(anyId());
   }
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void canOnePhaseCommit_WhenMutationsGrouperThrowsException_ShouldThrowCommitException() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void
+      onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void
+      onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowCommitException() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void commit_OnePhaseCommitted_ShouldNotThrowAnyException() {}
+
+  @Disabled("Enabling both one-phase commit and group commit is not supported")
+  @Override
+  @Test
+  public void commit_OnePhaseCommitted_CommitExceptionThrown_ShouldThrowCommitException() {}
 }

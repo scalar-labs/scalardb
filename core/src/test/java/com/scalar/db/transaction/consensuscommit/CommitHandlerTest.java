@@ -8,16 +8,22 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -34,13 +40,11 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
-@ExtendWith(MockitoExtension.class)
 public class CommitHandlerTest {
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
@@ -58,12 +62,14 @@ public class CommitHandlerTest {
   @Mock protected DistributedStorage storage;
   @Mock protected Coordinator coordinator;
   @Mock protected TransactionTableMetadataManager tableMetadataManager;
+  @Mock protected StorageInfoProvider storageInfoProvider;
   @Mock protected ConsensusCommitConfig config;
   @Mock protected BeforePreparationSnapshotHook beforePreparationSnapshotHook;
   @Mock protected Future<Void> beforePreparationSnapshotHookFuture;
 
   private CommitHandler handler;
   protected ParallelExecutor parallelExecutor;
+  protected MutationsGrouper mutationsGrouper;
 
   protected String anyId() {
     return ANY_ID;
@@ -79,15 +85,26 @@ public class CommitHandlerTest {
         coordinator,
         tableMetadataManager,
         parallelExecutor,
-        coordinatorWriteOmissionOnReadOnlyEnabled);
+        new MutationsGrouper(storageInfoProvider),
+        coordinatorWriteOmissionOnReadOnlyEnabled,
+        false);
   }
 
   @BeforeEach
   void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+
     parallelExecutor = new ParallelExecutor(config);
     handler = spy(createCommitHandler(true));
+    mutationsGrouper = spy(new MutationsGrouper(storageInfoProvider));
 
     extraInitialize();
+
+    // Arrange
+    when(storageInfoProvider.getStorageInfo(ANY_NAMESPACE_NAME))
+        .thenReturn(
+            new StorageInfoImpl(
+                "storage1", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
   }
 
   @AfterEach
@@ -135,10 +152,17 @@ public class CommitHandlerTest {
         .build();
   }
 
+  private Delete prepareDelete() {
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+        .build();
+  }
+
   private Snapshot prepareSnapshotWithDifferentPartitionPut() {
-    Snapshot snapshot =
-        new Snapshot(
-            anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
+    Snapshot snapshot = prepareSnapshot();
 
     // different partition
     Put put1 = preparePut1();
@@ -153,9 +177,7 @@ public class CommitHandlerTest {
   }
 
   private Snapshot prepareSnapshotWithSamePartitionPut() {
-    Snapshot snapshot =
-        new Snapshot(
-            anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
+    Snapshot snapshot = prepareSnapshot();
 
     // same partition
     Put put1 = preparePut1();
@@ -170,9 +192,7 @@ public class CommitHandlerTest {
   }
 
   private Snapshot prepareSnapshotWithoutWrites() {
-    Snapshot snapshot =
-        new Snapshot(
-            anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
+    Snapshot snapshot = prepareSnapshot();
 
     Get get = prepareGet();
     snapshot.putIntoGetSet(get, Optional.empty());
@@ -181,9 +201,7 @@ public class CommitHandlerTest {
   }
 
   private Snapshot prepareSnapshotWithoutReads() {
-    Snapshot snapshot =
-        new Snapshot(
-            anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
+    Snapshot snapshot = prepareSnapshot();
 
     // same partition
     Put put1 = preparePut1();
@@ -192,6 +210,15 @@ public class CommitHandlerTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put3), put3);
 
     return snapshot;
+  }
+
+  private Snapshot prepareSnapshotWithIsolation(Isolation isolation) {
+    return new Snapshot(anyId(), isolation, tableMetadataManager, new ParallelExecutor(config));
+  }
+
+  private Snapshot prepareSnapshot() {
+    return new Snapshot(
+        anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
   }
 
   private void setBeforePreparationSnapshotHookIfNeeded(boolean withSnapshotHook) {
@@ -935,6 +962,224 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.COMMITTED));
     verify(handler).rollbackRecords(snapshot);
     verify(handler).onFailureBeforeCommit(snapshot);
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshot();
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(snapshot);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshotWithIsolation(Isolation.SERIALIZABLE);
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(snapshot);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshotWithoutWrites();
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(snapshot);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse()
+      throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshot();
+
+    // Setup a delete with no corresponding record in read set
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.empty());
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(snapshot);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue() throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(snapshot);
+
+    // Assert
+    assertThat(actual).isTrue();
+    verify(mutationsGrouper).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    doReturn(false).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(snapshot);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(mutationsGrouper).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenMutationsGrouperThrowsException_ShouldThrowCommitException()
+      throws ExecutionException {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    doThrow(ExecutionException.class).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.canOnePhaseCommit(snapshot))
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(ExecutionException.class);
+  }
+
+  @Test
+  public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
+      throws CommitException, ExecutionException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
+    doNothing().when(storage).mutate(anyList());
+
+    // Act
+    handler.onePhaseCommitRecords(snapshot);
+
+    // Assert
+    verify(storage).mutate(anyList());
+    verify(snapshot).to(any(OnePhaseCommitMutationComposer.class));
+  }
+
+  @Test
+  public void
+      onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
+    doThrow(NoMutationException.class).when(storage).mutate(anyList());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(snapshot))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(NoMutationException.class);
+  }
+
+  @Test
+  public void
+      onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
+    doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(snapshot))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(RetriableExecutionException.class);
+  }
+
+  @Test
+  public void onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowCommitException()
+      throws ExecutionException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(snapshot))
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(ExecutionException.class);
+  }
+
+  @Test
+  public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
+      throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
+    Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
+
+    doReturn(true).when(handler).canOnePhaseCommit(snapshot);
+    doNothing().when(handler).onePhaseCommitRecords(snapshot);
+
+    // Act
+    handler.commit(snapshot, true);
+
+    // Assert
+    verify(handler).canOnePhaseCommit(snapshot);
+    verify(handler).onePhaseCommitRecords(snapshot);
+  }
+
+  @Test
+  public void commit_OnePhaseCommitted_CommitExceptionThrown_ShouldThrowCommitException()
+      throws CommitException {
+    // Arrange
+    CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
+    Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
+
+    doReturn(true).when(handler).canOnePhaseCommit(snapshot);
+    doThrow(CommitException.class).when(handler).onePhaseCommitRecords(snapshot);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commit(snapshot, true)).isInstanceOf(CommitException.class);
+
+    verify(handler).onFailureBeforeCommit(snapshot);
+  }
+
+  private CommitHandler createCommitHandlerWithOnePhaseCommit() {
+    return new CommitHandler(
+        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
   }
 
   protected void doThrowExceptionWhenCoordinatorPutState(

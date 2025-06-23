@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -21,10 +22,9 @@ import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
@@ -46,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -64,11 +65,11 @@ public class Snapshot {
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
 
   // The get set stores information about the records retrieved by Get operations in this
-  // transaction. This is used for validation and snapshot read.
+  // transaction. This is used for validation and snapshot reads.
   private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
 
   // The scan set stores information about the records retrieved by Scan operations in this
-  // transaction. This is used for validation and snapshot read.
+  // transaction. This is used for validation and snapshot reads.
   private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
 
   // The scanner set stores information about scanners that are not fully scanned. This is used for
@@ -127,9 +128,8 @@ public class Snapshot {
     return id;
   }
 
-  @VisibleForTesting
   @Nonnull
-  Isolation getIsolation() {
+  public Isolation getIsolation() {
     return isolation;
   }
 
@@ -213,8 +213,21 @@ public class Snapshot {
     return readSet.containsKey(key);
   }
 
+  @Nullable
+  public Optional<TransactionResult> getFromReadSet(Key key) {
+    return readSet.get(key);
+  }
+
   public boolean containsKeyInGetSet(Get get) {
     return getSet.containsKey(get);
+  }
+
+  public boolean containsKeyInWriteSet(Key key) {
+    return writeSet.containsKey(key);
+  }
+
+  public boolean containsKeyInDeleteSet(Key key) {
+    return deleteSet.containsKey(key);
   }
 
   public boolean hasWritesOrDeletes() {
@@ -235,8 +248,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan)
-      throws CrudException {
+  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -290,8 +302,7 @@ public class Snapshot {
     }
   }
 
-  public void to(MutationComposer composer)
-      throws ExecutionException, PreparationConflictException {
+  public void to(MutationComposer composer) throws ExecutionException {
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
@@ -627,6 +638,15 @@ public class Snapshot {
 
         // Compare the records of the original scan results and the latest scan results
         if (!originalResultEntry.getKey().equals(key)) {
+          if (writeSet.containsKey(originalResultEntry.getKey())
+              || deleteSet.containsKey(originalResultEntry.getKey())) {
+            // The record is inserted/deleted/updated by this transaction
+
+            // Skip the record of the original scan results
+            originalResultEntry = Iterators.getNext(originalResultIterator, null);
+            continue;
+          }
+
           // The record is inserted/deleted by another transaction
           throwExceptionDueToAntiDependency();
         }
@@ -640,9 +660,21 @@ public class Snapshot {
         originalResultEntry = Iterators.getNext(originalResultIterator, null);
       }
 
-      if (originalResultEntry != null) {
-        // Some of the records of the scan results are deleted by another transaction
-        throwExceptionDueToAntiDependency();
+      while (originalResultEntry != null) {
+        if (writeSet.containsKey(originalResultEntry.getKey())
+            || deleteSet.containsKey(originalResultEntry.getKey())) {
+          // The record is inserted/deleted/updated by this transaction
+
+          // Skip the record of the original scan results
+          originalResultEntry = Iterators.getNext(originalResultIterator, null);
+        } else {
+          // The record is inserted/deleted by another transaction
+          throwExceptionDueToAntiDependency();
+        }
+      }
+
+      if (!latestResult.isPresent()) {
+        return;
       }
 
       if (scan.getLimit() != 0 && results.size() == scan.getLimit()) {
@@ -723,13 +755,9 @@ public class Snapshot {
   }
 
   private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(operation);
-    if (metadata == null) {
-      assert operation.forFullTableName().isPresent();
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
-    }
-    return metadata.getTableMetadata();
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, operation);
+    return transactionTableMetadata.getTableMetadata();
   }
 
   private boolean isChanged(
@@ -754,6 +782,10 @@ public class Snapshot {
 
   private boolean isSerializable() {
     return isolation == Isolation.SERIALIZABLE;
+  }
+
+  public boolean isSnapshotReadRequired() {
+    return isolation != Isolation.READ_COMMITTED;
   }
 
   public boolean isValidationRequired() {
