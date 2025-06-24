@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdminPermissionIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.PermissionTestUtils;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -28,6 +29,11 @@ public class DynamoAdminPermissionIntegrationTest
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new DynamoAdminTestUtils(getProperties(testName));
+  }
+
+  @Override
+  protected PermissionTestUtils getPermissionTestUtils(String testName) {
+    return new DynamoPermissionTestUtils(getProperties(testName));
   }
 
   @Test

@@ -2,10 +2,12 @@ package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.PermissionTestUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -44,17 +46,33 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
           .build();
   private DistributedStorageAdmin adminForRootUser;
   private DistributedStorageAdmin adminForNormalUser;
+  private String normalUserName;
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    // Initialize the admin for root user
     Properties propertiesForRootUser = getProperties(TEST_NAME);
+    Properties propertiesForNormalUser = getPropertiesForNormalUser(TEST_NAME);
+
+    // Initialize the admin for root user
     StorageFactory factoryForRootUser = StorageFactory.create(propertiesForRootUser);
     adminForRootUser = factoryForRootUser.getStorageAdmin();
+
+    DatabaseConfig config = new DatabaseConfig(propertiesForNormalUser);
+    if (!config.getUsername().isPresent() || !config.getPassword().isPresent()) {
+      throw new IllegalArgumentException(
+          "Username and password must be set in the properties for normal user");
+    }
+    // Create normal user and grant permissions
+    PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
+    normalUserName = config.getUsername().get();
+    permissionTestUtils.createNormalUser(normalUserName, config.getPassword().get());
+    permissionTestUtils.grantRequiredPermission(normalUserName);
+    permissionTestUtils.close();
+
     // Initialize the admin for normal user
-    Properties propertiesForNormalUser = getPropertiesForNormalUser(TEST_NAME);
     StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
     adminForNormalUser = factoryForNormalUser.getStorageAdmin();
+    
     // Create the namespace and table
     adminForRootUser.createNamespace(NAMESPACE1, true, getCreationOptions());
     adminForRootUser.createTable(NAMESPACE1, TABLE1, TABLE_METADATA, true, getCreationOptions());
@@ -71,6 +89,10 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
       // Close the admin instances
       adminForRootUser.close();
       adminForNormalUser.close();
+      // Drop normal user
+      PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
+      permissionTestUtils.dropNormalUser(normalUserName);
+      permissionTestUtils.close();
     } catch (Exception e) {
       logger.warn("Failed to close admin", e);
     }
@@ -290,4 +312,6 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   protected abstract AdminTestUtils getAdminTestUtils(String testName);
+
+  protected abstract PermissionTestUtils getPermissionTestUtils(String testName);
 }

@@ -39,13 +39,7 @@ public final class CassandraEnv {
 
     return properties;
   }
-
-  /*
-   * This method is used for executing commands other than CREATE commands. In Cassandra, the
-   * ROLE executing the commands has multiple permissions for the object created implicitly.
-   * To know the exact permissions that should be granted to the ROLE, we avoid this behavior by
-   * using a different ROLE.
-   */
+  
   public static Properties getPropertiesForNormalUser(String testName) {
     String contactPoints =
         System.getProperty(PROP_CASSANDRA_CONTACT_POINTS, DEFAULT_CASSANDRA_CONTACT_POINTS);

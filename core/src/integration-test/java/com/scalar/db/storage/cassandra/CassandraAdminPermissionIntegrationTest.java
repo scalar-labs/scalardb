@@ -2,6 +2,7 @@ package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.api.DistributedStorageAdminPermissionIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.PermissionTestUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -28,6 +29,11 @@ public class CassandraAdminPermissionIntegrationTest
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new CassandraAdminTestUtils(getProperties(testName));
+  }
+
+  @Override
+  protected PermissionTestUtils getPermissionTestUtils(String testName) {
+    return new CassandraPermissionTestUtils(getProperties(testName));
   }
 
   @Test
