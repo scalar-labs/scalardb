@@ -99,7 +99,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .partitionKey(Key.ofInt(COL_NAME1, PARTITION_KEY_VALUE))
             .build();
     // Act Assert
-    assertThatCode(() -> storageForNormalUser.scan(scan)).doesNotThrowAnyException();
+    assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
   }
 
   @Test
@@ -107,7 +107,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
     // Act Assert
-    assertThatCode(() -> storageForNormalUser.scan(scan)).doesNotThrowAnyException();
+    assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
   }
 
   @Test
