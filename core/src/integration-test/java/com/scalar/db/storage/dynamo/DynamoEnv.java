@@ -10,12 +10,14 @@ public final class DynamoEnv {
   private static final String PROP_DYNAMO_REGION = "scalardb.dynamo.region";
   private static final String PROP_DYNAMO_ACCESS_KEY_ID = "scalardb.dynamo.access_key_id";
   private static final String PROP_DYNAMO_SECRET_ACCESS_KEY = "scalardb.dynamo.secret_access_key";
+  private static final String PROP_DYNAMO_EMULATOR = "scalardb.dynamo.emulator";
   private static final String PROP_DYNAMO_CREATE_OPTIONS = "scalardb.dynamo.create_options";
 
   private static final String DEFAULT_DYNAMO_ENDPOINT_OVERRIDE = "http://localhost:8000";
   private static final String DEFAULT_DYNAMO_REGION = "us-west-2";
   private static final String DEFAULT_DYNAMO_ACCESS_KEY_ID = "fakeMyKeyId";
   private static final String DEFAULT_DYNAMO_SECRET_ACCESS_KEY = "fakeSecretAccessKey";
+  private static final String DEFAULT_DYNAMO_EMULATOR = "true";
 
   private static final ImmutableMap<String, String> DEFAULT_DYNAMO_CREATE_OPTIONS =
       ImmutableMap.of(DynamoAdmin.NO_SCALING, "true", DynamoAdmin.NO_BACKUP, "true");
@@ -30,40 +32,12 @@ public final class DynamoEnv {
         System.getProperty(PROP_DYNAMO_ACCESS_KEY_ID, DEFAULT_DYNAMO_ACCESS_KEY_ID);
     String secretAccessKey =
         System.getProperty(PROP_DYNAMO_SECRET_ACCESS_KEY, DEFAULT_DYNAMO_SECRET_ACCESS_KEY);
+    String isEmulator = System.getProperty(PROP_DYNAMO_EMULATOR, DEFAULT_DYNAMO_EMULATOR);
 
     Properties properties = new Properties();
-    if (endpointOverride != null) {
+    if (isEmulator.equals("true") && endpointOverride != null) {
       properties.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
-    properties.setProperty(DatabaseConfig.USERNAME, accessKeyId);
-    properties.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
-    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
-
-    // Add testName as a metadata namespace suffix
-    properties.setProperty(
-        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
-        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
-
-    return properties;
-  }
-
-  /**
-   * Returns properties for tests that require real DynamoDB (not the emulator) to be used.
-   *
-   * <p>These properties are used in tests that require real DynamoDB (not the emulator) to be used.
-   */
-  public static Properties getPropertiesForNonEmulator(String testName) {
-    String region = System.getProperty(PROP_DYNAMO_REGION, DEFAULT_DYNAMO_REGION);
-    String accessKeyId =
-        System.getProperty(PROP_DYNAMO_ACCESS_KEY_ID, DEFAULT_DYNAMO_ACCESS_KEY_ID);
-    String secretAccessKey =
-        System.getProperty(PROP_DYNAMO_SECRET_ACCESS_KEY, DEFAULT_DYNAMO_SECRET_ACCESS_KEY);
-
-    Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
     properties.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     properties.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);

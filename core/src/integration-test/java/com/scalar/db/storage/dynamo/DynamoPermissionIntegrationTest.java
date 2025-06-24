@@ -9,12 +9,12 @@ public class DynamoPermissionIntegrationTest
     extends DistributedStoragePermissionIntegrationTestBase {
   @Override
   protected Properties getProperties(String testName) {
-    return DynamoEnv.getPropertiesForNonEmulator(testName);
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override
   protected Properties getPropertiesForNormalUser(String testName) {
-    return DynamoEnv.getPropertiesForNonEmulator(testName);
+    return DynamoEnv.getProperties(testName);
   }
 
   @Override
