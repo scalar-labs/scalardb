@@ -67,7 +67,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestPermission {
+    integrationTestCassandraPermission {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -78,11 +78,29 @@ sourceSets {
             include '**/com/scalar/db/storage/cassandra/CassandraEnv.java'
             include '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
             include '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestDynamoPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
             include '**/com/scalar/db/storage/dynamo/DynamoAdminTestUtils.java'
             include '**/com/scalar/db/storage/dynamo/DynamoEnv.java'
             include '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
             include '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestJdbcPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
             include '**/com/scalar/db/storage/jdbc/JdbcAdminTestUtils.java'
             include '**/com/scalar/db/storage/jdbc/JdbcTestUtils.java'
@@ -113,9 +131,15 @@ configurations {
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
-    integrationTestPermissionImplementation.extendsFrom testImplementation
-    integrationTestPermissionRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestCassandraPermissionImplementation.extendsFrom testImplementation
+    integrationTestCassandraPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestDynamoPermissionImplementation.extendsFrom testImplementation
+    integrationTestDynamoPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestJdbcPermissionImplementation.extendsFrom testImplementation
+    integrationTestJdbcPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcPermissionCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -230,11 +254,33 @@ task integrationTestMultiStorage(type: Test) {
     }
 }
 
-task integrationTestPermission(type: Test) {
-    description = 'Runs the integration tests that inherit from DistributedStoragePermissionIntegrationTestBase.'
+task integrationTestCassandraPermission(type: Test) {
+    description = 'Runs the integration tests for Cassandra permissions.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestPermission.output.classesDirs
-    classpath = sourceSets.integrationTestPermission.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestCassandraPermission.output.classesDirs
+    classpath = sourceSets.integrationTestCassandraPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
+task integrationTestDynamoPermission(type: Test) {
+    description = 'Runs the integration tests for DynamoDB permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestDynamoPermission.output.classesDirs
+    classpath = sourceSets.integrationTestDynamoPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
+task integrationTestJdbcPermission(type: Test) {
+    description = 'Runs the integration tests for JDBC permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbcPermission.output.classesDirs
+    classpath = sourceSets.integrationTestJdbcPermission.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
