@@ -39,7 +39,7 @@ public final class CassandraEnv {
 
     return properties;
   }
-  
+
   public static Properties getPropertiesForNormalUser(String testName) {
     String contactPoints =
         System.getProperty(PROP_CASSANDRA_CONTACT_POINTS, DEFAULT_CASSANDRA_CONTACT_POINTS);

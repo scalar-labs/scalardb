@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.PermissionTestUtils;
+import java.util.Optional;
 import java.util.Properties;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -11,7 +12,12 @@ import software.amazon.awssdk.policybuilder.iam.IamResource;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.AttachUserPolicyRequest;
+import software.amazon.awssdk.services.iam.model.AttachedPolicy;
+import software.amazon.awssdk.services.iam.model.CreatePolicyRequest;
 import software.amazon.awssdk.services.iam.model.CreatePolicyVersionRequest;
+import software.amazon.awssdk.services.iam.model.DeletePolicyVersionRequest;
+import software.amazon.awssdk.services.iam.model.ListAttachedUserPoliciesRequest;
+import software.amazon.awssdk.services.iam.model.ListPolicyVersionsRequest;
 import software.amazon.awssdk.services.iam.model.User;
 
 public class DynamoPermissionTestUtils implements PermissionTestUtils {
@@ -69,22 +75,19 @@ public class DynamoPermissionTestUtils implements PermissionTestUtils {
   @Override
   public void grantRequiredPermission(String userName) {
     try {
-      // Get the account ID to construct the ARN\
       User user = client.getUser().user();
-      String accountId = user.arn().split(":")[4];
-      String policyArn = String.format("arn:aws:iam::%s:policy/%s", accountId, IAM_POLICY_NAME);
-
-      // Create a new version of the existing policy
-      client.createPolicyVersion(
-          CreatePolicyVersionRequest.builder()
-              .policyArn(policyArn)
-              .policyDocument(POLICY.toJson())
-              .setAsDefault(true)
-              .build());
-
-      // Attach the policy to the user
-      client.attachUserPolicy(
-          AttachUserPolicyRequest.builder().userName(user.userName()).policyArn(policyArn).build());
+      Optional<String> attachedPolicyArn = getAttachedPolicyArn(user.userName(), IAM_POLICY_NAME);
+      if (attachedPolicyArn.isPresent()) {
+        deleteStalePolicyVersions(attachedPolicyArn.get());
+        createNewPolicyVersion(attachedPolicyArn.get());
+      } else {
+        String policyArn = createNewPolicy();
+        client.attachUserPolicy(
+            AttachUserPolicyRequest.builder()
+                .userName(user.userName())
+                .policyArn(policyArn)
+                .build());
+      }
     } catch (Exception e) {
       throw new RuntimeException("Failed to grant required permissions", e);
     }
@@ -93,5 +96,53 @@ public class DynamoPermissionTestUtils implements PermissionTestUtils {
   @Override
   public void close() {
     client.close();
+  }
+
+  private Optional<String> getAttachedPolicyArn(String userName, String policyName) {
+    AttachedPolicy attachedPolicy =
+        client
+            .listAttachedUserPolicies(
+                ListAttachedUserPoliciesRequest.builder().userName(userName).build())
+            .attachedPolicies()
+            .stream()
+            .filter(policy -> policy.policyName().equals(policyName))
+            .findFirst()
+            .orElse(null);
+    return Optional.ofNullable(attachedPolicy).map(AttachedPolicy::policyArn);
+  }
+
+  private String createNewPolicy() {
+    return client
+        .createPolicy(
+            CreatePolicyRequest.builder()
+                .policyName(IAM_POLICY_NAME)
+                .policyDocument(POLICY.toJson())
+                .build())
+        .policy()
+        .arn();
+  }
+
+  private void deleteStalePolicyVersions(String policyArn) {
+    client
+        .listPolicyVersions(ListPolicyVersionsRequest.builder().policyArn(policyArn).build())
+        .versions()
+        .stream()
+        .filter(version -> !version.isDefaultVersion())
+        .forEach(
+            version ->
+                client.deletePolicyVersion(
+                    DeletePolicyVersionRequest.builder()
+                        .policyArn(policyArn)
+                        .versionId(version.versionId())
+                        .build()));
+  }
+
+  private void createNewPolicyVersion(String policyArn) {
+    client.createPolicyVersion(
+        CreatePolicyVersionRequest.builder()
+            .policyArn(policyArn)
+            .policyDocument(POLICY.toJson())
+            .setAsDefault(true)
+            .build());
   }
 }
