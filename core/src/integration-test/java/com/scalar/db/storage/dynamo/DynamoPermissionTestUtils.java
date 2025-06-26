@@ -103,8 +103,7 @@ public class DynamoPermissionTestUtils implements PermissionTestUtils {
         client
             .listAttachedUserPolicies(
                 ListAttachedUserPoliciesRequest.builder().userName(userName).build())
-            .attachedPolicies()
-            .stream()
+            .attachedPolicies().stream()
             .filter(policy -> policy.policyName().equals(policyName))
             .findFirst()
             .orElse(null);
@@ -123,10 +122,8 @@ public class DynamoPermissionTestUtils implements PermissionTestUtils {
   }
 
   private void deleteStalePolicyVersions(String policyArn) {
-    client
-        .listPolicyVersions(ListPolicyVersionsRequest.builder().policyArn(policyArn).build())
-        .versions()
-        .stream()
+    client.listPolicyVersions(ListPolicyVersionsRequest.builder().policyArn(policyArn).build())
+        .versions().stream()
         .filter(version -> !version.isDefaultVersion())
         .forEach(
             version ->

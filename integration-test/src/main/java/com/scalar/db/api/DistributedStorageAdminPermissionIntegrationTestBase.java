@@ -72,7 +72,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Initialize the admin for normal user
     StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
     adminForNormalUser = factoryForNormalUser.getStorageAdmin();
-    
+
     // Create the namespace and table
     adminForRootUser.createNamespace(NAMESPACE1, true, getCreationOptions());
     adminForRootUser.createTable(NAMESPACE1, TABLE1, TABLE_METADATA, true, getCreationOptions());
