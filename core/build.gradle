@@ -12,6 +12,15 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -22,6 +31,9 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -42,6 +54,9 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -53,6 +68,9 @@ sourceSets {
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
