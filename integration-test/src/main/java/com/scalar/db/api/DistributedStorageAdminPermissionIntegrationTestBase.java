@@ -12,22 +12,18 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
-  private static final Logger logger =
-      LoggerFactory.getLogger(DistributedStorageAdminPermissionIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "storage_admin";
-  private static final String NAMESPACE1 = "test_" + TEST_NAME + "_1";
-  private static final String NAMESPACE2 = "test_" + TEST_NAME + "_2";
-  private static final String TABLE1 = "test_table_1";
-  private static final String TABLE2 = "test_table_2";
+  protected static final String TEST_NAME = "storage_admin";
+  protected static final String NAMESPACE = "test_" + TEST_NAME + "_1";
+  protected static final String TABLE = "test_table_1";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
@@ -44,7 +40,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
           .addClusteringKey(COL_NAME2, Scan.Ordering.Order.ASC)
           .addSecondaryIndex(COL_NAME4)
           .build();
-  private DistributedStorageAdmin adminForRootUser;
+  protected DistributedStorageAdmin adminForRootUser;
   private DistributedStorageAdmin adminForNormalUser;
   private String normalUserName;
 
@@ -63,57 +59,70 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
           "Username and password must be set in the properties for normal user");
     }
     // Create normal user and grant permissions
-    PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
     normalUserName = config.getUsername().get();
-    permissionTestUtils.createNormalUser(normalUserName, config.getPassword().get());
-    permissionTestUtils.grantRequiredPermission(normalUserName);
-    permissionTestUtils.close();
+    PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
+    try {
+      permissionTestUtils.createNormalUser(normalUserName, config.getPassword().get());
+      permissionTestUtils.grantRequiredPermission(normalUserName);
+    } finally {
+      permissionTestUtils.close();
+    }
 
     // Initialize the admin for normal user
     StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
     adminForNormalUser = factoryForNormalUser.getStorageAdmin();
-
-    // Create the namespace and table
-    adminForRootUser.createNamespace(NAMESPACE1, true, getCreationOptions());
-    adminForRootUser.createTable(NAMESPACE1, TABLE1, TABLE_METADATA, true, getCreationOptions());
   }
 
   @AfterAll
   public void afterAll() throws Exception {
+    // Drop the table and namespace created for the tests
+    adminForRootUser.dropTable(NAMESPACE, TABLE, true);
+    adminForRootUser.dropNamespace(NAMESPACE, true);
+    // Close the admin instances
+    adminForRootUser.close();
+    adminForNormalUser.close();
+    // Drop normal user
+    PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
     try {
-      // Drop the table and namespace created for the tests
-      adminForRootUser.dropTable(NAMESPACE1, TABLE1, true);
-      adminForRootUser.dropTable(NAMESPACE1, TABLE2, true);
-      adminForRootUser.dropNamespace(NAMESPACE1, true);
-      adminForRootUser.dropNamespace(NAMESPACE2, true);
-      // Close the admin instances
-      adminForRootUser.close();
-      adminForNormalUser.close();
-      // Drop normal user
-      PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
       permissionTestUtils.dropNormalUser(normalUserName);
+    } finally {
       permissionTestUtils.close();
-    } catch (Exception e) {
-      logger.warn("Failed to close admin", e);
     }
   }
 
+  @BeforeEach
+  public void beforeEach() throws ExecutionException {
+    dropTableByRootIfExists();
+    dropNamespaceByRootIfExists();
+  }
+
+  @AfterEach
+  public void afterEach() {
+    sleepBetweenTests();
+  }
+
   @Test
-  public void getImportTableMetadata_WithSufficientPermission_ShouldSucceed() {
+  public void getImportTableMetadata_WithSufficientPermission_ShouldSucceed()
+      throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.getImportTableMetadata(NAMESPACE1, TABLE1))
+    assertThatCode(() -> adminForNormalUser.getImportTableMetadata(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void addRawColumnToTable_WithSufficientPermission_ShouldSucceed() {
+  public void addRawColumnToTable_WithSufficientPermission_ShouldSucceed()
+      throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
     assertThatCode(
             () ->
                 adminForNormalUser.addRawColumnToTable(
-                    NAMESPACE1, TABLE1, RAW_COL_NAME, DataType.INT))
+                    NAMESPACE, TABLE, RAW_COL_NAME, DataType.INT))
         .doesNotThrowAnyException();
   }
 
@@ -121,186 +130,210 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   public void createNamespace_WithSufficientPermission_ShouldSucceed() {
     // Arrange
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.createNamespace(NAMESPACE2, getCreationOptions()))
+    assertThatCode(() -> adminForNormalUser.createNamespace(NAMESPACE, getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
   @Test
   public void createTable_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
-    try {
-      // Arrange
-      // Act Assert
-      assertThatCode(
-              () ->
-                  adminForNormalUser.createTable(
-                      NAMESPACE1, TABLE2, TABLE_METADATA, getCreationOptions()))
-          .doesNotThrowAnyException();
-    } finally {
-      // Clean up
-      adminForRootUser.dropTable(NAMESPACE1, TABLE2, true);
-    }
+    // Arrange
+    createNamespaceByRoot();
+    // Act Assert
+    assertThatCode(
+            () ->
+                adminForNormalUser.createTable(
+                    NAMESPACE, TABLE, TABLE_METADATA, getCreationOptions()))
+        .doesNotThrowAnyException();
   }
 
   @Test
   public void dropTable_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
-    try {
-      // Arrange
-      adminForRootUser.createTable(NAMESPACE1, TABLE2, TABLE_METADATA, true, getCreationOptions());
-      // Act Assert
-      assertThatCode(() -> adminForNormalUser.dropTable(NAMESPACE1, TABLE2, true))
-          .doesNotThrowAnyException();
-    } finally {
-      // Clean up
-      adminForRootUser.dropTable(NAMESPACE1, TABLE2, true);
-    }
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.dropTable(NAMESPACE, TABLE)).doesNotThrowAnyException();
   }
 
   @Test
   public void dropNamespace_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
-    try {
-      // Arrange
-      adminForRootUser.createNamespace(NAMESPACE2, true, getCreationOptions());
-      // Act Assert
-      assertThatCode(() -> adminForNormalUser.dropNamespace(NAMESPACE2, true))
-          .doesNotThrowAnyException();
-    } finally {
-      // Clean up
-      adminForRootUser.dropNamespace(NAMESPACE2, true);
-    }
-  }
-
-  @Test
-  public void truncateTable_WithSufficientPermission_ShouldSucceed() {
     // Arrange
+    createNamespaceByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.truncateTable(NAMESPACE1, TABLE1))
+    assertThatCode(() -> adminForNormalUser.dropNamespace(NAMESPACE, true))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void createIndex_WithSufficientPermission_ShouldSucceed() {
+  public void truncateTable_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.truncateTable(NAMESPACE, TABLE))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void createIndex_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
     assertThatCode(
-            () ->
-                adminForNormalUser.createIndex(NAMESPACE1, TABLE1, COL_NAME3, getCreationOptions()))
+            () -> adminForNormalUser.createIndex(NAMESPACE, TABLE, COL_NAME3, getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void dropIndex_WithSufficientPermission_ShouldSucceed() {
+  public void dropIndex_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.dropIndex(NAMESPACE1, TABLE1, COL_NAME4))
+    assertThatCode(() -> adminForNormalUser.dropIndex(NAMESPACE, TABLE, COL_NAME4))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void indexExists_WithSufficientPermission_ShouldSucceed() {
+  public void indexExists_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.indexExists(NAMESPACE1, TABLE1, COL_NAME3))
+    assertThatCode(() -> adminForNormalUser.indexExists(NAMESPACE, TABLE, COL_NAME4))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void getTableMetadata_WithSufficientPermission_ShouldSucceed() {
+  public void getTableMetadata_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.getTableMetadata(NAMESPACE1, TABLE1))
+    assertThatCode(() -> adminForNormalUser.getTableMetadata(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void getNamespaceTableNames_WithSufficientPermission_ShouldSucceed() {
+  public void getNamespaceTableNames_WithSufficientPermission_ShouldSucceed()
+      throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.getNamespaceTableNames(NAMESPACE1))
+    assertThatCode(() -> adminForNormalUser.getNamespaceTableNames(NAMESPACE))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void namespaceExists_WithSufficientPermission_ShouldSucceed() {
+  public void namespaceExists_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.namespaceExists(NAMESPACE1)).doesNotThrowAnyException();
+    assertThatCode(() -> adminForNormalUser.namespaceExists(NAMESPACE)).doesNotThrowAnyException();
   }
 
   @Test
-  public void tableExists_WithSufficientPermission_ShouldSucceed() {
+  public void tableExists_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.tableExists(NAMESPACE1, TABLE1))
+    assertThatCode(() -> adminForNormalUser.tableExists(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void repairNamespace_WithSufficientPermission_ShouldSucceed() {
+  public void repairNamespace_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
+    createNamespaceByRoot();
+    // Drop the namespaces table to simulate a repair scenario
+    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
+    try {
+      adminTestUtils.dropNamespacesTable();
+    } finally {
+      adminTestUtils.close();
+    }
     // Act Assert
-    assertThatCode(() -> adminForNormalUser.repairNamespace(NAMESPACE1, getCreationOptions()))
+    assertThatCode(() -> adminForNormalUser.repairNamespace(NAMESPACE, getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void repairTable_WithSufficientPermission_ShouldSucceed() {
+  public void repairTable_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+    // Drop the metadata table to simulate a repair scenario
+    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
+    try {
+      adminTestUtils.dropMetadataTable();
+    } finally {
+      adminTestUtils.close();
+    }
     // Act Assert
     assertThatCode(
             () ->
                 adminForNormalUser.repairTable(
-                    NAMESPACE1, TABLE1, TABLE_METADATA, getCreationOptions()))
+                    NAMESPACE, TABLE, TABLE_METADATA, getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void addNewColumnToTable_WithSufficientPermission_ShouldSucceed() {
+  public void addNewColumnToTable_WithSufficientPermission_ShouldSucceed()
+      throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     // Act Assert
     assertThatCode(
             () ->
                 adminForNormalUser.addNewColumnToTable(
-                    NAMESPACE1, TABLE1, NEW_COL_NAME, DataType.INT))
+                    NAMESPACE, TABLE, NEW_COL_NAME, DataType.INT))
         .doesNotThrowAnyException();
   }
 
   @Test
   public void importTable_WithSufficientPermission_ShouldSucceed() throws Exception {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
     try {
-      // Arrange
       adminTestUtils.dropNamespacesTable();
       adminTestUtils.dropMetadataTable();
-      // Act Assert
-      assertThatCode(() -> adminForNormalUser.importTable(NAMESPACE1, TABLE1, getCreationOptions()))
-          .doesNotThrowAnyException();
     } finally {
-      // Clean up
-      adminForRootUser.dropTable(NAMESPACE1, TABLE1, true);
-      adminForRootUser.createTable(NAMESPACE1, TABLE1, TABLE_METADATA, true, getCreationOptions());
       adminTestUtils.close();
     }
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.importTable(NAMESPACE, TABLE, getCreationOptions()))
+        .doesNotThrowAnyException();
   }
 
   @Test
-  public void getNamespaceNames_WithSufficientPermission_ShouldSucceed() {
+  public void getNamespaceNames_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
+    createNamespaceByRoot();
     // Act Assert
     assertThatCode(() -> adminForNormalUser.getNamespaceNames()).doesNotThrowAnyException();
   }
 
   @Test
   public void upgrade_WithSufficientPermission_ShouldSucceed() throws Exception {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
     AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
     try {
-      // Arrange
       adminTestUtils.dropNamespacesTable();
-      // Act Assert
-      assertThatCode(() -> adminForNormalUser.upgrade(getCreationOptions()))
-          .doesNotThrowAnyException();
     } finally {
       adminTestUtils.close();
     }
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.upgrade(getCreationOptions()))
+        .doesNotThrowAnyException();
   }
 
   protected abstract Properties getProperties(String testName);
@@ -314,4 +347,34 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   protected abstract AdminTestUtils getAdminTestUtils(String testName);
 
   protected abstract PermissionTestUtils getPermissionTestUtils(String testName);
+
+  protected void waitForTableCreation() {}
+
+  protected void waitForNamespaceCreation() {}
+
+  protected void waitForTableDeletion() {}
+
+  protected void waitForNamespaceDeletion() {}
+
+  protected void sleepBetweenTests() {}
+
+  private void createNamespaceByRoot() throws ExecutionException {
+    adminForRootUser.createNamespace(NAMESPACE, getCreationOptions());
+    waitForNamespaceCreation();
+  }
+
+  private void createTableByRoot() throws ExecutionException {
+    adminForRootUser.createTable(NAMESPACE, TABLE, TABLE_METADATA, getCreationOptions());
+    waitForTableCreation();
+  }
+
+  private void dropNamespaceByRootIfExists() throws ExecutionException {
+    adminForRootUser.dropNamespace(NAMESPACE, true);
+    waitForNamespaceDeletion();
+  }
+
+  private void dropTableByRootIfExists() throws ExecutionException {
+    adminForRootUser.dropTable(NAMESPACE, TABLE, true);
+    waitForTableDeletion();
+  }
 }

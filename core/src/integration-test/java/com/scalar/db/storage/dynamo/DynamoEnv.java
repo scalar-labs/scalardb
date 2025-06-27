@@ -35,7 +35,7 @@ public final class DynamoEnv {
     String isEmulator = System.getProperty(PROP_DYNAMO_EMULATOR, DEFAULT_DYNAMO_EMULATOR);
 
     Properties properties = new Properties();
-    if (isEmulator.equals("true") && endpointOverride != null) {
+    if (Boolean.parseBoolean(isEmulator) && endpointOverride != null) {
       properties.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);

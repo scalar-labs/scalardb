@@ -8,6 +8,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.PermissionTestUtils;
 import java.util.Arrays;
 import java.util.Collections;
@@ -18,17 +19,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedStoragePermissionIntegrationTestBase {
-  private static final Logger logger =
-      LoggerFactory.getLogger(DistributedStoragePermissionIntegrationTestBase.class);
+  protected static final String TEST_NAME = "storage";
+  protected static final String NAMESPACE = "int_test_" + TEST_NAME;
+  protected static final String TABLE = "test_table";
 
-  private static final String TEST_NAME = "storage";
-  private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private static final String TABLE = "test_table";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
@@ -37,7 +34,6 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   private static final String CLUSTERING_KEY_VALUE2 = "value2";
   private static final int INT_COLUMN_VALUE1 = 1;
   private static final int INT_COLUMN_VALUE2 = 1;
-  private static final int SLEEP_TIME_MILLIS = 1000;
 
   private String normalUserName;
   private DistributedStorage storageForNormalUser;
@@ -71,7 +67,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
 
     namespace = getNamespace();
     createTable();
-    Thread.sleep(SLEEP_TIME_MILLIS); // Wait for the table to be created
+    waitForTableCreation();
   }
 
   @BeforeEach
@@ -81,17 +77,9 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
-    try {
-      dropTable();
-    } catch (Exception e) {
-      logger.warn("Failed to drop table", e);
-    }
-    try {
-      storageForNormalUser.close();
-      adminForRootUser.close();
-    } catch (Exception e) {
-      logger.warn("Failed to close storage or admin", e);
-    }
+    dropTable();
+    storageForNormalUser.close();
+    adminForRootUser.close();
     // Drop normal user
     PermissionTestUtils permissionTestUtils = getPermissionTestUtils(TEST_NAME);
     permissionTestUtils.dropNormalUser(normalUserName);
@@ -258,6 +246,10 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   }
 
   protected abstract PermissionTestUtils getPermissionTestUtils(String testName);
+
+  protected abstract AdminTestUtils getAdminTestUtils(String testName);
+
+  protected void waitForTableCreation() {}
 
   private void createTable() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
