@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Test;
 public class DynamoAdminPermissionIntegrationTest
     extends DistributedStorageAdminPermissionIntegrationTestBase {
   private static final int SLEEP_BETWEEN_TESTS_SECONDS = 10;
-  private static final int SLEEP_BETWEEN_RETRIES_SECONDS = 3;
-  private static final int MAX_RETRY_COUNT = 10;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -40,48 +38,6 @@ public class DynamoAdminPermissionIntegrationTest
   @Override
   protected PermissionTestUtils getPermissionTestUtils(String testName) {
     return new DynamoPermissionTestUtils(getProperties(testName));
-  }
-
-  @Override
-  protected void waitForTableCreation() {
-    try {
-      AdminTestUtils utils = getAdminTestUtils(TEST_NAME);
-      int retryCount = 0;
-      while (retryCount < MAX_RETRY_COUNT) {
-        if (utils.tableExists(NAMESPACE, TABLE)) {
-          utils.close();
-          return;
-        }
-        Uninterruptibles.sleepUninterruptibly(
-            SLEEP_BETWEEN_RETRIES_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
-        retryCount++;
-      }
-      utils.close();
-      throw new RuntimeException("Table was not created after " + MAX_RETRY_COUNT + " retries");
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to wait for table creation", e);
-    }
-  }
-
-  @Override
-  protected void waitForTableDeletion() {
-    try {
-      AdminTestUtils utils = getAdminTestUtils(TEST_NAME);
-      int retryCount = 0;
-      while (retryCount < MAX_RETRY_COUNT) {
-        if (!utils.tableExists(NAMESPACE, TABLE)) {
-          utils.close();
-          return;
-        }
-        Uninterruptibles.sleepUninterruptibly(
-            SLEEP_BETWEEN_RETRIES_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
-        retryCount++;
-      }
-      utils.close();
-      throw new RuntimeException("Table was not deleted after " + MAX_RETRY_COUNT + " retries");
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to wait for table deletion", e);
-    }
   }
 
   @Override
