@@ -36,15 +36,7 @@ jobs:
             cassandra:3.0
 
       - name: Wait for Cassandra to be ready
-        run: |
-          for i in {1..30}; do
-            if docker exec cassandra cqlsh -e "SHOW VERSION" 2>/dev/null; then
-              echo "Cassandra is ready"
-              break
-            fi
-            echo "Waiting for Cassandra to start... (attempt $i/30)"
-            sleep 10
-          done
+        run: sleep 60
 
       - name: Execute Gradle 'integrationTestCassandraPermission' task
         run: ./gradlew integrationTestCassandraPermission
@@ -82,15 +74,7 @@ jobs:
             cassandra:3.11
 
       - name: Wait for Cassandra to be ready
-        run: |
-          for i in {1..30}; do
-            if docker exec cassandra cqlsh -e "SHOW VERSION" 2>/dev/null; then
-              echo "Cassandra is ready"
-              break
-            fi
-            echo "Waiting for Cassandra to start... (attempt $i/30)"
-            sleep 10
-          done
+        run: sleep 60
 
       - name: Execute Gradle 'integrationTestCassandraPermission' task
         run: ./gradlew integrationTestCassandraPermission
