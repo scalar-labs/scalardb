@@ -14,15 +14,6 @@ jobs:
     name: Cassandra 3.0 Permission Integration Test
     runs-on: ubuntu-latest
 
-    services:
-      cassandra:
-        image: cassandra:3.0
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +25,26 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Start Cassandra with custom configuration
+        run: |
+          docker run -d --name cassandra \
+            -p 9042:9042 \
+            -v ${{ github.workspace }}/ci/no-superuser/cassandra.yaml:/etc/cassandra/cassandra.yaml \
+            -e MAX_HEAP_SIZE=2048m \
+            -e HEAP_NEWSIZE=512m \
+            cassandra:3.0
+
+      - name: Wait for Cassandra to be ready
+        run: |
+          for i in {1..30}; do
+            if docker exec cassandra cqlsh -e "SHOW VERSION" 2>/dev/null; then
+              echo "Cassandra is ready"
+              break
+            fi
+            echo "Waiting for Cassandra to start... (attempt $i/30)"
+            sleep 10
+          done
 
       - name: Execute Gradle 'integrationTestCassandraPermission' task
         run: ./gradlew integrationTestCassandraPermission
@@ -49,15 +60,6 @@ jobs:
     name: Cassandra 3.11 Permission Integration Test
     runs-on: ubuntu-latest
 
-    services:
-      cassandra:
-        image: cassandra:3.11
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
     steps:
       - uses: actions/checkout@v4
 
@@ -69,6 +71,26 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Start Cassandra with custom configuration
+        run: |
+          docker run -d --name cassandra \
+            -p 9042:9042 \
+            -v ${{ github.workspace }}/ci/no-superuser/cassandra.yaml:/etc/cassandra/cassandra.yaml \
+            -e MAX_HEAP_SIZE=2048m \
+            -e HEAP_NEWSIZE=512m \
+            cassandra:3.11
+
+      - name: Wait for Cassandra to be ready
+        run: |
+          for i in {1..30}; do
+            if docker exec cassandra cqlsh -e "SHOW VERSION" 2>/dev/null; then
+              echo "Cassandra is ready"
+              break
+            fi
+            echo "Waiting for Cassandra to start... (attempt $i/30)"
+            sleep 10
+          done
 
       - name: Execute Gradle 'integrationTestCassandraPermission' task
         run: ./gradlew integrationTestCassandraPermission
