@@ -19,13 +19,12 @@ public class CassandraPermissionTestUtils implements PermissionTestUtils {
         .getSession()
         .execute(
             String.format(
-                "CREATE ROLE IF NOT EXISTS %s WITH PASSWORD = '%s' AND LOGIN = true",
-                userName, password));
+                "CREATE ROLE %s WITH PASSWORD = '%s' AND LOGIN = true", userName, password));
   }
 
   @Override
   public void dropNormalUser(String userName) {
-    clusterManager.getSession().execute(String.format("DROP ROLE IF EXISTS %s", userName));
+    clusterManager.getSession().execute(String.format("DROP ROLE %s", userName));
   }
 
   @Override
