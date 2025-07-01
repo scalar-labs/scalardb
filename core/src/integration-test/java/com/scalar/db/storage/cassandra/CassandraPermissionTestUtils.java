@@ -6,6 +6,9 @@ import com.scalar.db.util.PermissionTestUtils;
 import java.util.Properties;
 
 public class CassandraPermissionTestUtils implements PermissionTestUtils {
+  public static final int SLEEP_BETWEEN_RETRIES_SECONDS = 3;
+  public static final int MAX_RETRY_COUNT = 10;
+
   private final ClusterManager clusterManager;
 
   public CassandraPermissionTestUtils(Properties properties) {

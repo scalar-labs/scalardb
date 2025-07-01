@@ -1,5 +1,8 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.scalar.db.storage.cassandra.CassandraPermissionTestUtils.MAX_RETRY_COUNT;
+import static com.scalar.db.storage.cassandra.CassandraPermissionTestUtils.SLEEP_BETWEEN_RETRIES_SECONDS;
+
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStoragePermissionIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
@@ -11,9 +14,6 @@ import java.util.concurrent.TimeUnit;
 
 public class CassandraPermissionIntegrationTest
     extends DistributedStoragePermissionIntegrationTestBase {
-  private static final int SLEEP_BETWEEN_RETRIES_SECONDS = 3;
-  private static final int MAX_RETRY_COUNT = 10;
-
   @Override
   protected Properties getProperties(String testName) {
     return CassandraEnv.getProperties(testName);

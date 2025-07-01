@@ -80,13 +80,17 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     }
 
     try {
-      adminForRootUser.close();
+      if (adminForRootUser != null) {
+        adminForRootUser.close();
+      }
     } catch (Exception e) {
       logger.warn("Failed to close admin for root user", e);
     }
 
     try {
-      adminForNormalUser.close();
+      if (adminForNormalUser != null) {
+        adminForNormalUser.close();
+      }
     } catch (Exception e) {
       logger.warn("Failed to close admin for normal user", e);
     }

@@ -1,5 +1,8 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.scalar.db.storage.cassandra.CassandraPermissionTestUtils.MAX_RETRY_COUNT;
+import static com.scalar.db.storage.cassandra.CassandraPermissionTestUtils.SLEEP_BETWEEN_RETRIES_SECONDS;
+
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorageAdminPermissionIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
@@ -12,9 +15,6 @@ import org.junit.jupiter.api.Test;
 
 public class CassandraAdminPermissionIntegrationTest
     extends DistributedStorageAdminPermissionIntegrationTestBase {
-  private static final int SLEEP_BETWEEN_RETRIES_SECONDS = 3;
-  private static final int MAX_RETRY_COUNT = 10;
-
   @Override
   protected Properties getProperties(String testName) {
     return CassandraEnv.getProperties(testName);
@@ -93,7 +93,7 @@ public class CassandraAdminPermissionIntegrationTest
           return;
         }
         Uninterruptibles.sleepUninterruptibly(
-            SLEEP_BETWEEN_RETRIES_SECONDS, java.util.concurrent.TimeUnit.MILLISECONDS);
+            SLEEP_BETWEEN_RETRIES_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
         retryCount++;
       }
       utils.close();

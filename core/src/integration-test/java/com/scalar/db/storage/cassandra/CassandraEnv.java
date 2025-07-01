@@ -41,25 +41,14 @@ public final class CassandraEnv {
   }
 
   public static Properties getPropertiesForNormalUser(String testName) {
-    String contactPoints =
-        System.getProperty(PROP_CASSANDRA_CONTACT_POINTS, DEFAULT_CASSANDRA_CONTACT_POINTS);
+    Properties properties = getProperties(testName);
+
     String username =
         System.getProperty(PROP_CASSANDRA_NORMAL_USERNAME, DEFAULT_CASSANDRA_NORMAL_USERNAME);
     String password =
         System.getProperty(PROP_CASSANDRA_NORMAL_PASSWORD, DEFAULT_CASSANDRA_NORMAL_PASSWORD);
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);
     properties.setProperty(DatabaseConfig.USERNAME, username);
     properties.setProperty(DatabaseConfig.PASSWORD, password);
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
-    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
-
-    // Add testName as a metadata schema suffix
-    properties.setProperty(
-        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
-        DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
   }
