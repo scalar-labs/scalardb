@@ -26,14 +26,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Start Cassandra with custom configuration
+      - name: Start Cassandra with authentication enabled
         run: |
           docker run -d --name cassandra \
             -p 9042:9042 \
-            -v ${{ github.workspace }}/ci/no-superuser/cassandra.yaml:/etc/cassandra/cassandra.yaml \
-            -e MAX_HEAP_SIZE=2048m \
-            -e HEAP_NEWSIZE=512m \
-            cassandra:3.0
+            -e CASSANDRA_PASSWORD_SEEDER=yes \
+            -e CASSANDRA_PASSWORD=cassandra \
+            -e CASSANDRA_AUTHENTICATOR=PasswordAuthenticator \
+            -e CASSANDRA_AUTHORIZER=CassandraAuthorizer \
+            bitnami/cassandra:3.0
 
       - name: Wait for Cassandra to be ready
         run: sleep 60
@@ -64,14 +65,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Start Cassandra with custom configuration
+      - name: Start Cassandra with authentication enabled
         run: |
           docker run -d --name cassandra \
             -p 9042:9042 \
-            -v ${{ github.workspace }}/ci/no-superuser/cassandra.yaml:/etc/cassandra/cassandra.yaml \
-            -e MAX_HEAP_SIZE=2048m \
-            -e HEAP_NEWSIZE=512m \
-            cassandra:3.11
+            -e CASSANDRA_PASSWORD_SEEDER=yes \
+            -e CASSANDRA_PASSWORD=cassandra \
+            -e CASSANDRA_AUTHENTICATOR=PasswordAuthenticator \
+            -e CASSANDRA_AUTHORIZER=CassandraAuthorizer \
+            bitnami/cassandra:3.11
 
       - name: Wait for Cassandra to be ready
         run: sleep 60
