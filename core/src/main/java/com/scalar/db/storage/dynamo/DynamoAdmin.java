@@ -1032,6 +1032,46 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
   }
 
+  private boolean rawIndexExists(String nonPrefixedNamespace, String table, String indexName) {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    String globalIndexName =
+        String.join(
+            ".",
+            getFullTableName(namespace, table),
+            DynamoAdmin.GLOBAL_INDEX_NAME_PREFIX,
+            indexName);
+    int retryCount = 0;
+    try {
+      while (true) {
+        DescribeTableResponse response =
+            client.describeTable(
+                DescribeTableRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
+        GlobalSecondaryIndexDescription description =
+            response.table().globalSecondaryIndexes().stream()
+                .filter(d -> d.indexName().equals(globalIndexName))
+                .findFirst()
+                .orElse(null);
+        if (description == null) {
+          return false;
+        }
+        if (description.indexStatus() == IndexStatus.ACTIVE) {
+          return true;
+        }
+        if (retryCount++ >= MAX_RETRY_COUNT) {
+          throw new IllegalStateException(
+              String.format(
+                  "Waiting for the secondary index %s on the %s table to be active failed",
+                  indexName, getFullTableName(namespace, table)));
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+      }
+    } catch (ResourceNotFoundException e) {
+      return false;
+    }
+  }
+
   private void waitForIndexCreation(Namespace namespace, String table, String columnName)
       throws ExecutionException {
     try {
@@ -1366,6 +1406,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createTableInternal(nonPrefixedNamespace, table, metadata, true, options);
+      for (String indexColumnName : metadata.getSecondaryIndexNames()) {
+        if (!rawIndexExists(nonPrefixedNamespace, table, indexColumnName)) {
+          createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+        }
+      }
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
