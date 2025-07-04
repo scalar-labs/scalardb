@@ -45,7 +45,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
           .addSecondaryIndex(COL_NAME4)
           .build();
 
-  protected DistributedStorageAdmin adminForRootUser;
+  private DistributedStorageAdmin adminForRootUser;
   private DistributedStorageAdmin adminForNormalUser;
   private String normalUserName;
   private String normalUserPassword;
