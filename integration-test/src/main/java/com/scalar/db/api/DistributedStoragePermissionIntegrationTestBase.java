@@ -33,6 +33,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
   private static final int PARTITION_KEY_VALUE = 1;
   private static final String CLUSTERING_KEY_VALUE1 = "value1";
   private static final String CLUSTERING_KEY_VALUE2 = "value2";
@@ -116,6 +117,19 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   }
 
   @Test
+  public void get_WithIndexKey_WithSufficientPermission_ShouldSucceed() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt("c3", INT_COLUMN_VALUE1))
+            .build();
+    // Act Assert
+    assertThatCode(() -> storageForNormalUser.get(get)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void scan_WithSufficientPermission_ShouldSucceed() {
     // Arrange
     Scan scan =
@@ -123,6 +137,19 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .namespace(namespace)
             .table(TABLE)
             .partitionKey(Key.ofInt(COL_NAME1, PARTITION_KEY_VALUE))
+            .build();
+    // Act Assert
+    assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void scan_WithIndexKey_WithSufficientPermission_ShouldSucceed() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt("c3", INT_COLUMN_VALUE1))
             .build();
     // Act Assert
     assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
@@ -278,8 +305,10 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .addColumn(COL_NAME1, DataType.INT)
             .addColumn(COL_NAME2, DataType.TEXT)
             .addColumn(COL_NAME3, DataType.INT)
+            .addColumn(COL_NAME4, DataType.INT)
             .addPartitionKey(COL_NAME1)
             .addClusteringKey(COL_NAME2)
+            .addSecondaryIndex(COL_NAME3)
             .build(),
         true,
         options);
@@ -303,7 +332,8 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
                 Key.ofInt(
                     COL_NAME1, DistributedStoragePermissionIntegrationTestBase.PARTITION_KEY_VALUE))
             .clusteringKey(Key.ofText(COL_NAME2, clusteringKey))
-            .intValue(COL_NAME3, intColumnValue);
+            .intValue(COL_NAME3, intColumnValue)
+            .intValue(COL_NAME4, intColumnValue);
     if (condition != null) {
       buildable.condition(condition);
     }
