@@ -695,22 +695,24 @@ public class ParallelExecutorTest {
 
     List<ParallelExecutorTask> mixedTasks = Arrays.asList(failingTask1, failingTask2, task);
 
-    // Act Assert
+    // Act
     Exception exception =
         catchException(
             () ->
                 parallelExecutor.executeTasks(
                     mixedTasks, parallel, noWait, stopOnError, "test", TX_ID));
 
-    if (exception == executionException1) {
-      assertThat(exception)
-          .isEqualTo(executionException1)
-          .hasSuppressedException(executionException2);
-    } else {
-      assertThat(exception)
-          .isEqualTo(executionException2)
-          .hasSuppressedException(executionException1);
-    }
+    // Assert
+    assertThat(exception)
+        .satisfiesAnyOf(
+            e ->
+                assertThat(e)
+                    .isEqualTo(executionException1)
+                    .hasSuppressedException(executionException2),
+            e ->
+                assertThat(e)
+                    .isEqualTo(executionException2)
+                    .hasSuppressedException(executionException1));
 
     verify(parallelExecutorService, times(mixedTasks.size())).execute(any());
   }
