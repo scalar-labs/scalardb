@@ -20,8 +20,8 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.List;
@@ -178,7 +178,7 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_WTEThrownInLoggingInBatchExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_WTEThrownInLoggingInBatchExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -188,7 +188,7 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 
@@ -206,7 +206,7 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_WTEThrownInCasInBatchExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_WTEThrownInCasInBatchExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -216,13 +216,12 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 
   @Test
-  public void
-      handle_WTEThrownInSimpleWriteInBatchExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_WTEThrownInSimpleWriteInBatchExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -232,12 +231,12 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 
   @Test
-  public void handle_DriverExceptionThrownInExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_DriverExceptionThrownInExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -246,7 +245,7 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 

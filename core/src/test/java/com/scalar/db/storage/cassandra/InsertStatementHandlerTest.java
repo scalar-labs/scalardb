@@ -28,7 +28,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -330,7 +329,7 @@ public class InsertStatementHandlerTest {
   }
 
   @Test
-  public void handle_WTEWithCasThrown_ShouldThrowProperExecutionException() {
+  public void handle_WTEWithCasThrown_ShouldThrowExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
     put.withCondition(new PutIfNotExists());
@@ -342,13 +341,12 @@ public class InsertStatementHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> spy.handle(put))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
 
   @Test
-  public void
-      handle_PutWithConditionGivenAndWTEWithSimpleThrown_ShouldThrowProperExecutionException() {
+  public void handle_PutWithConditionGivenAndWTEWithSimpleThrown_ShouldThrowExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
     put.withCondition(new PutIfNotExists());
@@ -365,8 +363,7 @@ public class InsertStatementHandlerTest {
   }
 
   @Test
-  public void
-      handle_PutWithoutConditionGivenAndWTEWithSimpleThrown_ShouldThrowProperExecutionException() {
+  public void handle_PutWithoutConditionGivenAndWTEWithSimpleThrown_ShouldExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
     spy = prepareSpiedInsertStatementHandler();
@@ -377,12 +374,12 @@ public class InsertStatementHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> spy.handle(put))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
 
   @Test
-  public void handle_DriverExceptionThrown_ShouldThrowProperExecutionException() {
+  public void handle_DriverExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
     spy = prepareSpiedInsertStatementHandler();
