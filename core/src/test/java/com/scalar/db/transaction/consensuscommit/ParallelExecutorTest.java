@@ -1,7 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doThrow;
@@ -694,12 +696,21 @@ public class ParallelExecutorTest {
     List<ParallelExecutorTask> mixedTasks = Arrays.asList(failingTask1, failingTask2, task);
 
     // Act Assert
-    assertThatThrownBy(
+    Exception exception =
+        catchException(
             () ->
                 parallelExecutor.executeTasks(
-                    mixedTasks, parallel, noWait, stopOnError, "test", TX_ID))
-        .isEqualTo(executionException1)
-        .hasSuppressedException(executionException2);
+                    mixedTasks, parallel, noWait, stopOnError, "test", TX_ID));
+
+    if (exception == executionException1) {
+      assertThat(exception)
+          .isEqualTo(executionException1)
+          .hasSuppressedException(executionException2);
+    } else {
+      assertThat(exception)
+          .isEqualTo(executionException2)
+          .hasSuppressedException(executionException1);
+    }
 
     verify(parallelExecutorService, times(mixedTasks.size())).execute(any());
   }

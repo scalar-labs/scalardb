@@ -258,8 +258,9 @@ class CoordinatorGroupCommitterTest {
     }
   }
 
+  @SuppressWarnings("ClassCanBeStatic")
   @Nested
-  static class CoordinatorGroupCommitKeyManipulatorTest {
+  class CoordinatorGroupCommitKeyManipulatorTest {
     private final CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
 
