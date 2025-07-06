@@ -363,7 +363,8 @@ public class InsertStatementHandlerTest {
   }
 
   @Test
-  public void handle_PutWithoutConditionGivenAndWTEWithSimpleThrown_ShouldExecutionException() {
+  public void
+      handle_PutWithoutConditionGivenAndWTEWithSimpleThrown_ShouldThrowExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
     spy = prepareSpiedInsertStatementHandler();

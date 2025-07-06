@@ -44,7 +44,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
       return results;
     } catch (WriteTimeoutException e) {
       if (e.getWriteType() == WriteType.CAS) {
-        // retry needs to be done if applications need to do the operation exactly
         throw new ExecutionException(
             CoreError.CASSANDRA_WRITE_TIMEOUT_IN_PAXOS_PHASE_IN_MUTATION.buildMessage(), e);
       } else if (e.getWriteType() == WriteType.SIMPLE) {
@@ -54,7 +53,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
           throw new ReadRepairableExecutionException(
               CoreError.CASSANDRA_WRITE_TIMEOUT_IN_LEARN_PHASE_IN_MUTATION.buildMessage(), e);
         } else {
-          // retry needs to be done if applications need to do the operation exactly
           throw new ExecutionException(
               CoreError.CASSANDRA_WRITE_TIMEOUT_SIMPLE_WRITE_OPERATION_FAILED_IN_MUTATION
                   .buildMessage(),
