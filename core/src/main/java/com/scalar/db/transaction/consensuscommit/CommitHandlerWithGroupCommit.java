@@ -61,7 +61,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   boolean canOnePhaseCommit(Snapshot snapshot) throws CommitException {
     try {
       return super.canOnePhaseCommit(snapshot);
-    } catch (Exception e) {
+    } catch (CommitException e) {
       cancelGroupCommitIfNeeded(snapshot.getId());
       throw e;
     }
