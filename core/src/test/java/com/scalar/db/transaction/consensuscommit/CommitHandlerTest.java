@@ -1089,7 +1089,7 @@ public class CommitHandlerTest {
 
   @Test
   public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
-      throws CommitException, ExecutionException {
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -1131,15 +1131,16 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowCommitException()
-      throws ExecutionException {
+  public void
+      onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws ExecutionException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
 
     // Act Assert
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(snapshot))
-        .isInstanceOf(CommitException.class)
+        .isInstanceOf(UnknownTransactionStatusException.class)
         .hasCauseInstanceOf(ExecutionException.class);
   }
 
@@ -1162,17 +1163,19 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commit_OnePhaseCommitted_CommitExceptionThrown_ShouldThrowCommitException()
-      throws CommitException {
+  public void
+      commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws CommitException, UnknownTransactionStatusException {
     // Arrange
     CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
 
     doReturn(true).when(handler).canOnePhaseCommit(snapshot);
-    doThrow(CommitException.class).when(handler).onePhaseCommitRecords(snapshot);
+    doThrow(UnknownTransactionStatusException.class).when(handler).onePhaseCommitRecords(snapshot);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commit(snapshot, true)).isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> handler.commit(snapshot, true))
+        .isInstanceOf(UnknownTransactionStatusException.class);
 
     verify(handler).onFailureBeforeCommit(snapshot);
   }
