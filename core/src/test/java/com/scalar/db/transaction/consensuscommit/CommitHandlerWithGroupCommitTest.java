@@ -254,7 +254,8 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Disabled("Enabling both one-phase commit and group commit is not supported")
   @Override
   @Test
-  public void onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowCommitException() {}
+  public void
+      onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException() {}
 
   @Disabled("Enabling both one-phase commit and group commit is not supported")
   @Override
@@ -264,5 +265,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Disabled("Enabling both one-phase commit and group commit is not supported")
   @Override
   @Test
-  public void commit_OnePhaseCommitted_CommitExceptionThrown_ShouldThrowCommitException() {}
+  public void
+      commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException() {}
 }

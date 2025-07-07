@@ -261,7 +261,8 @@ public class CommitHandler {
   }
 
   @VisibleForTesting
-  void onePhaseCommitRecords(Snapshot snapshot) throws CommitException {
+  void onePhaseCommitRecords(Snapshot snapshot)
+      throws CommitConflictException, UnknownTransactionStatusException {
     try {
       OnePhaseCommitMutationComposer composer =
           new OnePhaseCommitMutationComposer(snapshot.getId(), tableMetadataManager);
@@ -279,7 +280,7 @@ public class CommitHandler {
           e,
           snapshot.getId());
     } catch (ExecutionException e) {
-      throw new CommitException(
+      throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
     }
   }
