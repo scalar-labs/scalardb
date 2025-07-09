@@ -58,6 +58,23 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
+  boolean canOnePhaseCommit(Snapshot snapshot) throws CommitException {
+    try {
+      return super.canOnePhaseCommit(snapshot);
+    } catch (CommitException e) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
+      throw e;
+    }
+  }
+
+  @Override
+  void onePhaseCommitRecords(Snapshot snapshot)
+      throws CommitConflictException, UnknownTransactionStatusException {
+    cancelGroupCommitIfNeeded(snapshot.getId());
+    super.onePhaseCommitRecords(snapshot);
+  }
+
+  @Override
   protected void onFailureBeforeCommit(Snapshot snapshot) {
     cancelGroupCommitIfNeeded(snapshot.getId());
   }

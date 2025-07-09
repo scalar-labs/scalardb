@@ -90,6 +90,11 @@ public class CommitHandlerTest {
         false);
   }
 
+  protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
+    return new CommitHandler(
+        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
+  }
+
   @BeforeEach
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
@@ -1068,8 +1073,9 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void canOnePhaseCommit_WhenMutationsGrouperThrowsException_ShouldThrowCommitException()
-      throws ExecutionException {
+  public void
+      canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException()
+          throws ExecutionException {
     // Arrange
     CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
     Snapshot snapshot = prepareSnapshot();
@@ -1178,11 +1184,6 @@ public class CommitHandlerTest {
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     verify(handler).onFailureBeforeCommit(snapshot);
-  }
-
-  private CommitHandler createCommitHandlerWithOnePhaseCommit() {
-    return new CommitHandler(
-        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
   }
 
   protected void doThrowExceptionWhenCoordinatorPutState(
