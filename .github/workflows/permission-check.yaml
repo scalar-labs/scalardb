@@ -1,0 +1,88 @@
+name: Test Permissions
+
+on:
+  workflow_dispatch:
+
+env:
+  TERM: dumb
+  JAVA_VERSION: '8'
+  JAVA_VENDOR: 'temurin'
+
+jobs:
+  integration-test-permission-cassandra-3-0:
+    name: Cassandra 3.0 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Start Cassandra with authentication enabled
+        run: |
+          docker run -d --name cassandra \
+            -p 9042:9042 \
+            -e CASSANDRA_PASSWORD_SEEDER=yes \
+            -e CASSANDRA_PASSWORD=cassandra \
+            -e CASSANDRA_AUTHENTICATOR=PasswordAuthenticator \
+            -e CASSANDRA_AUTHORIZER=CassandraAuthorizer \
+            bitnami/cassandra:3.0
+
+      - name: Wait for Cassandra to be ready
+        run: sleep 30
+
+      - name: Execute Gradle 'integrationTestCassandraPermission' task
+        run: ./gradlew integrationTestCassandraPermission
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cassandra_3.0_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestCassandraPermission
+
+  integration-test-permission-cassandra-3-11:
+    name: Cassandra 3.11 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Start Cassandra with authentication enabled
+        run: |
+          docker run -d --name cassandra \
+            -p 9042:9042 \
+            -e CASSANDRA_PASSWORD_SEEDER=yes \
+            -e CASSANDRA_PASSWORD=cassandra \
+            -e CASSANDRA_AUTHENTICATOR=PasswordAuthenticator \
+            -e CASSANDRA_AUTHORIZER=CassandraAuthorizer \
+            bitnami/cassandra:3.11
+
+      - name: Wait for Cassandra to be ready
+        run: sleep 30
+
+      - name: Execute Gradle 'integrationTestCassandraPermission' task
+        run: ./gradlew integrationTestCassandraPermission
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cassandra_3.11_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestCassandraPermission
