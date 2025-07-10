@@ -22,6 +22,9 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -67,6 +70,20 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+    integrationTestCassandraPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraPermissionTestUtils.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraAdminTestUtils.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraEnv.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
 }
 
 configurations {
@@ -88,6 +105,9 @@ configurations {
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
+    integrationTestCassandraPermissionImplementation.extendsFrom testImplementation
+    integrationTestCassandraPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraPermissionCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -196,6 +216,17 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+    }
+}
+
+task integrationTestCassandraPermission(type: Test) {
+    description = 'Runs the integration tests for Cassandra permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCassandraPermission.output.classesDirs
+    classpath = sourceSets.integrationTestCassandraPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
 }
 
