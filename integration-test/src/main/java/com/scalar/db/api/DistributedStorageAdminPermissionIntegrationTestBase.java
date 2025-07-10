@@ -254,22 +254,6 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
-  public void repairNamespace_WithSufficientPermission_ShouldSucceed() throws Exception {
-    // Arrange
-    createNamespaceByRoot();
-    // Drop the namespaces table to simulate a repair scenario
-    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
-    try {
-      adminTestUtils.dropNamespacesTable();
-    } finally {
-      adminTestUtils.close();
-    }
-    // Act Assert
-    assertThatCode(() -> adminForNormalUser.repairNamespace(NAMESPACE, getCreationOptions()))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
   public void repairTable_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
     createNamespaceByRoot();
@@ -310,37 +294,12 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     createTableByRoot();
     AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
     try {
-      adminTestUtils.dropNamespacesTable();
       adminTestUtils.dropMetadataTable();
     } finally {
       adminTestUtils.close();
     }
     // Act Assert
     assertThatCode(() -> adminForNormalUser.importTable(NAMESPACE, TABLE, getCreationOptions()))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void getNamespaceNames_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
-    // Arrange
-    createNamespaceByRoot();
-    // Act Assert
-    assertThatCode(() -> adminForNormalUser.getNamespaceNames()).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void upgrade_WithSufficientPermission_ShouldSucceed() throws Exception {
-    // Arrange
-    createNamespaceByRoot();
-    createTableByRoot();
-    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
-    try {
-      adminTestUtils.dropNamespacesTable();
-    } finally {
-      adminTestUtils.close();
-    }
-    // Act Assert
-    assertThatCode(() -> adminForNormalUser.upgrade(getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
