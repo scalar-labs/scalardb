@@ -254,22 +254,6 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
-  public void repairNamespace_WithSufficientPermission_ShouldSucceed() throws Exception {
-    // Arrange
-    createNamespaceByRoot();
-    // Drop the namespaces table to simulate a repair scenario
-    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
-    try {
-      adminTestUtils.dropNamespacesTable();
-    } finally {
-      adminTestUtils.close();
-    }
-    // Act Assert
-    assertThatCode(() -> adminForNormalUser.repairNamespace(NAMESPACE, getCreationOptions()))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
   public void repairTable_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
     createNamespaceByRoot();
@@ -310,7 +294,6 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     createTableByRoot();
     AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
     try {
-      adminTestUtils.dropNamespacesTable();
       adminTestUtils.dropMetadataTable();
     } finally {
       adminTestUtils.close();
@@ -326,22 +309,6 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     createNamespaceByRoot();
     // Act Assert
     assertThatCode(() -> adminForNormalUser.getNamespaceNames()).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void upgrade_WithSufficientPermission_ShouldSucceed() throws Exception {
-    // Arrange
-    createNamespaceByRoot();
-    createTableByRoot();
-    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
-    try {
-      adminTestUtils.dropNamespacesTable();
-    } finally {
-      adminTestUtils.close();
-    }
-    // Act Assert
-    assertThatCode(() -> adminForNormalUser.upgrade(getCreationOptions()))
-        .doesNotThrowAnyException();
   }
 
   protected abstract Properties getProperties(String testName);

@@ -73,4 +73,32 @@ public abstract class AdminTestUtils {
     }
     return tableMetadata.equals(expectedMetadata);
   }
+
+  /**
+   * Verify if the namespace exists in the underlying storage. It does not check the ScalarDB
+   * metadata.
+   *
+   * @param namespace a namespace
+   * @return true if the namespace exists or if the storage does not have the concept of namespace,
+   *     false otherwise
+   * @throws Exception if an error occurs
+   */
+  public abstract boolean namespaceExists(String namespace) throws Exception;
+
+  /**
+   * Check if the table exists in the underlying storage.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @return true if the table exists, false otherwise
+   * @throws Exception if an error occurs
+   */
+  public abstract boolean tableExists(String namespace, String table) throws Exception;
+
+  /**
+   * Closes connections to the storage
+   *
+   * @throws Exception if an error occurs
+   */
+  public abstract void close() throws Exception;
 }
