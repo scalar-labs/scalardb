@@ -11,8 +11,8 @@ import com.datastax.driver.core.exceptions.WriteTimeoutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.common.error.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
@@ -48,12 +48,11 @@ public class BatchHandler {
    * must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
-   * @throws RetriableExecutionException if it fails, but it can be retried
    * @throws NoMutationException if at least one of conditional {@code Mutation}s fails because it
    *     didn't meet the condition
+   * @throws ExecutionException if the execution fails
    */
-  public void handle(List<? extends Mutation> mutations)
-      throws RetriableExecutionException, NoMutationException {
+  public void handle(List<? extends Mutation> mutations) throws ExecutionException {
     try {
       ResultSet results = execute(mutations);
       // it's for conditional update. non-conditional update always return true
@@ -64,17 +63,18 @@ public class BatchHandler {
       logger.warn("Write timeout happened during batch mutate operation", e);
       WriteType writeType = e.getWriteType();
       if (writeType == WriteType.BATCH_LOG) {
-        throw new RetriableExecutionException(
-            CoreError.CASSANDRA_LOGGING_FAILED_IN_BATCH.buildMessage(), e);
+        // A timeout occurred while the coordinator was waiting for the batch log replicas to
+        // acknowledge the log. Thus, the batch may or may not be applied.
+        throw new ExecutionException(CoreError.CASSANDRA_LOGGING_FAILED_IN_BATCH.buildMessage(), e);
       } else if (writeType == WriteType.BATCH) {
         logger.warn("Logging succeeded, but mutations in the batch partially failed", e);
       } else {
-        throw new RetriableExecutionException(
+        throw new ExecutionException(
             CoreError.CASSANDRA_OPERATION_FAILED_IN_BATCH.buildMessage(writeType), e);
       }
     } catch (RuntimeException e) {
       logger.warn(e.getMessage(), e);
-      throw new RetriableExecutionException(
+      throw new ExecutionException(
           CoreError.CASSANDRA_ERROR_OCCURRED_IN_BATCH.buildMessage(e.getMessage()), e);
     }
   }
