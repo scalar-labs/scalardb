@@ -78,7 +78,8 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
     return false;
   }
 
-  private boolean tableExists(String nonPrefixedNamespace, String table) {
+  @Override
+  public boolean tableExists(String nonPrefixedNamespace, String table) {
     try {
       client.describeTable(
           DescribeTableRequest.builder()
@@ -136,5 +137,16 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
             .tableName(getFullTableName(metadataNamespace, DynamoAdmin.METADATA_TABLE))
             .item(itemValues)
             .build());
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws Exception {
+    // Dynamo has no concept of namespace
+    return true;
+  }
+
+  @Override
+  public void close() {
+    client.close();
   }
 }
