@@ -12,7 +12,6 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -32,9 +31,9 @@ public abstract class MutateStatementHandler extends StatementHandler {
    *
    * @param operation {@link Mutation} operation
    * @return a {@code ResultSet}
-   * @throws RetriableExecutionException if the execution fails, but it can be retriable
    * @throws ReadRepairableExecutionException if the execution partially fails, which can be
    *     repaired by a following read
+   * @throws ExecutionException if the execution fails
    */
   @Override
   @Nonnull
@@ -50,8 +49,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
     } catch (WriteTimeoutException e) {
       logger.warn("Write timeout happened during mutate operation", e);
       if (e.getWriteType() == WriteType.CAS) {
-        // retry needs to be done if applications need to do the operation exactly
-        throw new RetriableExecutionException(
+        throw new ExecutionException(
             CoreError.CASSANDRA_WRITE_TIMEOUT_IN_PAXOS_PHASE_IN_MUTATION.buildMessage(), e);
       } else if (e.getWriteType() == WriteType.SIMPLE) {
         Mutation mutation = (Mutation) operation;
@@ -60,8 +58,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
           throw new ReadRepairableExecutionException(
               CoreError.CASSANDRA_WRITE_TIMEOUT_IN_LEARN_PHASE_IN_MUTATION.buildMessage(), e);
         } else {
-          // retry needs to be done if applications need to do the operation exactly
-          throw new RetriableExecutionException(
+          throw new ExecutionException(
               CoreError.CASSANDRA_WRITE_TIMEOUT_SIMPLE_WRITE_OPERATION_FAILED_IN_MUTATION
                   .buildMessage(),
               e);
@@ -72,7 +69,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
       }
     } catch (RuntimeException e) {
       logger.warn(e.getMessage(), e);
-      throw new RetriableExecutionException(
+      throw new ExecutionException(
           CoreError.CASSANDRA_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
   }
