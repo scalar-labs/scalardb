@@ -2,6 +2,7 @@ name: Test Permissions
 
 on:
   workflow_dispatch:
+  pull_request:
 
 env:
   TERM: dumb
