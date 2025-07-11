@@ -5,9 +5,9 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineMysql;
 import com.scalar.db.storage.jdbc.RdbEngineOracle;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
@@ -78,17 +78,8 @@ public class ServerAdminTestUtils extends AdminTestUtils {
   @Override
   public boolean namespaceExists(String namespace) throws SQLException {
     String sql;
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (rdbEngine instanceof RdbEngineMysql) {
       sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
-    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
-      sql = "SELECT 1 FROM all_users WHERE username = ?";
-    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
-      sql = "SELECT 1 FROM pg_namespace WHERE nspname = ?";
-    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
-      // SQLite has no concept of namespace
-      return true;
-    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
-      sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
     } else {
       throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
     }

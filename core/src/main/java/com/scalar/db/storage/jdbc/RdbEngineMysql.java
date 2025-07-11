@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class RdbEngineMysql implements RdbEngineStrategy {
+public class RdbEngineMysql implements RdbEngineStrategy {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
 
   @Override
