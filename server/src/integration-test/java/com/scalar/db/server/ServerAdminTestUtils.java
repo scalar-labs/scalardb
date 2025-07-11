@@ -7,11 +7,14 @@ import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
+import com.scalar.db.storage.jdbc.RdbEngineMysql;
 import com.scalar.db.storage.jdbc.RdbEngineOracle;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -20,17 +23,18 @@ import org.apache.commons.dbcp2.BasicDataSource;
 public class ServerAdminTestUtils extends AdminTestUtils {
 
   private final RdbEngineStrategy rdbEngine;
-  private final JdbcConfig config;
   private final String metadataNamespace;
   private final String metadataTable;
+  private final BasicDataSource dataSource;
 
   public ServerAdminTestUtils(Properties jdbcStorageProperties) {
     super(jdbcStorageProperties);
-    config = new JdbcConfig(new DatabaseConfig(jdbcStorageProperties));
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(jdbcStorageProperties));
     metadataNamespace =
         config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     metadataTable = JdbcAdmin.METADATA_TABLE;
     rdbEngine = RdbEngineFactory.create(config);
+    dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
   }
 
   @Override
@@ -66,10 +70,51 @@ public class ServerAdminTestUtils extends AdminTestUtils {
   }
 
   private void execute(String sql) throws SQLException {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-        Connection connection = dataSource.getConnection();
+    try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
     }
   }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws SQLException {
+    String sql;
+    if (rdbEngine instanceof RdbEngineMysql) {
+      sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
+    } else {
+      throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
+    }
+
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setString(1, namespace);
+      ResultSet resultSet = preparedStatement.executeQuery();
+
+      return resultSet.next();
+    }
+  }
+
+  @Override
+  public boolean tableExists(String namespace, String table) throws Exception {
+    String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
+    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.execute(sql);
+      return true;
+    } catch (SQLException e) {
+      // An exception will be thrown if the table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return false;
+      }
+      throw new Exception(
+          String.format(
+              "Checking if the %s table exists failed", getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void close() throws Exception {}
 }
