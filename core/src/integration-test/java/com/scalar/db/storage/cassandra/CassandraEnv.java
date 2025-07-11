@@ -7,10 +7,14 @@ public final class CassandraEnv {
   private static final String PROP_CASSANDRA_CONTACT_POINTS = "scalardb.cassandra.contact_points";
   private static final String PROP_CASSANDRA_USERNAME = "scalardb.cassandra.username";
   private static final String PROP_CASSANDRA_PASSWORD = "scalardb.cassandra.password";
+  private static final String PROP_CASSANDRA_NORMAL_USERNAME = "scalardb.cassandra.normal_username";
+  private static final String PROP_CASSANDRA_NORMAL_PASSWORD = "scalardb.cassandra.normal_password";
 
   private static final String DEFAULT_CASSANDRA_CONTACT_POINTS = "localhost";
   private static final String DEFAULT_CASSANDRA_USERNAME = "cassandra";
   private static final String DEFAULT_CASSANDRA_PASSWORD = "cassandra";
+  private static final String DEFAULT_CASSANDRA_NORMAL_USERNAME = "test";
+  private static final String DEFAULT_CASSANDRA_NORMAL_PASSWORD = "test";
 
   private CassandraEnv() {}
 
@@ -28,5 +32,18 @@ public final class CassandraEnv {
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
     return props;
+  }
+
+  public static Properties getPropertiesForNormalUser(String testName) {
+    Properties properties = getProperties(testName);
+
+    String username =
+        System.getProperty(PROP_CASSANDRA_NORMAL_USERNAME, DEFAULT_CASSANDRA_NORMAL_USERNAME);
+    String password =
+        System.getProperty(PROP_CASSANDRA_NORMAL_PASSWORD, DEFAULT_CASSANDRA_NORMAL_PASSWORD);
+    properties.setProperty(DatabaseConfig.USERNAME, username);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+
+    return properties;
   }
 }

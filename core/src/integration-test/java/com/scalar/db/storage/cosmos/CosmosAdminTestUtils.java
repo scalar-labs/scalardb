@@ -90,4 +90,35 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
         .getScripts()
         .getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME);
   }
+
+  @Override
+  public boolean namespaceExists(String namespace) {
+    try {
+      client.getDatabase(namespace).read();
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
+  }
+
+  @Override
+  public boolean tableExists(String namespace, String table) {
+    try {
+      client.getDatabase(namespace).getContainer(table).read();
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
+  }
+
+  @Override
+  public void close() {
+    client.close();
+  }
 }
