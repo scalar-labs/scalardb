@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.Properties;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.policybuilder.iam.IamEffect;
 import software.amazon.awssdk.policybuilder.iam.IamPolicy;
 import software.amazon.awssdk.policybuilder.iam.IamResource;
@@ -79,18 +80,34 @@ public class DynamoPermissionTestUtils implements PermissionTestUtils {
       User user = client.getUser().user();
       Optional<String> attachedPolicyArn = getAttachedPolicyArn(user.userName());
       if (attachedPolicyArn.isPresent()) {
-        deleteStalePolicyVersions(attachedPolicyArn.get());
-        createNewPolicyVersion(attachedPolicyArn.get());
+        String policyArn = attachedPolicyArn.get();
+        try {
+          deleteStalePolicyVersions(policyArn);
+          createNewPolicyVersion(policyArn);
+        } catch (SdkException e) {
+          throw new RuntimeException(
+              String.format(
+                  "Failed to update policy for user: %s, policyArn: %s", userName, policyArn),
+              e);
+        }
       } else {
         String policyArn = createNewPolicy();
-        client.attachUserPolicy(
-            AttachUserPolicyRequest.builder()
-                .userName(user.userName())
-                .policyArn(policyArn)
-                .build());
+        try {
+          client.attachUserPolicy(
+              AttachUserPolicyRequest.builder()
+                  .userName(user.userName())
+                  .policyArn(policyArn)
+                  .build());
+        } catch (SdkException e) {
+          throw new RuntimeException(
+              String.format(
+                  "Failed to attach new policy for user: %s, policyArn: %s", userName, policyArn),
+              e);
+        }
       }
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to grant required permissions", e);
+    } catch (SdkException e) {
+      throw new RuntimeException(
+          String.format("Failed to grant required permissions for user: %s", userName), e);
     }
   }
 

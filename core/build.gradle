@@ -140,8 +140,8 @@ dependencies {
     implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
     implementation 'software.amazon.awssdk:applicationautoscaling'
     implementation 'software.amazon.awssdk:dynamodb'
-    implementation 'software.amazon.awssdk:iam'
-    implementation 'software.amazon.awssdk:iam-policy-builder'
+    testImplementation 'software.amazon.awssdk:iam'
+    testImplementation 'software.amazon.awssdk:iam-policy-builder'
     implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
     implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
