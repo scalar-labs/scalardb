@@ -107,7 +107,10 @@ public class DynamoPermissionTestUtils implements PermissionTestUtils {
       }
     } catch (SdkException e) {
       throw new RuntimeException(
-          String.format("Failed to grant required permissions for user: %s", userName), e);
+          String.format(
+              "Failed to grant required permissions for user: %s, error: %s",
+              userName, e.getMessage()),
+          e);
     }
   }
 
