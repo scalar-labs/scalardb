@@ -2,12 +2,13 @@ name: Test Permissions
 
 on:
   workflow_dispatch:
-  pull_request:
 
 env:
   TERM: dumb
   JAVA_VERSION: '8'
   JAVA_VENDOR: 'temurin'
+  DYNAMO_ACCESS_KEY_ID: ${{ secrets.DYNAMO_ACCESS_KEY }}
+  DYNAMO_SECRET_ACCESS_KEY: ${{ secrets.DYNAMO_SECRET_ACCESS_KEY }}
 
 jobs:
   integration-test-permission-cassandra-3-0:
@@ -105,7 +106,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
-        run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.accessKeyId=${{ secrets.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secretAccessKey=${{ secrets.DYNAMO_SECRET_ACCESS_KEY }}
+        run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.accessKeyId=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secretAccessKey=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
 
       - name: Upload Gradle test reports
         if: always()
