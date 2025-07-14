@@ -106,7 +106,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
-        run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.accessKeyId=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secretAccessKey=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
+        run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
 
       - name: Upload Gradle test reports
         if: always()
