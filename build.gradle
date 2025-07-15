@@ -1,13 +1,15 @@
-buildscript {
-    repositories {
-        maven {
-            url 'https://plugins.gradle.org/m2/'
-        }
-    }
-    dependencies {
-        classpath 'com.diffplug.spotless:spotless-plugin-gradle:6.13.0'
-    }
+plugins {
+    id "com.diffplug.spotless" version "6.13.0"
+    id "org.jreleaser" version "1.19.0"
 }
+
+ext {
+    projectGroup = 'com.scalar-labs'
+    projectVersion = '3.16.1-SNAPSHOT'
+}
+
+group = projectGroup
+version = projectVersion
 
 subprojects {
     apply plugin: 'java'
@@ -18,7 +20,7 @@ subprojects {
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'com.scalar.db.jdk-configuration'
 
-    project.version = '3.16.1-SNAPSHOT'
+    project.version = projectVersion
 
     ext {
         guiceVersion = '5.1.0'
@@ -35,7 +37,7 @@ subprojects {
         sqlserverDriverVersion = '12.8.1.jre8'
         sqliteDriverVersion = '3.50.1.0'
         yugabyteDriverVersion = '42.7.3-yb-4'
-        db2DriverVersion= '12.1.2.0'
+        db2DriverVersion = '12.1.2.0'
         mariadDbDriverVersion = '3.5.3'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.13.1'
@@ -66,7 +68,7 @@ subprojects {
         testLogging.showStandardStreams = true
     }
 
-    group = "com.scalar-labs"
+    group = projectGroup
 
     java {
         withJavadocJar()
@@ -92,3 +94,38 @@ subprojects {
     }
 }
 
+jreleaser {
+    gitRootSearch = true
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+    deploy {
+        maven {
+            def stagingRepositories = ['core/build/staging-deploy',
+                                       'integration-test/build/staging-deploy',
+                                       'schema-loader/build/staging-deploy',
+                                       'data-loader/core/build/staging-deploy']
+            mavenCentral {
+                sonatype {
+                    active = 'RELEASE'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepositories.each { stagingRepository(it) }
+                }
+            }
+            nexus2 {
+                'snapshot-deploy' {
+                    active = 'SNAPSHOT'
+                    snapshotUrl = 'https://central.sonatype.com/repository/maven-snapshots/'
+                    applyMavenCentralRules = true
+                    snapshotSupported = true
+                    closeRepository = true
+                    releaseRepository = true
+                    stagingRepositories.each { stagingRepository(it) }
+                }
+            }
+        }
+    }
+}
