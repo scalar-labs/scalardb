@@ -1,7 +1,6 @@
 plugins {
     id 'com.google.protobuf' version "${protobufPluginVersion}"
     id 'maven-publish'
-    id 'signing'
     id 'base'
 }
 
@@ -84,18 +83,7 @@ publishing {
     }
     repositories {
         maven {
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.properties['ossrhUsername'] ?: ""
-                password = project.properties['ossrhPassword'] ?: ""
-            }
+            url = layout.buildDirectory.dir('staging-deploy')
         }
     }
-}
-
-signing {
-    required { project.gradle.taskGraph.hasTask("publish") }
-    sign publishing.publications.mavenJava
 }
