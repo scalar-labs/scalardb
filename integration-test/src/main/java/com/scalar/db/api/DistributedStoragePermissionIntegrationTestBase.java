@@ -51,23 +51,28 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     Properties propertiesForRootUser = getProperties(TEST_NAME);
     Properties propertiesForNormalUser = getPropertiesForNormalUser(TEST_NAME);
 
-    // Create admin for root user
-    StorageFactory factoryForRootUser = StorageFactory.create(propertiesForRootUser);
-    adminForRootUser = factoryForRootUser.getStorageAdmin();
+    try {
+      // Create admin for root user
+      StorageFactory factoryForRootUser = StorageFactory.create(propertiesForRootUser);
+      adminForRootUser = factoryForRootUser.getStorageAdmin();
 
-    // Create normal user and give permissions
-    DatabaseConfig config = new DatabaseConfig(propertiesForNormalUser);
-    normalUserName = getUserNameFromConfig(config);
-    normalUserPassword = getPasswordFromConfig(config);
-    setUpNormalUser();
+      // Create normal user and give permissions
+      DatabaseConfig config = new DatabaseConfig(propertiesForNormalUser);
+      normalUserName = getUserNameFromConfig(config);
+      normalUserPassword = getPasswordFromConfig(config);
+      setUpNormalUser();
 
-    // Create storage for normal user
-    StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
-    storageForNormalUser = factoryForNormalUser.getStorage();
+      // Create storage for normal user
+      StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
+      storageForNormalUser = factoryForNormalUser.getStorage();
 
-    namespace = getNamespace();
-    createTable();
-    waitForTableCreation();
+      namespace = getNamespace();
+      createTable();
+      waitForTableCreation();
+    } catch (Exception e) {
+      logger.error("Failed to set up the test environment", e);
+      throw e;
+    }
   }
 
   @BeforeEach
