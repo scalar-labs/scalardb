@@ -10,12 +10,14 @@ public final class DynamoEnv {
   private static final String PROP_DYNAMO_REGION = "scalardb.dynamo.region";
   private static final String PROP_DYNAMO_ACCESS_KEY_ID = "scalardb.dynamo.access_key_id";
   private static final String PROP_DYNAMO_SECRET_ACCESS_KEY = "scalardb.dynamo.secret_access_key";
+  private static final String PROP_DYNAMO_EMULATOR_USED = "scalardb.dynamo.emulator_used";
   private static final String PROP_DYNAMO_CREATE_OPTIONS = "scalardb.dynamo.create_options";
 
   private static final String DEFAULT_DYNAMO_ENDPOINT_OVERRIDE = "http://localhost:8000";
   private static final String DEFAULT_DYNAMO_REGION = "us-west-2";
   private static final String DEFAULT_DYNAMO_ACCESS_KEY_ID = "fakeMyKeyId";
   private static final String DEFAULT_DYNAMO_SECRET_ACCESS_KEY = "fakeSecretAccessKey";
+  private static final String DEFAULT_DYNAMO_EMULATOR_USED = "true";
 
   private static final ImmutableMap<String, String> DEFAULT_DYNAMO_CREATE_OPTIONS =
       ImmutableMap.of(DynamoAdmin.NO_SCALING, "true", DynamoAdmin.NO_BACKUP, "true");
@@ -30,24 +32,26 @@ public final class DynamoEnv {
         System.getProperty(PROP_DYNAMO_ACCESS_KEY_ID, DEFAULT_DYNAMO_ACCESS_KEY_ID);
     String secretAccessKey =
         System.getProperty(PROP_DYNAMO_SECRET_ACCESS_KEY, DEFAULT_DYNAMO_SECRET_ACCESS_KEY);
+    String isEmulatorUsed =
+        System.getProperty(PROP_DYNAMO_EMULATOR_USED, DEFAULT_DYNAMO_EMULATOR_USED);
 
-    Properties props = new Properties();
-    if (endpointOverride != null) {
-      props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
+    Properties properties = new Properties();
+    if (Boolean.parseBoolean(isEmulatorUsed) && endpointOverride != null) {
+      properties.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
-    props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
-    props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
-    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
-    props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    properties.setProperty(DatabaseConfig.USERNAME, accessKeyId);
+    properties.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
+    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
 
     // Add testName as a metadata namespace suffix
-    props.setProperty(
+    properties.setProperty(
         DynamoConfig.TABLE_METADATA_NAMESPACE, DynamoAdmin.METADATA_NAMESPACE + "_" + testName);
 
-    return props;
+    return properties;
   }
 
   public static Map<String, String> getCreationOptions() {
