@@ -45,6 +45,9 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -84,6 +87,20 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+    integrationTestDynamoPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoAdminTestUtils.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoEnv.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
 }
 
 configurations {
@@ -108,6 +125,9 @@ configurations {
     integrationTestCassandraPermissionImplementation.extendsFrom testImplementation
     integrationTestCassandraPermissionRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestCassandraPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestDynamoPermissionImplementation.extendsFrom testImplementation
+    integrationTestDynamoPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoPermissionCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -120,6 +140,8 @@ dependencies {
     implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
     implementation 'software.amazon.awssdk:applicationautoscaling'
     implementation 'software.amazon.awssdk:dynamodb'
+    testImplementation 'software.amazon.awssdk:iam'
+    testImplementation 'software.amazon.awssdk:iam-policy-builder'
     implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
     implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
@@ -224,6 +246,17 @@ task integrationTestCassandraPermission(type: Test) {
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestCassandraPermission.output.classesDirs
     classpath = sourceSets.integrationTestCassandraPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
+task integrationTestDynamoPermission(type: Test) {
+    description = 'Runs the integration tests for DynamoDB permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestDynamoPermission.output.classesDirs
+    classpath = sourceSets.integrationTestDynamoPermission.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })

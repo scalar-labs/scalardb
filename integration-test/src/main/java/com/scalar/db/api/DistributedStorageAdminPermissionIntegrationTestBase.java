@@ -55,19 +55,24 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     Properties propertiesForRootUser = getProperties(TEST_NAME);
     Properties propertiesForNormalUser = getPropertiesForNormalUser(TEST_NAME);
 
-    // Initialize the admin for root user
-    StorageFactory factoryForRootUser = StorageFactory.create(propertiesForRootUser);
-    adminForRootUser = factoryForRootUser.getStorageAdmin();
+    try {
+      // Initialize the admin for root user
+      StorageFactory factoryForRootUser = StorageFactory.create(propertiesForRootUser);
+      adminForRootUser = factoryForRootUser.getStorageAdmin();
 
-    // Create normal user and give permissions
-    DatabaseConfig config = new DatabaseConfig(propertiesForNormalUser);
-    normalUserName = getUserNameFromConfig(config);
-    normalUserPassword = getPasswordFromConfig(config);
-    setUpNormalUser();
+      // Create normal user and give permissions
+      DatabaseConfig config = new DatabaseConfig(propertiesForNormalUser);
+      normalUserName = getUserNameFromConfig(config);
+      normalUserPassword = getPasswordFromConfig(config);
+      setUpNormalUser();
 
-    // Initialize the admin for normal user
-    StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
-    adminForNormalUser = factoryForNormalUser.getStorageAdmin();
+      // Initialize the admin for normal user
+      StorageFactory factoryForNormalUser = StorageFactory.create(propertiesForNormalUser);
+      adminForNormalUser = factoryForNormalUser.getStorageAdmin();
+    } catch (Exception e) {
+      logger.error("Failed to set up the test environment", e);
+      throw e;
+    }
   }
 
   @AfterAll
