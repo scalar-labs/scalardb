@@ -23,8 +23,6 @@ jobs:
       SIGNING_SECRET_KEY_RING: ${{ secrets.SIGNING_SECRET_KEY_RING }}
       SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
       SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-      OSSRH_USERNAMAE: ${{ secrets.OSSRH_USERNAMAE }}
-      OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
 
   create-release:
     needs: upload-artifacts
