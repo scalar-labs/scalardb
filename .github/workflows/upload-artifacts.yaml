@@ -16,11 +16,15 @@ on:
         required: true
       AWS_MARKETPLACE_ECR_ID:
         required: true
-      SIGNING_SECRET_KEY_RING:
+      MAVEN_CENTRAL_USERNAME:
         required: true
-      SIGNING_KEY_ID:
+      MAVEN_CENTRAL_PASSWORD:
         required: true
-      SIGNING_PASSWORD:
+      MAVEN_CENTRAL_GPG_PASSPHRASE:
+        required: true
+      MAVEN_CENTRAL_GPG_PUBLIC_KEY:
+        required: true
+      MAVEN_CENTRAL_GPG_SECRET_KEY:
         required: true
 
 jobs:
