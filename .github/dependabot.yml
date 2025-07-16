@@ -74,13 +74,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-
-  - package-ecosystem: "github-actions"
-    target-branch: "3.12"
-    groups:
-      actions on branch 3.12:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
