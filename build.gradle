@@ -5,7 +5,7 @@ plugins {
 
 ext {
     projectGroup = 'com.scalar-labs'
-    projectVersion = '3.12.8-SNAPSHOT'
+    projectVersion = '3.12.8'
 }
 
 group = projectGroup
