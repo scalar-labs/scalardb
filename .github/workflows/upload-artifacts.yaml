@@ -22,10 +22,6 @@ on:
         required: true
       SIGNING_PASSWORD:
         required: true
-      OSSRH_USERNAMAE:
-        required: true
-      OSSRH_PASSWORD:
-        required: true
 
 jobs:
   upload-artifacts:
