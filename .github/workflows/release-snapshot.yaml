@@ -42,7 +42,7 @@ jobs:
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_PASSPHRASE }}
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_SECRET_KEY }}
-        run: ./gradlew jreleaserDeploy
+        run: ./gradlew jreleaserDeploy -Dorg.gradle.jvmargs="-Xmx4g"
 
       - name: Upload JReleaser outputs
         if: always()
