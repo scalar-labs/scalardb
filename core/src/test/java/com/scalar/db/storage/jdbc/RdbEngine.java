@@ -37,4 +37,8 @@ public enum RdbEngine {
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
   }
+
+  public static RdbEngineStrategy createRdbEnginePostgresqlWithMergeUsed() {
+    return new RdbEnginePostgresql(true);
+  }
 }
