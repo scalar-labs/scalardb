@@ -161,13 +161,13 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithTop(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new MergeQuery(builder);
+    return new MergeQuery(builder, null, true);
   }
 
   @Override

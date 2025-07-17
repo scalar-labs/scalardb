@@ -152,7 +152,7 @@ public interface SelectQuery extends Query {
 
     public SelectQuery build() {
       if (limit > 0) {
-        return rdbEngine.buildSelectQuery(this, limit);
+        return rdbEngine.buildSelectWithLimitQuery(this, limit);
       }
       return new SimpleSelectQuery(this);
     }
