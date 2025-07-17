@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -1648,6 +1649,150 @@ public class QueryBuilderTest {
     }
   }
 
+  @Test
+  public void upsertQueryTest_WithPostgresqlWithMergeUsed() throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEnginePostgresqlWithMergeUsed();
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    UpsertQuery query;
+    PreparedStatement preparedStatement;
+
+    Map<String, Column<?>> columns = new HashMap<>();
+    columns.put("v1", TextColumn.of("v1", "v1Value"));
+    columns.put("v2", TextColumn.of("v2", "v2Value"));
+    columns.put("v3", TextColumn.of("v3", "v3Value"));
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(new Key("p1", "p1Value"), Optional.empty(), columns)
+            .build();
+
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
+                    + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                    + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "v1Value");
+    verify(preparedStatement).setString(3, "v2Value");
+    verify(preparedStatement).setString(4, "v3Value");
+    verify(preparedStatement).setString(5, "p1Value");
+    verify(preparedStatement).setString(6, "v1Value");
+    verify(preparedStatement).setString(7, "v2Value");
+    verify(preparedStatement).setString(8, "v3Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+                    + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                    + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                    + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v1Value");
+    verify(preparedStatement).setString(4, "v2Value");
+    verify(preparedStatement).setString(5, "v3Value");
+    verify(preparedStatement).setString(6, "p1Value");
+    verify(preparedStatement).setString(7, "c1Value");
+    verify(preparedStatement).setString(8, "v1Value");
+    verify(preparedStatement).setString(9, "v2Value");
+    verify(preparedStatement).setString(10, "v3Value");
+
+    columns.put("v4", TextColumn.of("v4", "v4Value"));
+    preparedStatement = mock(PreparedStatement.class);
+
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                columns)
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+                    + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                    + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
+                    + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verify(preparedStatement).setString(5, "v1Value");
+    verify(preparedStatement).setString(6, "v2Value");
+    verify(preparedStatement).setString(7, "v3Value");
+    verify(preparedStatement).setString(8, "v4Value");
+    verify(preparedStatement).setString(9, "p1Value");
+    verify(preparedStatement).setString(10, "p2Value");
+    verify(preparedStatement).setString(11, "c1Value");
+    verify(preparedStatement).setString(12, "c2Value");
+    verify(preparedStatement).setString(13, "v1Value");
+    verify(preparedStatement).setString(14, "v2Value");
+    verify(preparedStatement).setString(15, "v3Value");
+    verify(preparedStatement).setString(16, "v4Value");
+
+    columns.put("v5", TextColumn.ofNull("v5"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                columns)
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+                    + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                    + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
+                    + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
+                    + "VALUES (?,?,?,?,?,?,?,?,?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verify(preparedStatement).setString(5, "v1Value");
+    verify(preparedStatement).setString(6, "v2Value");
+    verify(preparedStatement).setString(7, "v3Value");
+    verify(preparedStatement).setString(8, "v4Value");
+    verify(preparedStatement).setNull(9, Types.VARCHAR);
+    verify(preparedStatement).setString(10, "p1Value");
+    verify(preparedStatement).setString(11, "p2Value");
+    verify(preparedStatement).setString(12, "c1Value");
+    verify(preparedStatement).setString(13, "c2Value");
+    verify(preparedStatement).setString(14, "v1Value");
+    verify(preparedStatement).setString(15, "v2Value");
+    verify(preparedStatement).setString(16, "v3Value");
+    verify(preparedStatement).setString(17, "v4Value");
+    verify(preparedStatement).setNull(18, Types.VARCHAR);
+  }
+
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void upsertQueryWithoutValuesTest(RdbEngine rdbEngineType) throws SQLException {
@@ -1853,6 +1998,82 @@ public class QueryBuilderTest {
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
+  }
+
+  @Test
+  public void upsertQueryWithoutValuesTest_WithPostgresqlWithMergeUsed() throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEnginePostgresqlWithMergeUsed();
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    UpsertQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(new Key("p1", "p1Value"), Optional.empty(), Collections.emptyMap())
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
+                    + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p1Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Collections.emptyMap())
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+                    + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                    + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "p1Value");
+    verify(preparedStatement).setString(4, "c1Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
+            .values(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Collections.emptyMap())
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+                    + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                    + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)",
+                rdbEngine));
+
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verify(preparedStatement).setString(5, "p1Value");
+    verify(preparedStatement).setString(6, "p2Value");
+    verify(preparedStatement).setString(7, "c1Value");
+    verify(preparedStatement).setString(8, "c2Value");
   }
 
   private String encloseSql(String sql, RdbEngineStrategy rdbEngine) {

@@ -2,15 +2,18 @@ package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
@@ -20,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -29,9 +33,41 @@ import org.slf4j.LoggerFactory;
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
+  private final boolean mergeUsed;
+
+  public RdbEnginePostgresql(JdbcConfig config) {
+    timeTypeEngine = new RdbEngineTimeTypePostgresql();
+    mergeUsed = isMergeSupported(config);
+    if (mergeUsed) {
+      logger.info("The MERGE statement is used for put operations.");
+    }
+  }
+
+  private boolean isMergeSupported(JdbcConfig config) {
+    Properties properties = new Properties();
+    config.getUsername().ifPresent(user -> properties.setProperty("user", user));
+    config.getPassword().ifPresent(password -> properties.setProperty("password", password));
+
+    // Check if the MERGE statement is supported by connecting to the database.
+    try (Connection connection = getDriver().connect(config.getJdbcUrl(), properties)) {
+      DatabaseMetaData metaData = connection.getMetaData();
+
+      // If the major version is 15 or later, the MERGE statement is supported.
+      return metaData.getDatabaseMajorVersion() >= 15;
+    } catch (SQLException e) {
+      logger.warn("Failed to connect to the database to check the MERGE statement support", e);
+      return false;
+    }
+  }
 
   public RdbEnginePostgresql() {
-    timeTypeEngine = new RdbEngineTimeTypePostgresql();
+    this(false);
+  }
+
+  @VisibleForTesting
+  RdbEnginePostgresql(boolean mergeUsed) {
+    this.timeTypeEngine = new RdbEngineTimeTypePostgresql();
+    this.mergeUsed = mergeUsed;
   }
 
   @Override
@@ -211,7 +247,13 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnConflictDoUpdateQuery(builder);
+    if (mergeUsed) {
+      // Use the MERGE statement if the PostgreSQL version is 15 or later
+      return new MergeQuery(builder, null);
+    } else {
+      // Use the INSERT ON CONFLICT DO UPDATE statement for older versions
+      return new InsertOnConflictDoUpdateQuery(builder);
+    }
   }
 
   @Override

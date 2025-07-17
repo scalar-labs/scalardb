@@ -17,7 +17,7 @@ public final class RdbEngineFactory {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
       return createMysqlOrTidbEngine(config);
     } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return new RdbEnginePostgresql();
+      return new RdbEnginePostgresql(config);
     } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
       return new RdbEngineOracle(config);
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
