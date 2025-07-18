@@ -18,9 +18,9 @@ public final class MultiStorageEnv {
   private static final String DEFAULT_CASSANDRA_USERNAME = "cassandra";
   private static final String DEFAULT_CASSANDRA_PASSWORD = "cassandra";
 
-  private static final String DEFAULT_JDBC_CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String DEFAULT_JDBC_USERNAME = "root";
-  private static final String DEFAULT_JDBC_PASSWORD = "mysql";
+  private static final String DEFAULT_JDBC_CONTACT_POINT = "jdbc:postgresql://localhost:5432/";
+  private static final String DEFAULT_JDBC_USERNAME = "postgres";
+  private static final String DEFAULT_JDBC_PASSWORD = "postgres";
 
   private MultiStorageEnv() {}
 
