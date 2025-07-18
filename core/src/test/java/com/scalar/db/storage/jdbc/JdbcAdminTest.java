@@ -565,8 +565,8 @@ public class JdbcAdminTest {
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\"\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"my_ns\"\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   @Test
@@ -2603,7 +2603,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2715,7 +2715,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )",
         "UPDATE \""
             + METADATA_SCHEMA
