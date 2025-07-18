@@ -94,6 +94,17 @@ public interface RdbEngineStrategy {
 
   String tableExistsInternalTableCheckSql(String fullTableName);
 
+  default String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
   String dropIndexSql(String schema, String table, String indexName);
 
   /**
