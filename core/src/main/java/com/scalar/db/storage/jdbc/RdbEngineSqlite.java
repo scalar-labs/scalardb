@@ -262,18 +262,6 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String createIndexSql(
-      String schema, String table, String indexName, String indexedColumn) {
-    return "CREATE INDEX "
-        + enclose(indexName)
-        + " ON "
-        + encloseFullTableName(schema, table)
-        + " ("
-        + enclose(indexedColumn)
-        + ")";
-  }
-
-  @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName);
   }
