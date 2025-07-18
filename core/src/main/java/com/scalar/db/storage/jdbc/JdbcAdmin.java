@@ -824,14 +824,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void createIndex(Connection connection, String schema, String table, String indexedColumn)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
-    String createIndexStatement =
-        "CREATE INDEX "
-            + enclose(indexName)
-            + " ON "
-            + encloseFullTableName(schema, table)
-            + " ("
-            + enclose(indexedColumn)
-            + ")";
+    String createIndexStatement = rdbEngine.createIndexSql(schema, table, indexName, indexedColumn);
     execute(connection, createIndexStatement);
   }
 
