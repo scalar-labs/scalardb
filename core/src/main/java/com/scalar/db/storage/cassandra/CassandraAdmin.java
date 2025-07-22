@@ -139,7 +139,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String insertQuery =
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .value(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
+            .value(NAMESPACES_NAME_COL, keyspace)
             .toString();
     clusterManager.getSession().execute(insertQuery);
   }
@@ -180,7 +180,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String deleteQuery =
         QueryBuilder.delete()
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, keyspace))
             .toString();
     clusterManager.getSession().execute(deleteQuery);
   }
@@ -349,7 +349,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String query =
           QueryBuilder.select(NAMESPACES_NAME_COL)
               .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
+              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, namespace))
               .toString();
       ResultSet resultSet = clusterManager.getSession().execute(query);
 
@@ -396,7 +396,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
     try {
       String alterTableQuery =
-          SchemaBuilder.alterTable(namespace, table)
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
               .addColumn(columnName)
               .type(toCassandraDataType(columnType))
               .getQueryString();

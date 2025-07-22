@@ -36,13 +36,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       LoggerFactory.getLogger(DistributedStorageAdminIntegrationTestBase.class);
 
   private static final String TEST_NAME = "storage_admin";
-  private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
-  private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
-  private static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
-  private static final String TABLE1 = "test_table1";
-  private static final String TABLE2 = "test_table2";
-  private static final String TABLE3 = "test_table3";
-  private static final String TABLE4 = "test_table4";
+  private static final String NAMESPACE1 = "Int_test_" + TEST_NAME + "1";
+  private static final String NAMESPACE2 = "Int_test_" + TEST_NAME + "2";
+  private static final String NAMESPACE3 = "Int_test_" + TEST_NAME + "3";
+  private static final String TABLE1 = "Test_table1";
+  private static final String TABLE2 = "Test_table2";
+  private static final String TABLE3 = "Test_table3";
+  private static final String TABLE4 = "Test_table4";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
