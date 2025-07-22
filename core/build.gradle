@@ -59,6 +59,9 @@ sourceSets {
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -101,6 +104,21 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+    integrationTestJdbcPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcAdminTestUtils.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcTestUtils.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcEnv.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
 }
 
 configurations {
@@ -128,6 +146,9 @@ configurations {
     integrationTestDynamoPermissionImplementation.extendsFrom testImplementation
     integrationTestDynamoPermissionRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestDynamoPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestJdbcPermissionImplementation.extendsFrom testImplementation
+    integrationTestJdbcPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcPermissionCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -258,6 +279,17 @@ task integrationTestDynamoPermission(type: Test) {
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestDynamoPermission.output.classesDirs
     classpath = sourceSets.integrationTestDynamoPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
+task integrationTestJdbcPermission(type: Test) {
+    description = 'Runs the integration tests for JDBC permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbcPermission.output.classesDirs
+    classpath = sourceSets.integrationTestJdbcPermission.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
