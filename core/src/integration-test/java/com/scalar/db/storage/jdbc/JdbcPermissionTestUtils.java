@@ -69,8 +69,6 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
       return String.format(
           "CREATE LOGIN %s WITH PASSWORD = '%s', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF; CREATE USER %s FOR LOGIN %s",
           userName, password, userName, userName);
-    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
-      return String.format("CREATE USER %s IDENTIFIED BY %s", userName, password);
     } else {
       throw new UnsupportedOperationException("Creating users is not supported for " + rdbEngine);
     }
@@ -87,8 +85,6 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
       throw new UnsupportedOperationException("SQLite does not support user management");
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       return String.format("DROP USER %s; DROP LOGIN %s", userName, userName);
-    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
-      return String.format("DROP USER %s", userName);
     } else {
       throw new UnsupportedOperationException("Dropping users is not supported for " + rdbEngine);
     }
@@ -132,8 +128,6 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
         String.format("ALTER ROLE [db_datareader] ADD MEMBER %s", userName),
         String.format("ALTER ROLE [db_datawriter] ADD MEMBER %s", userName)
       };
-    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
-      return new String[] {};
     } else {
       throw new UnsupportedOperationException(
           "Granting permissions is not supported for " + rdbEngine);
