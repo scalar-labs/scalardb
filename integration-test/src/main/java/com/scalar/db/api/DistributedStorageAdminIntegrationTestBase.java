@@ -43,21 +43,21 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String TABLE2 = "Test_table2";
   private static final String TABLE3 = "Test_table3";
   private static final String TABLE4 = "Test_table4";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
-  private static final String COL_NAME12 = "c12";
-  private static final String COL_NAME13 = "c13";
-  private static final String COL_NAME14 = "c14";
-  private static final String COL_NAME15 = "c15";
+  private static final String COL_NAME1 = "Column1";
+  private static final String COL_NAME2 = "Column2";
+  private static final String COL_NAME3 = "Column3";
+  private static final String COL_NAME4 = "Column4";
+  private static final String COL_NAME5 = "Column5";
+  private static final String COL_NAME6 = "Column6";
+  private static final String COL_NAME7 = "Column7";
+  private static final String COL_NAME8 = "Column8";
+  private static final String COL_NAME9 = "Column9";
+  private static final String COL_NAME10 = "Column10";
+  private static final String COL_NAME11 = "Column11";
+  private static final String COL_NAME12 = "Column12";
+  private static final String COL_NAME13 = "Column13";
+  private static final String COL_NAME14 = "Column14";
+  private static final String COL_NAME15 = "Column15";
 
   private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()

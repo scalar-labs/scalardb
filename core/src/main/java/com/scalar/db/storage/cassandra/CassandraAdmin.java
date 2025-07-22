@@ -271,15 +271,21 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     for (ColumnMetadata column : metadata.getColumns()) {
-      builder.addColumn(column.getName(), fromCassandraDataType(column.getType().getName()));
+      builder.addColumn(
+          unquoteIfNecessary(column.getName()), fromCassandraDataType(column.getType().getName()));
     }
-    metadata.getPartitionKey().forEach(c -> builder.addPartitionKey(c.getName()));
+    metadata
+        .getPartitionKey()
+        .forEach(c -> builder.addPartitionKey(unquoteIfNecessary(c.getName())));
     for (int i = 0; i < metadata.getClusteringColumns().size(); i++) {
-      String clusteringColumnName = metadata.getClusteringColumns().get(i).getName();
+      String clusteringColumnName =
+          unquoteIfNecessary(metadata.getClusteringColumns().get(i).getName());
       ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
       builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
     }
-    metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
+    metadata
+        .getIndexes()
+        .forEach(i -> builder.addSecondaryIndex(unquoteIfNecessary(i.getTarget())));
     return builder.build();
   }
 
@@ -397,7 +403,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     try {
       String alterTableQuery =
           SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
-              .addColumn(columnName)
+              .addColumn(quoteIfNecessary(columnName))
               .type(toCassandraDataType(columnType))
               .getQueryString();
 
@@ -685,5 +691,15 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     public String toString() {
       return strategyName;
     }
+  }
+
+  private String unquoteIfNecessary(String identifier) {
+    if (identifier == null) {
+      return null;
+    }
+    if (identifier.length() >= 2 && identifier.startsWith("\"") && identifier.endsWith("\"")) {
+      return identifier.substring(1, identifier.length() - 1).replace("\"\"", "\"");
+    }
+    return identifier;
   }
 }
