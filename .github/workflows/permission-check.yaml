@@ -135,7 +135,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       - name: Upload Gradle test reports
         if: always()
@@ -164,7 +164,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       - name: Upload Gradle test reports
         if: always()
@@ -193,7 +193,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       - name: Upload Gradle test reports
         if: always()
@@ -422,8 +422,15 @@ jobs:
         credentials:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
+        env:
+          ORACLE_PWD: Oracle
         ports:
           - 1521:1521
+        options: >-
+          --health-cmd "/opt/oracle/checkDBStatus.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 120
 
     steps:
       - uses: actions/checkout@v4
@@ -438,7 +445,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
       - name: Upload Gradle test reports
         if: always()
@@ -450,15 +457,6 @@ jobs:
   integration-test-permission-jdbc-oracle-23:
     name: Oracle 23 Permission Integration Test
     runs-on: ubuntu-latest
-
-    services:
-      oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:23
-        credentials:
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-        ports:
-          - 1521:1521
 
     steps:
       - name: Free up ~14GB of disk space by removing the Android SDK
@@ -502,7 +500,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+      - name: Stop Oracle 23 container
+        if: always()
+        run: docker stop oracle-23 | xargs docker rm
 
       - name: Upload Gradle test reports
         if: always()
@@ -513,7 +515,7 @@ jobs:
 
   integration-test-permission-jdbc-sqlserver-2017:
     name: SQL Server 2017 Permission Integration Test
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -535,7 +537,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=false -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer17
+        run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" "-Dfile.encoding=UTF-8"
 
       - name: Upload Gradle test reports
         if: always()
@@ -548,15 +550,19 @@ jobs:
     name: SQL Server 2019 Permission Integration Test
     runs-on: ubuntu-latest
 
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          MSSQL_PID: "Express"
+          SA_PASSWORD: "SqlServer19"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+        options: --name sqlserver19
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Sql Server 2019
-        uses: rails-sqlserver/setup-mssql@v1
-        with:
-          components: sqlcmd,sqlengine
-          sa-password: "SqlServer19"
-          version: 2019
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -568,7 +574,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=false -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+        run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer19"
 
       - name: Upload Gradle test reports
         if: always()
@@ -581,15 +587,19 @@ jobs:
     name: SQL Server 2022 Permission Integration Test
     runs-on: ubuntu-latest
 
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          MSSQL_PID: "Express"
+          SA_PASSWORD: "SqlServer22"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+        options: --name sqlserver22
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Sql Server 2022
-        uses: rails-sqlserver/setup-mssql@v1
-        with:
-          components: sqlcmd,sqlengine
-          sa-password: "SqlServer22"
-          version: 2022
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
@@ -601,7 +611,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=false -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22
+        run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer22"
 
       - name: Upload Gradle test reports
         if: always()
@@ -609,5 +619,3 @@ jobs:
         with:
           name: sqlserver_2022_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
-
-
