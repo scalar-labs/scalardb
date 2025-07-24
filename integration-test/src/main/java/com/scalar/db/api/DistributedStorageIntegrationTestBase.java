@@ -47,15 +47,15 @@ public abstract class DistributedStorageIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageIntegrationTestBase.class);
 
-  protected static final String TEST_NAME = "storage";
-  protected static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
-  protected static final String COL_NAME6 = "c6";
+  protected static final String TEST_NAME = "Storage";
+  protected static final String NAMESPACE = "Int_test_" + TEST_NAME;
+  protected static final String TABLE = "Test_table";
+  protected static final String COL_NAME1 = "Column1";
+  protected static final String COL_NAME2 = "Column2";
+  protected static final String COL_NAME3 = "Column3";
+  protected static final String COL_NAME4 = "Column4";
+  protected static final String COL_NAME5 = "Column5";
+  protected static final String COL_NAME6 = "Column6";
 
   protected DistributedStorage storage;
   protected DistributedStorageAdmin admin;
