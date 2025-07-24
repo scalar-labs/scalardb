@@ -271,15 +271,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     for (ColumnMetadata column : metadata.getColumns()) {
-      builder.addColumn(
-          unquoteIfNecessary(column.getName()), fromCassandraDataType(column.getType().getName()));
+      builder.addColumn(column.getName(), fromCassandraDataType(column.getType().getName()));
     }
-    metadata
-        .getPartitionKey()
-        .forEach(c -> builder.addPartitionKey(unquoteIfNecessary(c.getName())));
+    metadata.getPartitionKey().forEach(c -> builder.addPartitionKey(c.getName()));
     for (int i = 0; i < metadata.getClusteringColumns().size(); i++) {
-      String clusteringColumnName =
-          unquoteIfNecessary(metadata.getClusteringColumns().get(i).getName());
+      String clusteringColumnName = metadata.getClusteringColumns().get(i).getName();
       ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
       builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
     }
