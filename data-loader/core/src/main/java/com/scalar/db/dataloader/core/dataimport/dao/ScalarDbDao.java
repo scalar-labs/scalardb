@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
@@ -10,6 +11,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -250,6 +252,33 @@ public class ScalarDbDao {
    *
    * @param namespace ScalarDB namespace
    * @param table ScalarDB table name
+   * @param projectionColumns List of column projection to use during scan
+   * @param limit Scan limit value
+   * @param transaction Distributed transaction object
+   * @return ScalarDB Scanner object
+   * @throws ScalarDbDaoException if scan fails
+   */
+  public TransactionManagerCrudOperable.Scanner createScanner(
+      String namespace,
+      String table,
+      List<String> projectionColumns,
+      int limit,
+      DistributedTransactionManager transaction)
+      throws ScalarDbDaoException {
+    Scan scan =
+        createScan(namespace, table, null, null, new ArrayList<>(), projectionColumns, limit);
+    try {
+      return transaction.getScanner(scan);
+    } catch (CrudException e) {
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
+    }
+  }
+
+  /**
+   * Create a ScalarDB scanner instance
+   *
+   * @param namespace ScalarDB namespace
+   * @param table ScalarDB table name
    * @param partitionKey Partition key used in ScalarDB scan
    * @param scanRange Optional range to set ScalarDB scan start and end values
    * @param sortOrders Optional scan clustering key sorting values
@@ -275,6 +304,37 @@ public class ScalarDbDao {
       return storage.scan(scan);
     } catch (ExecutionException e) {
       throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
+    }
+  }
+
+  /**
+   * Create a ScalarDB scanner instance
+   *
+   * @param namespace ScalarDB namespace
+   * @param table ScalarDB table name
+   * @param partitionKey Partition key used in ScalarDB scan
+   * @param scanRange Optional range to set ScalarDB scan start and end values
+   * @param sortOrders Optional scan clustering key sorting values
+   * @param projectionColumns List of column projection to use during scan
+   * @param limit Scan limit value
+   * @param transaction Distributed transaction object
+   * @return ScalarDB Scanner object
+   */
+  public TransactionManagerCrudOperable.Scanner createScanner(
+      String namespace,
+      String table,
+      @Nullable Key partitionKey,
+      @Nullable ScanRange scanRange,
+      @Nullable List<Scan.Ordering> sortOrders,
+      @Nullable List<String> projectionColumns,
+      int limit,
+      DistributedTransactionManager transaction) {
+    Scan scan =
+        createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
+    try {
+      return transaction.getScanner(scan);
+    } catch (CrudException e) {
+      throw new RuntimeException(e);
     }
   }
 
