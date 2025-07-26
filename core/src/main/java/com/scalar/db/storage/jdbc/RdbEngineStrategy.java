@@ -127,7 +127,7 @@ public interface RdbEngineStrategy {
     return enclose(schema) + "." + enclose(table);
   }
 
-  SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
+  SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit);
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
