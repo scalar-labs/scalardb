@@ -71,7 +71,7 @@ public class JdbcDatabaseWithReservedKeywordIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    return JdbcEnv.getProperties(testName);
+    return properties;
   }
 
   @Override
