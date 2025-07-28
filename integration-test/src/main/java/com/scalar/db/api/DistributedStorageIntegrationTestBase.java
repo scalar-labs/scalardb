@@ -47,15 +47,15 @@ public abstract class DistributedStorageIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageIntegrationTestBase.class);
 
-  protected static final String TEST_NAME = "storage";
-  protected static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
-  protected static final String COL_NAME6 = "c6";
+  private static final String TEST_NAME = "storage";
+  private static final String NAMESPACE = "int_test_" + TEST_NAME;
+  private static final String TABLE = "test_table";
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
+  private static final String COL_NAME5 = "c5";
+  private static final String COL_NAME6 = "c6";
 
   protected DistributedStorage storage;
   protected DistributedStorageAdmin admin;
@@ -75,8 +75,48 @@ public abstract class DistributedStorageIntegrationTestBase {
 
   protected abstract Properties getProperties(String testName);
 
+  protected String getTestName() {
+    return TEST_NAME;
+  }
+
   protected String getNamespace() {
     return NAMESPACE;
+  }
+
+  protected String getTableName() {
+    return TABLE;
+  }
+
+  protected String getColumnName1() {
+    return COL_NAME1;
+  }
+
+  protected String getColumnName2() {
+    return COL_NAME2;
+  }
+
+  protected String getColumnName3() {
+    return COL_NAME3;
+  }
+
+  protected String getColumnName4() {
+    return COL_NAME4;
+  }
+
+  protected String getColumnName5() {
+    return COL_NAME5;
+  }
+
+  protected String getColumnName6() {
+    return COL_NAME6;
+  }
+
+  protected DistributedStorage getStorage() {
+    return storage;
+  }
+
+  protected DistributedStorageAdmin getAdmin() {
+    return admin;
   }
 
   private void createTable() throws ExecutionException {
@@ -84,17 +124,17 @@ public abstract class DistributedStorageIntegrationTestBase {
     admin.createNamespace(namespace, true, options);
     admin.createTable(
         namespace,
-        TABLE,
+        getTableName(),
         TableMetadata.newBuilder()
-            .addColumn(COL_NAME1, DataType.INT)
-            .addColumn(COL_NAME2, DataType.TEXT)
-            .addColumn(COL_NAME3, DataType.INT)
-            .addColumn(COL_NAME4, DataType.INT)
-            .addColumn(COL_NAME5, DataType.BOOLEAN)
-            .addColumn(COL_NAME6, DataType.BLOB)
-            .addPartitionKey(COL_NAME1)
-            .addClusteringKey(COL_NAME4)
-            .addSecondaryIndex(COL_NAME3)
+            .addColumn(getColumnName1(), DataType.INT)
+            .addColumn(getColumnName2(), DataType.TEXT)
+            .addColumn(getColumnName3(), DataType.INT)
+            .addColumn(getColumnName4(), DataType.INT)
+            .addColumn(getColumnName5(), DataType.BOOLEAN)
+            .addColumn(getColumnName6(), DataType.BLOB)
+            .addPartitionKey(getColumnName1())
+            .addClusteringKey(getColumnName4())
+            .addSecondaryIndex(getColumnName3())
             .build(),
         true,
         options);
@@ -114,7 +154,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private void truncateTable() throws ExecutionException {
-    admin.truncateTable(namespace, TABLE);
+    admin.truncateTable(namespace, getTableName());
   }
 
   @AfterAll
@@ -143,18 +183,18 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private void dropTable() throws ExecutionException {
-    admin.dropTable(namespace, TABLE);
+    admin.dropTable(namespace, getTableName());
     admin.dropNamespace(namespace);
   }
 
   @Test
   public void operation_NoTargetGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 0);
-    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(getColumnName1(), 0);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 0);
     Get get =
         Get.newBuilder()
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
@@ -166,12 +206,12 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void operation_WrongNamespaceGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 0);
-    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(getColumnName1(), 0);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 0);
     Get get =
         Get.newBuilder()
             .namespace("wrong_" + namespace) // a wrong namespace
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
@@ -182,12 +222,12 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void operation_WrongTableGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 0);
-    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(getColumnName1(), 0);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 0);
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table("wrong_" + TABLE) // a wrong table
+            .table("wrong_" + getTableName()) // a wrong table
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
@@ -207,36 +247,40 @@ public abstract class DistributedStorageIntegrationTestBase {
       populateRecords();
       Get get =
           Get.newBuilder()
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, 0))
-              .clusteringKey(Key.ofInt(COL_NAME4, 0))
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), 0))
+              .clusteringKey(Key.ofInt(getColumnName4(), 0))
               .build();
-      Scan scan = Scan.newBuilder().table(TABLE).partitionKey(Key.ofInt(COL_NAME1, 0)).build();
+      Scan scan =
+          Scan.newBuilder()
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), 0))
+              .build();
       Put put =
           Put.newBuilder()
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, 1))
-              .clusteringKey(Key.ofInt(COL_NAME4, 0))
-              .textValue(COL_NAME2, "foo")
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName4(), 0))
+              .textValue(getColumnName2(), "foo")
               .build();
       Delete delete =
           Delete.newBuilder()
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, 2))
-              .clusteringKey(Key.ofInt(COL_NAME4, 0))
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), 2))
+              .clusteringKey(Key.ofInt(getColumnName4(), 0))
               .build();
       Mutation putAsMutation1 =
           Put.newBuilder()
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, 3))
-              .clusteringKey(Key.ofInt(COL_NAME4, 0))
-              .textValue(COL_NAME2, "foo")
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), 3))
+              .clusteringKey(Key.ofInt(getColumnName4(), 0))
+              .textValue(getColumnName2(), "foo")
               .build();
       Mutation deleteAsMutation2 =
           Delete.newBuilder()
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, 3))
-              .clusteringKey(Key.ofInt(COL_NAME4, 1))
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), 3))
+              .clusteringKey(Key.ofInt(getColumnName4(), 1))
               .build();
 
       // Act Assert
@@ -270,9 +314,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get().getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(actual.get().getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 0)));
   }
 
   @Test
@@ -282,8 +327,13 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
 
     // Act Assert
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Get get = Get.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build();
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(getTableName())
+            .partitionKey(partitionKey)
+            .build();
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -297,17 +347,18 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Get get = prepareGet(pKey, cKey);
-    get.withProjections(Arrays.asList(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6));
+    get.withProjections(
+        Arrays.asList(getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6()));
     Optional<Result> actual = storage.get(get);
 
     // Assert
     assertThat(actual).isNotEmpty();
     assertThat(actual.get().getContainedColumnNames())
-        .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6);
-    assertThat(actual.get().getInt(COL_NAME1)).isEqualTo(0);
-    assertThat(actual.get().getText(COL_NAME2)).isEqualTo("0");
-    assertThat(actual.get().getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(actual.get().isNull(COL_NAME6)).isTrue();
+        .containsOnly(getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6());
+    assertThat(actual.get().getInt(getColumnName1())).isEqualTo(0);
+    assertThat(actual.get().getText(getColumnName2())).isEqualTo("0");
+    assertThat(actual.get().getInt(getColumnName3())).isEqualTo(0);
+    assertThat(actual.get().isNull(getColumnName6())).isTrue();
   }
 
   @Test
@@ -321,17 +372,17 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Act
     Get get =
         Get.newBuilder(prepareGet(pKey, cKey))
-            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("3"))
-            .and(ConditionBuilder.column(COL_NAME3).isEqualToInt(3))
+            .where(ConditionBuilder.column(getColumnName2()).isEqualToText("3"))
+            .and(ConditionBuilder.column(getColumnName3()).isEqualToInt(3))
             .build();
     Optional<Result> actual = storage.get(get);
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(COL_NAME1)).isEqualTo(pKey);
-    assertThat(actual.get().getInt(COL_NAME4)).isEqualTo(cKey);
-    assertThat(actual.get().getText(COL_NAME2)).isEqualTo("3");
-    assertThat(actual.get().getInt(COL_NAME3)).isEqualTo(3);
+    assertThat(actual.get().getInt(getColumnName1())).isEqualTo(pKey);
+    assertThat(actual.get().getInt(getColumnName4())).isEqualTo(cKey);
+    assertThat(actual.get().getText(getColumnName2())).isEqualTo("3");
+    assertThat(actual.get().getInt(getColumnName3())).isEqualTo(3);
   }
 
   @Test
@@ -344,8 +395,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Act
     Get get =
         Get.newBuilder(prepareGet(pKey, cKey))
-            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("a"))
-            .and(ConditionBuilder.column(COL_NAME3).isEqualToInt(3))
+            .where(ConditionBuilder.column(getColumnName2()).isEqualToText("a"))
+            .and(ConditionBuilder.column(getColumnName3()).isEqualToInt(3))
             .build();
     Optional<Result> actual = storage.get(get);
 
@@ -364,12 +415,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
-            .projection(COL_NAME1)
-            .projection(COL_NAME2)
-            .projection(COL_NAME3)
-            .projection(COL_NAME6)
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
+            .projection(getColumnName1())
+            .projection(getColumnName2())
+            .projection(getColumnName3())
+            .projection(getColumnName6())
             .build();
     List<Result> actual = scanAll(scan);
 
@@ -377,17 +428,17 @@ public abstract class DistributedStorageIntegrationTestBase {
     actual.forEach(
         a -> {
           assertThat(a.getContainedColumnNames())
-              .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6);
-          assertThat(a.getInt(COL_NAME1)).isEqualTo(0);
-          assertThat(a.isNull(COL_NAME6)).isTrue();
+              .containsOnly(getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6());
+          assertThat(a.getInt(getColumnName1())).isEqualTo(0);
+          assertThat(a.isNull(getColumnName6())).isTrue();
         });
     assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getText(COL_NAME2)).isEqualTo("0");
-    assertThat(actual.get(1).getText(COL_NAME2)).isEqualTo("1");
-    assertThat(actual.get(2).getText(COL_NAME2)).isEqualTo("2");
-    assertThat(actual.get(0).getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(actual.get(1).getInt(COL_NAME3)).isEqualTo(1);
-    assertThat(actual.get(2).getInt(COL_NAME3)).isEqualTo(2);
+    assertThat(actual.get(0).getText(getColumnName2())).isEqualTo("0");
+    assertThat(actual.get(1).getText(getColumnName2())).isEqualTo("1");
+    assertThat(actual.get(2).getText(getColumnName2())).isEqualTo("2");
+    assertThat(actual.get(0).getInt(getColumnName3())).isEqualTo(0);
+    assertThat(actual.get(1).getInt(getColumnName3())).isEqualTo(1);
+    assertThat(actual.get(2).getInt(getColumnName3())).isEqualTo(2);
   }
 
   @Test
@@ -401,8 +452,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
     Scanner scanner = storage.scan(scan);
 
@@ -425,18 +476,18 @@ public abstract class DistributedStorageIntegrationTestBase {
     assertThat(result.isPresent()).isFalse();
 
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName4()).get().getAsInt()).isEqualTo(2);
 
     scanner.close();
   }
@@ -452,8 +503,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
     double t1 = System.currentTimeMillis();
     List<Result> actual = scanAll(scan);
@@ -466,10 +517,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     double t4 = System.currentTimeMillis();
 
     // Assert
-    assertThat(actual.get(0).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(0).getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(actual.get(0).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 0)));
     System.err.println("first: " + (t2 - t1) + " (ms)");
     System.err.println("second: " + (t3 - t2) + " (ms)");
     System.err.println("third: " + (t4 - t3) + " (ms)");
@@ -486,23 +537,23 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
-            .start(Key.ofInt(COL_NAME4, 0))
-            .end(Key.ofInt(COL_NAME4, 2), false)
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
+            .start(Key.ofInt(getColumnName4(), 0))
+            .end(Key.ofInt(getColumnName4(), 2), false)
             .build();
     List<Result> actual = scanAll(scan);
 
     // verify
     assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -516,23 +567,23 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
-            .start(Key.ofInt(COL_NAME4, 0), false)
-            .end(Key.ofInt(COL_NAME4, 2))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
+            .start(Key.ofInt(getColumnName4(), 0), false)
+            .end(Key.ofInt(getColumnName4(), 2))
             .build();
     List<Result> actual = scanAll(scan);
 
     // verify
     assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -544,11 +595,11 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .start(Key.ofInt(COL_NAME4, 0))
-            .end(Key.ofInt(COL_NAME4, 2))
-            .ordering(Scan.Ordering.asc(COL_NAME4))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .start(Key.ofInt(getColumnName4(), 0))
+            .end(Key.ofInt(getColumnName4(), 2))
+            .ordering(Scan.Ordering.asc(getColumnName4()))
             .build();
 
     // Act
@@ -556,12 +607,12 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-    assertThat(actual.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertThat(actual.get(0).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 0)));
+    assertThat(actual.get(1).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 1)));
+    assertThat(actual.get(2).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 2)));
   }
 
   @Test
@@ -573,26 +624,26 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .start(Key.ofInt(COL_NAME4, 0))
-            .end(Key.ofInt(COL_NAME4, 2))
-            .ordering(Scan.Ordering.desc(COL_NAME4))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .start(Key.ofInt(getColumnName4(), 0))
+            .end(Key.ofInt(getColumnName4(), 2))
+            .ordering(Scan.Ordering.desc(getColumnName4()))
             .build();
-    new Scan(Key.ofInt(COL_NAME1, 0))
-        .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC));
+    new Scan(Key.ofInt(getColumnName1(), 0))
+        .withOrdering(new Scan.Ordering(getColumnName4(), Scan.Ordering.Order.DESC));
 
     // Act
     List<Result> actual = scanAll(scan);
 
     // Assert
     assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-    assertThat(actual.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(0).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 2)));
+    assertThat(actual.get(1).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 1)));
+    assertThat(actual.get(2).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 0)));
   }
 
   @Test
@@ -605,9 +656,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .ordering(Scan.Ordering.desc(COL_NAME4))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .ordering(Scan.Ordering.desc(getColumnName4()))
             .limit(1)
             .build();
 
@@ -616,8 +667,8 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // verify
     assertThat(actual.size()).isEqualTo(1);
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertThat(actual.get(0).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 2)));
   }
 
   @Test
@@ -631,24 +682,24 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .start(Key.ofInt(COL_NAME4, 0))
-            .end(Key.ofInt(COL_NAME4, 2))
-            .where(ConditionBuilder.column(COL_NAME5).isEqualToBoolean(true))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .start(Key.ofInt(getColumnName4(), 0))
+            .end(Key.ofInt(getColumnName4(), 2))
+            .where(ConditionBuilder.column(getColumnName5()).isEqualToBoolean(true))
             .build();
     List<Result> actual = scanAll(scan);
 
     // verify
     assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).contains(COL_NAME1)).isTrue();
-    assertThat(actual.get(0).getInt(COL_NAME1)).isEqualTo(0);
-    assertThat(actual.get(0).contains(COL_NAME4)).isTrue();
-    assertThat(actual.get(0).getInt(COL_NAME4)).isEqualTo(0);
-    assertThat(actual.get(1).contains(COL_NAME1)).isTrue();
-    assertThat(actual.get(1).getInt(COL_NAME1)).isEqualTo(0);
-    assertThat(actual.get(1).contains(COL_NAME4)).isTrue();
-    assertThat(actual.get(1).getInt(COL_NAME4)).isEqualTo(2);
+    assertThat(actual.get(0).contains(getColumnName1())).isTrue();
+    assertThat(actual.get(0).getInt(getColumnName1())).isEqualTo(0);
+    assertThat(actual.get(0).contains(getColumnName4())).isTrue();
+    assertThat(actual.get(0).getInt(getColumnName4())).isEqualTo(0);
+    assertThat(actual.get(1).contains(getColumnName1())).isTrue();
+    assertThat(actual.get(1).getInt(getColumnName1())).isEqualTo(0);
+    assertThat(actual.get(1).contains(getColumnName4())).isTrue();
+    assertThat(actual.get(1).getInt(getColumnName4())).isEqualTo(2);
   }
 
   @Test
@@ -662,8 +713,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
@@ -672,18 +723,18 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(actual.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(getColumnName4()).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -697,8 +748,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
@@ -708,20 +759,20 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(result.get().getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(result.get().getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(result.get().getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(result.get().getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(result.get().getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
 
     assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -735,8 +786,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
@@ -746,18 +797,18 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(all.size()).isEqualTo(3);
-    assertThat(all.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(all.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(all.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(all.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(all.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(all.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(all.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(all.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(all.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(all.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(all.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(all.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(all.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(all.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(all.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(all.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(all.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
+    assertThat(all.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(all.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(all.get(2).getValue(getColumnName4()).get().getAsInt()).isEqualTo(2);
 
     assertThat(actual).isEmpty();
   }
@@ -773,8 +824,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
@@ -785,18 +836,18 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(actual.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(getColumnName4()).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -805,12 +856,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
@@ -821,16 +872,16 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
+    assertThat(actual.get().getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(actual.get().getValue(getColumnName2()))
+        .isEqualTo(Optional.of(new TextValue(getColumnName2(), Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), pKey + cKey)));
+    assertThat(actual.get().getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), cKey)));
+    assertThat(actual.get().getValue(getColumnName5()))
+        .isEqualTo(Optional.of(new BooleanValue(getColumnName5(), cKey % 2 == 0)));
   }
 
   @Test
@@ -840,34 +891,34 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
     List<Put> puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
 
     // Act
     storage.put(puts.get(0));
-    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
+    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
     assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
 
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
+    assertThat(actual.get().getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(actual.get().getValue(getColumnName2()))
+        .isEqualTo(Optional.of(new TextValue(getColumnName2(), Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), pKey + cKey)));
+    assertThat(actual.get().getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), cKey)));
+    assertThat(actual.get().getValue(getColumnName5()))
+        .isEqualTo(Optional.of(new BooleanValue(getColumnName5(), cKey % 2 == 0)));
   }
 
   @Test
@@ -879,8 +930,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
 
     // Act
@@ -890,18 +941,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(scan);
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
-    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName4()).get().getAsInt())
+        .isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName4()).get().getAsInt())
+        .isEqualTo(pKey + cKey + 2);
   }
 
   @Test
@@ -917,8 +970,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
 
     // Act
@@ -928,25 +981,27 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(scan);
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
-    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName4()).get().getAsInt())
+        .isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName4()).get().getAsInt())
+        .isEqualTo(pKey + cKey + 2);
   }
 
   @Test
   public void put_PutWithoutValuesGiven_ShouldStoreProperly() throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 0);
-    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(getColumnName1(), 0);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 0);
 
     // Act
     assertThatCode(
@@ -954,7 +1009,7 @@ public abstract class DistributedStorageIntegrationTestBase {
                 storage.put(
                     Put.newBuilder()
                         .namespace(namespace)
-                        .table(TABLE)
+                        .table(getTableName())
                         .partitionKey(partitionKey)
                         .clusteringKey(clusteringKey)
                         .build()))
@@ -965,7 +1020,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         storage.get(
             Get.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
+                .table(getTableName())
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .build());
@@ -975,8 +1030,8 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void put_PutWithoutValuesGivenTwice_ShouldStoreProperly() throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 0);
-    Key clusteringKey = Key.ofInt(COL_NAME4, 0);
+    Key partitionKey = Key.ofInt(getColumnName1(), 0);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 0);
 
     // Act
     assertThatCode(
@@ -984,7 +1039,7 @@ public abstract class DistributedStorageIntegrationTestBase {
                 storage.put(
                     Put.newBuilder()
                         .namespace(namespace)
-                        .table(TABLE)
+                        .table(getTableName())
                         .partitionKey(partitionKey)
                         .clusteringKey(clusteringKey)
                         .build()))
@@ -994,7 +1049,7 @@ public abstract class DistributedStorageIntegrationTestBase {
                 storage.put(
                     Put.newBuilder()
                         .namespace(namespace)
-                        .table(TABLE)
+                        .table(getTableName())
                         .partitionKey(partitionKey)
                         .clusteringKey(clusteringKey)
                         .build()))
@@ -1005,7 +1060,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         storage.get(
             Get.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
+                .table(getTableName())
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .build());
@@ -1026,8 +1081,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
 
     // Act
@@ -1037,8 +1092,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(scan);
     assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey)));
+    assertThat(results.get(0).getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), pKey + cKey)));
   }
 
   @Test
@@ -1052,7 +1107,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         .withCondition(
             new PutIf(
                 new ConditionalExpression(
-                    COL_NAME2, new TextValue("1"), ConditionalExpression.Operator.EQ)));
+                    getColumnName2(), new TextValue("1"), ConditionalExpression.Operator.EQ)));
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1))))
@@ -1063,18 +1118,18 @@ public abstract class DistributedStorageIntegrationTestBase {
         scanAll(
             Scan.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .table(getTableName())
+                .partitionKey(Key.ofInt(getColumnName1(), 0))
                 .build());
     assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -1107,17 +1162,19 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Act Assert
     storage.put(puts.get(0));
     puts.get(0).withCondition(new PutIfExists());
-    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
+    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
     Result result = actual.get();
-    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(result.getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, Integer.MAX_VALUE)));
+    assertThat(result.getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(result.getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), cKey)));
+    assertThat(result.getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), Integer.MAX_VALUE)));
   }
 
   @Test
@@ -1135,18 +1192,22 @@ public abstract class DistributedStorageIntegrationTestBase {
         .withCondition(
             new PutIf(
                 new ConditionalExpression(
-                    COL_NAME3, new IntValue(pKey + cKey), ConditionalExpression.Operator.EQ)));
-    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
+                    getColumnName3(),
+                    new IntValue(pKey + cKey),
+                    ConditionalExpression.Operator.EQ)));
+    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
     Result result = actual.get();
-    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(result.getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, Integer.MAX_VALUE)));
+    assertThat(result.getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(result.getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), cKey)));
+    assertThat(result.getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), Integer.MAX_VALUE)));
   }
 
   @Test
@@ -1164,18 +1225,22 @@ public abstract class DistributedStorageIntegrationTestBase {
         .withCondition(
             new PutIf(
                 new ConditionalExpression(
-                    COL_NAME3, new IntValue(pKey + cKey + 1), ConditionalExpression.Operator.EQ)));
-    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
+                    getColumnName3(),
+                    new IntValue(pKey + cKey + 1),
+                    ConditionalExpression.Operator.EQ)));
+    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
     assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
 
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
     Result result = actual.get();
-    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(result.getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
+    assertThat(result.getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(result.getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), cKey)));
+    assertThat(result.getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), pKey + cKey)));
   }
 
   @Test
@@ -1184,8 +1249,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Put put = preparePuts().get(0);
     storage.put(put);
 
-    put.withTextValue(COL_NAME2, null);
-    put.withBooleanValue(COL_NAME5, null);
+    put.withTextValue(getColumnName2(), null);
+    put.withBooleanValue(getColumnName5(), null);
 
     // Act
     storage.put(put);
@@ -1194,48 +1259,57 @@ public abstract class DistributedStorageIntegrationTestBase {
     Optional<Result> actual = storage.get(prepareGet(0, 0));
     assertThat(actual.isPresent()).isTrue();
     Result result = actual.get();
-    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
-    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(result.getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, (String) null)));
-    assertThat(result.getValue(COL_NAME3)).isEqualTo(Optional.of(new IntValue(COL_NAME3, 0)));
-    assertThat(result.getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, false)));
+    assertThat(result.getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), 0)));
+    assertThat(result.getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 0)));
+    assertThat(result.getValue(getColumnName2()))
+        .isEqualTo(Optional.of(new TextValue(getColumnName2(), (String) null)));
+    assertThat(result.getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), 0)));
+    assertThat(result.getValue(getColumnName5()))
+        .isEqualTo(Optional.of(new BooleanValue(getColumnName5(), false)));
 
     assertThat(result.getContainedColumnNames())
         .isEqualTo(
             new HashSet<>(
-                Arrays.asList(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6)));
+                Arrays.asList(
+                    getColumnName1(),
+                    getColumnName2(),
+                    getColumnName3(),
+                    getColumnName4(),
+                    getColumnName5(),
+                    getColumnName6())));
 
-    assertThat(result.contains(COL_NAME1)).isTrue();
-    assertThat(result.isNull(COL_NAME1)).isFalse();
-    assertThat(result.getInt(COL_NAME1)).isEqualTo(0);
-    assertThat(result.getAsObject(COL_NAME1)).isEqualTo(0);
+    assertThat(result.contains(getColumnName1())).isTrue();
+    assertThat(result.isNull(getColumnName1())).isFalse();
+    assertThat(result.getInt(getColumnName1())).isEqualTo(0);
+    assertThat(result.getAsObject(getColumnName1())).isEqualTo(0);
 
-    assertThat(result.contains(COL_NAME4)).isTrue();
-    assertThat(result.isNull(COL_NAME4)).isFalse();
-    assertThat(result.getInt(COL_NAME4)).isEqualTo(0);
-    assertThat(result.getAsObject(COL_NAME4)).isEqualTo(0);
+    assertThat(result.contains(getColumnName4())).isTrue();
+    assertThat(result.isNull(getColumnName4())).isFalse();
+    assertThat(result.getInt(getColumnName4())).isEqualTo(0);
+    assertThat(result.getAsObject(getColumnName4())).isEqualTo(0);
 
-    assertThat(result.contains(COL_NAME2)).isTrue();
-    assertThat(result.isNull(COL_NAME2)).isTrue();
-    assertThat(result.getText(COL_NAME2)).isNull();
-    assertThat(result.getAsObject(COL_NAME2)).isNull();
+    assertThat(result.contains(getColumnName2())).isTrue();
+    assertThat(result.isNull(getColumnName2())).isTrue();
+    assertThat(result.getText(getColumnName2())).isNull();
+    assertThat(result.getAsObject(getColumnName2())).isNull();
 
-    assertThat(result.contains(COL_NAME3)).isTrue();
-    assertThat(result.isNull(COL_NAME3)).isFalse();
-    assertThat(result.getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(result.getAsObject(COL_NAME3)).isEqualTo(0);
+    assertThat(result.contains(getColumnName3())).isTrue();
+    assertThat(result.isNull(getColumnName3())).isFalse();
+    assertThat(result.getInt(getColumnName3())).isEqualTo(0);
+    assertThat(result.getAsObject(getColumnName3())).isEqualTo(0);
 
-    assertThat(result.contains(COL_NAME5)).isTrue();
-    assertThat(result.isNull(COL_NAME5)).isTrue();
-    assertThat(result.getBoolean(COL_NAME5)).isFalse();
-    assertThat(result.getAsObject(COL_NAME5)).isNull();
+    assertThat(result.contains(getColumnName5())).isTrue();
+    assertThat(result.isNull(getColumnName5())).isTrue();
+    assertThat(result.getBoolean(getColumnName5())).isFalse();
+    assertThat(result.getAsObject(getColumnName5())).isNull();
 
-    assertThat(result.contains(COL_NAME6)).isTrue();
-    assertThat(result.isNull(COL_NAME6)).isTrue();
-    assertThat(result.getBlob(COL_NAME6)).isNull();
-    assertThat(result.getAsObject(COL_NAME6)).isNull();
+    assertThat(result.contains(getColumnName6())).isTrue();
+    assertThat(result.isNull(getColumnName6())).isTrue();
+    assertThat(result.getBlob(getColumnName6())).isNull();
+    assertThat(result.getAsObject(getColumnName6())).isNull();
   }
 
   @Test
@@ -1244,9 +1318,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     Put putIf =
         Put.newBuilder(preparePuts().get(0))
-            .intValue(COL_NAME3, 100)
+            .intValue(getColumnName3(), 100)
             .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(COL_NAME3).isNullInt()).build())
+                ConditionBuilder.putIf(ConditionBuilder.column(getColumnName3()).isNullInt())
+                    .build())
             .enableImplicitPreRead()
             .build();
 
@@ -1264,7 +1339,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -1273,16 +1348,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> results =
         scanAll(
-            Scan.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build());
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(getTableName())
+                .partitionKey(partitionKey)
+                .build());
     assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 1);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 2);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(cKey + 1);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(cKey + 2);
   }
 
   @Test
@@ -1304,8 +1383,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -1317,7 +1396,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         storage.get(
             Get.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
+                .table(getTableName())
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .build());
@@ -1331,15 +1410,15 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
     delete.withCondition(
         new DeleteIf(
             new ConditionalExpression(
-                COL_NAME2,
+                getColumnName2(),
                 new TextValue(Integer.toString(Integer.MAX_VALUE)),
                 ConditionalExpression.Operator.EQ)));
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
@@ -1349,7 +1428,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         storage.get(
             Get.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
+                .table(getTableName())
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .build());
@@ -1363,15 +1442,15 @@ public abstract class DistributedStorageIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
     delete.withCondition(
         new DeleteIf(
             new ConditionalExpression(
-                COL_NAME2,
+                getColumnName2(),
                 new TextValue(Integer.toString(pKey)),
                 ConditionalExpression.Operator.EQ)));
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
@@ -1381,7 +1460,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         storage.get(
             Get.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
+                .table(getTableName())
                 .partitionKey(partitionKey)
                 .clusteringKey(clusteringKey)
                 .build());
@@ -1401,7 +1480,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         .withCondition(
             new DeleteIf(
                 new ConditionalExpression(
-                    COL_NAME2, new TextValue("1"), ConditionalExpression.Operator.EQ)));
+                    getColumnName2(), new TextValue("1"), ConditionalExpression.Operator.EQ)));
 
     // Act
     assertThatCode(
@@ -1413,8 +1492,8 @@ public abstract class DistributedStorageIntegrationTestBase {
         scanAll(
             Scan.newBuilder()
                 .namespace(namespace)
-                .table(TABLE)
-                .partitionKey(Key.ofInt(COL_NAME1, 0))
+                .table(getTableName())
+                .partitionKey(Key.ofInt(getColumnName1(), 0))
                 .build());
     assertThat(results.size()).isEqualTo(0);
   }
@@ -1439,8 +1518,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
 
     // Act
@@ -1450,18 +1529,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(scan);
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
-    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName4()).get().getAsInt())
+        .isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(getColumnName4()).get().getAsInt())
+        .isEqualTo(pKey + cKey + 2);
   }
 
   @Test
@@ -1470,8 +1551,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     populateRecords();
     List<Put> puts = preparePuts();
-    puts.get(1).withValue(COL_NAME3, Integer.MAX_VALUE);
-    puts.get(2).withValue(COL_NAME3, Integer.MIN_VALUE);
+    puts.get(1).withValue(getColumnName3(), Integer.MAX_VALUE);
+    puts.get(2).withValue(getColumnName3(), Integer.MIN_VALUE);
 
     int pKey = 0;
     int cKey = 0;
@@ -1480,8 +1561,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, pKey))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), pKey))
             .build();
 
     // Act
@@ -1491,14 +1572,16 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(scan);
     assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(0).getValue(COL_NAME3).isPresent()).isTrue();
-    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(Integer.MAX_VALUE);
-    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME3).isPresent()).isTrue();
-    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(Integer.MIN_VALUE);
+    assertThat(results.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(getColumnName3()).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(getColumnName3()).get().getAsInt())
+        .isEqualTo(Integer.MAX_VALUE);
+    assertThat(results.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(getColumnName3()).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(getColumnName3()).get().getAsInt())
+        .isEqualTo(Integer.MIN_VALUE);
   }
 
   @Test
@@ -1507,12 +1590,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
@@ -1523,16 +1606,16 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
+    assertThat(actual.get().getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), pKey)));
+    assertThat(actual.get().getValue(getColumnName2()))
+        .isEqualTo(Optional.of(new TextValue(getColumnName2(), Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(getColumnName3()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName3(), pKey + cKey)));
+    assertThat(actual.get().getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), cKey)));
+    assertThat(actual.get().getValue(getColumnName5()))
+        .isEqualTo(Optional.of(new BooleanValue(getColumnName5(), cKey % 2 == 0)));
   }
 
   @Test
@@ -1545,12 +1628,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
 
     // Act
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     Delete delete =
         Delete.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
@@ -1560,16 +1643,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     List<Result> actual =
         scanAll(
-            Scan.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build());
+            Scan.newBuilder()
+                .namespace(namespace)
+                .table(getTableName())
+                .partitionKey(partitionKey)
+                .build());
     assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 1);
-    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
-    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
-    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 2);
+    assertThat(actual.get(0).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(getColumnName4()).get().getAsInt()).isEqualTo(cKey + 1);
+    assertThat(actual.get(1).getValue(getColumnName1()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName1()).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(getColumnName4()).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(getColumnName4()).get().getAsInt()).isEqualTo(cKey + 2);
   }
 
   @Test
@@ -1583,8 +1670,13 @@ public abstract class DistributedStorageIntegrationTestBase {
   public void put_PutWithoutClusteringKeyGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     int pKey = 0;
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Put put = Put.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build();
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(getTableName())
+            .partitionKey(partitionKey)
+            .build();
 
     // Act Assert
     assertThatCode(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
@@ -1595,13 +1687,13 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
     Put put =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
-            .intValue(COL_NAME4, cKey)
+            .intValue(getColumnName4(), cKey)
             .build();
 
     // Act Assert
@@ -1611,7 +1703,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void put_PutGivenForIndexedColumnWithNullValue_ShouldPut() throws ExecutionException {
     // Arrange
-    storage.put(preparePuts().get(0).withValue(IntColumn.ofNull(COL_NAME3))); // (0,0)
+    storage.put(preparePuts().get(0).withValue(IntColumn.ofNull(getColumnName3()))); // (0,0)
     Get get = new Get(prepareGet(0, 0));
 
     // Act
@@ -1619,9 +1711,12 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getColumns().get(COL_NAME1)).isEqualTo(IntColumn.of(COL_NAME1, 0));
-    assertThat(actual.get().getColumns().get(COL_NAME4)).isEqualTo(IntColumn.of(COL_NAME4, 0));
-    assertThat(actual.get().getColumns().get(COL_NAME3)).isEqualTo(IntColumn.ofNull(COL_NAME3));
+    assertThat(actual.get().getColumns().get(getColumnName1()))
+        .isEqualTo(IntColumn.of(getColumnName1(), 0));
+    assertThat(actual.get().getColumns().get(getColumnName4()))
+        .isEqualTo(IntColumn.of(getColumnName4(), 0));
+    assertThat(actual.get().getColumns().get(getColumnName3()))
+        .isEqualTo(IntColumn.ofNull(getColumnName3()));
   }
 
   @Test
@@ -1632,8 +1727,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .table(getTableName())
+            .indexKey(Key.ofInt(getColumnName3(), c3))
             .build();
 
     // Act
@@ -1641,8 +1736,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
-    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get().getValue(getColumnName1()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName1(), 0)));
+    assertThat(actual.get().getValue(getColumnName4()))
+        .isEqualTo(Optional.of(new IntValue(getColumnName4(), 0)));
   }
 
   @Test
@@ -1654,10 +1751,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .indexKey(Key.ofInt(COL_NAME3, c3))
-            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("0"))
-            .and(ConditionBuilder.column(COL_NAME5).isEqualToBoolean(true))
+            .table(getTableName())
+            .indexKey(Key.ofInt(getColumnName3(), c3))
+            .where(ConditionBuilder.column(getColumnName2()).isEqualToText("0"))
+            .and(ConditionBuilder.column(getColumnName5()).isEqualToBoolean(true))
             .build();
 
     // Act
@@ -1665,10 +1762,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getInt(COL_NAME1)).isEqualTo(0);
-    assertThat(actual.get().getInt(COL_NAME4)).isEqualTo(0);
-    assertThat(actual.get().getText(COL_NAME2)).isEqualTo("0");
-    assertThat(actual.get().getBoolean(COL_NAME5)).isEqualTo(true);
+    assertThat(actual.get().getInt(getColumnName1())).isEqualTo(0);
+    assertThat(actual.get().getInt(getColumnName4())).isEqualTo(0);
+    assertThat(actual.get().getText(getColumnName2())).isEqualTo("0");
+    assertThat(actual.get().getBoolean(getColumnName5())).isEqualTo(true);
   }
 
   @Test
@@ -1680,10 +1777,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .indexKey(Key.ofInt(COL_NAME3, c3))
-            .where(ConditionBuilder.column(COL_NAME2).isEqualToText("a"))
-            .and(ConditionBuilder.column(COL_NAME5).isEqualToBoolean(true))
+            .table(getTableName())
+            .indexKey(Key.ofInt(getColumnName3(), c3))
+            .where(ConditionBuilder.column(getColumnName2()).isEqualToText("a"))
+            .and(ConditionBuilder.column(getColumnName5()).isEqualToBoolean(true))
             .build();
 
     // Act
@@ -1702,8 +1799,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Get get =
         Get.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .table(getTableName())
+            .indexKey(Key.ofInt(getColumnName3(), c3))
             .build();
 
     // Act Assert
@@ -1718,8 +1815,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .indexKey(Key.ofInt(COL_NAME3, c3))
+            .table(getTableName())
+            .indexKey(Key.ofInt(getColumnName3(), c3))
             .build();
 
     // Act
@@ -1731,11 +1828,11 @@ public abstract class DistributedStorageIntegrationTestBase {
         new ArrayList<>(
             Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
     for (Result result : actual) {
-      assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
-      assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
+      assertThat(result.getValue(getColumnName1()).isPresent()).isTrue();
+      assertThat(result.getValue(getColumnName4()).isPresent()).isTrue();
 
-      int col1Val = result.getValue(COL_NAME1).get().getAsInt();
-      int col4Val = result.getValue(COL_NAME4).get().getAsInt();
+      int col1Val = result.getValue(getColumnName1()).get().getAsInt();
+      int col4Val = result.getValue(getColumnName4()).get().getAsInt();
       List<Integer> col1AndCol4 = Arrays.asList(col1Val, col4Val);
       assertThat(expectedValues).contains(col1AndCol4);
       expectedValues.remove(col1AndCol4);
@@ -1751,8 +1848,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .indexKey(Key.ofText(COL_NAME2, c2))
+            .table(getTableName())
+            .indexKey(Key.ofText(getColumnName2(), c2))
             .build();
 
     // Act Assert
@@ -1765,21 +1862,25 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
 
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key partitionKey = Key.ofInt(getColumnName1(), 1);
     for (int i = 0; i < recordCount; i++) {
-      Key clusteringKey = Key.ofInt(COL_NAME4, i);
+      Key clusteringKey = Key.ofInt(getColumnName4(), i);
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
+              .table(getTableName())
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
 
     Scan scan =
-        Scan.newBuilder().namespace(namespace).table(TABLE).partitionKey(partitionKey).build();
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(getTableName())
+            .partitionKey(partitionKey)
+            .build();
 
     // Act
     List<Result> results = scanAll(scan);
@@ -1787,8 +1888,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     assertThat(results.size()).isEqualTo(recordCount);
     for (int i = 0; i < recordCount; i++) {
-      assertThat(results.get(i).getInt(COL_NAME1)).isEqualTo(1);
-      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(i);
+      assertThat(results.get(i).getInt(getColumnName1())).isEqualTo(1);
+      assertThat(results.get(i).getInt(getColumnName4())).isEqualTo(i);
     }
   }
 
@@ -1799,32 +1900,32 @@ public abstract class DistributedStorageIntegrationTestBase {
     int fetchCount = 234;
 
     // Arrange
-    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key partitionKey = Key.ofInt(getColumnName1(), 1);
     for (int i = 0; i < recordCount; i++) {
-      Key clusteringKey = Key.ofInt(COL_NAME4, i);
+      Key clusteringKey = Key.ofInt(getColumnName4(), i);
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
+              .table(getTableName())
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
 
     Scan scanAsc =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
-            .ordering(Scan.Ordering.asc(COL_NAME4))
+            .ordering(Scan.Ordering.asc(getColumnName4()))
             .build();
     Scan scanDesc =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
-            .ordering(Scan.Ordering.desc(COL_NAME4))
+            .ordering(Scan.Ordering.desc(getColumnName4()))
             .build();
 
     // Act
@@ -1847,14 +1948,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     assertThat(resultsAsc.size()).isEqualTo(fetchCount);
     for (int i = 0; i < fetchCount; i++) {
-      assertThat(resultsAsc.get(i).getInt(COL_NAME1)).isEqualTo(1);
-      assertThat(resultsAsc.get(i).getInt(COL_NAME4)).isEqualTo(i);
+      assertThat(resultsAsc.get(i).getInt(getColumnName1())).isEqualTo(1);
+      assertThat(resultsAsc.get(i).getInt(getColumnName4())).isEqualTo(i);
     }
 
     assertThat(resultsDesc.size()).isEqualTo(fetchCount);
     for (int i = 0; i < fetchCount; i++) {
-      assertThat(resultsDesc.get(i).getInt(COL_NAME1)).isEqualTo(1);
-      assertThat(resultsDesc.get(i).getInt(COL_NAME4)).isEqualTo(recordCount - i - 1);
+      assertThat(resultsDesc.get(i).getInt(getColumnName1())).isEqualTo(1);
+      assertThat(resultsDesc.get(i).getInt(getColumnName4())).isEqualTo(recordCount - i - 1);
     }
   }
 
@@ -1865,22 +1966,22 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
     int limit = 234;
 
-    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key partitionKey = Key.ofInt(getColumnName1(), 1);
     for (int i = 0; i < recordCount; i++) {
-      Key clusteringKey = Key.ofInt(COL_NAME4, i);
+      Key clusteringKey = Key.ofInt(getColumnName4(), i);
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
+              .table(getTableName())
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .partitionKey(partitionKey)
             .limit(limit)
             .build();
@@ -1891,8 +1992,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Assert
     assertThat(results.size()).isEqualTo(limit);
     for (int i = 0; i < limit; i++) {
-      assertThat(results.get(i).getInt(COL_NAME1)).isEqualTo(1);
-      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(i);
+      assertThat(results.get(i).getInt(getColumnName1())).isEqualTo(1);
+      assertThat(results.get(i).getInt(getColumnName4())).isEqualTo(i);
     }
   }
 
@@ -1901,7 +2002,7 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     populateRecords();
-    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(getTableName()).all().build();
 
     // Act
     List<Result> results = scanAll(scanAll);
@@ -1916,12 +2017,13 @@ public abstract class DistributedStorageIntegrationTestBase {
                         j ->
                             expectedResults.add(
                                 new ExpectedResultBuilder()
-                                    .column(IntColumn.of(COL_NAME1, i))
-                                    .column(IntColumn.of(COL_NAME4, j))
-                                    .column(TextColumn.of(COL_NAME2, Integer.toString(i + j)))
-                                    .column(IntColumn.of(COL_NAME3, i + j))
-                                    .column(BooleanColumn.of(COL_NAME5, j % 2 == 0))
-                                    .column(BlobColumn.ofNull(COL_NAME6))
+                                    .column(IntColumn.of(getColumnName1(), i))
+                                    .column(IntColumn.of(getColumnName4(), j))
+                                    .column(
+                                        TextColumn.of(getColumnName2(), Integer.toString(i + j)))
+                                    .column(IntColumn.of(getColumnName3(), i + j))
+                                    .column(BooleanColumn.of(getColumnName5(), j % 2 == 0))
+                                    .column(BlobColumn.ofNull(getColumnName6()))
                                     .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
   }
@@ -1933,35 +2035,36 @@ public abstract class DistributedStorageIntegrationTestBase {
     Put p1 =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 1))
-            .clusteringKey(Key.ofInt(COL_NAME4, 1))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 1))
+            .clusteringKey(Key.ofInt(getColumnName4(), 1))
             .build();
     Put p2 =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 1))
-            .clusteringKey(Key.ofInt(COL_NAME4, 2))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 1))
+            .clusteringKey(Key.ofInt(getColumnName4(), 2))
             .build();
     Put p3 =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 2))
-            .clusteringKey(Key.ofInt(COL_NAME4, 1))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 2))
+            .clusteringKey(Key.ofInt(getColumnName4(), 1))
             .build();
     Put p4 =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 3))
-            .clusteringKey(Key.ofInt(COL_NAME4, 0))
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 3))
+            .clusteringKey(Key.ofInt(getColumnName4(), 0))
             .build();
     storage.put(ImmutableList.of(p1, p2));
     storage.put(p3);
     storage.put(p4);
-    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().limit(2).build();
+    Scan scanAll =
+        Scan.newBuilder().namespace(namespace).table(getTableName()).all().limit(2).build();
 
     // Act
     List<Result> results = scanAll(scanAll);
@@ -1971,36 +2074,36 @@ public abstract class DistributedStorageIntegrationTestBase {
         results,
         ImmutableList.of(
             new ExpectedResultBuilder()
-                .column(IntColumn.of(COL_NAME1, 1))
-                .column(IntColumn.of(COL_NAME4, 1))
-                .column(TextColumn.ofNull(COL_NAME2))
-                .column(IntColumn.ofNull(COL_NAME3))
-                .column(BooleanColumn.ofNull(COL_NAME5))
-                .column(BlobColumn.ofNull(COL_NAME6))
+                .column(IntColumn.of(getColumnName1(), 1))
+                .column(IntColumn.of(getColumnName4(), 1))
+                .column(TextColumn.ofNull(getColumnName2()))
+                .column(IntColumn.ofNull(getColumnName3()))
+                .column(BooleanColumn.ofNull(getColumnName5()))
+                .column(BlobColumn.ofNull(getColumnName6()))
                 .build(),
             new ExpectedResultBuilder()
-                .column(IntColumn.of(COL_NAME1, 1))
-                .column(IntColumn.of(COL_NAME4, 2))
-                .column(TextColumn.ofNull(COL_NAME2))
-                .column(IntColumn.ofNull(COL_NAME3))
-                .column(BooleanColumn.ofNull(COL_NAME5))
-                .column(BlobColumn.ofNull(COL_NAME6))
+                .column(IntColumn.of(getColumnName1(), 1))
+                .column(IntColumn.of(getColumnName4(), 2))
+                .column(TextColumn.ofNull(getColumnName2()))
+                .column(IntColumn.ofNull(getColumnName3()))
+                .column(BooleanColumn.ofNull(getColumnName5()))
+                .column(BlobColumn.ofNull(getColumnName6()))
                 .build(),
             new ExpectedResultBuilder()
-                .column(IntColumn.of(COL_NAME1, 2))
-                .column(IntColumn.of(COL_NAME4, 1))
-                .column(TextColumn.ofNull(COL_NAME2))
-                .column(IntColumn.ofNull(COL_NAME3))
-                .column(BooleanColumn.ofNull(COL_NAME5))
-                .column(BlobColumn.ofNull(COL_NAME6))
+                .column(IntColumn.of(getColumnName1(), 2))
+                .column(IntColumn.of(getColumnName4(), 1))
+                .column(TextColumn.ofNull(getColumnName2()))
+                .column(IntColumn.ofNull(getColumnName3()))
+                .column(BooleanColumn.ofNull(getColumnName5()))
+                .column(BlobColumn.ofNull(getColumnName6()))
                 .build(),
             new ExpectedResultBuilder()
-                .column(IntColumn.of(COL_NAME1, 3))
-                .column(IntColumn.of(COL_NAME4, 0))
-                .column(TextColumn.ofNull(COL_NAME2))
-                .column(IntColumn.ofNull(COL_NAME3))
-                .column(BooleanColumn.ofNull(COL_NAME5))
-                .column(BlobColumn.ofNull(COL_NAME6))
+                .column(IntColumn.of(getColumnName1(), 3))
+                .column(IntColumn.of(getColumnName4(), 0))
+                .column(TextColumn.ofNull(getColumnName2()))
+                .column(IntColumn.ofNull(getColumnName3()))
+                .column(BooleanColumn.ofNull(getColumnName5()))
+                .column(BlobColumn.ofNull(getColumnName6()))
                 .build()));
     assertThat(results).hasSize(2);
   }
@@ -2015,9 +2118,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scanAll =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .all()
-            .projections(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6)
+            .projections(getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6())
             .build();
     List<Result> actualResults = scanAll(scanAll);
 
@@ -2031,16 +2134,18 @@ public abstract class DistributedStorageIntegrationTestBase {
                         j ->
                             expectedResults.add(
                                 new ExpectedResultBuilder()
-                                    .column(IntColumn.of(COL_NAME1, i))
-                                    .column(TextColumn.of(COL_NAME2, Integer.toString(i + j)))
-                                    .column(IntColumn.of(COL_NAME3, i + j))
-                                    .column(BlobColumn.ofNull(COL_NAME6))
+                                    .column(IntColumn.of(getColumnName1(), i))
+                                    .column(
+                                        TextColumn.of(getColumnName2(), Integer.toString(i + j)))
+                                    .column(IntColumn.of(getColumnName3(), i + j))
+                                    .column(BlobColumn.ofNull(getColumnName6()))
                                     .build())));
     TestUtils.assertResultsContainsExactlyInAnyOrder(actualResults, expectedResults);
     actualResults.forEach(
         actualResult ->
             assertThat(actualResult.getContainedColumnNames())
-                .containsOnly(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME6));
+                .containsOnly(
+                    getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6()));
   }
 
   @Test
@@ -2048,18 +2153,18 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     for (int i = 0; i < 345; i++) {
-      Key partitionKey = Key.ofInt(COL_NAME1, i % 4);
-      Key clusteringKey = Key.ofInt(COL_NAME4, i);
+      Key partitionKey = Key.ofInt(getColumnName1(), i % 4);
+      Key clusteringKey = Key.ofInt(getColumnName4(), i);
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
+              .table(getTableName())
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
-    Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+    Scan scan = Scan.newBuilder().namespace(namespace).table(getTableName()).all().build();
 
     // Act
     List<Result> results = scanAll(scan);
@@ -2069,12 +2174,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     for (int i = 0; i < 345; i++) {
       expectedResults.add(
           new ExpectedResultBuilder()
-              .column(IntColumn.of(COL_NAME1, i % 4))
-              .column(IntColumn.of(COL_NAME4, i))
-              .column(TextColumn.ofNull(COL_NAME2))
-              .column(IntColumn.ofNull(COL_NAME3))
-              .column(BooleanColumn.ofNull(COL_NAME5))
-              .column(BlobColumn.of(COL_NAME6, new byte[getLargeDataSizeInBytes()]))
+              .column(IntColumn.of(getColumnName1(), i % 4))
+              .column(IntColumn.of(getColumnName4(), i))
+              .column(TextColumn.ofNull(getColumnName2()))
+              .column(IntColumn.ofNull(getColumnName3()))
+              .column(BooleanColumn.ofNull(getColumnName5()))
+              .column(BlobColumn.of(getColumnName6(), new byte[getLargeDataSizeInBytes()]))
               .build());
     }
     TestUtils.assertResultsContainsExactlyInAnyOrder(results, expectedResults);
@@ -2085,24 +2190,24 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException {
     // Arrange
     Put put =
-        new Put(Key.ofInt(COL_NAME1, 0), Key.ofInt(COL_NAME4, 0))
-            .withTextValue(COL_NAME2, "foo")
-            .withIntValue(COL_NAME3, 0)
-            .withBooleanValue(COL_NAME5, true)
+        new Put(Key.ofInt(getColumnName1(), 0), Key.ofInt(getColumnName4(), 0))
+            .withTextValue(getColumnName2(), "foo")
+            .withIntValue(getColumnName3(), 0)
+            .withBooleanValue(getColumnName5(), true)
             .forNamespace(namespace)
-            .forTable(TABLE);
+            .forTable(getTableName());
     storage.put(put);
 
     // Act
-    Get get = prepareGet(0, 0).withProjection(COL_NAME3).withProjection(COL_NAME5);
+    Get get = prepareGet(0, 0).withProjection(getColumnName3()).withProjection(getColumnName5());
     Optional<Result> actual = storage.get(get);
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
     Result result = actual.get();
-    assertThat(result.getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
-    assertThat(result.getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(result.getBoolean(COL_NAME5)).isTrue();
+    assertThat(result.getContainedColumnNames()).containsOnly(getColumnName3(), getColumnName5());
+    assertThat(result.getInt(getColumnName3())).isEqualTo(0);
+    assertThat(result.getBoolean(getColumnName5())).isTrue();
   }
 
   @Test
@@ -2112,12 +2217,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     Put put =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .clusteringKey(Key.ofInt(COL_NAME4, 0))
-            .textValue(COL_NAME2, "foo")
-            .intValue(COL_NAME3, 0)
-            .booleanValue(COL_NAME5, true)
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .clusteringKey(Key.ofInt(getColumnName4(), 0))
+            .textValue(getColumnName2(), "foo")
+            .intValue(getColumnName3(), 0)
+            .booleanValue(getColumnName5(), true)
             .build();
     storage.put(put);
 
@@ -2125,18 +2230,19 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .projection(COL_NAME3)
-            .projection(COL_NAME5)
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .projection(getColumnName3())
+            .projection(getColumnName5())
             .build();
     List<Result> results = scanAll(scan);
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
-    assertThat(results.get(0).getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(results.get(0).getBoolean(COL_NAME5)).isTrue();
+    assertThat(results.get(0).getContainedColumnNames())
+        .containsOnly(getColumnName3(), getColumnName5());
+    assertThat(results.get(0).getInt(getColumnName3())).isEqualTo(0);
+    assertThat(results.get(0).getBoolean(getColumnName5())).isTrue();
   }
 
   @Test
@@ -2146,12 +2252,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     Put put =
         Put.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
-            .partitionKey(Key.ofInt(COL_NAME1, 0))
-            .clusteringKey(Key.ofInt(COL_NAME4, 0))
-            .textValue(COL_NAME2, "foo")
-            .intValue(COL_NAME3, 0)
-            .booleanValue(COL_NAME5, true)
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .clusteringKey(Key.ofInt(getColumnName4(), 0))
+            .textValue(getColumnName2(), "foo")
+            .intValue(getColumnName3(), 0)
+            .booleanValue(getColumnName5(), true)
             .build();
     storage.put(put);
 
@@ -2159,18 +2265,19 @@ public abstract class DistributedStorageIntegrationTestBase {
     Scan scanAll =
         Scan.newBuilder()
             .namespace(namespace)
-            .table(TABLE)
+            .table(getTableName())
             .all()
-            .projection(COL_NAME3)
-            .projection(COL_NAME5)
+            .projection(getColumnName3())
+            .projection(getColumnName5())
             .build();
     List<Result> results = scanAll(scanAll);
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getContainedColumnNames()).containsOnly(COL_NAME3, COL_NAME5);
-    assertThat(results.get(0).getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(results.get(0).getBoolean(COL_NAME5)).isTrue();
+    assertThat(results.get(0).getContainedColumnNames())
+        .containsOnly(getColumnName3(), getColumnName5());
+    assertThat(results.get(0).getInt(getColumnName3())).isEqualTo(0);
+    assertThat(results.get(0).getBoolean(getColumnName5())).isTrue();
   }
 
   @Test
@@ -2179,20 +2286,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
 
     // Arrange
-    Key clusteringKey = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 1);
     for (int i = 0; i < recordCount; i++) {
-      Key partitionKey = Key.ofInt(COL_NAME1, i);
+      Key partitionKey = Key.ofInt(getColumnName1(), i);
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
+              .table(getTableName())
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
 
-    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(getTableName()).all().build();
 
     // Act
     List<Result> results = scanAll(scanAll);
@@ -2202,8 +2309,8 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     Set<Integer> partitionKeys = new HashSet<>();
     for (int i = 0; i < recordCount; i++) {
-      partitionKeys.add(results.get(i).getInt(COL_NAME1));
-      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(1);
+      partitionKeys.add(results.get(i).getInt(getColumnName1()));
+      assertThat(results.get(i).getInt(getColumnName4())).isEqualTo(1);
     }
     assertThat(partitionKeys.size()).isEqualTo(recordCount);
     assertThat(partitionKeys).allMatch(i -> i >= 0 && i < recordCount);
@@ -2216,20 +2323,21 @@ public abstract class DistributedStorageIntegrationTestBase {
     int recordCount = 345;
     int limit = 234;
 
-    Key clusteringKey = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey = Key.ofInt(getColumnName4(), 1);
     for (int i = 0; i < recordCount; i++) {
-      Key partitionKey = Key.ofInt(COL_NAME1, i);
+      Key partitionKey = Key.ofInt(getColumnName1(), i);
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
+              .table(getTableName())
               .partitionKey(partitionKey)
               .clusteringKey(clusteringKey)
-              .blobValue(COL_NAME6, new byte[getLargeDataSizeInBytes()])
+              .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
 
-    Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().limit(limit).build();
+    Scan scan =
+        Scan.newBuilder().namespace(namespace).table(getTableName()).all().limit(limit).build();
 
     // Act
     List<Result> results = scanAll(scan);
@@ -2239,8 +2347,8 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     Set<Integer> partitionKeys = new HashSet<>();
     for (int i = 0; i < limit; i++) {
-      partitionKeys.add(results.get(i).getInt(COL_NAME1));
-      assertThat(results.get(i).getInt(COL_NAME4)).isEqualTo(1);
+      partitionKeys.add(results.get(i).getInt(getColumnName1()));
+      assertThat(results.get(i).getInt(getColumnName4())).isEqualTo(1);
     }
     assertThat(partitionKeys.size()).isEqualTo(limit);
     assertThat(partitionKeys).allMatch(i -> i >= 0 && i < recordCount);
@@ -2252,11 +2360,11 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private Get prepareGet(int pKey, int cKey) {
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     return Get.newBuilder()
         .namespace(namespace)
-        .table(TABLE)
+        .table(getTableName())
         .partitionKey(partitionKey)
         .clusteringKey(clusteringKey)
         .build();
@@ -2271,17 +2379,17 @@ public abstract class DistributedStorageIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = Key.ofInt(COL_NAME1, i);
-                          Key clusteringKey = Key.ofInt(COL_NAME4, j);
+                          Key partitionKey = Key.ofInt(getColumnName1(), i);
+                          Key clusteringKey = Key.ofInt(getColumnName4(), j);
                           Put put =
                               Put.newBuilder()
                                   .namespace(namespace)
-                                  .table(TABLE)
+                                  .table(getTableName())
                                   .partitionKey(partitionKey)
                                   .clusteringKey(clusteringKey)
-                                  .textValue(COL_NAME2, Integer.toString(i + j))
-                                  .intValue(COL_NAME3, i + j)
-                                  .booleanValue(COL_NAME5, j % 2 == 0)
+                                  .textValue(getColumnName2(), Integer.toString(i + j))
+                                  .intValue(getColumnName3(), i + j)
+                                  .booleanValue(getColumnName5(), j % 2 == 0)
                                   .build();
                           puts.add(put);
                         }));
@@ -2290,11 +2398,11 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private Delete prepareDelete(int pKey, int cKey) {
-    Key partitionKey = Key.ofInt(COL_NAME1, pKey);
-    Key clusteringKey = Key.ofInt(COL_NAME4, cKey);
+    Key partitionKey = Key.ofInt(getColumnName1(), pKey);
+    Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     return Delete.newBuilder()
         .namespace(namespace)
-        .table(TABLE)
+        .table(getTableName())
         .partitionKey(partitionKey)
         .clusteringKey(clusteringKey)
         .build();
@@ -2309,12 +2417,12 @@ public abstract class DistributedStorageIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = Key.ofInt(COL_NAME1, i);
-                          Key clusteringKey = Key.ofInt(COL_NAME4, j);
+                          Key partitionKey = Key.ofInt(getColumnName1(), i);
+                          Key clusteringKey = Key.ofInt(getColumnName4(), j);
                           Delete delete =
                               Delete.newBuilder()
                                   .namespace(namespace)
-                                  .table(TABLE)
+                                  .table(getTableName())
                                   .partitionKey(partitionKey)
                                   .clusteringKey(clusteringKey)
                                   .build();
