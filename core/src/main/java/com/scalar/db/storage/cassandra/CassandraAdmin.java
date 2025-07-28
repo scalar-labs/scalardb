@@ -139,7 +139,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String insertQuery =
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .value(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
+            .value(NAMESPACES_NAME_COL, keyspace)
             .toString();
     clusterManager.getSession().execute(insertQuery);
   }
@@ -180,7 +180,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String deleteQuery =
         QueryBuilder.delete()
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, keyspace))
             .toString();
     clusterManager.getSession().execute(deleteQuery);
   }
@@ -279,7 +279,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
       builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
     }
-    metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
+    metadata
+        .getIndexes()
+        .forEach(i -> builder.addSecondaryIndex(unquoteIfNecessary(i.getTarget())));
     return builder.build();
   }
 
@@ -349,7 +351,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String query =
           QueryBuilder.select(NAMESPACES_NAME_COL)
               .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
+              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, namespace))
               .toString();
       ResultSet resultSet = clusterManager.getSession().execute(query);
 
@@ -396,8 +398,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
     try {
       String alterTableQuery =
-          SchemaBuilder.alterTable(namespace, table)
-              .addColumn(columnName)
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .addColumn(quoteIfNecessary(columnName))
               .type(toCassandraDataType(columnType))
               .getQueryString();
 
@@ -685,5 +687,15 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     public String toString() {
       return strategyName;
     }
+  }
+
+  private String unquoteIfNecessary(String identifier) {
+    if (identifier == null) {
+      return null;
+    }
+    if (identifier.length() >= 2 && identifier.startsWith("\"") && identifier.endsWith("\"")) {
+      return identifier.substring(1, identifier.length() - 1).replace("\"\"", "\"");
+    }
+    return identifier;
   }
 }

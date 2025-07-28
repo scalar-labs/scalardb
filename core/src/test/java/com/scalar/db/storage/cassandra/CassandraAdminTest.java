@@ -229,7 +229,7 @@ public class CassandraAdminTest {
         QueryBuilder.insertInto(
                 quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
-            .value(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, keyspace)
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -569,7 +569,7 @@ public class CassandraAdminTest {
             .from(
                 quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
-            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, keyspace))
             .toString();
     verify(cassandraSession).execute(query);
   }
