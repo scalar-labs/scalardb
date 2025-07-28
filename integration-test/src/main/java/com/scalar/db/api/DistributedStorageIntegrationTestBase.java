@@ -63,8 +63,8 @@ public abstract class DistributedStorageIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
-    StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
+    initialize(getTestName());
+    StorageFactory factory = StorageFactory.create(getProperties(getTestName()));
     admin = factory.getAdmin();
     namespace = getNamespace();
     createTable();
@@ -238,7 +238,7 @@ public abstract class DistributedStorageIntegrationTestBase {
 
   @Test
   public void operation_DefaultNamespaceGiven_ShouldWorkProperly() {
-    Properties properties = getProperties(TEST_NAME);
+    Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
     final DistributedStorage storageWithDefaultNamespace =
         StorageFactory.create(properties).getStorage();
