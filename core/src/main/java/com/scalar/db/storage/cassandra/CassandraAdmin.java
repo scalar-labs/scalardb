@@ -211,7 +211,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
       builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
     }
-    metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
+    metadata
+        .getIndexes()
+        .forEach(i -> builder.addSecondaryIndex(unquoteIfNecessary(i.getTarget())));
     return builder.build();
   }
 
@@ -302,8 +304,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       String alterTableQuery =
-          SchemaBuilder.alterTable(namespace, table)
-              .addColumn(columnName)
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .addColumn(quoteIfNecessary(columnName))
               .type(toCassandraDataType(columnType))
               .getQueryString();
 
@@ -495,5 +497,15 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     public String toString() {
       return strategyName;
     }
+  }
+
+  private String unquoteIfNecessary(String identifier) {
+    if (identifier == null) {
+      return null;
+    }
+    if (identifier.length() >= 2 && identifier.startsWith("\"") && identifier.endsWith("\"")) {
+      return identifier.substring(1, identifier.length() - 1).replace("\"\"", "\"");
+    }
+    return identifier;
   }
 }
