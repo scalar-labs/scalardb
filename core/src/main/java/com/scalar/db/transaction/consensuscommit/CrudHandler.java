@@ -272,7 +272,8 @@ public class CrudHandler {
         exception = e;
       }
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+              exception.getMessage()),
           exception,
           snapshot.getId());
     } finally {
@@ -280,7 +281,7 @@ public class CrudHandler {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner", e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", snapshot.getId(), e);
         }
       }
     }
@@ -511,15 +512,14 @@ public class CrudHandler {
           recoveryResult.recoveryFuture.get();
         }
       } catch (java.util.concurrent.ExecutionException e) {
-        if (e.getCause() instanceof CrudConflictException) {
-          throw new CrudConflictException(
-              e.getCause().getMessage(), e.getCause(), snapshot.getId());
+        Throwable cause = e.getCause();
+        if (cause instanceof CrudException) {
+          throw (CrudException) cause;
         }
 
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(
-                e.getCause().getMessage()),
-            e.getCause(),
+            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
+            cause,
             snapshot.getId());
       } catch (Exception e) {
         throw new CrudException(
@@ -536,15 +536,14 @@ public class CrudHandler {
       try {
         recoveryResult.recoveryFuture.get();
       } catch (java.util.concurrent.ExecutionException e) {
-        if (e.getCause() instanceof CrudConflictException) {
-          throw new CrudConflictException(
-              e.getCause().getMessage(), e.getCause(), snapshot.getId());
+        Throwable cause = e.getCause();
+        if (cause instanceof CrudException) {
+          throw (CrudException) cause;
         }
 
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(
-                e.getCause().getMessage()),
-            e.getCause(),
+            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
+            cause,
             snapshot.getId());
       } catch (Exception e) {
         throw new CrudException(
@@ -572,7 +571,8 @@ public class CrudHandler {
       }
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     }
@@ -592,7 +592,8 @@ public class CrudHandler {
       }
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     }
@@ -824,7 +825,8 @@ public class CrudHandler {
       } catch (ExecutionException e) {
         closeScanner();
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+                e.getMessage()),
             e,
             snapshot.getId());
       } catch (CrudException e) {
@@ -878,7 +880,7 @@ public class CrudHandler {
       try {
         scanner.close();
       } catch (IOException e) {
-        logger.warn("Failed to close the scanner", e);
+        logger.warn("Failed to close the scanner. Transaction ID: {}", snapshot.getId(), e);
       }
     }
   }

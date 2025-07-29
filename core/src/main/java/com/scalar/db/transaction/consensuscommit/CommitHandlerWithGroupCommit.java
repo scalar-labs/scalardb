@@ -104,7 +104,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     } catch (Exception e) {
       // This is an unexpected exception, but clean up resources just in case.
       cancelGroupCommitIfNeeded(id);
-      throw new AssertionError("Group commit unexpectedly failed. TransactionID:" + id, e);
+      throw new AssertionError("Group commit unexpectedly failed. TransactionID: " + id, e);
     }
   }
 

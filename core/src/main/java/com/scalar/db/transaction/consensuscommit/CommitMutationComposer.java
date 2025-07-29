@@ -78,6 +78,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       // for rollforward in lazy recovery
       mutations.add(composeDelete(base, result));
     } else {
+      assert result.getState().equals(TransactionState.COMMITTED);
       logger.debug(
           "The record was committed by the originated one "
               + "or rolled forward by another transaction: {}",

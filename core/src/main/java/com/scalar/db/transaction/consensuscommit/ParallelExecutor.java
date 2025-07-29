@@ -76,7 +76,7 @@ public class ParallelExecutor {
           config.isParallelPreparationEnabled(),
           false,
           stopOnError,
-          "preparation",
+          "prepareRecords",
           transactionId);
     } catch (ValidationConflictException | CrudException e) {
       throw new AssertionError(
@@ -89,7 +89,12 @@ public class ParallelExecutor {
       throws ExecutionException, ValidationConflictException {
     try {
       executeTasks(
-          tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
+          tasks,
+          config.isParallelValidationEnabled(),
+          false,
+          true,
+          "validateRecords",
+          transactionId);
     } catch (CrudException e) {
       throw new AssertionError(
           "Tasks for validating a transaction should not throw CrudException", e);
@@ -190,7 +195,11 @@ public class ParallelExecutor {
               task.run();
             } catch (Exception e) {
               logger.warn(
-                  "Failed to run a {} task. Transaction ID: {}", taskName, transactionId, e);
+                  "Failed to run a {} task. Details: {}; Transaction ID: {}",
+                  taskName,
+                  e.getMessage(),
+                  transactionId,
+                  e);
               throw e;
             }
             return null;
