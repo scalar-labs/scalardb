@@ -67,8 +67,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
-    Properties properties = getProperties(TEST_NAME);
+    initialize(getTestName());
+    Properties properties = getProperties(getTestName());
     storageFactory = StorageFactory.create(properties);
     admin = storageFactory.getAdmin();
     namespace1 = getNamespace1();
@@ -81,6 +81,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   protected void initialize(String testName) throws Exception {}
 
   protected abstract Properties getProperties(String testName);
+
+  protected String getTestName() {
+    return TEST_NAME;
+  }
 
   protected String getNamespace1() {
     return NAMESPACE1;
@@ -1001,7 +1005,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
           throws Exception {
-    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
+    AdminTestUtils adminTestUtils = getAdminTestUtils(getTestName());
     try {
       // Arrange
       adminTestUtils.dropNamespacesTable();

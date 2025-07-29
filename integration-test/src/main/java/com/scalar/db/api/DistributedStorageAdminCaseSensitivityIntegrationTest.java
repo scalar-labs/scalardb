@@ -28,6 +28,11 @@ public abstract class DistributedStorageAdminCaseSensitivityIntegrationTest
   private static final String COL_NAME15 = "Column15";
 
   @Override
+  protected String getTestName() {
+    return TEST_NAME;
+  }
+
+  @Override
   protected String getNamespace1() {
     return NAMESPACE1;
   }
