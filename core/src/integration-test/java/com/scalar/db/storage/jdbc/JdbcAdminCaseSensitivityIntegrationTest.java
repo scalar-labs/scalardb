@@ -1,12 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTest;
+import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 
 public class JdbcAdminCaseSensitivityIntegrationTest
-    extends DistributedStorageAdminCaseSensitivityIntegrationTest {
+    extends DistributedStorageAdminCaseSensitivityIntegrationTestBase {
   private RdbEngineStrategy rdbEngine;
 
   @Override

@@ -1,13 +1,13 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTest;
+import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 
 public class CassandraAdminCaseSensitivityIntegrationTest
-    extends DistributedStorageAdminCaseSensitivityIntegrationTest {
+    extends DistributedStorageAdminCaseSensitivityIntegrationTestBase {
   @Override
   protected Properties getProperties(String testName) {
     return CassandraEnv.getProperties(testName);

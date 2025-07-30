@@ -1,6 +1,6 @@
 package com.scalar.db.api;
 
-public abstract class DistributedStorageAdminCaseSensitivityIntegrationTest
+public abstract class DistributedStorageAdminCaseSensitivityIntegrationTestBase
     extends DistributedStorageAdminIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_admin_case";

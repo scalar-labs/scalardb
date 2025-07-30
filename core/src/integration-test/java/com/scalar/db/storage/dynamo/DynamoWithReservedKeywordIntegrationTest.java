@@ -60,8 +60,7 @@ public class DynamoWithReservedKeywordIntegrationTest
     return DynamoEnv.getCreationOptions();
   }
 
-  // DynamoDB doesn't support putting a null value for a secondary index column
-  @Disabled
+  @Disabled("DynamoDB doesn't support putting a null value for a secondary index column")
   @Override
   public void put_PutGivenForIndexedColumnWithNullValue_ShouldPut() {}
 }

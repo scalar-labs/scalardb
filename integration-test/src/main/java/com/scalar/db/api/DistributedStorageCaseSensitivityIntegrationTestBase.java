@@ -3,7 +3,7 @@ package com.scalar.db.api;
 import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedStorageCaseSensitivityIntegrationTest
+public abstract class DistributedStorageCaseSensitivityIntegrationTestBase
     extends DistributedStorageIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_case";

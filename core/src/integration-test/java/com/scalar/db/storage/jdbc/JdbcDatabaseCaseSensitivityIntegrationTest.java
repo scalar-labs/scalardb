@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTest;
+import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -20,7 +20,7 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 public class JdbcDatabaseCaseSensitivityIntegrationTest
-    extends DistributedStorageCaseSensitivityIntegrationTest {
+    extends DistributedStorageCaseSensitivityIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
 

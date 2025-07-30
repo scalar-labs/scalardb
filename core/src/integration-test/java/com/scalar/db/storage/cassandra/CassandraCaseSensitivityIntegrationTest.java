@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTest;
+import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class CassandraCaseSensitivityIntegrationTest
-    extends DistributedStorageCaseSensitivityIntegrationTest {
+    extends DistributedStorageCaseSensitivityIntegrationTestBase {
   @Override
   protected Properties getProperties(String testName) {
     return CassandraEnv.getProperties(testName);

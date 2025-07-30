@@ -1,11 +1,11 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTest;
+import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
 
 public class CosmosCaseSensitivityIntegrationTest
-    extends DistributedStorageCaseSensitivityIntegrationTest {
+    extends DistributedStorageCaseSensitivityIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {
