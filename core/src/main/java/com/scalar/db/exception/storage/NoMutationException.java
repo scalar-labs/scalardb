@@ -1,7 +1,9 @@
 package com.scalar.db.exception.storage;
 
 import com.google.common.collect.ImmutableList;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 
@@ -34,6 +36,7 @@ public class NoMutationException extends ExecutionException {
     boolean first = true;
     for (Mutation mutation : mutations) {
       assert mutation.forFullTableName().isPresent();
+      assert mutation instanceof Put || mutation instanceof Delete;
 
       if (!first) {
         builder.append(", ");
@@ -49,6 +52,8 @@ public class NoMutationException extends ExecutionException {
           .append(mutation.getPartitionKey())
           .append(", Clustering Key: ")
           .append(mutation.getClusteringKey())
+          .append(", Condition: ")
+          .append(mutation.getCondition())
           .append("}");
     }
 
