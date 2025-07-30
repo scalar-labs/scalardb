@@ -195,11 +195,7 @@ public class ParallelExecutor {
               task.run();
             } catch (Exception e) {
               logger.warn(
-                  "Failed to run a {} task. Details: {}; Transaction ID: {}",
-                  taskName,
-                  e.getMessage(),
-                  transactionId,
-                  e);
+                  "Failed to run a {} task. Transaction ID: {}", taskName, transactionId, e);
               throw e;
             }
             return null;
