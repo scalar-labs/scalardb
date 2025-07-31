@@ -720,11 +720,15 @@ public class CrudHandler {
 
   private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
       throws CrudException {
+    assert operation.forFullTableName().isPresent();
+
     try {
       return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(operation.forFullTableName().get()),
+          e,
+          snapshot.getId());
     }
   }
 
