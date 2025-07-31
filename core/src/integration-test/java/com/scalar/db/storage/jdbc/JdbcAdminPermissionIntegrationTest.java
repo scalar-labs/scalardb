@@ -38,38 +38,31 @@ public class JdbcAdminPermissionIntegrationTest
 
   @Override
   protected void waitForTableCreation() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(DDL_WAIT_SECONDS, TimeUnit.SECONDS);
-    }
+    waitForDdlCompletion();
   }
 
   @Override
   protected void waitForNamespaceCreation() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(DDL_WAIT_SECONDS, TimeUnit.SECONDS);
-    }
+    waitForDdlCompletion();
   }
 
   @Override
   protected void waitForTableDeletion() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(DDL_WAIT_SECONDS, TimeUnit.SECONDS);
-    }
+    waitForDdlCompletion();
   }
 
   @Override
   protected void waitForNamespaceDeletion() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(DDL_WAIT_SECONDS, TimeUnit.SECONDS);
-    }
+    waitForDdlCompletion();
   }
 
   @Override
   protected void sleepBetweenTests() {
+    // Sleep to ensure the DDL operations executed as ACT are completed before the next setup.
+    waitForDdlCompletion();
+  }
+
+  private void waitForDdlCompletion() {
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       // This is needed to avoid schema or catalog version mismatch database errors.
       Uninterruptibles.sleepUninterruptibly(DDL_WAIT_SECONDS, TimeUnit.SECONDS);
