@@ -39,8 +39,10 @@ public class CsvExportManager extends ExportManager {
   void processHeader(ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer)
       throws IOException {
     String header = createCsvHeaderRow(exportOptions, tableMetadata);
-    writer.append(header);
-    writer.flush();
+    if (!exportOptions.isExcludeHeaderRow()) {
+      writer.append(header);
+      writer.flush();
+    }
   }
 
   /**
