@@ -8,7 +8,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
@@ -173,13 +173,13 @@ public class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithFetchFirstNRowsOnly(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return MergeIntoQuery.createForOracle(builder);
+    return new MergeQuery(builder, "DUAL");
   }
 
   @Override

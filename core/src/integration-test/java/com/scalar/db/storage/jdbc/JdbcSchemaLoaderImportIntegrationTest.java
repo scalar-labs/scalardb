@@ -27,8 +27,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
 
   @Override
   protected Properties getProperties(String testName) {
-    Properties properties = new Properties();
-    properties.putAll(JdbcEnv.getProperties(testName));
+    Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     testUtils = new JdbcAdminImportTestUtils(properties);
