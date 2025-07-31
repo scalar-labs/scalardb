@@ -41,7 +41,6 @@ jobs:
     with:
       target-ref: v3.7.3
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
   call-vuln-check-for-v3_8:
