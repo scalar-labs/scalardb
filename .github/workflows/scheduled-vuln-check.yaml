@@ -13,7 +13,6 @@ jobs:
     with:
       target-ref: master
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
   call-vuln-check-for-v3_4:
@@ -21,7 +20,6 @@ jobs:
     with:
       target-ref: v3.4.9
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
   call-vuln-check-for-v3_5:
@@ -29,7 +27,6 @@ jobs:
     with:
       target-ref: v3.5.7
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
   call-vuln-check-for-v3_6:
@@ -37,7 +34,6 @@ jobs:
     with:
       target-ref: v3.6.4
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
   call-vuln-check-for-v3_7:
@@ -53,5 +49,4 @@ jobs:
     with:
       target-ref: v3.8.0
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
