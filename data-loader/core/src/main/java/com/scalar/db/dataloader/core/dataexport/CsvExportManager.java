@@ -38,8 +38,8 @@ public class CsvExportManager extends ExportManager {
   @Override
   void processHeader(ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer)
       throws IOException {
-    String header = createCsvHeaderRow(exportOptions, tableMetadata);
     if (!exportOptions.isExcludeHeaderRow()) {
+      String header = createCsvHeaderRow(exportOptions, tableMetadata);
       writer.append(header);
       writer.flush();
     }

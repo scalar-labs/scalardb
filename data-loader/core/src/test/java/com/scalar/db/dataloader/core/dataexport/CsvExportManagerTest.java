@@ -146,7 +146,7 @@ public class CsvExportManagerTest {
     runExportAndAssertFirstLine(false, expectedFirstLine);
   }
 
-  private void runExportAndAssertFirstLine(boolean includeHeader, String expectedFirstLine)
+  private void runExportAndAssertFirstLine(boolean excludeHeader, String expectedFirstLine)
       throws Exception {
     // Arrange
     producerTaskFactory = new ProducerTaskFactory(",", false, false);
@@ -166,7 +166,7 @@ public class CsvExportManagerTest {
             .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
             .delimiter(",")
-            .excludeHeaderRow(includeHeader)
+            .excludeHeaderRow(excludeHeader)
             .build();
 
     Mockito.when(
@@ -182,12 +182,11 @@ public class CsvExportManagerTest {
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
-        new BufferedWriter(
-            Files.newBufferedWriter(
-                Paths.get(filePath),
-                Charset.defaultCharset(),
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND))) {
+        Files.newBufferedWriter(
+            Paths.get(filePath),
+            Charset.defaultCharset(),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING)) {
       exportManager.startExport(exportOptions, mockData, writer);
     }
     File file = new File(filePath);
@@ -195,7 +194,8 @@ public class CsvExportManagerTest {
     try (BufferedReader br = Files.newBufferedReader(file.toPath(), Charset.defaultCharset())) {
       String firstLine = br.readLine();
       Assertions.assertEquals(expectedFirstLine, firstLine);
+    } finally {
+      Assertions.assertTrue(file.delete());
     }
-    Assertions.assertTrue(file.delete());
   }
 }
