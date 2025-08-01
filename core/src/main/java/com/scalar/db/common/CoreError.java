@@ -728,19 +728,35 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
-      Category.CONCURRENCY_ERROR, "0013", "The record being prepared already exists", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0013",
+      "The record being prepared already exists. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
-      Category.CONCURRENCY_ERROR, "0014", "A conflict occurred when preparing records", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0014",
+      "A conflict occurred when preparing records. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE(
       Category.CONCURRENCY_ERROR,
       "0015",
-      "The committing state in the coordinator failed. The transaction has been aborted",
+      "The committing state in the coordinator failed. The transaction has been aborted. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ(
-      Category.CONCURRENCY_ERROR, "0016", "A conflict occurred during implicit pre-read", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0016",
+      "A conflict occurred during implicit pre-read. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD(
-      Category.CONCURRENCY_ERROR, "0017", "This record needs to be recovered", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0017",
+      "This record needs to be recovered. Table: %s; Partition Key: %s; Clustering Key: %s; Transaction ID that wrote the record: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_NOT_EXISTS(
       Category.CONCURRENCY_ERROR,
       "0018",
@@ -784,7 +800,11 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS(
-      Category.CONCURRENCY_ERROR, "0026", "A conflict occurred when committing records", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0026",
+      "A conflict occurred when committing records. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category
@@ -890,20 +910,21 @@ public enum CoreError implements ScalarDbError {
   JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR, "0035", "Beginning a transaction failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED(
-      Category.INTERNAL_ERROR, "0036", "Preparing records failed", "", ""),
-  CONSENSUS_COMMIT_VALIDATION_FAILED(Category.INTERNAL_ERROR, "0037", "Validation failed", "", ""),
+      Category.INTERNAL_ERROR, "0036", "Preparing records failed. Details: %s", "", ""),
+  CONSENSUS_COMMIT_VALIDATION_FAILED(
+      Category.INTERNAL_ERROR, "0037", "Validation failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED(
-      Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed", "", ""),
+      Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED(
       Category.INTERNAL_ERROR,
       "0039",
-      "Reading a record from the underlying storage failed",
+      "Reading a record from the underlying storage failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED(
       Category.INTERNAL_ERROR,
       "0040",
-      "Scanning records from the underlying storage failed",
+      "Scanning records from the underlying storage failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
@@ -919,7 +940,7 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
-  HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
       Category.INTERNAL_ERROR,
       "0046",
       "Handling the before-preparation snapshot hook failed. Details: %s",
@@ -938,7 +959,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
-      Category.INTERNAL_ERROR, "0058", "Committing records failed", "", ""),
+      Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -952,21 +973,31 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist",
+      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_CANNOT_GET_STATE(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR, "0002", "The state cannot be retrieved", "", ""),
+  CONSENSUS_COMMIT_CANNOT_COORDINATOR_STATUS(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0002",
+      "The coordinator status cannot be retrieved. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0003",
-      "The coordinator status is unknown",
+      "The coordinator status is unknown. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0004",
-      "Aborting state failed with NoMutationException, but the coordinator status does not exist",
+      "Aborting state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_ONE_PHASE_COMMITTING_RECORDS_FAILED(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0005",
+      "One-phase committing records failed. Details: %s",
       "",
       ""),
   ;

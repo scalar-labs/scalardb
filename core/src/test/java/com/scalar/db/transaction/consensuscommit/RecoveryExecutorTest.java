@@ -348,9 +348,8 @@ public class RecoveryExecutorTest {
       execute_ReturnLatestResultAndRecoverType_TransactionNotExpiredAndNoCoordinatorState_ShouldThrowUncommittedRecordException()
           throws CoordinatorException, ExecutionException {
     // Arrange
-    TransactionResult transactionResult = mock(TransactionResult.class);
-    when(transactionResult.getId()).thenReturn(ANY_ID_1);
-    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(false);
 
     // Act Assert

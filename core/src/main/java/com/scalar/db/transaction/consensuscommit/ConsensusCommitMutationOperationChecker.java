@@ -1,5 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.*;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
@@ -7,7 +9,6 @@ import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -28,16 +29,6 @@ public class ConsensusCommitMutationOperationChecker {
     this.transactionTableMetadataManager = transactionTableMetadataManager;
   }
 
-  private TransactionTableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata metadata =
-        transactionTableMetadataManager.getTransactionTableMetadata(operation);
-    if (metadata == null) {
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
-    }
-    return metadata;
-  }
-
   /**
    * Checks the mutation validity
    *
@@ -55,7 +46,8 @@ public class ConsensusCommitMutationOperationChecker {
   }
 
   private void check(Put put) throws ExecutionException {
-    TransactionTableMetadata metadata = getTableMetadata(put);
+    TransactionTableMetadata metadata =
+        getTransactionTableMetadata(transactionTableMetadataManager, put);
     for (String column : put.getContainedColumnNames()) {
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
         throw new IllegalArgumentException(
@@ -92,7 +84,8 @@ public class ConsensusCommitMutationOperationChecker {
           CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_DELETE.buildMessage(
               condition.getClass().getSimpleName()));
     }
-    TransactionTableMetadata transactionMetadata = getTableMetadata(delete);
+    TransactionTableMetadata transactionMetadata =
+        getTransactionTableMetadata(transactionTableMetadataManager, delete);
     checkConditionIsNotTargetingMetadataColumns(condition, transactionMetadata);
     ConditionChecker conditionChecker =
         createConditionChecker(transactionMetadata.getTableMetadata());
