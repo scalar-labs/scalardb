@@ -141,7 +141,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }
 

@@ -52,10 +52,6 @@ public final class JdbcEnv {
   }
 
   public static boolean isSqlite() {
-    Properties properties = new Properties();
-    properties.setProperty(
-        DatabaseConfig.CONTACT_POINTS, System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
-    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(properties)));
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlite:");
   }
 }

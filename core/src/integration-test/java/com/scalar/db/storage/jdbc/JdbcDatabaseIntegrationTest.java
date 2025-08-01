@@ -57,10 +57,10 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, pKey))
-              .clusteringKey(Key.ofInt(COL_NAME4, cKey))
-              .intValue(COL_NAME3, value)
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), pKey))
+              .clusteringKey(Key.ofInt(getColumnName4(), cKey))
+              .intValue(getColumnName3(), value)
               .build());
 
       // Act
@@ -68,16 +68,16 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
           storage.get(
               Get.newBuilder()
                   .namespace(namespace)
-                  .table(TABLE)
-                  .partitionKey(Key.ofInt(COL_NAME1, pKey))
-                  .clusteringKey(Key.ofInt(COL_NAME4, cKey))
+                  .table(getTableName())
+                  .partitionKey(Key.ofInt(getColumnName1(), pKey))
+                  .clusteringKey(Key.ofInt(getColumnName4(), cKey))
                   .build());
 
       // Assert
       assertThat(result.isPresent()).isTrue();
-      assertThat(result.get().getInt(COL_NAME1)).isEqualTo(pKey);
-      assertThat(result.get().getInt(COL_NAME4)).isEqualTo(cKey);
-      assertThat(result.get().getInt(COL_NAME3)).isEqualTo(value);
+      assertThat(result.get().getInt(getColumnName1())).isEqualTo(pKey);
+      assertThat(result.get().getInt(getColumnName4())).isEqualTo(cKey);
+      assertThat(result.get().getInt(getColumnName3())).isEqualTo(value);
     }
   }
 
@@ -95,26 +95,26 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, pKey))
-              .clusteringKey(Key.ofInt(COL_NAME4, 0))
-              .intValue(COL_NAME3, 1)
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), pKey))
+              .clusteringKey(Key.ofInt(getColumnName4(), 0))
+              .intValue(getColumnName3(), 1)
               .build());
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, pKey))
-              .clusteringKey(Key.ofInt(COL_NAME4, 1))
-              .intValue(COL_NAME3, 2)
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), pKey))
+              .clusteringKey(Key.ofInt(getColumnName4(), 1))
+              .intValue(getColumnName3(), 2)
               .build());
       storage.put(
           Put.newBuilder()
               .namespace(namespace)
-              .table(TABLE)
-              .partitionKey(Key.ofInt(COL_NAME1, pKey))
-              .clusteringKey(Key.ofInt(COL_NAME4, 2))
-              .intValue(COL_NAME3, 3)
+              .table(getTableName())
+              .partitionKey(Key.ofInt(getColumnName1(), pKey))
+              .clusteringKey(Key.ofInt(getColumnName4(), 2))
+              .intValue(getColumnName3(), 3)
               .build());
 
       // Act
@@ -122,30 +122,30 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
           storage.scan(
               Scan.newBuilder()
                   .namespace(namespace)
-                  .table(TABLE)
-                  .partitionKey(Key.ofInt(COL_NAME1, pKey))
+                  .table(getTableName())
+                  .partitionKey(Key.ofInt(getColumnName1(), pKey))
                   .build());
       List<Result> results = scanner.all();
       scanner.close();
 
       // Assert
       assertThat(results).hasSize(3);
-      assertThat(results.get(0).getInt(COL_NAME1)).isEqualTo(pKey);
-      assertThat(results.get(0).getInt(COL_NAME4)).isEqualTo(0);
-      assertThat(results.get(0).getInt(COL_NAME3)).isEqualTo(1);
+      assertThat(results.get(0).getInt(getColumnName1())).isEqualTo(pKey);
+      assertThat(results.get(0).getInt(getColumnName4())).isEqualTo(0);
+      assertThat(results.get(0).getInt(getColumnName3())).isEqualTo(1);
 
-      assertThat(results.get(1).getInt(COL_NAME1)).isEqualTo(pKey);
-      assertThat(results.get(1).getInt(COL_NAME4)).isEqualTo(1);
-      assertThat(results.get(1).getInt(COL_NAME3)).isEqualTo(2);
+      assertThat(results.get(1).getInt(getColumnName1())).isEqualTo(pKey);
+      assertThat(results.get(1).getInt(getColumnName4())).isEqualTo(1);
+      assertThat(results.get(1).getInt(getColumnName3())).isEqualTo(2);
 
-      assertThat(results.get(2).getInt(COL_NAME1)).isEqualTo(pKey);
-      assertThat(results.get(2).getInt(COL_NAME4)).isEqualTo(2);
-      assertThat(results.get(2).getInt(COL_NAME3)).isEqualTo(3);
+      assertThat(results.get(2).getInt(getColumnName1())).isEqualTo(pKey);
+      assertThat(results.get(2).getInt(getColumnName4())).isEqualTo(2);
+      assertThat(results.get(2).getInt(getColumnName3())).isEqualTo(3);
     }
   }
 
   private DistributedStorage getStorageInStreamingMode() {
-    Properties properties = JdbcEnv.getProperties(TEST_NAME);
+    Properties properties = JdbcEnv.getProperties(getTestName());
     properties.setProperty(DatabaseConfig.SCAN_FETCH_SIZE, Integer.toString(Integer.MIN_VALUE));
     return StorageFactory.create(properties).getStorage();
   }

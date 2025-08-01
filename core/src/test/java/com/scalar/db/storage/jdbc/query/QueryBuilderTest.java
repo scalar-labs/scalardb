@@ -1292,7 +1292,7 @@ public class QueryBuilderTest {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-    String expectedQuery = "";
+    String expectedQuery;
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
@@ -1329,7 +1329,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?);";
         break;
@@ -1408,7 +1408,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);";
@@ -1494,7 +1494,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);";
@@ -1593,7 +1593,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
@@ -1671,7 +1671,7 @@ public class QueryBuilderTest {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
 
-    String expectedQuery = "";
+    String expectedQuery;
     UpsertQuery query;
     PreparedStatement preparedStatement;
 
@@ -1697,7 +1697,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
         break;
       case SQLITE:
@@ -1755,7 +1755,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
         break;
@@ -1822,7 +1822,7 @@ public class QueryBuilderTest {
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?);";
         break;
