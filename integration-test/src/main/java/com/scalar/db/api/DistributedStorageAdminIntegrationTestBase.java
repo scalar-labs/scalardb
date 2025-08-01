@@ -49,26 +49,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String COL_NAME10 = "c10";
   private static final String COL_NAME11 = "c11";
 
-  private static final TableMetadata TABLE_METADATA =
-      TableMetadata.newBuilder()
-          .addColumn(COL_NAME1, DataType.INT)
-          .addColumn(COL_NAME2, DataType.TEXT)
-          .addColumn(COL_NAME3, DataType.TEXT)
-          .addColumn(COL_NAME4, DataType.INT)
-          .addColumn(COL_NAME5, DataType.INT)
-          .addColumn(COL_NAME6, DataType.TEXT)
-          .addColumn(COL_NAME7, DataType.BIGINT)
-          .addColumn(COL_NAME8, DataType.FLOAT)
-          .addColumn(COL_NAME9, DataType.DOUBLE)
-          .addColumn(COL_NAME10, DataType.BOOLEAN)
-          .addColumn(COL_NAME11, DataType.BLOB)
-          .addPartitionKey(COL_NAME2)
-          .addPartitionKey(COL_NAME1)
-          .addClusteringKey(COL_NAME4, Scan.Ordering.Order.ASC)
-          .addClusteringKey(COL_NAME3, Scan.Ordering.Order.DESC)
-          .addSecondaryIndex(COL_NAME5)
-          .addSecondaryIndex(COL_NAME6)
-          .build();
   private StorageFactory storageFactory;
   private DistributedStorageAdmin admin;
   private String systemNamespaceName;
@@ -78,8 +58,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
-    Properties properties = getProperties(TEST_NAME);
+    initialize(getTestName());
+    Properties properties = getProperties(getTestName());
     storageFactory = StorageFactory.create(properties);
     admin = storageFactory.getAdmin();
     systemNamespaceName = getSystemNamespaceName(properties);
@@ -95,6 +75,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   protected abstract String getSystemNamespaceName(Properties properties);
 
+  protected String getTestName() {
+    return TEST_NAME;
+  }
+
   protected String getNamespace1() {
     return NAMESPACE1;
   }
@@ -107,12 +91,94 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     return NAMESPACE3;
   }
 
+  protected String getTable1() {
+    return TABLE1;
+  }
+
+  protected String getTable2() {
+    return TABLE2;
+  }
+
+  protected String getTable3() {
+    return TABLE3;
+  }
+
+  protected String getTable4() {
+    return TABLE4;
+  }
+
+  protected String getColumnName1() {
+    return COL_NAME1;
+  }
+
+  protected String getColumnName2() {
+    return COL_NAME2;
+  }
+
+  protected String getColumnName3() {
+    return COL_NAME3;
+  }
+
+  protected String getColumnName4() {
+    return COL_NAME4;
+  }
+
+  protected String getColumnName5() {
+    return COL_NAME5;
+  }
+
+  protected String getColumnName6() {
+    return COL_NAME6;
+  }
+
+  protected String getColumnName7() {
+    return COL_NAME7;
+  }
+
+  protected String getColumnName8() {
+    return COL_NAME8;
+  }
+
+  protected String getColumnName9() {
+    return COL_NAME9;
+  }
+
+  protected String getColumnName10() {
+    return COL_NAME10;
+  }
+
+  protected String getColumnName11() {
+    return COL_NAME11;
+  }
+
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addColumn(getColumnName1(), DataType.INT)
+        .addColumn(getColumnName2(), DataType.TEXT)
+        .addColumn(getColumnName3(), DataType.TEXT)
+        .addColumn(getColumnName4(), DataType.INT)
+        .addColumn(getColumnName5(), DataType.INT)
+        .addColumn(getColumnName6(), DataType.TEXT)
+        .addColumn(getColumnName7(), DataType.BIGINT)
+        .addColumn(getColumnName8(), DataType.FLOAT)
+        .addColumn(getColumnName9(), DataType.DOUBLE)
+        .addColumn(getColumnName10(), DataType.BOOLEAN)
+        .addColumn(getColumnName11(), DataType.BLOB)
+        .addPartitionKey(getColumnName2())
+        .addPartitionKey(getColumnName1())
+        .addClusteringKey(getColumnName4(), Scan.Ordering.Order.ASC)
+        .addClusteringKey(getColumnName3(), Scan.Ordering.Order.DESC)
+        .addSecondaryIndex(getColumnName5())
+        .addSecondaryIndex(getColumnName6())
+        .build();
+  }
+
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
       admin.createNamespace(namespace, true, options);
-      for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-        admin.createTable(namespace, table, TABLE_METADATA, true, options);
+      for (String table : Arrays.asList(getTable1(), getTable2(), getTable3())) {
+        admin.createTable(namespace, table, getTableMetadata(), true, options);
       }
     }
   }
@@ -140,7 +206,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   private void dropTables() throws ExecutionException {
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
-      for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
+      for (String table : Arrays.asList(getTable1(), getTable2(), getTable3())) {
         admin.dropTable(namespace, table);
       }
       admin.dropNamespace(namespace);
@@ -153,61 +219,63 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act
-    TableMetadata tableMetadata = admin.getTableMetadata(namespace1, TABLE1);
+    TableMetadata tableMetadata = admin.getTableMetadata(namespace1, getTable1());
 
     // Assert
     assertThat(tableMetadata).isNotNull();
 
     assertThat(tableMetadata.getPartitionKeyNames().size()).isEqualTo(2);
     Iterator<String> iterator = tableMetadata.getPartitionKeyNames().iterator();
-    assertThat(iterator.next()).isEqualTo(COL_NAME2);
-    assertThat(iterator.next()).isEqualTo(COL_NAME1);
+    assertThat(iterator.next()).isEqualTo(getColumnName2());
+    assertThat(iterator.next()).isEqualTo(getColumnName1());
 
     assertThat(tableMetadata.getClusteringKeyNames().size()).isEqualTo(2);
     iterator = tableMetadata.getClusteringKeyNames().iterator();
-    assertThat(iterator.next()).isEqualTo(COL_NAME4);
-    assertThat(iterator.next()).isEqualTo(COL_NAME3);
+    assertThat(iterator.next()).isEqualTo(getColumnName4());
+    assertThat(iterator.next()).isEqualTo(getColumnName3());
 
     assertThat(tableMetadata.getColumnNames().size()).isEqualTo(11);
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME1)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME2)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME3)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME4)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME5)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME6)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME7)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME8)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME9)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME10)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME11)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName1())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName2())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName3())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName4())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName5())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName6())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName7())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName8())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName9())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName10())).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(getColumnName11())).isTrue();
 
-    assertThat(tableMetadata.getColumnDataType(COL_NAME1)).isEqualTo(DataType.INT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME2)).isEqualTo(DataType.TEXT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME3)).isEqualTo(DataType.TEXT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME4)).isEqualTo(DataType.INT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME5)).isEqualTo(DataType.INT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME6)).isEqualTo(DataType.TEXT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME7)).isEqualTo(DataType.BIGINT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME8)).isEqualTo(DataType.FLOAT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME9)).isEqualTo(DataType.DOUBLE);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME10)).isEqualTo(DataType.BOOLEAN);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME11)).isEqualTo(DataType.BLOB);
+    assertThat(tableMetadata.getColumnDataType(getColumnName1())).isEqualTo(DataType.INT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName2())).isEqualTo(DataType.TEXT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName3())).isEqualTo(DataType.TEXT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName4())).isEqualTo(DataType.INT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName5())).isEqualTo(DataType.INT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName6())).isEqualTo(DataType.TEXT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName7())).isEqualTo(DataType.BIGINT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName8())).isEqualTo(DataType.FLOAT);
+    assertThat(tableMetadata.getColumnDataType(getColumnName9())).isEqualTo(DataType.DOUBLE);
+    assertThat(tableMetadata.getColumnDataType(getColumnName10())).isEqualTo(DataType.BOOLEAN);
+    assertThat(tableMetadata.getColumnDataType(getColumnName11())).isEqualTo(DataType.BLOB);
 
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isEqualTo(Scan.Ordering.Order.DESC);
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME4)).isEqualTo(Scan.Ordering.Order.ASC);
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME5)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME6)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME7)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME8)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME9)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME10)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME11)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName1())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName2())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName3()))
+        .isEqualTo(Scan.Ordering.Order.DESC);
+    assertThat(tableMetadata.getClusteringOrder(getColumnName4()))
+        .isEqualTo(Scan.Ordering.Order.ASC);
+    assertThat(tableMetadata.getClusteringOrder(getColumnName5())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName6())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName7())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName8())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName9())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName10())).isNull();
+    assertThat(tableMetadata.getClusteringOrder(getColumnName11())).isNull();
 
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME6)).isTrue();
+    assertThat(tableMetadata.getSecondaryIndexNames().contains(getColumnName5())).isTrue();
+    assertThat(tableMetadata.getSecondaryIndexNames().contains(getColumnName6())).isTrue();
   }
 
   @Test
@@ -286,13 +354,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     try {
       // Arrange
       admin.createNamespace(namespace3);
-      admin.createTable(namespace3, TABLE1, TABLE_METADATA);
+      admin.createTable(namespace3, getTable1(), getTableMetadata());
 
       // Act Assert
       assertThatThrownBy(() -> admin.dropNamespace(namespace3))
           .isInstanceOf(IllegalArgumentException.class);
     } finally {
-      admin.dropTable(namespace3, TABLE1, true);
+      admin.dropTable(namespace3, getTable1(), true);
       admin.dropNamespace(namespace3, true);
     }
   }
@@ -313,12 +381,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       Map<String, String> options = getCreationOptions();
 
       // Act
-      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+      admin.createTable(namespace1, getTable4(), getTableMetadata(), options);
 
       // Assert
-      assertThat(admin.tableExists(namespace1, TABLE4)).isTrue();
+      assertThat(admin.tableExists(namespace1, getTable4())).isTrue();
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
     }
   }
 
@@ -327,7 +395,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createTable(namespace1, TABLE1, TABLE_METADATA))
+    assertThatThrownBy(() -> admin.createTable(namespace1, getTable1(), getTableMetadata()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -336,7 +404,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createTable(namespace3, TABLE1, TABLE_METADATA))
+    assertThatThrownBy(() -> admin.createTable(namespace3, getTable1(), getTableMetadata()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -345,7 +413,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> admin.createTable(namespace1, TABLE1, TABLE_METADATA, true))
+    assertThatCode(() -> admin.createTable(namespace1, getTable1(), getTableMetadata(), true))
         .doesNotThrowAnyException();
   }
 
@@ -354,15 +422,15 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+      admin.createTable(namespace1, getTable4(), getTableMetadata(), options);
 
       // Act
-      admin.dropTable(namespace1, TABLE4);
+      admin.dropTable(namespace1, getTable4());
 
       // Assert
-      assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
+      assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
     }
   }
 
@@ -371,7 +439,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.dropTable(namespace1, TABLE4))
+    assertThatThrownBy(() -> admin.dropTable(namespace1, getTable4()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -380,7 +448,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> admin.dropTable(namespace1, TABLE4, true)).doesNotThrowAnyException();
+    assertThatCode(() -> admin.dropTable(namespace1, getTable4(), true)).doesNotThrowAnyException();
   }
 
   @Test
@@ -388,27 +456,27 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     DistributedStorage storage = null;
     try {
       // Arrange
-      Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
-      Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
+      Key partitionKey = new Key(getColumnName2(), "aaa", getColumnName1(), 1);
+      Key clusteringKey = new Key(getColumnName4(), 2, getColumnName3(), "bbb");
       storage = storageFactory.getStorage();
       storage.put(
           new Put(partitionKey, clusteringKey)
-              .withValue(COL_NAME5, 3)
-              .withValue(COL_NAME6, "ccc")
-              .withValue(COL_NAME7, 4L)
-              .withValue(COL_NAME8, 1.0f)
-              .withValue(COL_NAME9, 1.0d)
-              .withValue(COL_NAME10, true)
-              .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
+              .withValue(getColumnName5(), 3)
+              .withValue(getColumnName6(), "ccc")
+              .withValue(getColumnName7(), 4L)
+              .withValue(getColumnName8(), 1.0f)
+              .withValue(getColumnName9(), 1.0d)
+              .withValue(getColumnName10(), true)
+              .withValue(getColumnName11(), "ddd".getBytes(StandardCharsets.UTF_8))
               .forNamespace(namespace1)
-              .forTable(TABLE1));
+              .forTable(getTable1()));
 
       // Act
-      admin.truncateTable(namespace1, TABLE1);
+      admin.truncateTable(namespace1, getTable1());
 
       // Assert
       Scanner scanner =
-          storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+          storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(getTable1()));
       assertThat(scanner.all()).isEmpty();
       scanner.close();
     } finally {
@@ -423,7 +491,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.truncateTable(namespace1, TABLE4))
+    assertThatThrownBy(() -> admin.truncateTable(namespace1, getTable4()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -435,7 +503,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     Set<String> actual = admin.getNamespaceTableNames(namespace1);
 
     // Assert
-    assertThat(actual).isEqualTo(new HashSet<>(Arrays.asList(TABLE1, TABLE2, TABLE3)));
+    assertThat(actual)
+        .isEqualTo(new HashSet<>(Arrays.asList(getTable1(), getTable2(), getTable3())));
   }
 
   @Test
@@ -453,10 +522,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThat(admin.tableExists(namespace1, TABLE1)).isTrue();
-    assertThat(admin.tableExists(namespace1, TABLE2)).isTrue();
-    assertThat(admin.tableExists(namespace1, TABLE3)).isTrue();
-    assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
+    assertThat(admin.tableExists(namespace1, getTable1())).isTrue();
+    assertThat(admin.tableExists(namespace1, getTable2())).isTrue();
+    assertThat(admin.tableExists(namespace1, getTable3())).isTrue();
+    assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
   }
 
   @Test
@@ -468,67 +537,79 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       Map<String, String> options = getCreationOptions();
       TableMetadata metadata =
           TableMetadata.newBuilder()
-              .addColumn(COL_NAME1, DataType.INT)
-              .addColumn(COL_NAME2, DataType.INT)
-              .addColumn(COL_NAME3, DataType.TEXT)
-              .addColumn(COL_NAME4, DataType.BIGINT)
-              .addColumn(COL_NAME5, DataType.FLOAT)
-              .addColumn(COL_NAME6, DataType.DOUBLE)
-              .addColumn(COL_NAME7, DataType.BOOLEAN)
-              .addColumn(COL_NAME8, DataType.BLOB)
-              .addColumn(COL_NAME9, DataType.TEXT)
-              .addPartitionKey(COL_NAME1)
-              .addSecondaryIndex(COL_NAME9)
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.BOOLEAN)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName9())
               .build();
-      admin.createTable(namespace1, TABLE4, metadata, options);
+      admin.createTable(namespace1, getTable4(), metadata, options);
       storage = storageFactory.getStorage();
       storage.put(
           Put.newBuilder()
               .namespace(namespace1)
-              .table(TABLE4)
-              .partitionKey(Key.ofInt(COL_NAME1, 1))
-              .intValue(COL_NAME2, 2)
-              .textValue(COL_NAME3, "3")
-              .bigIntValue(COL_NAME4, 4)
-              .floatValue(COL_NAME5, 5)
-              .doubleValue(COL_NAME6, 6)
-              .booleanValue(COL_NAME7, true)
-              .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
-              .textValue(COL_NAME9, "9")
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .intValue(getColumnName2(), 2)
+              .textValue(getColumnName3(), "3")
+              .bigIntValue(getColumnName4(), 4)
+              .floatValue(getColumnName5(), 5)
+              .doubleValue(getColumnName6(), 6)
+              .booleanValue(getColumnName7(), true)
+              .blobValue(getColumnName8(), "8".getBytes(StandardCharsets.UTF_8))
+              .textValue(getColumnName9(), "9")
               .build());
       // Act
-      admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
+      admin.createIndex(namespace1, getTable4(), getColumnName2(), options);
+      admin.createIndex(namespace1, getTable4(), getColumnName3(), options);
+      admin.createIndex(namespace1, getTable4(), getColumnName4(), options);
+      admin.createIndex(namespace1, getTable4(), getColumnName5(), options);
+      admin.createIndex(namespace1, getTable4(), getColumnName6(), options);
       if (isIndexOnBooleanColumnSupported()) {
-        admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+        admin.createIndex(namespace1, getTable4(), getColumnName7(), options);
       }
-      admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
+      admin.createIndex(namespace1, getTable4(), getColumnName8(), options);
 
       // Assert
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName6())).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
+        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName7())).isTrue();
       }
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName8())).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
-        assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+        assertThat(admin.getTableMetadata(namespace1, getTable4()).getSecondaryIndexNames())
             .containsOnly(
-                COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6, COL_NAME7, COL_NAME8,
-                COL_NAME9);
+                getColumnName2(),
+                getColumnName3(),
+                getColumnName4(),
+                getColumnName5(),
+                getColumnName6(),
+                getColumnName7(),
+                getColumnName8(),
+                getColumnName9());
       } else {
-        assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+        assertThat(admin.getTableMetadata(namespace1, getTable4()).getSecondaryIndexNames())
             .containsOnly(
-                COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5, COL_NAME6, COL_NAME8, COL_NAME9);
+                getColumnName2(),
+                getColumnName3(),
+                getColumnName4(),
+                getColumnName5(),
+                getColumnName6(),
+                getColumnName8(),
+                getColumnName9());
       }
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
       if (storage != null) {
         storage.close();
       }
@@ -543,7 +624,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThatThrownBy(
             () ->
                 admin.createIndex(
-                    namespace1, "non-existing_table", COL_NAME2, getCreationOptions()))
+                    namespace1, "non-existing_table", getColumnName2(), getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -554,7 +635,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Act Assert
     assertThatThrownBy(
             () ->
-                admin.createIndex(namespace1, TABLE1, "non-existing_column", getCreationOptions()))
+                admin.createIndex(
+                    namespace1, getTable1(), "non-existing_column", getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -566,19 +648,21 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       Map<String, String> options = getCreationOptions();
       TableMetadata metadata =
           TableMetadata.newBuilder()
-              .addColumn(COL_NAME1, DataType.INT)
-              .addColumn(COL_NAME2, DataType.INT)
-              .addPartitionKey(COL_NAME1)
-              .addSecondaryIndex(COL_NAME2)
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
               .build();
-      admin.createTable(namespace1, TABLE4, metadata, options);
+      admin.createTable(namespace1, getTable4(), metadata, options);
 
       // Act Assert
       assertThatThrownBy(
-              () -> admin.createIndex(namespace1, TABLE4, COL_NAME2, getCreationOptions()))
+              () ->
+                  admin.createIndex(
+                      namespace1, getTable4(), getColumnName2(), getCreationOptions()))
           .isInstanceOf(IllegalArgumentException.class);
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
     }
   }
 
@@ -590,19 +674,21 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       Map<String, String> options = getCreationOptions();
       TableMetadata metadata =
           TableMetadata.newBuilder()
-              .addColumn(COL_NAME1, DataType.INT)
-              .addColumn(COL_NAME2, DataType.INT)
-              .addPartitionKey(COL_NAME1)
-              .addSecondaryIndex(COL_NAME2)
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
               .build();
-      admin.createTable(namespace1, TABLE4, metadata, options);
+      admin.createTable(namespace1, getTable4(), metadata, options);
 
       // Act Assert
       assertThatCode(
-              () -> admin.createIndex(namespace1, TABLE4, COL_NAME2, true, getCreationOptions()))
+              () ->
+                  admin.createIndex(
+                      namespace1, getTable4(), getColumnName2(), true, getCreationOptions()))
           .doesNotThrowAnyException();
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
     }
   }
 
@@ -615,68 +701,68 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       Map<String, String> options = getCreationOptions();
       TableMetadata metadata =
           TableMetadata.newBuilder()
-              .addColumn(COL_NAME1, DataType.INT)
-              .addColumn(COL_NAME2, DataType.INT)
-              .addColumn(COL_NAME3, DataType.TEXT)
-              .addColumn(COL_NAME4, DataType.BIGINT)
-              .addColumn(COL_NAME5, DataType.FLOAT)
-              .addColumn(COL_NAME6, DataType.DOUBLE)
-              .addColumn(COL_NAME7, DataType.BOOLEAN)
-              .addColumn(COL_NAME8, DataType.BLOB)
-              .addColumn(COL_NAME9, DataType.TEXT)
-              .addPartitionKey(COL_NAME1)
-              .addSecondaryIndex(COL_NAME2)
-              .addSecondaryIndex(COL_NAME3)
-              .addSecondaryIndex(COL_NAME4)
-              .addSecondaryIndex(COL_NAME5)
-              .addSecondaryIndex(COL_NAME6)
-              .addSecondaryIndex(COL_NAME8)
-              .addSecondaryIndex(COL_NAME9)
-              .addSecondaryIndex(COL_NAME9)
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.BOOLEAN)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
+              .addSecondaryIndex(getColumnName3())
+              .addSecondaryIndex(getColumnName4())
+              .addSecondaryIndex(getColumnName5())
+              .addSecondaryIndex(getColumnName6())
+              .addSecondaryIndex(getColumnName8())
+              .addSecondaryIndex(getColumnName9())
+              .addSecondaryIndex(getColumnName9())
               .build();
       if (isIndexOnBooleanColumnSupported()) {
-        metadata = TableMetadata.newBuilder(metadata).addSecondaryIndex(COL_NAME7).build();
+        metadata = TableMetadata.newBuilder(metadata).addSecondaryIndex(getColumnName7()).build();
       }
-      admin.createTable(namespace1, TABLE4, metadata, options);
+      admin.createTable(namespace1, getTable4(), metadata, options);
       storage = storageFactory.getStorage();
       storage.put(
           Put.newBuilder()
               .namespace(namespace1)
-              .table(TABLE4)
-              .partitionKey(Key.ofInt(COL_NAME1, 1))
-              .intValue(COL_NAME2, 2)
-              .textValue(COL_NAME3, "3")
-              .bigIntValue(COL_NAME4, 4)
-              .floatValue(COL_NAME5, 5)
-              .doubleValue(COL_NAME6, 6)
-              .booleanValue(COL_NAME7, true)
-              .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
-              .textValue(COL_NAME9, "9")
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .intValue(getColumnName2(), 2)
+              .textValue(getColumnName3(), "3")
+              .bigIntValue(getColumnName4(), 4)
+              .floatValue(getColumnName5(), 5)
+              .doubleValue(getColumnName6(), 6)
+              .booleanValue(getColumnName7(), true)
+              .blobValue(getColumnName8(), "8".getBytes(StandardCharsets.UTF_8))
+              .textValue(getColumnName9(), "9")
               .build());
 
       // Act
-      admin.dropIndex(namespace1, TABLE4, COL_NAME2);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME3);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME4);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME5);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME6);
+      admin.dropIndex(namespace1, getTable4(), getColumnName2());
+      admin.dropIndex(namespace1, getTable4(), getColumnName3());
+      admin.dropIndex(namespace1, getTable4(), getColumnName4());
+      admin.dropIndex(namespace1, getTable4(), getColumnName5());
+      admin.dropIndex(namespace1, getTable4(), getColumnName6());
       if (isIndexOnBooleanColumnSupported()) {
-        admin.dropIndex(namespace1, TABLE4, COL_NAME7);
+        admin.dropIndex(namespace1, getTable4(), getColumnName7());
       }
-      admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      admin.dropIndex(namespace1, getTable4(), getColumnName8());
 
       // Assert
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isFalse();
-      assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
-          .containsOnly(COL_NAME9);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName6())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName7())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName8())).isFalse();
+      assertThat(admin.getTableMetadata(namespace1, getTable4()).getSecondaryIndexNames())
+          .containsOnly(getColumnName9());
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
       if (storage != null) {
         storage.close();
       }
@@ -688,7 +774,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.dropIndex(namespace1, "non-existing-table", COL_NAME2))
+    assertThatThrownBy(() -> admin.dropIndex(namespace1, "non-existing-table", getColumnName2()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -697,7 +783,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.dropIndex(namespace1, TABLE1, COL_NAME2))
+    assertThatThrownBy(() -> admin.dropIndex(namespace1, getTable1(), getColumnName2()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -706,7 +792,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> admin.dropIndex(namespace1, TABLE1, COL_NAME2, true))
+    assertThatCode(() -> admin.dropIndex(namespace1, getTable1(), getColumnName2(), true))
         .doesNotThrowAnyException();
   }
 
@@ -722,16 +808,16 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn("pk1", DataType.TEXT)
               .addColumn("c1", DataType.TEXT)
               .build();
-      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
 
       // Act
-      admin.addNewColumnToTable(namespace1, TABLE4, "c2", DataType.TEXT);
-      admin.addNewColumnToTable(namespace1, TABLE4, "c3", DataType.DOUBLE);
-      admin.addNewColumnToTable(namespace1, TABLE4, "c4", DataType.INT);
-      admin.addNewColumnToTable(namespace1, TABLE4, "c5", DataType.BIGINT);
-      admin.addNewColumnToTable(namespace1, TABLE4, "c6", DataType.BLOB);
-      admin.addNewColumnToTable(namespace1, TABLE4, "c7", DataType.BOOLEAN);
-      admin.addNewColumnToTable(namespace1, TABLE4, "c8", DataType.FLOAT);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c2", DataType.TEXT);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c3", DataType.DOUBLE);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c4", DataType.INT);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c5", DataType.BIGINT);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c6", DataType.BLOB);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c7", DataType.BOOLEAN);
+      admin.addNewColumnToTable(namespace1, getTable4(), "c8", DataType.FLOAT);
 
       // Assert
       TableMetadata expectedTableMetadata =
@@ -744,9 +830,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn("c7", DataType.BOOLEAN)
               .addColumn("c8", DataType.FLOAT)
               .build();
-      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, getTable4(), true);
     }
   }
 
@@ -756,7 +842,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(
-            () -> admin.addNewColumnToTable(namespace1, TABLE4, COL_NAME2, DataType.TEXT))
+            () ->
+                admin.addNewColumnToTable(namespace1, getTable4(), getColumnName2(), DataType.TEXT))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -766,7 +853,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(
-            () -> admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME2, DataType.TEXT))
+            () ->
+                admin.addNewColumnToTable(namespace1, getTable1(), getColumnName2(), DataType.TEXT))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
