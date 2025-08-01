@@ -13,7 +13,7 @@ public class NoMutationException extends ExecutionException {
 
   public NoMutationException(
       String message, @SuppressFBWarnings("EI_EXPOSE_REP2") List<? extends Mutation> mutations) {
-    super(addTransactionIdToMessage(message, mutations));
+    super(addMutationDetailsToMessage(message, mutations));
     this.mutations = mutations;
   }
 
@@ -21,7 +21,7 @@ public class NoMutationException extends ExecutionException {
       String message,
       @SuppressFBWarnings("EI_EXPOSE_REP2") List<? extends Mutation> mutations,
       Throwable cause) {
-    super(addTransactionIdToMessage(message, mutations), cause);
+    super(addMutationDetailsToMessage(message, mutations), cause);
     this.mutations = mutations;
   }
 
@@ -29,7 +29,7 @@ public class NoMutationException extends ExecutionException {
     return ImmutableList.copyOf(mutations);
   }
 
-  private static String addTransactionIdToMessage(
+  private static String addMutationDetailsToMessage(
       String message, List<? extends Mutation> mutations) {
     StringBuilder builder = new StringBuilder(message).append(". Mutations: [");
 
