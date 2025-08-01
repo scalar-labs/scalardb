@@ -14,7 +14,6 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -134,7 +133,7 @@ public class Coordinator {
 
   private Optional<Coordinator.State> getStateInternal(String id) throws CoordinatorException {
     Get get = createGetWith(id);
-    return get(get);
+    return get(get, id);
   }
 
   /**
@@ -168,7 +167,7 @@ public class Coordinator {
 
   public void putState(Coordinator.State state) throws CoordinatorException {
     Put put = createPutWith(state);
-    put(put);
+    put(put, state.getId());
   }
 
   void putStateForGroupCommit(
@@ -189,7 +188,7 @@ public class Coordinator {
     State state = new State(parentId, childIds, transactionState, createdAt);
 
     Put put = createPutWith(state);
-    put(put);
+    put(put, state.getId());
   }
 
   public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
@@ -300,12 +299,10 @@ public class Coordinator {
         .forTable(TABLE);
   }
 
-  private Optional<Coordinator.State> get(Get get) throws CoordinatorException {
+  private Optional<Coordinator.State> get(Get get, String id) throws CoordinatorException {
     int counter = 0;
+    Exception exception = null;
     while (true) {
-      if (counter >= MAX_RETRY_COUNT) {
-        throw new CoordinatorException("Can't get coordinator state");
-      }
       try {
         Optional<Result> result = storage.get(get);
         if (result.isPresent()) {
@@ -313,10 +310,25 @@ public class Coordinator {
         } else {
           return Optional.empty();
         }
-      } catch (ExecutionException e) {
-        logger.warn("Can't get coordinator state", e);
+      } catch (Exception e) {
+        if (exception == null) {
+          exception = e;
+        } else {
+          exception.addSuppressed(e);
+        }
+
+        if (counter + 1 >= MAX_RETRY_COUNT) {
+          throw new CoordinatorException("Can't get coordinator state", exception);
+        }
+
+        logger.warn(
+            "Can't get coordinator state. Retrying... Attempt: {}; Transaction ID: {}",
+            counter,
+            id,
+            e);
+
+        exponentialBackoff(counter++);
       }
-      exponentialBackoff(counter++);
     }
   }
 
@@ -335,21 +347,34 @@ public class Coordinator {
         .forTable(TABLE);
   }
 
-  private void put(Put put) throws CoordinatorException {
+  private void put(Put put, String id) throws CoordinatorException {
     int counter = 0;
+    Exception exception = null;
     while (true) {
-      if (counter >= MAX_RETRY_COUNT) {
-        throw new CoordinatorException("Couldn't put coordinator state");
-      }
       try {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
         throw new CoordinatorConflictException("Mutation seems applied already", e);
-      } catch (ExecutionException e) {
-        logger.warn("Putting state in coordinator failed", e);
+      } catch (Exception e) {
+        if (exception == null) {
+          exception = e;
+        } else {
+          exception.addSuppressed(e);
+        }
+
+        if (counter + 1 >= MAX_RETRY_COUNT) {
+          throw new CoordinatorException("Couldn't put coordinator state", exception);
+        }
+
+        logger.warn(
+            "Putting state in coordinator failed. Retrying... Attempt: {}; Transaction ID: {}",
+            counter,
+            id,
+            e);
+
+        exponentialBackoff(counter++);
       }
-      exponentialBackoff(counter++);
     }
   }
 

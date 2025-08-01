@@ -423,7 +423,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     try {
       transaction.rollback();
     } catch (RollbackException e) {
-      logger.warn("Rolling back the transaction failed", e);
+      logger.warn(
+          "Rolling back the transaction failed. Transaction ID: {}", transaction.getId(), e);
     }
   }
 
