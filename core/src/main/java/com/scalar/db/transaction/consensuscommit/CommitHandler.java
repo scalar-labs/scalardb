@@ -261,7 +261,7 @@ public class CommitHandler {
       }
     } catch (CoordinatorException ex) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_CANNOT_COORDINATOR_STATUS.buildMessage(ex.getMessage()),
+          CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(ex.getMessage()),
           ex,
           snapshot.getId());
     }
@@ -397,7 +397,7 @@ public class CommitHandler {
             id);
       } catch (CoordinatorException e1) {
         throw new UnknownTransactionStatusException(
-            CoreError.CONSENSUS_COMMIT_CANNOT_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
+            CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
             e1,
             id);
       }
