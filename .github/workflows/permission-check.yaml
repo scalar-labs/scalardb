@@ -711,7 +711,7 @@ jobs:
           path: core/build/reports/tests/integrationTestJdbcPermission
 
   integration-test-permission-jdbc-db2-11-5:
-    name: DB2 11.5 Permission Integration Test
+    name: Db2 11.5 Permission Integration Test
     runs-on: ubuntu-latest
 
     services:
@@ -748,7 +748,7 @@ jobs:
           done
           echo "Container is ready"
 
-      - name: Create OS user for DB2
+      - name: Create OS user for Db2
         run: |
           docker exec db2 bash -c "useradd -m -s /bin/bash test"
           docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
@@ -765,7 +765,7 @@ jobs:
           path: core/build/reports/tests/integrationTestJdbcPermission
 
   integration-test-permission-jdbc-db2-12-1:
-    name: DB2 12.1 Permission Integration Test
+    name: Db2 12.1 Permission Integration Test
     runs-on: ubuntu-latest
 
     services:
@@ -802,7 +802,7 @@ jobs:
           done
           echo "Container is ready"
 
-      - name: Create OS user for DB2
+      - name: Create OS user for Db2
         run: |
           docker exec db2 bash -c "useradd -m -s /bin/bash test"
           docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
