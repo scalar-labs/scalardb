@@ -146,7 +146,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
         throw new UnsatisfiedConditionException(
             ConsensusCommitUtils.convertUnsatisfiedConditionExceptionMessageForUpdate(
                 e, update.getCondition().get()),
-            crud.getSnapshot().getId());
+            getId());
       }
 
       // If the condition is not specified, it means that the record does not exist. In this case,
@@ -185,12 +185,16 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       crud.readIfImplicitPreReadEnabled();
     } catch (CrudConflictException e) {
       throw new PreparationConflictException(
-          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(
+              e.getMessage()),
           e,
           getId());
     } catch (CrudException e) {
       throw new PreparationException(
-          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
+          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(
+              e.getMessage()),
+          e,
+          getId());
     }
 
     try {
@@ -238,7 +242,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     try {
       crud.closeScanners();
     } catch (CrudException e) {
-      logger.warn("Failed to close the scanner", e);
+      logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
     }
 
     if (!needRollback) {
@@ -246,7 +250,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      TransactionState state = commit.abortState(crud.getSnapshot().getId());
+      TransactionState state = commit.abortState(getId());
       if (state == TransactionState.COMMITTED) {
         throw new RollbackException(
             CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED
