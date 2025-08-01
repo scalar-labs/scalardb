@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
@@ -35,6 +36,8 @@ import org.mockito.MockitoAnnotations;
 
 public class RecoveryHandlerTest {
 
+  private static final String ANY_NAMESPACE_NAME = "tbl";
+  private static final String ANY_TABLE_NAME = "tbl";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_ID_1 = "id1";
@@ -49,7 +52,8 @@ public class RecoveryHandlerTest {
 
   @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
-  @Mock private TransactionTableMetadataManager tableMetadataManager;
+  @Mock private TransactionTableMetadataManager transactionTableMetadataManager;
+  @Mock private TransactionTableMetadata transactionTableMetadata;
   @Mock private Selection selection;
 
   private RecoveryHandler handler;
@@ -59,7 +63,15 @@ public class RecoveryHandlerTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    handler = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    handler = spy(new RecoveryHandler(storage, coordinator, transactionTableMetadataManager));
+
+    when(selection.forFullTableName())
+        .thenReturn(Optional.of(ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME));
+    when(selection.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(selection.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(transactionTableMetadataManager.getTransactionTableMetadata(selection))
+        .thenReturn(transactionTableMetadata);
+    when(transactionTableMetadata.getTableMetadata()).thenReturn(TABLE_METADATA);
   }
 
   private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {

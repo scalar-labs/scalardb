@@ -93,7 +93,8 @@ public class CommitHandler {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       throw new CommitException(
-          CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
+          CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     }
@@ -113,7 +114,8 @@ public class CommitHandler {
       abortState(snapshot.getId());
       rollbackRecords(snapshot);
       throw new CommitException(
-          CoreError.HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(e.getMessage()),
+          CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     }
@@ -229,7 +231,9 @@ public class CommitHandler {
               .collect(Collectors.toList()));
     } catch (ExecutionException e) {
       throw new CommitException(
-          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     }
   }
 
@@ -242,7 +246,8 @@ public class CommitHandler {
         if (state.equals(TransactionState.ABORTED)) {
           rollbackRecords(snapshot);
           throw new CommitConflictException(
-              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(),
+              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
+                  cause.getMessage()),
               cause,
               snapshot.getId());
         }
@@ -250,13 +255,15 @@ public class CommitHandler {
         throw new UnknownTransactionStatusException(
             CoreError
                 .CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-                .buildMessage(),
+                .buildMessage(cause.getMessage()),
             cause,
             snapshot.getId());
       }
     } catch (CoordinatorException ex) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), ex, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_CANNOT_COORDINATOR_STATUS.buildMessage(ex.getMessage()),
+          ex,
+          snapshot.getId());
     }
   }
 
@@ -273,15 +280,21 @@ public class CommitHandler {
       storage.mutate(composer.get());
     } catch (NoMutationException e) {
       throw new CommitConflictException(
-          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     } catch (RetriableExecutionException e) {
       throw new CommitConflictException(
-          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     } catch (ExecutionException e) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_ONE_PHASE_COMMITTING_RECORDS_FAILED.buildMessage(
+              e.getMessage()),
+          e,
+          snapshot.getId());
     }
   }
 
@@ -299,15 +312,20 @@ public class CommitHandler {
       parallelExecutor.prepareRecords(tasks, snapshot.getId());
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
-          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     } catch (RetriableExecutionException e) {
       throw new PreparationConflictException(
-          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     } catch (ExecutionException e) {
       throw new PreparationException(
-          CoreError.CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     }
   }
 
@@ -317,7 +335,9 @@ public class CommitHandler {
       snapshot.toSerializable(storage);
     } catch (ExecutionException e) {
       throw new ValidationException(
-          CoreError.CONSENSUS_COMMIT_VALIDATION_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.CONSENSUS_COMMIT_VALIDATION_FAILED.buildMessage(e.getMessage()),
+          e,
+          snapshot.getId());
     }
   }
 
@@ -333,7 +353,9 @@ public class CommitHandler {
       handleCommitConflict(snapshot, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
+          e,
+          id);
     }
   }
 
@@ -350,7 +372,7 @@ public class CommitHandler {
       }
       parallelExecutor.commitRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("Committing records failed. Transaction ID: {}", snapshot.getId(), e);
+      logger.info("Committing records failed. Transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }
@@ -370,16 +392,20 @@ public class CommitHandler {
         throw new UnknownTransactionStatusException(
             CoreError
                 .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-                .buildMessage(),
+                .buildMessage(e.getMessage()),
             e,
             id);
       } catch (CoordinatorException e1) {
         throw new UnknownTransactionStatusException(
-            CoreError.CONSENSUS_COMMIT_CANNOT_GET_STATE.buildMessage(), e1, id);
+            CoreError.CONSENSUS_COMMIT_CANNOT_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
+            e1,
+            id);
       }
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
+          e,
+          id);
     }
   }
 
@@ -397,7 +423,7 @@ public class CommitHandler {
       }
       parallelExecutor.rollbackRecords(tasks, snapshot.getId());
     } catch (Exception e) {
-      logger.warn("Rolling back records failed. Transaction ID: {}", snapshot.getId(), e);
+      logger.info("Rolling back records failed. Transaction ID: {}", snapshot.getId(), e);
       // ignore since records are recovered lazily
     }
   }

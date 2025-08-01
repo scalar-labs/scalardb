@@ -706,7 +706,7 @@ public class Snapshot {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner", e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
         }
       }
     }
