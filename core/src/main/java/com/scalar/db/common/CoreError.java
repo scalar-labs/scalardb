@@ -976,7 +976,7 @@ public enum CoreError implements ScalarDbError {
       "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_CANNOT_COORDINATOR_STATUS(
+  CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0002",
       "The coordinator status cannot be retrieved. Details: %s",
