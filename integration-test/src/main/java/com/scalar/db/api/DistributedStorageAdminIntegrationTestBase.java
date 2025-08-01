@@ -737,7 +737,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Act Assert
     assertThatThrownBy(
             () ->
-                admin.createIndex(namespace1, TABLE1, "non-existing_column", getCreationOptions()))
+                admin.createIndex(
+                    namespace1, getTable1(), "non-existing_column", getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -906,7 +907,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.dropIndex(namespace1, "non-existing-table", COL_NAME2))
+    assertThatThrownBy(() -> admin.dropIndex(namespace1, "non-existing-table", getColumnName2()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -915,7 +916,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> admin.dropIndex(namespace1, TABLE1, COL_NAME2))
+    assertThatThrownBy(() -> admin.dropIndex(namespace1, getTable1(), getColumnName2()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
