@@ -1,11 +1,12 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.api.DistributedStorageIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
-public class DynamoIntegrationTest extends DistributedStorageIntegrationTestBase {
+public class DynamoCaseSensitivityIntegrationTest
+    extends DistributedStorageCaseSensitivityIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {
