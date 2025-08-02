@@ -599,8 +599,8 @@ public class JdbcAdminTest {
         new RdbEngineDb2(config),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c4\" VARBINARY(64) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   @Test
@@ -611,8 +611,8 @@ public class JdbcAdminTest {
         RdbEngine.DB2,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   private void createTableInternal_ForX_CreateTableAndIndexes(
@@ -727,8 +727,8 @@ public class JdbcAdminTest {
         RdbEngine.DB2,
         "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
-        "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
   private void createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
@@ -2392,7 +2392,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2502,7 +2502,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(128)",
-        "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=true WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2631,7 +2631,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2735,7 +2735,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "DROP INDEX \"index_my_ns_my_tbl_my_column\"",
+        "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
         "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(32672)",
         "UPDATE \""
             + METADATA_SCHEMA
