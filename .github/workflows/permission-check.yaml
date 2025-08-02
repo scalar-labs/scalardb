@@ -619,3 +619,201 @@ jobs:
         with:
           name: sqlserver_2022_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-mariadb-10-11:
+    name: MariaDB 10.11 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MariaDB 10.11
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb_10.11_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-mariadb-11-4:
+    name: MariaDB 11.4 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MariaDB 11.4
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:11.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb_11.4_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-yugabytedb-2:
+    name: YugabyteDB 2 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run YugabyteDB 2
+        run: |
+          docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
+
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/yugabyte?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yugabytedb_2_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-db2-11-5:
+    name: Db2 11.5 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    services:
+      db2:
+        image: icr.io/db2_community/db2:11.5.9.0
+        env:
+          DB2INSTANCE: db2inst1
+          DB2INST1_PASSWORD: db2inst1
+          DBNAME: test_db
+          LICENSE: accept
+        ports:
+          - 50000:50000
+        options: --privileged --name db2
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 10
+        run: |
+          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+          do
+            echo "Container is not yet ready"
+            sleep 5s
+          done
+          echo "Container is ready"
+
+      - name: Create OS user for Db2
+        run: |
+          docker exec db2 bash -c "useradd -m -s /bin/bash test"
+          docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+          docker exec db2 bash -c "usermod -aG db2iadm1 test"
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db2_11.5_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-db2-12-1:
+    name: Db2 12.1 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    services:
+      db2:
+        image: icr.io/db2_community/db2:12.1.1.0
+        env:
+          DB2INSTANCE: db2inst1
+          DB2INST1_PASSWORD: db2inst1
+          DBNAME: test_db
+          LICENSE: accept
+        ports:
+          - 50000:50000
+        options: --privileged --name db2
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 10
+        run: |
+          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+          do
+            echo "Container is not yet ready"
+            sleep 5s
+          done
+          echo "Container is ready"
+
+      - name: Create OS user for Db2
+        run: |
+          docker exec db2 bash -c "useradd -m -s /bin/bash test"
+          docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+          docker exec db2 bash -c "usermod -aG db2iadm1 test"
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db2_12.1_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
