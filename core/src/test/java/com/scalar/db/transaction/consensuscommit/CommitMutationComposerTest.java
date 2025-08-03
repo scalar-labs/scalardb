@@ -12,8 +12,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -163,7 +161,7 @@ public class CommitMutationComposerTest {
                 ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
                     .and(
                         ConditionBuilder.column(STATE)
-                            .isEqualToInt(toStateValue(TransactionState.PREPARED).getAsInt()))
+                            .isEqualToInt(TransactionState.PREPARED.get()))
                     .build())
             .bigIntValue(COMMITTED_AT, ANY_TIME_2)
             .intValue(STATE, TransactionState.COMMITTED.get())
@@ -205,11 +203,10 @@ public class CommitMutationComposerTest {
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
         new PutIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(
-                STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
-    expected.withValue(Attribute.toCommittedAtValue(ANY_TIME_2));
-    expected.withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
+            new ConditionalExpression(STATE, TransactionState.PREPARED.get(), Operator.EQ)));
+    expected.withBigIntValue(Attribute.COMMITTED_AT, ANY_TIME_2);
+    expected.withIntValue(Attribute.STATE, TransactionState.COMMITTED.get());
     assertThat(actual).isEqualTo(expected);
   }
 
@@ -228,8 +225,8 @@ public class CommitMutationComposerTest {
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
+            new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -247,8 +244,8 @@ public class CommitMutationComposerTest {
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
+            new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -318,8 +315,8 @@ public class CommitMutationComposerTest {
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
+            new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
     assertThat(actual).isEqualTo(expected);
   }
 }

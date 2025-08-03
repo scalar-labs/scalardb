@@ -2373,15 +2373,15 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
             .forNamespace(namespace1)
             .forTable(TABLE_1)
             .withValue(new IntValue(BALANCE, INITIAL_BALANCE))
-            .withValue(Attribute.toIdValue(ANY_ID_2))
-            .withValue(Attribute.toStateValue(recordState))
-            .withValue(Attribute.toVersionValue(2))
-            .withValue(Attribute.toPreparedAtValue(preparedAt))
-            .withValue(Attribute.toBeforeIdValue(ANY_ID_1))
-            .withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED))
-            .withValue(Attribute.toBeforeVersionValue(1))
-            .withValue(Attribute.toBeforePreparedAtValue(1))
-            .withValue(Attribute.toBeforeCommittedAtValue(1));
+            .withTextValue(Attribute.ID, ANY_ID_2)
+            .withIntValue(Attribute.STATE, recordState.get())
+            .withIntValue(Attribute.VERSION, 2)
+            .withBigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .withTextValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .withIntValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .withIntValue(Attribute.BEFORE_VERSION, 1)
+            .withBigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .withBigIntValue(Attribute.BEFORE_COMMITTED_AT, 1);
     storage1.put(put);
 
     if (coordinatorState == null) {

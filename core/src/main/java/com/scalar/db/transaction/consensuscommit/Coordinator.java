@@ -286,7 +286,7 @@ public class Coordinator {
 
   @VisibleForTesting
   Get createGetWith(String id) {
-    return new Get(new Key(Attribute.toIdValue(id)))
+    return new Get(Key.ofText(Attribute.ID, id))
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(coordinatorNamespace)
         .forTable(TABLE);
@@ -327,13 +327,13 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    Put put = new Put(new Key(Attribute.toIdValue(state.getId())));
+    Put put = new Put(Key.ofText(Attribute.ID, state.getId()));
     String childIds = state.getChildIdsAsString();
     if (!childIds.isEmpty()) {
-      put.withValue(Attribute.toChildIdsValue(childIds));
+      put.withTextValue(Attribute.CHILD_IDS, childIds);
     }
-    return put.withValue(Attribute.toStateValue(state.getState()))
-        .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
+    return put.withIntValue(Attribute.STATE, state.getState().get())
+        .withBigIntValue(Attribute.CREATED_AT, state.getCreatedAt())
         .withConsistency(Consistency.LINEARIZABLE)
         .withCondition(new PutIfNotExists())
         .forNamespace(coordinatorNamespace)

@@ -26,12 +26,13 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -198,9 +199,9 @@ public class CoordinatorTest {
     // Assert
     assertThat(put.getPartitionKey().get().get(0)).isEqualTo(new TextValue(Attribute.ID, ANY_ID_1));
     assertThat(put.getColumns().get(Attribute.STATE))
-        .isEqualTo(ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)));
+        .isEqualTo(IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()));
     assertThat(put.getColumns().get(Attribute.CREATED_AT))
-        .isEqualTo(ScalarDbUtils.toColumn(Attribute.toCreatedAtValue(current)));
+        .isEqualTo(BigIntColumn.of(Attribute.CREATED_AT, current));
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
     assertThat(put.forNamespace().get()).isEqualTo(Coordinator.NAMESPACE);

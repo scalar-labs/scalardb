@@ -157,7 +157,7 @@ public class SnapshotTest {
                 ScalarDbUtils.toColumn(new TextValue(ANY_NAME_2, clusteringKeyColumnValue)))
             .put(ANY_NAME_3, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
             .put(ANY_NAME_4, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(txId)))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, txId))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
@@ -867,7 +867,7 @@ public class SnapshotTest {
                 .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_5))
                 .put(ANY_NAME_4, new TextValue(ANY_NAME_4, (String) null))
-                .put(Attribute.ID, Attribute.toIdValue(ANY_ID))
+                .put(Attribute.ID, new TextValue(Attribute.ID, ANY_ID))
                 .build());
     assertThat(result.getValue(ANY_NAME_1).isPresent()).isTrue();
     assertThat(result.getValue(ANY_NAME_1).get()).isEqualTo(new TextValue(ANY_NAME_1, ANY_TEXT_1));
@@ -879,7 +879,7 @@ public class SnapshotTest {
     assertThat(result.getValue(ANY_NAME_4).get())
         .isEqualTo(new TextValue(ANY_NAME_4, (String) null));
     assertThat(result.getValue(Attribute.ID).isPresent()).isTrue();
-    assertThat(result.getValue(Attribute.ID).get()).isEqualTo(Attribute.toIdValue(ANY_ID));
+    assertThat(result.getValue(Attribute.ID).get()).isEqualTo(new TextValue(Attribute.ID, ANY_ID));
 
     assertThat(result.getContainedColumnNames())
         .isEqualTo(
@@ -1378,7 +1378,7 @@ public class SnapshotTest {
                     ANY_NAME_2,
                     TextColumn.of(ANY_NAME_2, ANY_TEXT_2),
                     Attribute.ID,
-                    ScalarDbUtils.toColumn(Attribute.toIdValue("id1"))),
+                    TextColumn.of(Attribute.ID, "id1")),
                 TABLE_METADATA));
 
     Result result2 =
@@ -1390,7 +1390,7 @@ public class SnapshotTest {
                     ANY_NAME_2,
                     TextColumn.of(ANY_NAME_2, ANY_TEXT_1),
                     Attribute.ID,
-                    ScalarDbUtils.toColumn(Attribute.toIdValue("id2"))),
+                    TextColumn.of(Attribute.ID, "id2")),
                 TABLE_METADATA));
 
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);

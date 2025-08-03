@@ -12,8 +12,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -812,9 +810,8 @@ public class RollbackMutationComposerTest {
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ),
-            new ConditionalExpression(
-                STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
+            new ConditionalExpression(ID, ANY_ID_2, Operator.EQ),
+            new ConditionalExpression(STATE, TransactionState.PREPARED.get(), Operator.EQ)));
     assertThat(actual).isEqualTo(expected);
   }
 }

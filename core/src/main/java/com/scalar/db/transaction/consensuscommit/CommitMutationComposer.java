@@ -4,8 +4,6 @@ import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -125,9 +123,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         .withConsistency(Consistency.LINEARIZABLE)
         .withCondition(
             new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(
-                    STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+                new ConditionalExpression(ID, id, Operator.EQ),
+                new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)

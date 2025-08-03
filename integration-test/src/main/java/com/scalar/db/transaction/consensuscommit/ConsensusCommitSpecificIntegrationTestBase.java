@@ -8258,16 +8258,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .forNamespace(namespace)
             .forTable(table)
             .withValue(BALANCE, NEW_BALANCE)
-            .withValue(Attribute.toIdValue(ongoingTxId))
-            .withValue(Attribute.toStateValue(recordState))
-            .withValue(Attribute.toVersionValue(2))
-            .withValue(Attribute.toPreparedAtValue(preparedAt))
+            .withTextValue(Attribute.ID, ongoingTxId)
+            .withIntValue(Attribute.STATE, recordState.get())
+            .withIntValue(Attribute.VERSION, 2)
+            .withBigIntValue(Attribute.PREPARED_AT, preparedAt)
             .withValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
-            .withValue(Attribute.toBeforeIdValue(ANY_ID_1))
-            .withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED))
-            .withValue(Attribute.toBeforeVersionValue(1))
-            .withValue(Attribute.toBeforePreparedAtValue(1))
-            .withValue(Attribute.toBeforeCommittedAtValue(1));
+            .withTextValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .withIntValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .withIntValue(Attribute.BEFORE_VERSION, 1)
+            .withBigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .withBigIntValue(Attribute.BEFORE_COMMITTED_AT, 1);
     storage.put(put);
 
     if (coordinatorState == null) {

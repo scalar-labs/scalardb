@@ -9,6 +9,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
@@ -17,7 +18,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -59,38 +59,28 @@ public class TransactionResultTest {
                 .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
                 .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
-                .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
-                .put(
-                    Attribute.PREPARED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_3)))
-                .put(
-                    Attribute.COMMITTED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toCommittedAtValue(ANY_TIME_4)))
+                .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+                .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, ANY_TIME_3))
+                .put(Attribute.COMMITTED_AT, BigIntColumn.of(Attribute.COMMITTED_AT, ANY_TIME_4))
                 .put(
                     Attribute.STATE,
-                    ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)))
-                .put(
-                    Attribute.VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION_2)))
+                    IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+                .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, ANY_VERSION_2))
                 .put(
                     Attribute.BEFORE_PREFIX + ANY_NAME_3,
                     IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
-                .put(
-                    Attribute.BEFORE_ID,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(ANY_ID_1)))
+                .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
                 .put(
                     Attribute.BEFORE_PREPARED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+                    BigIntColumn.of(Attribute.BEFORE_PREPARED_AT, ANY_TIME_1))
                 .put(
                     Attribute.BEFORE_COMMITTED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+                    BigIntColumn.of(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_2))
                 .put(
                     Attribute.BEFORE_STATE,
-                    ScalarDbUtils.toColumn(
-                        Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+                    IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
                 .put(
-                    Attribute.BEFORE_VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                    Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, ANY_VERSION_1))
                 .build(),
             TABLE_METADATA));
   }
@@ -158,27 +148,29 @@ public class TransactionResultTest {
         .isEqualTo(Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)));
     assertThat(result.getValue(ANY_NAME_3))
         .isEqualTo(Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)));
-    assertThat(result.getValue(Attribute.ID)).isEqualTo(Optional.of(Attribute.toIdValue(ANY_ID_2)));
+    assertThat(result.getValue(Attribute.ID))
+        .isEqualTo(Optional.of(new TextValue(Attribute.ID, ANY_ID_2)));
     assertThat(result.getValue(Attribute.PREPARED_AT))
-        .isEqualTo(Optional.of(Attribute.toPreparedAtValue(ANY_TIME_3)));
+        .isEqualTo(Optional.of(new BigIntValue(Attribute.PREPARED_AT, ANY_TIME_3)));
     assertThat(result.getValue(Attribute.COMMITTED_AT))
-        .isEqualTo(Optional.of(Attribute.toCommittedAtValue(ANY_TIME_4)));
+        .isEqualTo(Optional.of(new BigIntValue(Attribute.COMMITTED_AT, ANY_TIME_4)));
     assertThat(result.getValue(Attribute.STATE))
-        .isEqualTo(Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)));
+        .isEqualTo(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
     assertThat(result.getValue(Attribute.VERSION))
-        .isEqualTo(Optional.of(Attribute.toVersionValue(ANY_VERSION_2)));
+        .isEqualTo(Optional.of(new IntValue(Attribute.VERSION, ANY_VERSION_2)));
     assertThat(result.getValue(Attribute.BEFORE_PREFIX + ANY_NAME_3))
         .isEqualTo(Optional.of(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1)));
     assertThat(result.getValue(Attribute.BEFORE_ID))
-        .isEqualTo(Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)));
+        .isEqualTo(Optional.of(new TextValue(Attribute.BEFORE_ID, ANY_ID_1)));
     assertThat(result.getValue(Attribute.BEFORE_PREPARED_AT))
-        .isEqualTo(Optional.of(Attribute.toBeforePreparedAtValue(ANY_TIME_1)));
+        .isEqualTo(Optional.of(new BigIntValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_1)));
     assertThat(result.getValue(Attribute.BEFORE_COMMITTED_AT))
-        .isEqualTo(Optional.of(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)));
+        .isEqualTo(Optional.of(new BigIntValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_2)));
     assertThat(result.getValue(Attribute.BEFORE_STATE))
-        .isEqualTo(Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)));
+        .isEqualTo(
+            Optional.of(new IntValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())));
     assertThat(result.getValue(Attribute.BEFORE_VERSION))
-        .isEqualTo(Optional.of(Attribute.toBeforeVersionValue(ANY_VERSION_1)));
+        .isEqualTo(Optional.of(new IntValue(Attribute.BEFORE_VERSION, ANY_VERSION_1)));
 
     assertThat(result.getContainedColumnNames())
         .isEqualTo(
@@ -380,38 +372,28 @@ public class TransactionResultTest {
                 .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
                 .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
-                .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
-                .put(
-                    Attribute.PREPARED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_3)))
-                .put(
-                    Attribute.COMMITTED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toCommittedAtValue(ANY_TIME_4)))
+                .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+                .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, ANY_TIME_3))
+                .put(Attribute.COMMITTED_AT, BigIntColumn.of(Attribute.COMMITTED_AT, ANY_TIME_4))
                 .put(
                     Attribute.STATE,
-                    ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)))
-                .put(
-                    Attribute.VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION_2)))
+                    IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+                .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, ANY_VERSION_2))
                 .put(
                     Attribute.BEFORE_PREFIX + ANY_NAME_3,
                     IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
-                .put(
-                    Attribute.BEFORE_ID,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(ANY_ID_1)))
+                .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
                 .put(
                     Attribute.BEFORE_PREPARED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+                    BigIntColumn.of(Attribute.BEFORE_PREPARED_AT, ANY_TIME_1))
                 .put(
                     Attribute.BEFORE_COMMITTED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+                    BigIntColumn.of(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_2))
                 .put(
                     Attribute.BEFORE_STATE,
-                    ScalarDbUtils.toColumn(
-                        Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+                    IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
                 .put(
-                    Attribute.BEFORE_VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                    Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, ANY_VERSION_1))
                 .build(),
             TABLE_METADATA);
     Result r2 = new TransactionResult(r1);
@@ -429,38 +411,28 @@ public class TransactionResultTest {
                 .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
                 .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
-                .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
-                .put(
-                    Attribute.PREPARED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(ANY_TIME_3)))
-                .put(
-                    Attribute.COMMITTED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toCommittedAtValue(ANY_TIME_4)))
+                .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+                .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, ANY_TIME_3))
+                .put(Attribute.COMMITTED_AT, BigIntColumn.of(Attribute.COMMITTED_AT, ANY_TIME_4))
                 .put(
                     Attribute.STATE,
-                    ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)))
-                .put(
-                    Attribute.VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toVersionValue(ANY_VERSION_2)))
+                    IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+                .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, ANY_VERSION_2))
                 .put(
                     Attribute.BEFORE_PREFIX + ANY_NAME_3,
                     IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
-                .put(
-                    Attribute.BEFORE_ID,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(ANY_ID_1)))
+                .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
                 .put(
                     Attribute.BEFORE_PREPARED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+                    BigIntColumn.of(Attribute.BEFORE_PREPARED_AT, ANY_TIME_1))
                 .put(
                     Attribute.BEFORE_COMMITTED_AT,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+                    BigIntColumn.of(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_2))
                 .put(
                     Attribute.BEFORE_STATE,
-                    ScalarDbUtils.toColumn(
-                        Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+                    IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
                 .put(
-                    Attribute.BEFORE_VERSION,
-                    ScalarDbUtils.toColumn(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                    Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, ANY_VERSION_1))
                 .build(),
             TABLE_METADATA);
     Map<String, Column<?>> emptyValues = Collections.emptyMap();
