@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageWithReservedKeywordIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -19,52 +19,10 @@ import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
-public class JdbcDatabaseWithReservedKeywordIntegrationTest
-    extends DistributedStorageWithReservedKeywordIntegrationTestBase {
+public class JdbcDatabaseCaseSensitivityIntegrationTest
+    extends DistributedStorageCaseSensitivityIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
-
-  @Override
-  protected String getNamespace() {
-    // a reserved keyword in JDBC
-    return "between";
-  }
-
-  @Override
-  protected String getTableName() {
-    // a reserved keyword in JDBC
-    return "create";
-  }
-
-  @Override
-  protected String getColumnName1() {
-    // a reserved keyword in JDBC
-    return "from";
-  }
-
-  @Override
-  protected String getColumnName2() {
-    // a reserved keyword in JDBC
-    return "to";
-  }
-
-  @Override
-  protected String getColumnName3() {
-    // a reserved keyword in JDBC
-    return "values";
-  }
-
-  @Override
-  protected String getColumnName4() {
-    // a reserved keyword in JDBC
-    return "like";
-  }
-
-  @Override
-  protected String getColumnName5() {
-    // a reserved keyword in JDBC
-    return "order";
-  }
 
   @Override
   protected Properties getProperties(String testName) {

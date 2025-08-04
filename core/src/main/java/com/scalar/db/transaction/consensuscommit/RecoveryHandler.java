@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.*;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorage;
@@ -9,6 +10,8 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.Key;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -37,8 +40,6 @@ public class RecoveryHandler {
   public void recover(
       Selection selection, TransactionResult result, Optional<Coordinator.State> state)
       throws ExecutionException, CoordinatorException {
-    logger.debug("Recovering for {}", result.getId());
-
     if (state.isPresent()) {
       if (state.get().getState().equals(TransactionState.COMMITTED)) {
         rollforwardRecord(selection, result);
@@ -52,17 +53,34 @@ public class RecoveryHandler {
 
   @VisibleForTesting
   void rollbackRecord(Selection selection, TransactionResult result) throws ExecutionException {
-    logger.debug(
-        "Rollback for {}, {} mutated by {}",
-        selection.getPartitionKey(),
-        selection.getClusteringKey(),
+    assert selection.forFullTableName().isPresent();
+
+    TransactionTableMetadata tableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, selection);
+    Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata.getTableMetadata());
+    Optional<Key> clusteringKey =
+        ScalarDbUtils.getClusteringKey(result, tableMetadata.getTableMetadata());
+
+    logger.info(
+        "Rolling back for a record. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
+        selection.forFullTableName().get(),
+        partitionKey,
+        clusteringKey,
         result.getId());
 
     RollbackMutationComposer composer = createRollbackMutationComposer(selection, result);
 
     try {
       mutate(composer.get());
-    } catch (NoMutationException ignored) {
+    } catch (NoMutationException e) {
+      logger.info(
+          "Rolling back for a record failed. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
+          selection.forFullTableName().get(),
+          partitionKey,
+          clusteringKey,
+          result.getId(),
+          e);
+
       // This can happen when the record has already been rolled back by another transaction. In
       // this case, we just ignore it.
     }
@@ -79,17 +97,34 @@ public class RecoveryHandler {
 
   @VisibleForTesting
   void rollforwardRecord(Selection selection, TransactionResult result) throws ExecutionException {
-    logger.debug(
-        "Rollforward for {}, {} mutated by {}",
-        selection.getPartitionKey(),
-        selection.getClusteringKey(),
+    assert selection.forFullTableName().isPresent();
+
+    TransactionTableMetadata tableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, selection);
+    Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata.getTableMetadata());
+    Optional<Key> clusteringKey =
+        ScalarDbUtils.getClusteringKey(result, tableMetadata.getTableMetadata());
+
+    logger.info(
+        "Rolling forward for a record. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
+        selection.forFullTableName().get(),
+        partitionKey,
+        clusteringKey,
         result.getId());
 
     CommitMutationComposer composer = createCommitMutationComposer(selection, result);
 
     try {
       mutate(composer.get());
-    } catch (NoMutationException ignored) {
+    } catch (NoMutationException e) {
+      logger.info(
+          "Rolling forward for a record failed. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
+          selection.forFullTableName().get(),
+          partitionKey,
+          clusteringKey,
+          result.getId(),
+          e);
+
       // This can happen when the record has already been committed by another transaction. In this
       // case, we just ignore it.
     }
@@ -106,13 +141,29 @@ public class RecoveryHandler {
 
   private void abortIfExpired(Selection selection, TransactionResult result)
       throws CoordinatorException, ExecutionException {
+    assert selection.forFullTableName().isPresent();
+
     if (!isTransactionExpired(result)) {
       return;
     }
 
     try {
       coordinator.putStateForLazyRecoveryRollback(result.getId());
-    } catch (CoordinatorConflictException ignored) {
+    } catch (CoordinatorConflictException e) {
+      TransactionTableMetadata tableMetadata =
+          getTransactionTableMetadata(tableMetadataManager, selection);
+      Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata.getTableMetadata());
+      Optional<Key> clusteringKey =
+          ScalarDbUtils.getClusteringKey(result, tableMetadata.getTableMetadata());
+
+      logger.info(
+          "Putting state in coordinator for a record failed. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
+          selection.forFullTableName().get(),
+          partitionKey,
+          clusteringKey,
+          result.getId(),
+          e);
+
       // This can happen when the record has already been rolled back by another transaction. In
       // this case, we just ignore it.
       return;

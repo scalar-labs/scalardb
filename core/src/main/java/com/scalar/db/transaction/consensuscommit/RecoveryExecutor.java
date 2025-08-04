@@ -131,7 +131,10 @@ public class RecoveryExecutor implements AutoCloseable {
     try {
       return coordinator.getState(transactionId);
     } catch (CoordinatorException e) {
-      throw new CrudException(e.getMessage(), e, transactionId);
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(e.getMessage()),
+          e,
+          transactionId);
     }
   }
 
@@ -154,12 +157,20 @@ public class RecoveryExecutor implements AutoCloseable {
       Selection selection,
       TransactionResult result,
       String transactionId)
-      throws UncommittedRecordException {
+      throws CrudException {
+    assert selection.forFullTableName().isPresent();
+
     if (!state.isPresent() && !recovery.isTransactionExpired(result)) {
+      TransactionTableMetadata transactionTableMetadata =
+          getTransactionTableMetadata(selection, transactionId);
       throw new UncommittedRecordException(
           selection,
           result,
-          CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD.buildMessage(
+              selection.forFullTableName().get(),
+              ScalarDbUtils.getPartitionKey(result, transactionTableMetadata.getTableMetadata()),
+              ScalarDbUtils.getClusteringKey(result, transactionTableMetadata.getTableMetadata()),
+              result.getId()),
           transactionId);
     }
   }
@@ -282,11 +293,15 @@ public class RecoveryExecutor implements AutoCloseable {
 
   private TransactionTableMetadata getTransactionTableMetadata(
       Operation operation, String transactionId) throws CrudException {
+    assert operation.forFullTableName().isPresent();
+
     try {
       return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(), e, transactionId);
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(operation.forFullTableName().get()),
+          e,
+          transactionId);
     }
   }
 

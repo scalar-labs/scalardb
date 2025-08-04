@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -24,9 +25,16 @@ public class MergeQuery implements UpsertQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
+  @Nullable private final String dualTableName;
+  private final boolean semicolonAdded;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public MergeQuery(Builder builder) {
+  public MergeQuery(Builder builder, @Nullable String dualTableName) {
+    this(builder, dualTableName, false);
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public MergeQuery(Builder builder, @Nullable String dualTableName, boolean semicolonAdded) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
@@ -34,6 +42,8 @@ public class MergeQuery implements UpsertQuery {
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     columns = builder.columns;
+    this.dualTableName = dualTableName;
+    this.semicolonAdded = semicolonAdded;
   }
 
   @Override
@@ -47,20 +57,23 @@ public class MergeQuery implements UpsertQuery {
         columns.keySet().stream().map(rdbEngine::enclose).collect(Collectors.toList());
 
     StringBuilder sql = new StringBuilder();
-    sql.append("MERGE ")
+    sql.append("MERGE INTO ")
         .append(rdbEngine.encloseFullTableName(schema, table))
         .append(" t1 USING (SELECT ")
-        .append(makeUsingSelectSqlString(enclosedKeyNames))
-        .append(") t2 ON (")
-        .append(makePrimaryKeyConditionsSqlString(enclosedKeyNames))
-        .append(")");
+        .append(makeUsingSelectSqlString(enclosedKeyNames));
+    if (dualTableName != null) {
+      sql.append(" FROM ").append(dualTableName);
+    }
+    sql.append(") t2 ON (").append(makePrimaryKeyConditionsSqlString(enclosedKeyNames)).append(")");
     if (!columns.isEmpty()) {
       sql.append(" WHEN MATCHED THEN UPDATE SET ")
           .append(makeUpdateSetSqlString(enclosedValueNames));
     }
     sql.append(" WHEN NOT MATCHED THEN INSERT ")
-        .append(makeInsertSqlString(enclosedKeyNames, enclosedValueNames))
-        .append(";");
+        .append(makeInsertSqlString(enclosedKeyNames, enclosedValueNames));
+    if (semicolonAdded) {
+      sql.append(";");
+    }
     return sql.toString();
   }
 
