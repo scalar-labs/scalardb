@@ -9,6 +9,7 @@ import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcPermissionTestUtils implements PermissionTestUtils {
+  public static final int DDL_WAIT_SECONDS = 1;
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
 
@@ -20,25 +21,29 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
 
   @Override
   public void createNormalUser(String userName, String password) {
-    try (Connection connection = dataSource.getConnection()) {
-      String createUserSql = getCreateUserSql(userName, password);
-      try (Statement statement = connection.createStatement()) {
-        statement.execute(createUserSql);
+    if (!JdbcTestUtils.isDb2(rdbEngine)) {
+      try (Connection connection = dataSource.getConnection()) {
+        String createUserSql = getCreateUserSql(userName, password);
+        try (Statement statement = connection.createStatement()) {
+          statement.execute(createUserSql);
+        }
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to create user: " + userName, e);
       }
-    } catch (SQLException e) {
-      throw new RuntimeException("Failed to create user: " + userName, e);
     }
   }
 
   @Override
   public void dropNormalUser(String userName) {
-    try (Connection connection = dataSource.getConnection()) {
-      String dropUserSql = getDropUserSql(userName);
-      try (Statement statement = connection.createStatement()) {
-        statement.execute(dropUserSql);
+    if (!JdbcTestUtils.isDb2(rdbEngine)) {
+      try (Connection connection = dataSource.getConnection()) {
+        String dropUserSql = getDropUserSql(userName);
+        try (Statement statement = connection.createStatement()) {
+          statement.execute(dropUserSql);
+        }
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to drop user: " + userName, e);
       }
-    } catch (SQLException e) {
-      throw new RuntimeException("Failed to drop user: " + userName, e);
     }
   }
 
@@ -127,6 +132,11 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
         String.format("ALTER ROLE [db_ddladmin] ADD MEMBER %s", userName),
         String.format("ALTER ROLE [db_datareader] ADD MEMBER %s", userName),
         String.format("ALTER ROLE [db_datawriter] ADD MEMBER %s", userName)
+      };
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return new String[] {
+        String.format("GRANT DBADM ON DATABASE TO USER %s", userName),
+        String.format("GRANT DATAACCESS ON DATABASE TO USER %s", userName)
       };
     } else {
       throw new UnsupportedOperationException(
