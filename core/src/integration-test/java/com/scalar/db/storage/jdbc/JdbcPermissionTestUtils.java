@@ -9,6 +9,7 @@ import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcPermissionTestUtils implements PermissionTestUtils {
+  public static final int DDL_WAIT_SECONDS = 1;
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
 
