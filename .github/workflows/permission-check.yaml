@@ -641,7 +641,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       - name: Upload Gradle test reports
         if: always()
@@ -671,7 +671,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
-        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       - name: Upload Gradle test reports
         if: always()
