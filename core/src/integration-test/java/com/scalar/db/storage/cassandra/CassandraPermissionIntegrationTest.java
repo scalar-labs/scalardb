@@ -40,7 +40,7 @@ public class CassandraPermissionIntegrationTest
   }
 
   @Override
-  protected void waitForTableCreation() {
+  protected void waitForDdlCompletion() {
     try {
       AdminTestUtils utils = getAdminTestUtils(TEST_NAME);
       int retryCount = 0;
