@@ -14,7 +14,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
@@ -263,8 +263,22 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(schema)
+        + "."
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
+  @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return "DROP INDEX " + enclose(indexName);
+    return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
   }
 
   @Override
@@ -297,13 +311,13 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return MergeIntoQuery.createForDb2(builder);
+    return new MergeQuery(builder, "SYSIBM.DUAL");
   }
 
   @Override
