@@ -21,29 +21,25 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
 
   @Override
   public void createNormalUser(String userName, String password) {
-    if (!JdbcTestUtils.isDb2(rdbEngine)) {
-      try (Connection connection = dataSource.getConnection()) {
-        String createUserSql = getCreateUserSql(userName, password);
-        try (Statement statement = connection.createStatement()) {
-          statement.execute(createUserSql);
-        }
-      } catch (SQLException e) {
-        throw new RuntimeException("Failed to create user: " + userName, e);
+    try (Connection connection = dataSource.getConnection()) {
+      String createUserSql = getCreateUserSql(userName, password);
+      try (Statement statement = connection.createStatement()) {
+        statement.execute(createUserSql);
       }
+    } catch (SQLException e) {
+      throw new RuntimeException("Failed to create user: " + userName, e);
     }
   }
 
   @Override
   public void dropNormalUser(String userName) {
-    if (!JdbcTestUtils.isDb2(rdbEngine)) {
-      try (Connection connection = dataSource.getConnection()) {
-        String dropUserSql = getDropUserSql(userName);
-        try (Statement statement = connection.createStatement()) {
-          statement.execute(dropUserSql);
-        }
-      } catch (SQLException e) {
-        throw new RuntimeException("Failed to drop user: " + userName, e);
+    try (Connection connection = dataSource.getConnection()) {
+      String dropUserSql = getDropUserSql(userName);
+      try (Statement statement = connection.createStatement()) {
+        statement.execute(dropUserSql);
       }
+    } catch (SQLException e) {
+      throw new RuntimeException("Failed to drop user: " + userName, e);
     }
   }
 
@@ -132,11 +128,6 @@ public class JdbcPermissionTestUtils implements PermissionTestUtils {
         String.format("ALTER ROLE [db_ddladmin] ADD MEMBER %s", userName),
         String.format("ALTER ROLE [db_datareader] ADD MEMBER %s", userName),
         String.format("ALTER ROLE [db_datawriter] ADD MEMBER %s", userName)
-      };
-    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
-      return new String[] {
-        String.format("GRANT DBADM ON DATABASE TO USER %s", userName),
-        String.format("GRANT DATAACCESS ON DATABASE TO USER %s", userName)
       };
     } else {
       throw new UnsupportedOperationException(
