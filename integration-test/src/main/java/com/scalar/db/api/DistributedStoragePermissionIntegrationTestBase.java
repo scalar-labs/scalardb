@@ -68,7 +68,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
 
       namespace = getNamespace();
       createTable();
-      waitForTableCreation();
+      waitForDdlCompletion();
     } catch (Exception e) {
       logger.error("Failed to set up the test environment", e);
       throw e;
@@ -78,6 +78,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     truncateTable();
+    waitForDdlCompletion();
   }
 
   @AfterAll
@@ -296,7 +297,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     return Collections.emptyMap();
   }
 
-  protected void waitForTableCreation() {
+  protected void waitForDdlCompletion() {
     // Default do nothing
   }
 

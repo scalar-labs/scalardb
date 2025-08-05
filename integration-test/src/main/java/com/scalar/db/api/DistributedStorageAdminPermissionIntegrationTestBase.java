@@ -38,7 +38,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
           .addColumn(COL_NAME2, DataType.TEXT)
-          .addColumn(COL_NAME3, DataType.TEXT)
+          .addColumn(COL_NAME3, DataType.INT)
           .addColumn(COL_NAME4, DataType.INT)
           .addPartitionKey(COL_NAME1)
           .addClusteringKey(COL_NAME2, Scan.Ordering.Order.ASC)
