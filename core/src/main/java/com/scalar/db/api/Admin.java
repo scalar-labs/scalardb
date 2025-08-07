@@ -442,6 +442,18 @@ public interface Admin {
   }
 
   /**
+   * Drops a column from an existing table. The column cannot be a partition or clustering key.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to drop
+   * @throws IllegalArgumentException if the table does not exist or the column does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException;
+
+  /**
    * Imports an existing table that is not managed by ScalarDB.
    *
    * @param namespace an existing namespace

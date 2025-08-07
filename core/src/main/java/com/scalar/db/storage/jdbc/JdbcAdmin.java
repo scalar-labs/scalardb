@@ -862,6 +862,31 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+      String addNewColumnStatement =
+          "ALTER TABLE "
+              + encloseFullTableName(namespace, table)
+              + " DROP COLUMN"
+              + enclose(columnName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, addNewColumnStatement);
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Adding the new %s column to the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

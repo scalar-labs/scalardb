@@ -970,6 +970,71 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TIMESTAMP)
+            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName3());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName4());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName5());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName6());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName7());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName8());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName9());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName10());
+      if (isTimestampTypeSupported()) {
+        admin.dropColumnFromTable(namespace1, getTable4(), getColumnName11());
+        admin.dropColumnFromTable(namespace1, getTable4(), getColumnName12());
+      }
+
+      // Assert
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .removeColumn(getColumnName3())
+              .removeColumn(getColumnName4())
+              .removeColumn(getColumnName5())
+              .removeColumn(getColumnName6())
+              .removeColumn(getColumnName7())
+              .removeColumn(getColumnName8())
+              .removeColumn(getColumnName9())
+              .removeColumn(getColumnName10());
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .removeColumn(getColumnName11())
+            .removeColumn(getColumnName12());
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
     // Arrange
 
@@ -999,6 +1064,38 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThatThrownBy(
             () ->
                 admin.addNewColumnToTable(namespace1, getTable1(), getColumnName2(), DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable4(), getColumnName2()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.dropColumnFromTable(namespace1, getTable1(), "nonExistingColumn"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName1()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName3()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName5()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

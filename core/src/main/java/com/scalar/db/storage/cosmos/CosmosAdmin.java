@@ -645,6 +645,23 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+      upsertTableMetadata(namespace, table, updatedTableMetadata);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          String.format(
+              "Adding the new %s column to the %s container failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
