@@ -1132,6 +1132,49 @@ public class CosmosAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String column1 = "c1";
+    String column2 = "c2";
+    String fullTableName = getFullTableName(namespace, table);
+    @SuppressWarnings("unchecked")
+    CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
+
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
+    when(container.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(response);
+
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .partitionKeyNames(Sets.newLinkedHashSet(column1))
+            .columns(ImmutableMap.of(column1, "text", column2, "int"))
+            .build();
+
+    when(response.getItem()).thenReturn(cosmosTableMetadata);
+
+    // Act
+    admin.dropColumnFromTable(namespace, table, column2);
+
+    // Assert
+    verify(container)
+        .readItem(fullTableName, new PartitionKey(fullTableName), CosmosTableMetadata.class);
+
+    CosmosTableMetadata expectedCosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(fullTableName)
+            .partitionKeyNames(Sets.newLinkedHashSet(column1))
+            .columns(ImmutableMap.of(column1, "text"))
+            .build();
+    verify(container).upsertItem(expectedCosmosTableMetadata);
+  }
+
+  @Test
   public void unsupportedOperations_ShouldThrowUnsupportedException() {
     // Arrange
     String namespace = "sample_ns";

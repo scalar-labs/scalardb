@@ -1442,6 +1442,73 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String column1 = "c1";
+    String column2 = "c2";
+
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(getFullTableName()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put(column1, AttributeValue.builder().s("text").build())
+                                .put(column2, AttributeValue.builder().s("int").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s(column1).build()).build())
+                .build());
+
+    // Act
+    admin.dropColumnFromTable(NAMESPACE, TABLE, column2);
+
+    // Assert
+    // Get metadata
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put(
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
+    verify(client)
+        .getItem(
+            GetItemRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .key(key)
+                .consistentRead(true)
+                .build());
+
+    // Put metadata
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_TABLE, AttributeValue.builder().s(getFullTableName()).build());
+    Map<String, AttributeValue> columns = new HashMap<>();
+
+    columns.put(
+        column1, AttributeValue.builder().s(DataType.TEXT.toString().toLowerCase()).build());
+
+    itemValues.put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+        AttributeValue.builder()
+            .l(Collections.singletonList(AttributeValue.builder().s(column1).build()))
+            .build());
+    verify(client)
+        .putItem(
+            PutItemRequest.builder()
+                .tableName(getFullMetadataTableName())
+                .item(itemValues)
+                .build());
+  }
+
+  @Test
   public void
       createNamespace_WithNonExistingNamespacesTable_ShouldCreateNamespacesTableAndAddNamespace()
           throws ExecutionException {

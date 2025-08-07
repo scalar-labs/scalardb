@@ -871,7 +871,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String addNewColumnStatement =
           "ALTER TABLE "
               + encloseFullTableName(namespace, table)
-              + " DROP COLUMN"
+              + " DROP COLUMN "
               + enclose(columnName);
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, addNewColumnStatement);
