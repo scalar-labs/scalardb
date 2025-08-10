@@ -6,8 +6,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -99,8 +97,8 @@ public class ConditionalQueryBuilderTest {
     // Arrange
     PutIf condition =
         new PutIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+            ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()),
+            ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()));
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -142,8 +140,8 @@ public class ConditionalQueryBuilderTest {
     // Arrange
     DeleteIf condition =
         new DeleteIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+            ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()),
+            ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()));
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act

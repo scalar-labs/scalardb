@@ -1,13 +1,11 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -129,8 +127,8 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         .forTable(base.forTable().get())
         .withCondition(
             new DeleteIf(
-                new ConditionalExpression(ID, id, Operator.EQ),
-                new ConditionalExpression(STATE, result.getState().get(), Operator.EQ)))
+                ConditionBuilder.column(ID).isEqualToText(id),
+                ConditionBuilder.column(STATE).isEqualToInt(result.getState().get())))
         .withConsistency(Consistency.LINEARIZABLE);
   }
 

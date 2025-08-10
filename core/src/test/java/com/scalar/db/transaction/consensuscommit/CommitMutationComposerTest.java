@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
@@ -18,7 +17,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -203,8 +201,8 @@ public class CommitMutationComposerTest {
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
         new PutIf(
-            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
-            new ConditionalExpression(STATE, TransactionState.PREPARED.get(), Operator.EQ)));
+            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
+            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get())));
     expected.withBigIntValue(Attribute.COMMITTED_AT, ANY_TIME_2);
     expected.withIntValue(Attribute.STATE, TransactionState.COMMITTED.get());
     assertThat(actual).isEqualTo(expected);
@@ -225,8 +223,8 @@ public class CommitMutationComposerTest {
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
-            new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
+            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
+            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -244,8 +242,8 @@ public class CommitMutationComposerTest {
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
-            new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
+            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
+            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -315,8 +313,8 @@ public class CommitMutationComposerTest {
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, ANY_ID, Operator.EQ),
-            new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
+            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
+            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
     assertThat(actual).isEqualTo(expected);
   }
 }

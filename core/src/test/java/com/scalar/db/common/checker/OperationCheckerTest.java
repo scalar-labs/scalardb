@@ -8,7 +8,6 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -772,9 +771,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition =
-        new PutIf(
-            new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
+    MutationCondition condition = new PutIf(ConditionBuilder.column(COL1).isEqualToText("1"));
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -1091,9 +1088,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition =
-        new DeleteIf(
-            new ConditionalExpression(COL1, new IntValue(1), ConditionalExpression.Operator.EQ));
+    MutationCondition condition = new DeleteIf(ConditionBuilder.column(COL1).isEqualToInt(1));
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1233,9 +1228,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition =
-        new DeleteIf(
-            new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
+    MutationCondition condition = new DeleteIf(ConditionBuilder.column(COL1).isEqualToText("1"));
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)

@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
@@ -8,7 +7,6 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -123,8 +121,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         .withConsistency(Consistency.LINEARIZABLE)
         .withCondition(
             new DeleteIf(
-                new ConditionalExpression(ID, id, Operator.EQ),
-                new ConditionalExpression(STATE, TransactionState.DELETED.get(), Operator.EQ)));
+                ConditionBuilder.column(ID).isEqualToText(id),
+                ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)

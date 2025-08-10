@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
@@ -19,7 +18,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -810,8 +808,8 @@ public class RollbackMutationComposerTest {
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ID, ANY_ID_2, Operator.EQ),
-            new ConditionalExpression(STATE, TransactionState.PREPARED.get(), Operator.EQ)));
+            ConditionBuilder.column(ID).isEqualToText(ANY_ID_2),
+            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get())));
     assertThat(actual).isEqualTo(expected);
   }
 }

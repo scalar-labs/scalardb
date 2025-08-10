@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -28,7 +27,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -330,10 +328,7 @@ public class JdbcServiceTest {
     Put put =
         new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
-            .withCondition(
-                new PutIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+            .withCondition(new PutIf(ConditionBuilder.column("v1").isEqualToText("val2")))
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -359,10 +354,7 @@ public class JdbcServiceTest {
     Put put =
         new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
-            .withCondition(
-                new PutIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+            .withCondition(new PutIf(ConditionBuilder.column("v1").isEqualToText("val2")))
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -508,10 +500,7 @@ public class JdbcServiceTest {
     // Act
     Delete delete =
         new Delete(Key.ofText("p1", "val1"))
-            .withCondition(
-                new DeleteIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+            .withCondition(new DeleteIf(ConditionBuilder.column("v1").isEqualToText("val2")))
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);
@@ -535,10 +524,7 @@ public class JdbcServiceTest {
     // Act
     Delete delete =
         new Delete(Key.ofText("p1", "val1"))
-            .withCondition(
-                new DeleteIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+            .withCondition(new DeleteIf(ConditionBuilder.column("v1").isEqualToText("val2")))
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);

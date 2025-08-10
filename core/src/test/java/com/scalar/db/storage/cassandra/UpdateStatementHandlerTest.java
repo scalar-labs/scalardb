@@ -1,6 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -13,14 +12,12 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.common.base.Joiner;
-import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -256,12 +253,12 @@ public class UpdateStatementHandlerTest {
     put = preparePutWithClusteringKey();
     put.withCondition(
         new PutIf(
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.NE),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.GT),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.GTE),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.LT),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.LTE)));
+            ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2),
+            ConditionBuilder.column(ANY_NAME_4).isNotEqualToInt(ANY_INT_2),
+            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_2),
+            ConditionBuilder.column(ANY_NAME_4).isGreaterThanOrEqualToInt(ANY_INT_2),
+            ConditionBuilder.column(ANY_NAME_4).isLessThanInt(ANY_INT_2),
+            ConditionBuilder.column(ANY_NAME_4).isLessThanOrEqualToInt(ANY_INT_2)));
 
     // Act
     handler.prepare(put);
@@ -291,8 +288,7 @@ public class UpdateStatementHandlerTest {
     configureBehavior(null);
     put = preparePutWithClusteringKey();
     PutIf putIf =
-        Mockito.spy(
-            new PutIf(new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.EQ)));
+        Mockito.spy(new PutIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2)));
     put.withCondition(putIf);
 
     // Act
@@ -324,8 +320,8 @@ public class UpdateStatementHandlerTest {
     put = preparePutWithClusteringKey();
     put.withCondition(
         new PutIf(
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.EQ),
-            new ConditionalExpression(ANY_NAME_5, new TextValue(ANY_TEXT_3), Operator.EQ)));
+            ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2),
+            ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_3)));
 
     // Act
     handler.bind(prepared, put);
@@ -417,8 +413,7 @@ public class UpdateStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    put.withCondition(
-            new PutIf(new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.EQ)))
+    put.withCondition(new PutIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2)))
         .withConsistency(Consistency.EVENTUAL);
 
     // Act

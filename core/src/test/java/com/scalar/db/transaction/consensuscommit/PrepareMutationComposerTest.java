@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
@@ -171,7 +169,7 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
-    put.withCondition(new PutIf(new ConditionalExpression(ID, ANY_ID_2, Operator.EQ)));
+    put.withCondition(new PutIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)));
     put.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
     put.withValue(Attribute.ID, ANY_ID_3);
     put.withValue(Attribute.STATE, TransactionState.PREPARED.get());
@@ -303,7 +301,7 @@ public class PrepareMutationComposerTest {
             .forNamespace(delete.forNamespace().get())
             .forTable(delete.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(new PutIf(new ConditionalExpression(ID, ANY_ID_2, Operator.EQ)));
+    expected.withCondition(new PutIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)));
     expected.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
     expected.withValue(Attribute.ID, ANY_ID_3);
     expected.withValue(Attribute.STATE, TransactionState.DELETED.get());

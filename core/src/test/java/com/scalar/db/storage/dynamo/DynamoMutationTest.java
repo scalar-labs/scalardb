@@ -3,8 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -98,8 +97,8 @@ public class DynamoMutationTest {
     // Arrange
     PutIf conditions =
         new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
+            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()),
+            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()));
     Put put = preparePut().withCondition(conditions);
 
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
@@ -125,8 +124,8 @@ public class DynamoMutationTest {
     // Arrange
     PutIf conditions =
         new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
+            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()),
+            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()));
     Put put = preparePut().withCondition(conditions);
 
     Map<String, String> expected = new HashMap<>();
@@ -170,8 +169,8 @@ public class DynamoMutationTest {
     // Arrange
     PutIf conditions =
         new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
+            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()),
+            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()));
     Put put = preparePut().withCondition(conditions);
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(

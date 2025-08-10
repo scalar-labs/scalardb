@@ -1,6 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -15,16 +14,14 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.common.base.Joiner;
-import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -236,8 +233,8 @@ public class DeleteStatementHandlerTest {
     del = prepareDeleteWithClusteringKey();
     del.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ANY_NAME_3, new IntValue(ANY_INT_1), Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, new TextValue(ANY_TEXT_3), Operator.EQ)));
+            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1),
+            ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3)));
 
     // Act
     handler.prepare(del);
@@ -267,9 +264,7 @@ public class DeleteStatementHandlerTest {
     configureBehavior(null);
     del = prepareDeleteWithClusteringKey();
     DeleteIf deleteIf =
-        spy(
-            new DeleteIf(
-                new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.EQ)));
+        spy(new DeleteIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2)));
     del.withCondition(deleteIf);
 
     // Act
@@ -300,8 +295,8 @@ public class DeleteStatementHandlerTest {
     del = prepareDeleteWithClusteringKey();
     del.withCondition(
         new DeleteIf(
-            new ConditionalExpression(ANY_NAME_3, new IntValue(ANY_INT_1), Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, new TextValue(ANY_TEXT_3), Operator.EQ)));
+            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1),
+            ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3)));
 
     // Act
     handler.bind(prepared, del);
@@ -378,8 +373,8 @@ public class DeleteStatementHandlerTest {
     del = prepareDeleteWithClusteringKey();
     del.withCondition(
             new DeleteIf(
-                new ConditionalExpression(ANY_NAME_3, new IntValue(ANY_INT_1), Operator.EQ),
-                new ConditionalExpression(ANY_NAME_4, new TextValue(ANY_TEXT_3), Operator.EQ)))
+                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1),
+                ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3)))
         .withConsistency(Consistency.EVENTUAL);
 
     // Act

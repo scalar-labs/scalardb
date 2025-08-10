@@ -6,8 +6,6 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
@@ -15,7 +13,6 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
@@ -1087,8 +1084,7 @@ public class QueryBuilderTest {
                 Key.ofText("p1", "p1Value"),
                 Optional.of(Key.ofText("c1", "c1Value")),
                 Collections.singletonList(
-                    new ConditionalExpression(
-                        "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
+                    ConditionBuilder.column("v1").isEqualToText("v1ConditionValue")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -1110,10 +1106,9 @@ public class QueryBuilderTest {
                 Key.ofText("p1", "p1Value"),
                 Optional.of(Key.ofText("c1", "c1Value")),
                 Arrays.asList(
-                    new ConditionalExpression("v1", new TextValue("v1ConditionValue"), Operator.NE),
-                    new ConditionalExpression("v2", new TextValue("v2ConditionValue"), Operator.GT),
-                    new ConditionalExpression(
-                        "v3", new TextValue("v3ConditionValue"), Operator.LTE)))
+                    ConditionBuilder.column("v1").isNotEqualToText("v1ConditionValue"),
+                    ConditionBuilder.column("v2").isGreaterThanText("v2ConditionValue"),
+                    ConditionBuilder.column("v3").isLessThanOrEqualToText("v3ConditionValue")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -1230,8 +1225,7 @@ public class QueryBuilderTest {
                 Key.ofText("p1", "p1Value"),
                 Optional.of(Key.ofText("c1", "c1Value")),
                 Collections.singletonList(
-                    new ConditionalExpression(
-                        "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
+                    ConditionBuilder.column("v1").isEqualToText("v1ConditionValue")))
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1=?", rdbEngine));
@@ -1248,11 +1242,9 @@ public class QueryBuilderTest {
                 Key.ofText("p1", "p1Value"),
                 Optional.of(Key.ofText("c1", "c1Value")),
                 Arrays.asList(
-                    new ConditionalExpression("v1", new TextValue("v1ConditionValue"), Operator.NE),
-                    new ConditionalExpression(
-                        "v2", new TextValue("v2ConditionValue"), Operator.GTE),
-                    new ConditionalExpression(
-                        "v3", new TextValue("v3ConditionValue"), Operator.LT)))
+                    ConditionBuilder.column("v1").isNotEqualToText("v1ConditionValue"),
+                    ConditionBuilder.column("v2").isGreaterThanOrEqualToText("v2ConditionValue"),
+                    ConditionBuilder.column("v3").isLessThanText("v3ConditionValue")))
             .build();
     assertThat(query.sql())
         .isEqualTo(

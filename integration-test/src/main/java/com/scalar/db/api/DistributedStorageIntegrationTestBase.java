@@ -1104,10 +1104,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     storage.put(puts.get(1));
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1)
-        .withCondition(
-            new PutIf(
-                new ConditionalExpression(
-                    getColumnName2(), new TextValue("1"), ConditionalExpression.Operator.EQ)));
+        .withCondition(new PutIf(ConditionBuilder.column(getColumnName2()).isEqualToText("1")));
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1))))
@@ -1190,11 +1187,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     storage.put(puts.get(0));
     puts.get(0)
         .withCondition(
-            new PutIf(
-                new ConditionalExpression(
-                    getColumnName3(),
-                    new IntValue(pKey + cKey),
-                    ConditionalExpression.Operator.EQ)));
+            new PutIf(ConditionBuilder.column(getColumnName3()).isEqualToInt(pKey + cKey)));
     puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
 
@@ -1223,11 +1216,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     storage.put(puts.get(0));
     puts.get(0)
         .withCondition(
-            new PutIf(
-                new ConditionalExpression(
-                    getColumnName3(),
-                    new IntValue(pKey + cKey + 1),
-                    ConditionalExpression.Operator.EQ)));
+            new PutIf(ConditionBuilder.column(getColumnName3()).isEqualToInt(pKey + cKey + 1)));
     puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
     assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
 
@@ -1417,10 +1406,8 @@ public abstract class DistributedStorageIntegrationTestBase {
     Delete delete = prepareDelete(pKey, cKey);
     delete.withCondition(
         new DeleteIf(
-            new ConditionalExpression(
-                getColumnName2(),
-                new TextValue(Integer.toString(Integer.MAX_VALUE)),
-                ConditionalExpression.Operator.EQ)));
+            ConditionBuilder.column(getColumnName2())
+                .isEqualToText(Integer.toString(Integer.MAX_VALUE))));
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
 
     // Assert
@@ -1449,10 +1436,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     Delete delete = prepareDelete(pKey, cKey);
     delete.withCondition(
         new DeleteIf(
-            new ConditionalExpression(
-                getColumnName2(),
-                new TextValue(Integer.toString(pKey)),
-                ConditionalExpression.Operator.EQ)));
+            ConditionBuilder.column(getColumnName2()).isEqualToText(Integer.toString(pKey))));
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
 
     // Assert
@@ -1477,10 +1461,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     deletes.get(0).withCondition(new DeleteIfExists());
     deletes
         .get(1)
-        .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(
-                    getColumnName2(), new TextValue("1"), ConditionalExpression.Operator.EQ)));
+        .withCondition(new DeleteIf(ConditionBuilder.column(getColumnName2()).isEqualToText("1")));
 
     // Act
     assertThatCode(

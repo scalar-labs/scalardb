@@ -3,8 +3,7 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
@@ -192,8 +191,8 @@ public class CosmosMutationTest {
     // Arrange
     PutIf conditions =
         new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
+            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()),
+            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()));
     Put put = preparePut().withCondition(conditions);
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     String id = cosmosMutation.getId();
