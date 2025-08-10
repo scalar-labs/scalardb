@@ -2962,8 +2962,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   protected Get prepareGet(int id, int type, String namespaceName, String tableName) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(namespaceName)
         .forTable(tableName)
@@ -2982,13 +2982,13 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   protected Scan prepareScan(
       int id, int fromType, int toType, String namespaceName, String tableName) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespaceName)
         .forTable(tableName)
         .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(ACCOUNT_TYPE, fromType))
-        .withEnd(new Key(ACCOUNT_TYPE, toType));
+        .withStart(Key.ofInt(ACCOUNT_TYPE, fromType))
+        .withEnd(Key.ofInt(ACCOUNT_TYPE, toType));
   }
 
   protected ScanAll prepareScanAll(String namespaceName, String tableName) {
@@ -2999,8 +2999,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   protected Put preparePut(int id, int type, String namespaceName, String tableName) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(namespaceName)
         .forTable(tableName)
@@ -3033,8 +3033,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   protected Delete prepareDelete(int id, int type, String namespaceName, String tableName) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(namespaceName)
         .forTable(tableName)

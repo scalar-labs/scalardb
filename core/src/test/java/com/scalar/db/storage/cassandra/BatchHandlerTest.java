@@ -79,14 +79,14 @@ public class BatchHandlerTest {
   }
 
   private List<Mutation> prepareNonConditionalPuts() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey1 = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey1 = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Put put1 =
         new Put(partitionKey, clusteringKey1)
             .withValue(ANY_NAME_3, ANY_INT_1)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    Key clusteringKey2 = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Key clusteringKey2 = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     Put put2 =
         new Put(partitionKey, clusteringKey2)
             .withValue(ANY_NAME_3, ANY_INT_1)

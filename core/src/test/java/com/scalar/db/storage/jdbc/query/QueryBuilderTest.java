@@ -79,7 +79,7 @@ public class QueryBuilderTest {
         queryBuilder
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
-            .where(new Key("p1", "p1Value"), Optional.empty(), Collections.emptySet())
+            .where(Key.ofText("p1", "p1Value"), Optional.empty(), Collections.emptySet())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?", rdbEngine));
     query.bind(preparedStatement);
@@ -91,7 +91,7 @@ public class QueryBuilderTest {
             .select(Collections.emptyList())
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value", "p2", "p2Value"), Optional.empty(), Collections.emptySet())
+                Key.of("p1", "p1Value", "p2", "p2Value"), Optional.empty(), Collections.emptySet())
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?", rdbEngine));
@@ -105,8 +105,8 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Collections.emptySet())
             .build();
     assertThat(query.sql())
@@ -121,8 +121,8 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 Collections.emptySet())
             .build();
     assertThat(query.sql())
@@ -138,8 +138,8 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("v1").isEqualToText("value1")),
                     Conjunction.of(ConditionBuilder.column("v2").isEqualToText("value2"))))
@@ -162,10 +162,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
             .build();
@@ -185,10 +185,10 @@ public class QueryBuilderTest {
             .select(Collections.emptyList())
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 false,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 false,
                 ImmutableSet.of())
             .build();
@@ -208,10 +208,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1Value", "c2", "c2EndValue")),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2EndValue")),
                 false,
                 ImmutableSet.of())
             .build();
@@ -233,10 +233,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
             .orderBy(Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.ASC)))
@@ -257,10 +257,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
             .orderBy(
@@ -284,10 +284,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
             .orderBy(Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.DESC)))
@@ -308,10 +308,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
             .orderBy(
@@ -364,10 +364,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
             .limit(10)
@@ -384,10 +384,10 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1StartValue")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1StartValue")),
                 true,
-                Optional.of(new Key("c1", "c1EndValue")),
+                Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("v1").isEqualToText("value1")),
@@ -766,7 +766,7 @@ public class QueryBuilderTest {
         queryBuilder
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
-            .where(new Key("v1", "v1Value"), Optional.empty(), Collections.emptySet())
+            .where(Key.ofText("v1", "v1Value"), Optional.empty(), Collections.emptySet())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?", rdbEngine));
     query.bind(preparedStatement);
@@ -778,7 +778,7 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("v1", "v1Value"),
+                Key.ofText("v1", "v1Value"),
                 Optional.empty(),
                 false,
                 Optional.empty(),
@@ -794,7 +794,7 @@ public class QueryBuilderTest {
         queryBuilder
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
-            .where(new Key("v2", "v2Value"), Optional.empty(), Collections.emptySet())
+            .where(Key.ofText("v2", "v2Value"), Optional.empty(), Collections.emptySet())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?", rdbEngine));
     query.bind(preparedStatement);
@@ -806,7 +806,7 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("v2", "v2Value"),
+                Key.ofText("v2", "v2Value"),
                 Optional.empty(),
                 ImmutableSet.of(
                     Conjunction.of(ConditionBuilder.column("v1").isEqualToText("value1")),
@@ -826,7 +826,7 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("v2", "v2Value"),
+                Key.ofText("v2", "v2Value"),
                 Optional.empty(),
                 false,
                 Optional.empty(),
@@ -843,7 +843,7 @@ public class QueryBuilderTest {
             .select(Arrays.asList("c1", "c2"))
             .from(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("v2", "v2Value"),
+                Key.ofText("v2", "v2Value"),
                 Optional.empty(),
                 false,
                 Optional.empty(),
@@ -934,7 +934,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .insertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.empty(), columns)
+            .values(Key.ofText("p1", "p1Value"), Optional.empty(), columns)
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)", rdbEngine));
@@ -948,7 +948,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .insertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
+            .values(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")), columns)
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)", rdbEngine));
@@ -965,8 +965,8 @@ public class QueryBuilderTest {
         queryBuilder
             .insertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 columns)
             .build();
     assertThat(query.sql())
@@ -989,8 +989,8 @@ public class QueryBuilderTest {
         queryBuilder
             .insertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 columns)
             .build();
     assertThat(query.sql())
@@ -1029,7 +1029,7 @@ public class QueryBuilderTest {
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
-            .where(new Key("p1", "p1Value"), Optional.empty())
+            .where(Key.ofText("p1", "p1Value"), Optional.empty())
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?", rdbEngine));
@@ -1044,7 +1044,7 @@ public class QueryBuilderTest {
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
-            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
+            .where(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")))
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?", rdbEngine));
@@ -1061,8 +1061,8 @@ public class QueryBuilderTest {
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
             .where(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -1084,8 +1084,8 @@ public class QueryBuilderTest {
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Collections.singletonList(
                     new ConditionalExpression(
                         "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
@@ -1107,8 +1107,8 @@ public class QueryBuilderTest {
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Arrays.asList(
                     new ConditionalExpression("v1", new TextValue("v1ConditionValue"), Operator.NE),
                     new ConditionalExpression("v2", new TextValue("v2ConditionValue"), Operator.GT),
@@ -1136,8 +1136,8 @@ public class QueryBuilderTest {
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Arrays.asList(
                     ConditionBuilder.column("v1").isNullText(),
                     ConditionBuilder.column("v2").isNotNullText()))
@@ -1160,7 +1160,7 @@ public class QueryBuilderTest {
         queryBuilder
             .update(NAMESPACE, TABLE, TABLE_METADATA)
             .set(columns)
-            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
+            .where(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -1187,7 +1187,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
-            .where(new Key("p1", "p1Value"), Optional.empty())
+            .where(Key.ofText("p1", "p1Value"), Optional.empty())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?", rdbEngine));
     query.bind(preparedStatement);
@@ -1197,7 +1197,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
-            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
+            .where(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")))
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?", rdbEngine));
@@ -1210,8 +1210,8 @@ public class QueryBuilderTest {
         queryBuilder
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -1227,8 +1227,8 @@ public class QueryBuilderTest {
         queryBuilder
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Collections.singletonList(
                     new ConditionalExpression(
                         "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
@@ -1245,8 +1245,8 @@ public class QueryBuilderTest {
         queryBuilder
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Arrays.asList(
                     new ConditionalExpression("v1", new TextValue("v1ConditionValue"), Operator.NE),
                     new ConditionalExpression(
@@ -1270,8 +1270,8 @@ public class QueryBuilderTest {
         queryBuilder
             .deleteFrom(NAMESPACE, TABLE, TABLE_METADATA)
             .where(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Arrays.asList(
                     ConditionBuilder.column("v1").isNullText(),
                     ConditionBuilder.column("v2").isNotNullText()))
@@ -1344,7 +1344,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.empty(), columns)
+            .values(Key.ofText("p1", "p1Value"), Optional.empty(), columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
@@ -1424,7 +1424,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), columns)
+            .values(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")), columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
@@ -1511,8 +1511,8 @@ public class QueryBuilderTest {
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
@@ -1611,8 +1611,8 @@ public class QueryBuilderTest {
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 columns)
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
@@ -1709,7 +1709,7 @@ public class QueryBuilderTest {
     query =
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
-            .values(new Key("p1", "p1Value"), Optional.empty(), Collections.emptyMap())
+            .values(Key.ofText("p1", "p1Value"), Optional.empty(), Collections.emptyMap())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
@@ -1769,8 +1769,8 @@ public class QueryBuilderTest {
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(
-                new Key("p1", "p1Value"),
-                Optional.of(new Key("c1", "c1Value")),
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
                 Collections.emptyMap())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
@@ -1838,8 +1838,8 @@ public class QueryBuilderTest {
         queryBuilder
             .upsertInto(NAMESPACE, TABLE, TABLE_METADATA)
             .values(
-                new Key("p1", "p1Value", "p2", "p2Value"),
-                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")),
                 Collections.emptyMap())
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));

@@ -90,8 +90,8 @@ public class SelectStatementHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     return new Get(partitionKey, clusteringKey)
@@ -100,7 +100,7 @@ public class SelectStatementHandlerTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
@@ -132,7 +132,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
         "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
@@ -221,7 +221,7 @@ public class SelectStatementHandlerTest {
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
         "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
@@ -264,8 +264,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3));
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -310,8 +310,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
+            .withStart(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+            .withEnd(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -362,8 +362,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3), false);
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -404,7 +404,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
             .withLimit(ANY_LIMIT);
 
@@ -445,7 +445,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
             .withLimit(ANY_LIMIT);
 
@@ -490,7 +490,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
             .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.DESC))
             .withLimit(ANY_LIMIT);
@@ -538,7 +538,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
             .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.ASC))
             .withLimit(ANY_LIMIT);
@@ -694,7 +694,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Get get =
         new Get(indexKey)
             .forNamespace(ANY_NAMESPACE_NAME)
@@ -842,7 +842,7 @@ public class SelectStatementHandlerTest {
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Scan scan =
         new Scan(indexKey)
             .forNamespace(ANY_NAMESPACE_NAME)
@@ -882,7 +882,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
             .withLimit(ANY_LIMIT)
             .withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));

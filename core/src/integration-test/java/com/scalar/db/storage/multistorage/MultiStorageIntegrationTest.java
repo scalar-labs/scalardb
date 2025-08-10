@@ -183,8 +183,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME2, "val2")
@@ -225,8 +225,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME2, "val2")
@@ -267,8 +267,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
 
     Put put =
         new Put(partitionKey, clusteringKey)
@@ -310,10 +310,10 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 0);
-    Key clusteringKey2 = new Key(COL_NAME4, 1);
-    Key clusteringKey3 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 0);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey3 = Key.ofInt(COL_NAME4, 2);
 
     cassandra.mutate(
         Arrays.asList(
@@ -352,10 +352,10 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 0);
-    Key clusteringKey2 = new Key(COL_NAME4, 1);
-    Key clusteringKey3 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 0);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey3 = Key.ofInt(COL_NAME4, 2);
 
     jdbcDatabase.mutate(
         Arrays.asList(
@@ -394,10 +394,10 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 0);
-    Key clusteringKey2 = new Key(COL_NAME4, 1);
-    Key clusteringKey3 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 0);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey3 = Key.ofInt(COL_NAME4, 2);
 
     cassandra.mutate(
         Arrays.asList(
@@ -442,8 +442,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME3, 3)
@@ -479,8 +479,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME3, 3)
@@ -516,8 +516,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME3, 3)
@@ -552,9 +552,9 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 1);
-    Key clusteringKey2 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
             .withValue(COL_NAME3, 3)
@@ -607,9 +607,9 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 1);
-    Key clusteringKey2 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
             .withValue(COL_NAME3, 3)
@@ -662,9 +662,9 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 1);
-    Key clusteringKey2 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
             .withValue(COL_NAME3, 3)
@@ -718,8 +718,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME2, "val2")
@@ -760,10 +760,10 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 0);
-    Key clusteringKey2 = new Key(COL_NAME4, 1);
-    Key clusteringKey3 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 0);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey3 = Key.ofInt(COL_NAME4, 2);
 
     jdbcDatabase.mutate(
         Arrays.asList(
@@ -802,8 +802,8 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME4, 4);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME3, 3)
@@ -839,9 +839,9 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME4, 1);
-    Key clusteringKey2 = new Key(COL_NAME4, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
+    Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
             .withValue(COL_NAME3, 3)

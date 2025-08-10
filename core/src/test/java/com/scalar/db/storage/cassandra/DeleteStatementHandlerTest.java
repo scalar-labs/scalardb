@@ -56,21 +56,21 @@ public class DeleteStatementHandlerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Delete prepareDeleteWithClusteringKey() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Delete prepareDeleteWithReservedKeywords() {
-    Key partitionKey = new Key("from", ANY_TEXT_1);
-    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    Key partitionKey = Key.ofText("from", ANY_TEXT_1);
+    Key clusteringKey = Key.ofText("to", ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey).forNamespace("keyspace").forTable("table");
   }
 

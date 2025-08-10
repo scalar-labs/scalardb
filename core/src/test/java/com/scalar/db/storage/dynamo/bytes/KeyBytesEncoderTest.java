@@ -85,10 +85,10 @@ public class KeyBytesEncoderTest {
 
     // Add min and max values and random values
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
-    target.add(new Key(getMinValue(COL1, col1Type)));
-    target.add(new Key(getMaxValue(COL1, col1Type)));
+    target.add(Key.newBuilder().add(getMinValue(COL1, col1Type)).build());
+    target.add(Key.newBuilder().add(getMaxValue(COL1, col1Type)).build());
     for (int i = 0; i < KEY_ELEMENT_COUNT - 2; i++) {
-      target.add(new Key(getRandomValue(COL1, col1Type, col1Order)));
+      target.add(Key.newBuilder().add(getRandomValue(COL1, col1Type, col1Order)).build());
     }
 
     Map<String, Order> keyOrders = new HashMap<>();
@@ -131,13 +131,16 @@ public class KeyBytesEncoderTest {
 
     // Add min and max values and random values
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
-    target.add(new Key(getMinValue(COL1, col1Type), getMinValue(COL2, col2Type)));
-    target.add(new Key(getMaxValue(COL1, col1Type), getMaxValue(COL2, col2Type)));
+    target.add(
+        Key.newBuilder().add(getMinValue(COL1, col1Type)).add(getMinValue(COL2, col2Type)).build());
+    target.add(
+        Key.newBuilder().add(getMaxValue(COL1, col1Type)).add(getMaxValue(COL2, col2Type)).build());
     for (int i = 0; i < KEY_ELEMENT_COUNT - 2; i++) {
       target.add(
-          new Key(
-              getRandomValue(COL1, col1Type, col1Order),
-              getRandomValue(COL2, col2Type, col2Order)));
+          Key.newBuilder()
+              .add(getRandomValue(COL1, col1Type, col1Order))
+              .add(getRandomValue(COL2, col2Type, col2Order))
+              .build());
     }
 
     Map<String, Order> keyOrders = new HashMap<>();
@@ -195,17 +198,24 @@ public class KeyBytesEncoderTest {
     // Add min and max values and random values
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
     target.add(
-        new Key(
-            getMinValue(COL1, col1Type), getMinValue(COL2, col2Type), getMinValue(COL3, col3Type)));
+        Key.newBuilder()
+            .add(getMinValue(COL1, col1Type))
+            .add(getMinValue(COL2, col2Type))
+            .add(getMinValue(COL3, col3Type))
+            .build());
     target.add(
-        new Key(
-            getMaxValue(COL1, col1Type), getMaxValue(COL2, col2Type), getMaxValue(COL3, col3Type)));
+        Key.newBuilder()
+            .add(getMaxValue(COL1, col1Type))
+            .add(getMaxValue(COL2, col2Type))
+            .add(getMaxValue(COL3, col3Type))
+            .build());
     for (int i = 0; i < KEY_ELEMENT_COUNT - 2; i++) {
       target.add(
-          new Key(
-              getRandomValue(COL1, col1Type, col1Order),
-              getRandomValue(COL2, col2Type, col2Order),
-              getRandomValue(COL3, col3Type, col3Order)));
+          Key.newBuilder()
+              .add(getRandomValue(COL1, col1Type, col1Order))
+              .add(getRandomValue(COL2, col2Type, col2Order))
+              .add(getRandomValue(COL3, col3Type, col3Order))
+              .build());
     }
 
     Map<String, Order> keyOrders = new HashMap<>();

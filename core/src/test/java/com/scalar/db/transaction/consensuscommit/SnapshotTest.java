@@ -175,8 +175,8 @@ public class SnapshotTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -184,8 +184,8 @@ public class SnapshotTest {
   }
 
   private Get prepareAnotherGet() {
-    Key partitionKey = new Key(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
+    Key partitionKey = Key.ofText(ANY_NAME_5, ANY_TEXT_5);
+    Key clusteringKey = Key.ofText(ANY_NAME_6, ANY_TEXT_6);
     return new Get(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -193,7 +193,7 @@ public class SnapshotTest {
   }
 
   private Get prepareGetWithIndex() {
-    Key indexKey = new Key(ANY_NAME_4, ANY_TEXT_1);
+    Key indexKey = Key.ofText(ANY_NAME_4, ANY_TEXT_1);
     return Get.newBuilder()
         .namespace(ANY_NAMESPACE_NAME)
         .table(ANY_TABLE_NAME)
@@ -202,8 +202,8 @@ public class SnapshotTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Scan(partitionKey)
         .withStart(clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
@@ -222,7 +222,7 @@ public class SnapshotTest {
   }
 
   private Scan prepareScanWithIndex() {
-    Key indexKey = new Key(ANY_NAME_4, ANY_TEXT_1);
+    Key indexKey = Key.ofText(ANY_NAME_4, ANY_TEXT_1);
     return Scan.newBuilder()
         .namespace(ANY_NAMESPACE_NAME)
         .table(ANY_TABLE_NAME)
@@ -260,8 +260,8 @@ public class SnapshotTest {
   }
 
   private Put prepareAnotherPut() {
-    Key partitionKey = new Key(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
+    Key partitionKey = Key.ofText(ANY_NAME_5, ANY_TEXT_5);
+    Key clusteringKey = Key.ofText(ANY_NAME_6, ANY_TEXT_6);
     return new Put(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -269,7 +269,7 @@ public class SnapshotTest {
   }
 
   private Put preparePutWithPartitionKeyOnly() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Put(partitionKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -320,8 +320,8 @@ public class SnapshotTest {
   }
 
   private Delete prepareAnotherDelete() {
-    Key partitionKey = new Key(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
+    Key partitionKey = Key.ofText(ANY_NAME_5, ANY_TEXT_5);
+    Key clusteringKey = Key.ofText(ANY_NAME_6, ANY_TEXT_6);
     return new Delete(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -1357,14 +1357,14 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
 
     Scan scan1 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
@@ -1408,8 +1408,8 @@ public class SnapshotTest {
     Scanner scanner1 = mock(Scanner.class);
     when(scanner1.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
     Scan scan1WithProjections =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
@@ -1419,8 +1419,8 @@ public class SnapshotTest {
     Scanner scanner2 = mock(Scanner.class);
     when(scanner2.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
     Scan scan2WithProjections =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
@@ -1824,7 +1824,7 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, infinite)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
@@ -1873,28 +1873,28 @@ public class SnapshotTest {
     Scan scan1 =
         prepareScan()
             // ["text1", "text3"]
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true);
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_1), true)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true);
     Scan scan2 =
         prepareScan()
             // ["text2", "text3"]
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true);
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true);
     Scan scan3 =
         prepareScan()
             // ["text1", "text2"]
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), true);
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_1), true)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true);
     Scan scan4 =
         prepareScan()
             // ("text2", "text3"]
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true);
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true);
     Scan scan5 =
         prepareScan()
             // ["text1", "text2")
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_1), true)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false);
 
     // Act Assert
     Throwable thrown1 =
@@ -1926,23 +1926,23 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, "text3"]
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, "text2"]
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), true)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan3 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, "text2")
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false)
+            .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
@@ -1971,23 +1971,23 @@ public class SnapshotTest {
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // ["text1", infinite)
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_1), true)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // ["text2", infinite)
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true)
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan3 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             // ("text2", infinite)
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
@@ -2398,7 +2398,7 @@ public class SnapshotTest {
     {
       // The method returns an immutable value, so the following update shouldn't be included.
       Get delayedGet =
-          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+          new Get(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
@@ -2406,7 +2406,7 @@ public class SnapshotTest {
       snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
 
       Put delayedPut =
-          new Put(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+          new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME)
@@ -2465,7 +2465,7 @@ public class SnapshotTest {
     {
       // The method returns an immutable value, so the following update shouldn't be included.
       Get delayedGet =
-          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+          new Get(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
@@ -2473,7 +2473,7 @@ public class SnapshotTest {
       snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
 
       Delete delayedDelete =
-          new Delete(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
+          new Delete(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);

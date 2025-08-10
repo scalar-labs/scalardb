@@ -76,8 +76,8 @@ public class PutStatementHandlerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
@@ -121,7 +121,7 @@ public class PutStatementHandlerTest {
         .thenReturn(spResponse);
     when(spResponse.getResponseAsString()).thenReturn("true");
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Put put =
         new Put(partitionKey)
             .forNamespace(ANY_NAMESPACE_NAME)

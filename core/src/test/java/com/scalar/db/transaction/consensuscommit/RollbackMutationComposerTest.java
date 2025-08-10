@@ -150,8 +150,8 @@ public class RollbackMutationComposerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -159,7 +159,7 @@ public class RollbackMutationComposerTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_NAMESPACE_NAME)

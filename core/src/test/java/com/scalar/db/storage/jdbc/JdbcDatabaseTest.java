@@ -71,7 +71,7 @@ public class JdbcDatabaseTest {
     // Arrange
 
     // Act
-    Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Get get = new Get(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcDatabase.get(get);
 
     // Assert
@@ -90,7 +90,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get = new Get(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.get(get);
             })
         .isInstanceOf(ExecutionException.class)
@@ -107,7 +107,7 @@ public class JdbcDatabaseTest {
             new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet, true));
 
     // Act
-    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Scan scan = new Scan(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     Scanner scanner = jdbcDatabase.scan(scan);
     scanner.close();
 
@@ -129,7 +129,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Scan scan = new Scan(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.scan(scan);
             })
         .isInstanceOf(ExecutionException.class)
@@ -152,7 +152,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Scan scan = new Scan(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.scan(scan);
             })
         .isInstanceOf(IllegalArgumentException.class);
@@ -170,7 +170,7 @@ public class JdbcDatabaseTest {
     doThrow(sqlException).when(connection).commit();
 
     // Act
-    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Scan scan = new Scan(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     Scanner scanner = jdbcDatabase.scan(scan);
     assertThatThrownBy(scanner::close).isInstanceOf(IOException.class).hasCause(sqlException);
 
@@ -190,7 +190,7 @@ public class JdbcDatabaseTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
@@ -212,7 +212,7 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key("p1", "val1"))
+                  new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
                       .withCondition(new PutIfNotExists())
                       .forNamespace(NAMESPACE)
@@ -234,7 +234,7 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key("p1", "val1"))
+                  new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
@@ -251,7 +251,7 @@ public class JdbcDatabaseTest {
     when(jdbcService.delete(any(), any())).thenReturn(true);
 
     // Act
-    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+    Delete delete = new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcDatabase.delete(delete);
 
     // Assert
@@ -270,7 +270,7 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Delete delete =
-                  new Delete(new Key("p1", "val1"))
+                  new Delete(Key.ofText("p1", "val1"))
                       .withCondition(new DeleteIfExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
@@ -291,7 +291,7 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.delete(delete);
             })
         .isInstanceOf(ExecutionException.class)
@@ -306,11 +306,11 @@ public class JdbcDatabaseTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
-    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+    Delete delete = new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcDatabase.mutate(Arrays.asList(put, delete));
 
     // Assert
@@ -331,13 +331,13 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key("p1", "val1"))
+                  new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
                       .withCondition(new PutIfNotExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               Delete delete =
-                  new Delete(new Key("p1", "val1"))
+                  new Delete(Key.ofText("p1", "val1"))
                       .withCondition(new DeleteIfExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
@@ -361,12 +361,12 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key("p1", "val1"))
+                  new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(ExecutionException.class)
@@ -388,12 +388,12 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key("p1", "val1"))
+                  new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(RetriableExecutionException.class)
@@ -415,12 +415,12 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key("p1", "val1"))
+                  new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isEqualTo(exception);

@@ -81,8 +81,8 @@ public class DeleteStatementHandlerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     return new Delete(partitionKey, clusteringKey)
@@ -145,7 +145,7 @@ public class DeleteStatementHandlerTest {
     when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);

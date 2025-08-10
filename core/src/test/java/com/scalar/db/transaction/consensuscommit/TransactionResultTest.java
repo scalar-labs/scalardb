@@ -121,7 +121,7 @@ public class TransactionResultTest {
     Optional<Key> actual = result.getPartitionKey();
 
     // Assert
-    assertThat(actual).isEqualTo(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
+    assertThat(actual).isEqualTo(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
   }
 
   @Test
@@ -133,7 +133,7 @@ public class TransactionResultTest {
     Optional<Key> actual = result.getClusteringKey();
 
     // Assert
-    assertThat(actual).isEqualTo(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
+    assertThat(actual).isEqualTo(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
   }
 
   @Test

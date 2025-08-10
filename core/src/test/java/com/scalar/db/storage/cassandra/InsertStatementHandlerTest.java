@@ -59,7 +59,7 @@ public class InsertStatementHandlerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Put(partitionKey)
         .withValue(ANY_NAME_2, ANY_INT_1)
         .withValue(ANY_NAME_3, ANY_INT_2)
@@ -68,8 +68,8 @@ public class InsertStatementHandlerTest {
   }
 
   private Put preparePutWithClusteringKey() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .withValue(ANY_NAME_3, ANY_INT_1)
         .forNamespace(ANY_NAMESPACE_NAME)
@@ -77,8 +77,8 @@ public class InsertStatementHandlerTest {
   }
 
   private Put preparePutWithReservedKeywords() {
-    Key partitionKey = new Key("from", ANY_TEXT_1);
-    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    Key partitionKey = Key.ofText("from", ANY_TEXT_1);
+    Key clusteringKey = Key.ofText("to", ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .withValue("one", ANY_INT_1)
         .forNamespace("keyspace")

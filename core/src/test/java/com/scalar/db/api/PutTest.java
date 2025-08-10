@@ -48,16 +48,16 @@ public class PutTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey);
   }
 
   @Test
   public void getPartitionKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key expected = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key expected = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Put put = new Put(expected, clusteringKey);
 
     // Act
@@ -70,8 +70,8 @@ public class PutTest {
   @Test
   public void getClusteringKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key expected = new Key(ANY_NAME_1, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key expected = Key.ofText(ANY_NAME_1, ANY_TEXT_2);
     Put put = new Put(partitionKey, expected);
 
     // Act
@@ -84,7 +84,7 @@ public class PutTest {
   @Test
   public void getClusteringKey_ClusteringKeyNotGivenInConstructor_ShouldReturnNull() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Put put = new Put(partitionKey);
 
     // Act
