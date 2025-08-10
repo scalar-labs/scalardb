@@ -9,10 +9,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -151,7 +150,7 @@ public abstract class PutStatementHandlerTestBase {
   public void handle_PutIfNotExistsGiven_ShouldCallUpdateItemWithCondition() {
     // Arrange
     when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
-    Put put = preparePut().withCondition(new PutIfNotExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
 
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
@@ -177,7 +176,7 @@ public abstract class PutStatementHandlerTestBase {
   public void handle_PutIfExistsGiven_ShouldCallUpdateItemWithCondition() {
     // Arrange
     when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfExists());
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
     String updateExpression = dynamoMutation.getUpdateExpression();
@@ -204,7 +203,7 @@ public abstract class PutStatementHandlerTestBase {
     ConditionalCheckFailedException toThrow = mock(ConditionalCheckFailedException.class);
     doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
 
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);

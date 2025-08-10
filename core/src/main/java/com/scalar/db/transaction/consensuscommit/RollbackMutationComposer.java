@@ -8,7 +8,6 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
@@ -126,9 +125,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
-            new DeleteIf(
-                ConditionBuilder.column(ID).isEqualToText(id),
-                ConditionBuilder.column(STATE).isEqualToInt(result.getState().get())))
+            ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                .build())
         .withConsistency(Consistency.LINEARIZABLE);
   }
 

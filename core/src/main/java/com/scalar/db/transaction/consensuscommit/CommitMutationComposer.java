@@ -9,7 +9,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -120,9 +119,9 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         .forTable(base.forTable().get())
         .withConsistency(Consistency.LINEARIZABLE)
         .withCondition(
-            new DeleteIf(
-                ConditionBuilder.column(ID).isEqualToText(id),
-                ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
+            ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                .build());
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)

@@ -200,7 +200,7 @@ public class DeleteStatementHandlerTest {
                 });
     configureBehavior(expected);
     del = prepareDeleteWithClusteringKey();
-    del.withCondition(new DeleteIfExists());
+    del.withCondition(ConditionBuilder.deleteIfExists());
 
     // Act
     handler.prepare(del);
@@ -232,9 +232,9 @@ public class DeleteStatementHandlerTest {
     configureBehavior(expected);
     del = prepareDeleteWithClusteringKey();
     del.withCondition(
-        new DeleteIf(
-            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1),
-            ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3)));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
+            .and(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3))
+            .build());
 
     // Act
     handler.prepare(del);
@@ -248,7 +248,7 @@ public class DeleteStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     del = prepareDeleteWithClusteringKey();
-    DeleteIfExists deleteIfExists = spy(new DeleteIfExists());
+    DeleteIfExists deleteIfExists = spy(ConditionBuilder.deleteIfExists());
     del.withCondition(deleteIfExists);
 
     // Act
@@ -264,7 +264,9 @@ public class DeleteStatementHandlerTest {
     configureBehavior(null);
     del = prepareDeleteWithClusteringKey();
     DeleteIf deleteIf =
-        spy(new DeleteIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2)));
+        spy(
+            ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+                .build());
     del.withCondition(deleteIf);
 
     // Act
@@ -294,9 +296,9 @@ public class DeleteStatementHandlerTest {
     configureBehavior(null);
     del = prepareDeleteWithClusteringKey();
     del.withCondition(
-        new DeleteIf(
-            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1),
-            ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3)));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
+            .and(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3))
+            .build());
 
     // Act
     handler.bind(prepared, del);
@@ -356,7 +358,7 @@ public class DeleteStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     del = prepareDeleteWithClusteringKey();
-    del.withCondition(new DeleteIfExists()).withConsistency(Consistency.EVENTUAL);
+    del.withCondition(ConditionBuilder.deleteIfExists()).withConsistency(Consistency.EVENTUAL);
 
     // Act
     handler.setConsistency(bound, del);
@@ -372,9 +374,9 @@ public class DeleteStatementHandlerTest {
     configureBehavior(null);
     del = prepareDeleteWithClusteringKey();
     del.withCondition(
-            new DeleteIf(
-                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1),
-                ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3)))
+            ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
+                .and(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3))
+                .build())
         .withConsistency(Consistency.EVENTUAL);
 
     // Act

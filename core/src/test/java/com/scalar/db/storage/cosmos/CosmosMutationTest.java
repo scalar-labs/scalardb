@@ -190,9 +190,10 @@ public class CosmosMutationTest {
   public void makeConditionalQuery_MutationWithConditionsGiven_ShouldReturnQuery() {
     // Arrange
     PutIf conditions =
-        new PutIf(
-            ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()),
-            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()));
+        ConditionBuilder.putIf(
+                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()))
+            .build();
     Put put = preparePut().withCondition(conditions);
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     String id = cosmosMutation.getId();

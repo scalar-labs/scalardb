@@ -10,16 +10,11 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
@@ -603,7 +598,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new PutIfNotExists();
+    MutationCondition condition = ConditionBuilder.putIfNotExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -620,7 +615,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIfNotExists();
+    MutationCondition condition = ConditionBuilder.putIfNotExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValue(COL1, 1)
@@ -663,7 +658,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new PutIfExists();
+    MutationCondition condition = ConditionBuilder.putIfExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -685,7 +680,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new PutIfExists();
+    MutationCondition condition = ConditionBuilder.putIfExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -707,7 +702,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new PutIfNotExists();
+    MutationCondition condition = ConditionBuilder.putIfNotExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -728,7 +723,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue("v4", true));
-    MutationCondition condition = new PutIfExists();
+    MutationCondition condition = ConditionBuilder.putIfExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -749,7 +744,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new TextValue(COL1, "1"), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new PutIfNotExists();
+    MutationCondition condition = ConditionBuilder.putIfNotExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -771,7 +766,8 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new PutIf(ConditionBuilder.column(COL1).isEqualToText("1"));
+    MutationCondition condition =
+        ConditionBuilder.putIf(ConditionBuilder.column(COL1).isEqualToText("1")).build();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -845,7 +841,7 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new DeleteIfExists();
+    MutationCondition condition = ConditionBuilder.deleteIfExists();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -866,7 +862,8 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    MutationCondition condition = new DeleteIf();
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(ConditionBuilder.column("dummy").isEqualToText("dummy")).build();
     Put put =
         new Put(partitionKey, clusteringKey)
             .withValues(values)
@@ -1088,7 +1085,8 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new DeleteIf(ConditionBuilder.column(COL1).isEqualToInt(1));
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(ConditionBuilder.column(COL1).isEqualToInt(1)).build();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1121,7 +1119,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, "p3", "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new DeleteIfExists();
+    MutationCondition condition = ConditionBuilder.deleteIfExists();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1139,7 +1137,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, "c3", "val1");
-    MutationCondition condition = new DeleteIfExists();
+    MutationCondition condition = ConditionBuilder.deleteIfExists();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1157,7 +1155,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = null;
-    MutationCondition condition = new DeleteIfExists();
+    MutationCondition condition = ConditionBuilder.deleteIfExists();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1174,7 +1172,8 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIf();
+    MutationCondition condition =
+        ConditionBuilder.putIf(ConditionBuilder.column("dummy").isEqualToText("dummy")).build();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1192,7 +1191,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIfExists();
+    MutationCondition condition = ConditionBuilder.putIfExists();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1210,7 +1209,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIfNotExists();
+    MutationCondition condition = ConditionBuilder.putIfNotExists();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)
@@ -1228,7 +1227,8 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new DeleteIf(ConditionBuilder.column(COL1).isEqualToText("1"));
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(ConditionBuilder.column(COL1).isEqualToText("1")).build();
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .withCondition(condition)

@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -807,9 +806,9 @@ public class RollbackMutationComposerTest {
             .forTable(scan.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new DeleteIf(
-            ConditionBuilder.column(ID).isEqualToText(ANY_ID_2),
-            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get())));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get()))
+            .build());
     assertThat(actual).isEqualTo(expected);
   }
 }

@@ -96,9 +96,10 @@ public class ConditionalQueryBuilderTest {
   public void visit_PutIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     PutIf condition =
-        new PutIf(
-            ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()),
-            ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()));
+        ConditionBuilder.putIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()))
+            .build();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -112,7 +113,7 @@ public class ConditionalQueryBuilderTest {
   @Test
   public void visit_PutIfExistsAcceptCalled_ShouldNotCallWhere() {
     // Arrange
-    PutIfExists condition = new PutIfExists();
+    PutIfExists condition = ConditionBuilder.putIfExists();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -125,7 +126,7 @@ public class ConditionalQueryBuilderTest {
   @Test
   public void visit_PutIfNotExistsAcceptCalled_ShouldNotCallWhere() {
     // Arrange
-    PutIfNotExists condition = new PutIfNotExists();
+    PutIfNotExists condition = ConditionBuilder.putIfNotExists();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -139,9 +140,10 @@ public class ConditionalQueryBuilderTest {
   public void visit_DeleteIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     DeleteIf condition =
-        new DeleteIf(
-            ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()),
-            ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()));
+        ConditionBuilder.deleteIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()))
+            .build();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act

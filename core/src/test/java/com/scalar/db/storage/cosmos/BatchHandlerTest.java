@@ -19,11 +19,10 @@ import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -104,9 +103,9 @@ public class BatchHandlerTest {
         .thenReturn(spResponse);
 
     Put put1 = preparePut();
-    Put put2 = preparePut().withCondition(new PutIfNotExists());
+    Put put2 = preparePut().withCondition(ConditionBuilder.putIfNotExists());
     Delete delete1 = prepareDelete();
-    Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete2 = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
     CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadata);
     CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadata);
     CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadata);
@@ -156,8 +155,8 @@ public class BatchHandlerTest {
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
-    Put put = preparePut().withCondition(new PutIfNotExists());
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))

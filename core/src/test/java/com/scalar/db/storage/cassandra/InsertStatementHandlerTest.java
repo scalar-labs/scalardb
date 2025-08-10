@@ -21,6 +21,7 @@ import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.WriteTimeoutException;
 import com.google.common.base.Joiner;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
@@ -215,7 +216,7 @@ public class InsertStatementHandlerTest {
                 });
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfNotExists());
+    put.withCondition(ConditionBuilder.putIfNotExists());
 
     // Act
     handler.prepare(put);
@@ -229,7 +230,7 @@ public class InsertStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    PutIfNotExists putIfNotExists = spy(new PutIfNotExists());
+    PutIfNotExists putIfNotExists = spy(ConditionBuilder.putIfNotExists());
     put.withCondition(putIfNotExists);
 
     // Act
@@ -318,7 +319,7 @@ public class InsertStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfNotExists()).withConsistency(Consistency.EVENTUAL);
+    put.withCondition(ConditionBuilder.putIfNotExists()).withConsistency(Consistency.EVENTUAL);
 
     // Act
     handler.setConsistency(bound, put);
@@ -332,7 +333,7 @@ public class InsertStatementHandlerTest {
   public void handle_WTEWithCasThrown_ShouldThrowExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfNotExists());
+    put.withCondition(ConditionBuilder.putIfNotExists());
     spy = prepareSpiedInsertStatementHandler();
 
     WriteTimeoutException toThrow = mock(WriteTimeoutException.class);
@@ -349,7 +350,7 @@ public class InsertStatementHandlerTest {
   public void handle_PutWithConditionGivenAndWTEWithSimpleThrown_ShouldThrowExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfNotExists());
+    put.withCondition(ConditionBuilder.putIfNotExists());
     spy = prepareSpiedInsertStatementHandler();
 
     WriteTimeoutException toThrow = mock(WriteTimeoutException.class);
@@ -398,7 +399,7 @@ public class InsertStatementHandlerTest {
   public void handle_PutWithConditionButNoMutationApplied_ShouldThrowProperExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfNotExists());
+    put.withCondition(ConditionBuilder.putIfNotExists());
     spy = prepareSpiedInsertStatementHandler();
 
     ResultSet results = mock(ResultSet.class);
@@ -415,7 +416,7 @@ public class InsertStatementHandlerTest {
   public void handle_PutWithoutConditionButNoMutationApplied_ShouldThrowProperExecutionException() {
     // Arrange
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfNotExists());
+    put.withCondition(ConditionBuilder.putIfNotExists());
     spy = prepareSpiedInsertStatementHandler();
 
     ResultSet results = mock(ResultSet.class);

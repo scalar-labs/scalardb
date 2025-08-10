@@ -8,11 +8,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
@@ -214,7 +213,7 @@ public class JdbcDatabaseTest {
               Put put =
                   new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
-                      .withCondition(new PutIfNotExists())
+                      .withCondition(ConditionBuilder.putIfNotExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               jdbcDatabase.put(put);
@@ -271,7 +270,7 @@ public class JdbcDatabaseTest {
             () -> {
               Delete delete =
                   new Delete(Key.ofText("p1", "val1"))
-                      .withCondition(new DeleteIfExists())
+                      .withCondition(ConditionBuilder.deleteIfExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               jdbcDatabase.delete(delete);
@@ -333,12 +332,12 @@ public class JdbcDatabaseTest {
               Put put =
                   new Put(Key.ofText("p1", "val1"))
                       .withValue("v1", "val2")
-                      .withCondition(new PutIfNotExists())
+                      .withCondition(ConditionBuilder.putIfNotExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               Delete delete =
                   new Delete(Key.ofText("p1", "val1"))
-                      .withCondition(new DeleteIfExists())
+                      .withCondition(ConditionBuilder.deleteIfExists())
                       .forNamespace(NAMESPACE)
                       .forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));

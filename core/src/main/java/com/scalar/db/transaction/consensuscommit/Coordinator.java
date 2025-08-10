@@ -6,11 +6,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
@@ -335,7 +335,7 @@ public class Coordinator {
     return put.withIntValue(Attribute.STATE, state.getState().get())
         .withBigIntValue(Attribute.CREATED_AT, state.getCreatedAt())
         .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(new PutIfNotExists())
+        .withCondition(ConditionBuilder.putIfNotExists())
         .forNamespace(coordinatorNamespace)
         .forTable(TABLE);
   }

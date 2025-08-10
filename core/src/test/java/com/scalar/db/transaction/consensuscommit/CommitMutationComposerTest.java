@@ -19,10 +19,8 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -200,9 +198,9 @@ public class CommitMutationComposerTest {
             .forTable(put.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new PutIf(
-            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
-            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get())));
+        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get()))
+            .build());
     expected.withBigIntValue(Attribute.COMMITTED_AT, ANY_TIME_2);
     expected.withIntValue(Attribute.STATE, TransactionState.COMMITTED.get());
     assertThat(actual).isEqualTo(expected);
@@ -222,9 +220,9 @@ public class CommitMutationComposerTest {
     Delete actual = (Delete) composer.get().get(0);
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
-        new DeleteIf(
-            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
-            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+            .build());
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -241,9 +239,9 @@ public class CommitMutationComposerTest {
     Delete actual = (Delete) composer.get().get(0);
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
-        new DeleteIf(
-            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
-            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+            .build());
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -312,9 +310,9 @@ public class CommitMutationComposerTest {
             .forTable(get.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new DeleteIf(
-            ConditionBuilder.column(ID).isEqualToText(ANY_ID),
-            ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get())));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+            .build());
     assertThat(actual).isEqualTo(expected);
   }
 }

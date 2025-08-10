@@ -12,8 +12,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
@@ -169,7 +167,8 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
-    put.withCondition(new PutIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)));
+    put.withCondition(
+        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)).build());
     put.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
     put.withValue(Attribute.ID, ANY_ID_3);
     put.withValue(Attribute.STATE, TransactionState.PREPARED.get());
@@ -227,7 +226,7 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
-    put.withCondition(new PutIfNotExists());
+    put.withCondition(ConditionBuilder.putIfNotExists());
     put.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
     put.withValue(Attribute.ID, ANY_ID_3);
     put.withValue(Attribute.STATE, TransactionState.PREPARED.get());
@@ -301,7 +300,8 @@ public class PrepareMutationComposerTest {
             .forNamespace(delete.forNamespace().get())
             .forTable(delete.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(new PutIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)));
+    expected.withCondition(
+        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)).build());
     expected.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
     expected.withValue(Attribute.ID, ANY_ID_3);
     expected.withValue(Attribute.STATE, TransactionState.DELETED.get());
@@ -367,7 +367,7 @@ public class PrepareMutationComposerTest {
             .forNamespace(delete.forNamespace().get())
             .forTable(delete.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(new PutIfNotExists());
+    expected.withCondition(ConditionBuilder.putIfNotExists());
     expected.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
     expected.withValue(Attribute.ID, ANY_ID_3);
     expected.withValue(Attribute.STATE, TransactionState.DELETED.get());

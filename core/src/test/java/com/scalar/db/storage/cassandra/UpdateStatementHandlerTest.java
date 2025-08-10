@@ -211,7 +211,7 @@ public class UpdateStatementHandlerTest {
                 });
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfExists());
+    put.withCondition(ConditionBuilder.putIfExists());
 
     // Act
     handler.prepare(put);
@@ -252,13 +252,13 @@ public class UpdateStatementHandlerTest {
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
     put.withCondition(
-        new PutIf(
-            ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2),
-            ConditionBuilder.column(ANY_NAME_4).isNotEqualToInt(ANY_INT_2),
-            ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_2),
-            ConditionBuilder.column(ANY_NAME_4).isGreaterThanOrEqualToInt(ANY_INT_2),
-            ConditionBuilder.column(ANY_NAME_4).isLessThanInt(ANY_INT_2),
-            ConditionBuilder.column(ANY_NAME_4).isLessThanOrEqualToInt(ANY_INT_2)));
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+            .and(ConditionBuilder.column(ANY_NAME_4).isNotEqualToInt(ANY_INT_2))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_2))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanOrEqualToInt(ANY_INT_2))
+            .and(ConditionBuilder.column(ANY_NAME_4).isLessThanInt(ANY_INT_2))
+            .and(ConditionBuilder.column(ANY_NAME_4).isLessThanOrEqualToInt(ANY_INT_2))
+            .build());
 
     // Act
     handler.prepare(put);
@@ -272,7 +272,7 @@ public class UpdateStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    PutIfExists putIfExists = Mockito.spy(new PutIfExists());
+    PutIfExists putIfExists = Mockito.spy(ConditionBuilder.putIfExists());
     put.withCondition(putIfExists);
 
     // Act
@@ -288,7 +288,9 @@ public class UpdateStatementHandlerTest {
     configureBehavior(null);
     put = preparePutWithClusteringKey();
     PutIf putIf =
-        Mockito.spy(new PutIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2)));
+        Mockito.spy(
+            ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+                .build());
     put.withCondition(putIf);
 
     // Act
@@ -319,9 +321,9 @@ public class UpdateStatementHandlerTest {
     configureBehavior(null);
     put = preparePutWithClusteringKey();
     put.withCondition(
-        new PutIf(
-            ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2),
-            ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_3)));
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+            .and(ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_3))
+            .build());
 
     // Act
     handler.bind(prepared, put);
@@ -398,7 +400,7 @@ public class UpdateStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIfExists()).withConsistency(Consistency.EVENTUAL);
+    put.withCondition(ConditionBuilder.putIfExists()).withConsistency(Consistency.EVENTUAL);
 
     // Act
     handler.setConsistency(bound, put);
@@ -413,7 +415,9 @@ public class UpdateStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     put = preparePutWithClusteringKey();
-    put.withCondition(new PutIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2)))
+    put.withCondition(
+            ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+                .build())
         .withConsistency(Consistency.EVENTUAL);
 
     // Act

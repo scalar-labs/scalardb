@@ -16,10 +16,9 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.WriteTimeoutException;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
@@ -97,7 +96,7 @@ public class BatchHandlerTest {
 
   private List<Mutation> prepareConditionalPuts() {
     List<Mutation> mutations = prepareNonConditionalPuts();
-    mutations.forEach(m -> m.withCondition(new PutIfNotExists()));
+    mutations.forEach(m -> m.withCondition(ConditionBuilder.putIfNotExists()));
     return mutations;
   }
 
@@ -146,7 +145,7 @@ public class BatchHandlerTest {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
-    mutations.get(1).withCondition(new PutIfExists());
+    mutations.get(1).withCondition(ConditionBuilder.putIfExists());
     when(session.execute(any(Statement.class))).thenReturn(results);
     when(results.wasApplied()).thenReturn(true);
 
@@ -165,7 +164,7 @@ public class BatchHandlerTest {
     // Arrange
     configureBehavior();
     mutations = prepareNonConditionalPuts();
-    mutations.get(1).withCondition(new PutIfNotExists());
+    mutations.get(1).withCondition(ConditionBuilder.putIfNotExists());
     when(session.execute(any(Statement.class))).thenReturn(results);
     when(results.wasApplied()).thenReturn(true);
     spy = prepareSpiedBatchHandler();

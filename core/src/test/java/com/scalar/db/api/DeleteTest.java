@@ -86,7 +86,7 @@ public class DeleteTest {
     // Arrange
     Delete del =
         prepareDelete()
-            .withCondition(new DeleteIfExists())
+            .withCondition(ConditionBuilder.deleteIfExists())
             .withConsistency(Consistency.EVENTUAL)
             .forNamespace("n1")
             .forTable("t1");
@@ -128,8 +128,8 @@ public class DeleteTest {
   @Test
   public void equals_SameDeleteWithDeleteIfExistsGiven_ShouldReturnTrue() {
     // Arrange
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
-    Delete another = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
+    Delete another = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     // Act
     boolean ret = delete.equals(another);
