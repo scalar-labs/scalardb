@@ -446,7 +446,7 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(Scan.Ordering.desc(ANY_NAME_3))
+            .withOrdering(Scan.Ordering.desc(ANY_NAME_2))
             .withLimit(ANY_LIMIT);
 
     String query =

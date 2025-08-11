@@ -556,7 +556,7 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(Scan.Ordering.desc(CKEY2))
+            .withOrdering(Scan.Ordering.desc(CKEY1))
             .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
