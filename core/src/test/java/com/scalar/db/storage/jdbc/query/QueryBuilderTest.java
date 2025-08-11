@@ -236,7 +236,7 @@ public class QueryBuilderTest {
                 Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
-            .orderBy(Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.ASC)))
+            .orderBy(Collections.singletonList(Scan.Ordering.asc("c1")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -260,10 +260,7 @@ public class QueryBuilderTest {
                 Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
-            .orderBy(
-                Arrays.asList(
-                    new Scan.Ordering("c1", Scan.Ordering.Order.ASC),
-                    new Scan.Ordering("c2", Scan.Ordering.Order.DESC)))
+            .orderBy(Arrays.asList(Scan.Ordering.asc("c1"), Scan.Ordering.desc("c2")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -287,7 +284,7 @@ public class QueryBuilderTest {
                 Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
-            .orderBy(Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.DESC)))
+            .orderBy(Collections.singletonList(Scan.Ordering.desc("c1")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -311,10 +308,7 @@ public class QueryBuilderTest {
                 Optional.of(Key.ofText("c1", "c1EndValue")),
                 true,
                 ImmutableSet.of())
-            .orderBy(
-                Arrays.asList(
-                    new Scan.Ordering("c1", Scan.Ordering.Order.DESC),
-                    new Scan.Ordering("c2", Scan.Ordering.Order.ASC)))
+            .orderBy(Arrays.asList(Scan.Ordering.desc("c1"), Scan.Ordering.asc("c2")))
             .build();
     assertThat(query.sql())
         .isEqualTo(
@@ -427,10 +421,7 @@ public class QueryBuilderTest {
             .select(Collections.emptyList())
             .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
             .where(ImmutableSet.of())
-            .orderBy(
-                Arrays.asList(
-                    new Scan.Ordering("v1", Scan.Ordering.Order.ASC),
-                    new Scan.Ordering("v2", Scan.Ordering.Order.DESC)))
+            .orderBy(Arrays.asList(Scan.Ordering.asc("v1"), Scan.Ordering.desc("v2")))
             .build();
     assertThat(query.sql())
         .isEqualTo(encloseSql("SELECT * FROM n1.t1 ORDER BY v1 ASC,v2 DESC", rdbEngine));

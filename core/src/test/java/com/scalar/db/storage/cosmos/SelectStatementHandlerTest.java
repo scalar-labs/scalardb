@@ -405,7 +405,7 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
+            .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
             .withLimit(ANY_LIMIT);
 
     String query =
@@ -446,7 +446,7 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
+            .withOrdering(Scan.Ordering.desc(ANY_NAME_3))
             .withLimit(ANY_LIMIT);
 
     String query =
@@ -491,8 +491,8 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.DESC))
+            .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
+            .withOrdering(Scan.Ordering.desc(ANY_NAME_3))
             .withLimit(ANY_LIMIT);
 
     String query =
@@ -539,8 +539,8 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.ASC))
+            .withOrdering(Scan.Ordering.desc(ANY_NAME_2))
+            .withOrdering(Scan.Ordering.asc(ANY_NAME_3))
             .withLimit(ANY_LIMIT);
 
     String query =
@@ -883,7 +883,7 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
+            .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
             .withLimit(ANY_LIMIT)
             .withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
 

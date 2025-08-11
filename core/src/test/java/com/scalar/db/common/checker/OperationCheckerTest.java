@@ -248,8 +248,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -271,8 +271,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -294,8 +294,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -317,8 +317,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -340,8 +340,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC))
+            .withOrdering(Scan.Ordering.desc(CKEY1))
+            .withOrdering(Scan.Ordering.asc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -363,7 +363,7 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -407,8 +407,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -432,8 +432,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -457,8 +457,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -482,8 +482,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -532,8 +532,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -556,8 +556,8 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
+            .withOrdering(Scan.Ordering.desc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -581,7 +581,7 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC))
+            .withOrdering(Scan.Ordering.asc(CKEY2))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 
@@ -1671,7 +1671,7 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(Scan.Ordering.asc(CKEY1))
             .forNamespace(NAMESPACE)
             .forTable(TABLE_NAME);
 

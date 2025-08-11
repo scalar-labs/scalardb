@@ -59,8 +59,6 @@ public abstract class SelectStatementHandlerTestBase {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
-  private static final Scan.Ordering.Order ASC_ORDER = Scan.Ordering.Order.ASC;
-  private static final Scan.Ordering.Order DESC_ORDER = Scan.Ordering.Order.DESC;
   private static final int ANY_LIMIT = 100;
 
   private SelectStatementHandler handler;
@@ -1854,7 +1852,7 @@ public abstract class SelectStatementHandlerTestBase {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
+            .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
             .withLimit(ANY_LIMIT);
 
     String expectedCondition =
@@ -1904,8 +1902,8 @@ public abstract class SelectStatementHandlerTestBase {
     Scan scan =
         prepareScan()
             .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
+            .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
+            .withOrdering(Scan.Ordering.desc(ANY_NAME_3))
             .withLimit(ANY_LIMIT);
 
     String expectedCondition =

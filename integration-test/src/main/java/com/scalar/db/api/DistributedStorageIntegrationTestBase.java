@@ -630,8 +630,6 @@ public abstract class DistributedStorageIntegrationTestBase {
             .end(Key.ofInt(getColumnName4(), 2))
             .ordering(Scan.Ordering.desc(getColumnName4()))
             .build();
-    new Scan(Key.ofInt(getColumnName1(), 0))
-        .withOrdering(new Scan.Ordering(getColumnName4(), Scan.Ordering.Order.DESC));
 
     // Act
     List<Result> actual = scanAll(scan);

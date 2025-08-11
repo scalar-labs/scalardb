@@ -331,7 +331,7 @@ public class SelectStatementHandlerTest {
     configureBehavior(expected);
     scan = prepareScan();
     scan.withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-        .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
+        .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
         .withLimit(ANY_LIMIT);
 
     // Act
@@ -365,8 +365,8 @@ public class SelectStatementHandlerTest {
     configureBehavior(expected);
     scan = prepareScan();
     scan.withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-        .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-        .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
+        .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
+        .withOrdering(Scan.Ordering.desc(ANY_NAME_3))
         .withLimit(ANY_LIMIT);
 
     // Act
