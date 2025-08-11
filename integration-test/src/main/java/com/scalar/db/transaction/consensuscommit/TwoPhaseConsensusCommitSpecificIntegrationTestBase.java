@@ -2366,8 +2366,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private void populatePreparedRecordAndCoordinatorStateRecordForStorage1(
       TransactionState recordState, long preparedAt, TransactionState coordinatorState)
       throws ExecutionException, CoordinatorException {
-    Key partitionKey = Key.newBuilder().add(new IntValue(ACCOUNT_ID, 0)).build();
-    Key clusteringKey = Key.newBuilder().add(new IntValue(ACCOUNT_TYPE, 0)).build();
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 0);
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(namespace1)

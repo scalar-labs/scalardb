@@ -1358,13 +1358,13 @@ public class SnapshotTest {
 
     Scan scan1 =
         new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
-        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
@@ -1409,7 +1409,7 @@ public class SnapshotTest {
     when(scanner1.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
     Scan scan1WithProjections =
         new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
@@ -1419,8 +1419,8 @@ public class SnapshotTest {
     Scanner scanner2 = mock(Scanner.class);
     when(scanner2.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
     Scan scan2WithProjections =
-        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        new Scan(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
@@ -2398,7 +2398,7 @@ public class SnapshotTest {
     {
       // The method returns an immutable value, so the following update shouldn't be included.
       Get delayedGet =
-          new Get(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+          new Get(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
@@ -2406,7 +2406,7 @@ public class SnapshotTest {
       snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
 
       Put delayedPut =
-          new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+          new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME)
@@ -2465,7 +2465,7 @@ public class SnapshotTest {
     {
       // The method returns an immutable value, so the following update shouldn't be included.
       Get delayedGet =
-          new Get(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+          new Get(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
@@ -2473,7 +2473,7 @@ public class SnapshotTest {
       snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
 
       Delete delayedDelete =
-          new Delete(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+          new Delete(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_1))
               .withConsistency(Consistency.LINEARIZABLE)
               .forNamespace(ANY_NAMESPACE_NAME)
               .forTable(ANY_TABLE_NAME);
