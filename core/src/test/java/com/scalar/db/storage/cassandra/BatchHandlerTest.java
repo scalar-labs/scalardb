@@ -22,6 +22,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,23 +82,37 @@ public class BatchHandlerTest {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey1 = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Put put1 =
-        new Put(partitionKey, clusteringKey1)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .intValue(ANY_NAME_3, ANY_INT_1)
+            .build();
     Key clusteringKey2 = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     Put put2 =
-        new Put(partitionKey, clusteringKey2)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey2)
+            .intValue(ANY_NAME_3, ANY_INT_1)
+            .build();
     return Arrays.asList(put1, put2);
   }
 
   private List<Mutation> prepareConditionalPuts() {
     List<Mutation> mutations = prepareNonConditionalPuts();
-    mutations.forEach(m -> m.withCondition(ConditionBuilder.putIfNotExists()));
-    return mutations;
+    List<Mutation> conditionalMutations = new ArrayList<>();
+    for (Mutation m : mutations) {
+      if (m instanceof Put) {
+        conditionalMutations.add(
+            Put.newBuilder((Put) m).condition(ConditionBuilder.putIfNotExists()).build());
+      } else {
+        conditionalMutations.add(m);
+      }
+    }
+    return conditionalMutations;
   }
 
   private BatchHandler prepareSpiedBatchHandler() {
@@ -145,7 +160,9 @@ public class BatchHandlerTest {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
-    mutations.get(1).withCondition(ConditionBuilder.putIfExists());
+    mutations.set(
+        1,
+        Put.newBuilder((Put) mutations.get(1)).condition(ConditionBuilder.putIfExists()).build());
     when(session.execute(any(Statement.class))).thenReturn(results);
     when(results.wasApplied()).thenReturn(true);
 
@@ -164,7 +181,11 @@ public class BatchHandlerTest {
     // Arrange
     configureBehavior();
     mutations = prepareNonConditionalPuts();
-    mutations.get(1).withCondition(ConditionBuilder.putIfNotExists());
+    mutations.set(
+        1,
+        Put.newBuilder((Put) mutations.get(1))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build());
     when(session.execute(any(Statement.class))).thenReturn(results);
     when(results.wasApplied()).thenReturn(true);
     spy = prepareSpiedBatchHandler();

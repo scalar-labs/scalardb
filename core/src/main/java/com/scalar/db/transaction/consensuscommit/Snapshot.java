@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Streams;
 import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -18,6 +19,7 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
@@ -593,9 +595,14 @@ public class Snapshot {
     Scanner scanner = null;
     try {
       // Only get tx_id and primary key columns because we use only them to compare
-      scan.clearProjections();
-      scan.withProjection(Attribute.ID);
-      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
+      ScanBuilder.BuildableScanOrScanAllFromExisting builder =
+          Scan.newBuilder(scan).clearProjections().projection(Attribute.ID);
+      TableMetadata tableMetadata = getTableMetadata(scan);
+      Streams.concat(
+              tableMetadata.getPartitionKeyNames().stream(),
+              tableMetadata.getClusteringKeyNames().stream())
+          .forEach(builder::projection);
+      scan = builder.build();
 
       if (scan.getLimit() == 0) {
         scanner = storage.scan(scan);
@@ -744,8 +751,7 @@ public class Snapshot {
       DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
       throws ExecutionException, ValidationConflictException {
     // Only get the tx_id column because we use only them to compare
-    get.clearProjections();
-    get.withProjection(Attribute.ID);
+    get = Get.newBuilder(get).clearProjections().projection(Attribute.ID).build();
 
     // Check if a read record is not changed
     Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);

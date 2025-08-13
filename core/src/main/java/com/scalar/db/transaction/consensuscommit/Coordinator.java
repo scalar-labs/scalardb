@@ -11,6 +11,7 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
@@ -286,10 +287,12 @@ public class Coordinator {
 
   @VisibleForTesting
   Get createGetWith(String id) {
-    return new Get(Key.ofText(Attribute.ID, id))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(coordinatorNamespace)
-        .forTable(TABLE);
+    return Get.newBuilder()
+        .namespace(coordinatorNamespace)
+        .table(TABLE)
+        .partitionKey(Key.ofText(Attribute.ID, id))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Optional<Coordinator.State> get(Get get, String id) throws CoordinatorException {
@@ -327,17 +330,21 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    Put put = new Put(Key.ofText(Attribute.ID, state.getId()));
     String childIds = state.getChildIdsAsString();
+    PutBuilder.Buildable builder =
+        Put.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(Attribute.ID, state.getId()))
+            .intValue(Attribute.STATE, state.getState().get())
+            .bigIntValue(Attribute.CREATED_AT, state.getCreatedAt())
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(ConditionBuilder.putIfNotExists());
+
     if (!childIds.isEmpty()) {
-      put.withTextValue(Attribute.CHILD_IDS, childIds);
+      builder.textValue(Attribute.CHILD_IDS, childIds);
     }
-    return put.withIntValue(Attribute.STATE, state.getState().get())
-        .withBigIntValue(Attribute.CREATED_AT, state.getCreatedAt())
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(ConditionBuilder.putIfNotExists())
-        .forNamespace(coordinatorNamespace)
-        .forTable(TABLE);
+    return builder.build();
   }
 
   private void put(Put put, String id) throws CoordinatorException {
