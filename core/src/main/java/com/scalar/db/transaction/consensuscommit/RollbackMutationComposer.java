@@ -1,18 +1,13 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
@@ -130,9 +125,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
         .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(STATE, toStateValue(result.getState()), Operator.EQ)))
+            ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                .build())
         .withConsistency(Consistency.LINEARIZABLE);
   }
 

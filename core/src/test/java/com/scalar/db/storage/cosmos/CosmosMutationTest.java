@@ -3,8 +3,7 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
@@ -44,8 +43,8 @@ public class CosmosMutationTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
@@ -54,8 +53,8 @@ public class CosmosMutationTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
@@ -137,7 +136,7 @@ public class CosmosMutationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
 
@@ -161,8 +160,8 @@ public class CosmosMutationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .forNamespace(ANY_NAMESPACE_NAME)
@@ -191,9 +190,10 @@ public class CosmosMutationTest {
   public void makeConditionalQuery_MutationWithConditionsGiven_ShouldReturnQuery() {
     // Arrange
     PutIf conditions =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.putIf(
+                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()))
+            .build();
     Put put = preparePut().withCondition(conditions);
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     String id = cosmosMutation.getId();

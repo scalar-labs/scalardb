@@ -111,7 +111,7 @@ public class ConditionSetter implements MutationConditionVisitor {
   }
 
   private Clause createClauseWith(ConditionalExpression e) {
-    String name = quoteIfNecessary(e.getName());
+    String name = quoteIfNecessary(e.getColumn().getName());
     switch (e.getOperator()) {
       case EQ:
       case IS_NULL:

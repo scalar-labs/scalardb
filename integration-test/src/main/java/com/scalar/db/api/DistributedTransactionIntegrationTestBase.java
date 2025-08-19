@@ -2685,8 +2685,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   protected Get prepareGet(int id, int type) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(namespace)
         .forTable(TABLE)
@@ -2701,13 +2701,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   protected Scan prepareScan(int id, int fromType, int toType) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespace)
         .forTable(TABLE)
         .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(ACCOUNT_TYPE, fromType))
-        .withEnd(new Key(ACCOUNT_TYPE, toType));
+        .withStart(Key.ofInt(ACCOUNT_TYPE, fromType))
+        .withEnd(Key.ofInt(ACCOUNT_TYPE, toType));
   }
 
   protected ScanAll prepareScanAll() {
@@ -2718,8 +2718,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   protected Put preparePut(int id, int type) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(namespace)
         .forTable(TABLE)
@@ -2749,8 +2749,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   protected Delete prepareDelete(int id, int type) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(namespace)
         .forTable(TABLE)

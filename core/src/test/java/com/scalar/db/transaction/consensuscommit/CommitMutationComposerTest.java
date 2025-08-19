@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
@@ -12,21 +11,16 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
@@ -102,8 +96,8 @@ public class CommitMutationComposerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
@@ -111,16 +105,16 @@ public class CommitMutationComposerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
@@ -163,7 +157,7 @@ public class CommitMutationComposerTest {
                 ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
                     .and(
                         ConditionBuilder.column(STATE)
-                            .isEqualToInt(toStateValue(TransactionState.PREPARED).getAsInt()))
+                            .isEqualToInt(TransactionState.PREPARED.get()))
                     .build())
             .bigIntValue(COMMITTED_AT, ANY_TIME_2)
             .intValue(STATE, TransactionState.COMMITTED.get())
@@ -204,12 +198,11 @@ public class CommitMutationComposerTest {
             .forTable(put.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new PutIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(
-                STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)));
-    expected.withValue(Attribute.toCommittedAtValue(ANY_TIME_2));
-    expected.withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get()))
+            .build());
+    expected.withBigIntValue(Attribute.COMMITTED_AT, ANY_TIME_2);
+    expected.withIntValue(Attribute.STATE, TransactionState.COMMITTED.get());
     assertThat(actual).isEqualTo(expected);
   }
 
@@ -227,9 +220,9 @@ public class CommitMutationComposerTest {
     Delete actual = (Delete) composer.get().get(0);
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
-        new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+            .build());
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -246,9 +239,9 @@ public class CommitMutationComposerTest {
     Delete actual = (Delete) composer.get().get(0);
     delete.withConsistency(Consistency.LINEARIZABLE);
     delete.withCondition(
-        new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+            .build());
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -317,9 +310,9 @@ public class CommitMutationComposerTest {
             .forTable(get.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new DeleteIf(
-            new ConditionalExpression(ID, toIdValue(ANY_ID), Operator.EQ),
-            new ConditionalExpression(STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+            .build());
     assertThat(actual).isEqualTo(expected);
   }
 }

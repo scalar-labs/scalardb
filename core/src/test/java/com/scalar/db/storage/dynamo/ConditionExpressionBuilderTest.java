@@ -68,7 +68,7 @@ public class ConditionExpressionBuilderTest {
   @Test
   public void visit_PutIfExistsAcceptCalled_ShouldReturnEmpty() {
     // Arrange
-    PutIfExists condition = new PutIfExists();
+    PutIfExists condition = ConditionBuilder.putIfExists();
     ConditionExpressionBuilder builder =
         new ConditionExpressionBuilder(
             DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
@@ -84,7 +84,7 @@ public class ConditionExpressionBuilderTest {
   @Test
   public void visit_PutIfNotExistsAcceptCalled_ShouldReturnEmpty() {
     // Arrange
-    PutIfNotExists condition = new PutIfNotExists();
+    PutIfNotExists condition = ConditionBuilder.putIfNotExists();
     ConditionExpressionBuilder builder =
         new ConditionExpressionBuilder(
             DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
