@@ -1100,6 +1100,16 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_IfExists_ForNonExistingColumn_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(
+            () -> admin.dropColumnFromTable(namespace1, getTable1(), "nonExistingColumn", true))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
           throws Exception {

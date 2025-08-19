@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -452,6 +453,31 @@ public interface Admin {
    */
   void dropColumnFromTable(String namespace, String table, String columnName)
       throws ExecutionException;
+
+  /**
+   * Drops a column from an existing table. The column cannot be a partition or clustering key.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to drop
+   * @param IfExists if set to true, the column will be dropped only if it exists. If set to false,
+   *     it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void dropColumnFromTable(
+      String namespace, String table, String columnName, boolean IfExists)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (IfExists && !tableMetadata.getColumnNames().contains(columnName)) {
+      return;
+    }
+    dropColumnFromTable(namespace, table, columnName);
+  }
 
   /**
    * Imports an existing table that is not managed by ScalarDB.

@@ -859,6 +859,26 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void addNewColumnToTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.addNewColumnToTable(namespace1, TABLE4, COL_NAME2, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void addNewColumnToTable_ForAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME2, DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly()
       throws ExecutionException {
     try {
@@ -924,26 +944,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void addNewColumnToTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> admin.addNewColumnToTable(namespace1, TABLE4, COL_NAME2, DataType.TEXT))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void addNewColumnToTable_ForAlreadyExistingColumn_ShouldThrowIllegalArgumentException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> admin.addNewColumnToTable(namespace1, TABLE1, COL_NAME2, DataType.TEXT))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
   public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
@@ -972,6 +972,15 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, TABLE1, "c5"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_IfNotExists_ForNonExistingColumn_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(() -> admin.dropColumnFromTable(namespace1, TABLE1, "nonExistingColumn", true))
+        .doesNotThrowAnyException();
   }
 
   @Test
