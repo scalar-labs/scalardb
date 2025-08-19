@@ -192,7 +192,10 @@ public class SimpleSelectQuery implements SelectQuery {
             order = Scan.Ordering.Order.ASC;
           }
         }
-        orderingList.add(new Scan.Ordering(clusteringKeyName, order));
+        orderingList.add(
+            order == Scan.Ordering.Order.ASC
+                ? Scan.Ordering.asc(clusteringKeyName)
+                : Scan.Ordering.desc(clusteringKeyName));
       }
     }
 

@@ -38,9 +38,9 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,8 +128,8 @@ public class CrudHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
@@ -140,7 +140,7 @@ public class CrudHandlerTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
@@ -168,15 +168,14 @@ public class CrudHandlerTest {
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, partitionKeyColumnValue))
             .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyColumnValue))
             .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
-            .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(state)))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(2)))
-            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(ANY_ID_1)))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, state.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 2))
+            .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
             .put(
                 Attribute.BEFORE_STATE,
-                ScalarDbUtils.toColumn(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
-            .put(
-                Attribute.BEFORE_VERSION, ScalarDbUtils.toColumn(Attribute.toBeforeVersionValue(1)))
+                IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, 1))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
@@ -1403,17 +1402,14 @@ public class CrudHandlerTest {
         ImmutableMap.<String, Column<?>>builder()
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
             .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_3))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_2)))
-            .put(
-                Attribute.STATE,
-                ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(2)))
-            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(Attribute.toBeforeIdValue(ANY_ID_1)))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 2))
+            .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
             .put(
                 Attribute.BEFORE_STATE,
-                ScalarDbUtils.toColumn(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
-            .put(
-                Attribute.BEFORE_VERSION, ScalarDbUtils.toColumn(Attribute.toBeforeVersionValue(1)))
+                IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, 1))
             .build();
     Result result2 = new ResultImpl(columns, TABLE_METADATA);
 
@@ -1452,7 +1448,7 @@ public class CrudHandlerTest {
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     Delete delete =
-        new Delete(new Key(ANY_NAME_1, ANY_TEXT_1), new Key(ANY_NAME_2, ANY_TEXT_3))
+        new Delete(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_3))
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 

@@ -424,8 +424,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     DistributedTransactionManager manager = null;
     try {
       // Arrange
-      Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
-      Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
+      Key partitionKey = Key.of(COL_NAME2, "aaa", COL_NAME1, 1);
+      Key clusteringKey = Key.of(COL_NAME4, 2, COL_NAME3, "bbb");
       manager = transactionFactory.getTransactionManager();
       manager.put(
           new Put(partitionKey, clusteringKey)

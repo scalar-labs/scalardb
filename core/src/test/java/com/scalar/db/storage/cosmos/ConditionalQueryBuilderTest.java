@@ -6,8 +6,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -98,9 +96,10 @@ public class ConditionalQueryBuilderTest {
   public void visit_PutIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     PutIf condition =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.putIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()))
+            .build();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -114,7 +113,7 @@ public class ConditionalQueryBuilderTest {
   @Test
   public void visit_PutIfExistsAcceptCalled_ShouldNotCallWhere() {
     // Arrange
-    PutIfExists condition = new PutIfExists();
+    PutIfExists condition = ConditionBuilder.putIfExists();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -127,7 +126,7 @@ public class ConditionalQueryBuilderTest {
   @Test
   public void visit_PutIfNotExistsAcceptCalled_ShouldNotCallWhere() {
     // Arrange
-    PutIfNotExists condition = new PutIfNotExists();
+    PutIfNotExists condition = ConditionBuilder.putIfNotExists();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -141,9 +140,10 @@ public class ConditionalQueryBuilderTest {
   public void visit_DeleteIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     DeleteIf condition =
-        new DeleteIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.deleteIf(
+                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.get()))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.get()))
+            .build();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act

@@ -10,16 +10,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
@@ -28,7 +22,6 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -107,7 +100,7 @@ public class JdbcServiceTest {
     when(resultSet.next()).thenReturn(false);
 
     // Act
-    Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Get get = new Get(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcService.get(get, connection);
 
     // Assert
@@ -132,7 +125,7 @@ public class JdbcServiceTest {
     when(resultSet.next()).thenReturn(false);
 
     // Act
-    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Scan scan = new Scan(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     Scanner scanner = jdbcService.getScanner(scan, connection);
 
     // Assert
@@ -228,7 +221,7 @@ public class JdbcServiceTest {
     when(resultSet.next()).thenReturn(false);
 
     // Act
-    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Scan scan = new Scan(Key.ofText("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcService.scan(scan, connection);
 
     // Assert
@@ -303,7 +296,7 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
@@ -328,12 +321,10 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
             .withCondition(
-                new PutIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+                ConditionBuilder.putIf(ConditionBuilder.column("v1").isEqualToText("val2")).build())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -357,12 +348,10 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
             .withCondition(
-                new PutIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+                ConditionBuilder.putIf(ConditionBuilder.column("v1").isEqualToText("val2")).build())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -386,9 +375,9 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
-            .withCondition(new PutIfExists())
+            .withCondition(ConditionBuilder.putIfExists())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -412,9 +401,9 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
-            .withCondition(new PutIfExists())
+            .withCondition(ConditionBuilder.putIfExists())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -437,9 +426,9 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
-            .withCondition(new PutIfNotExists())
+            .withCondition(ConditionBuilder.putIfNotExists())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -464,9 +453,9 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
-            .withCondition(new PutIfNotExists())
+            .withCondition(ConditionBuilder.putIfNotExists())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.put(put, connection);
@@ -486,7 +475,7 @@ public class JdbcServiceTest {
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
     // Act
-    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+    Delete delete = new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);
 
     // Assert
@@ -507,11 +496,10 @@ public class JdbcServiceTest {
 
     // Act
     Delete delete =
-        new Delete(new Key("p1", "val1"))
+        new Delete(Key.ofText("p1", "val1"))
             .withCondition(
-                new DeleteIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+                ConditionBuilder.deleteIf(ConditionBuilder.column("v1").isEqualToText("val2"))
+                    .build())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);
@@ -534,11 +522,10 @@ public class JdbcServiceTest {
 
     // Act
     Delete delete =
-        new Delete(new Key("p1", "val1"))
+        new Delete(Key.ofText("p1", "val1"))
             .withCondition(
-                new DeleteIf(
-                    new ConditionalExpression(
-                        "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)))
+                ConditionBuilder.deleteIf(ConditionBuilder.column("v1").isEqualToText("val2"))
+                    .build())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);
@@ -562,8 +549,8 @@ public class JdbcServiceTest {
 
     // Act
     Delete delete =
-        new Delete(new Key("p1", "val1"))
-            .withCondition(new DeleteIfExists())
+        new Delete(Key.ofText("p1", "val1"))
+            .withCondition(ConditionBuilder.deleteIfExists())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);
@@ -587,8 +574,8 @@ public class JdbcServiceTest {
 
     // Act
     Delete delete =
-        new Delete(new Key("p1", "val1"))
-            .withCondition(new DeleteIfExists())
+        new Delete(Key.ofText("p1", "val1"))
+            .withCondition(ConditionBuilder.deleteIfExists())
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
     boolean ret = jdbcService.delete(delete, connection);
@@ -614,11 +601,11 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key("p1", "val1"))
+        new Put(Key.ofText("p1", "val1"))
             .withValue("v1", "val2")
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
-    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+    Delete delete = new Delete(Key.ofText("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection);
 
     // Assert

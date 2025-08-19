@@ -6,11 +6,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
@@ -286,7 +286,7 @@ public class Coordinator {
 
   @VisibleForTesting
   Get createGetWith(String id) {
-    return new Get(new Key(Attribute.toIdValue(id)))
+    return new Get(Key.ofText(Attribute.ID, id))
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(coordinatorNamespace)
         .forTable(TABLE);
@@ -327,15 +327,15 @@ public class Coordinator {
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    Put put = new Put(new Key(Attribute.toIdValue(state.getId())));
+    Put put = new Put(Key.ofText(Attribute.ID, state.getId()));
     String childIds = state.getChildIdsAsString();
     if (!childIds.isEmpty()) {
-      put.withValue(Attribute.toChildIdsValue(childIds));
+      put.withTextValue(Attribute.CHILD_IDS, childIds);
     }
-    return put.withValue(Attribute.toStateValue(state.getState()))
-        .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
+    return put.withIntValue(Attribute.STATE, state.getState().get())
+        .withBigIntValue(Attribute.CREATED_AT, state.getCreatedAt())
         .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(new PutIfNotExists())
+        .withCondition(ConditionBuilder.putIfNotExists())
         .forNamespace(coordinatorNamespace)
         .forTable(TABLE);
   }

@@ -9,8 +9,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -63,8 +63,8 @@ public abstract class DeleteStatementHandlerTestBase {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
@@ -111,7 +111,7 @@ public abstract class DeleteStatementHandlerTestBase {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
 
@@ -136,7 +136,7 @@ public abstract class DeleteStatementHandlerTestBase {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     DynamoMutation dynamoMutation = new DynamoMutation(delete, metadata);
 
@@ -162,7 +162,7 @@ public abstract class DeleteStatementHandlerTestBase {
     ConditionalCheckFailedException toThrow = mock(ConditionalCheckFailedException.class);
     doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -177,7 +177,7 @@ public abstract class DeleteStatementHandlerTestBase {
     DynamoDbException toThrow = mock(DynamoDbException.class);
     doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(delete))

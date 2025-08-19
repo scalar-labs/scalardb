@@ -1,19 +1,14 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -124,10 +119,9 @@ public class CommitMutationComposer extends AbstractMutationComposer {
         .forTable(base.forTable().get())
         .withConsistency(Consistency.LINEARIZABLE)
         .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(
-                    STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+            ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                .build());
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)

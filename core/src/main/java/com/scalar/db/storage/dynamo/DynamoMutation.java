@@ -132,7 +132,7 @@ public class DynamoMutation extends DynamoOperation {
     if (mutation.getCondition().isPresent()) {
       int index = 0;
       for (ConditionalExpression expression : mutation.getCondition().get().getExpressions()) {
-        ret.put(CONDITION_COLUMN_NAME_ALIAS + index, expression.getName());
+        ret.put(CONDITION_COLUMN_NAME_ALIAS + index, expression.getColumn().getName());
         index++;
       }
     }

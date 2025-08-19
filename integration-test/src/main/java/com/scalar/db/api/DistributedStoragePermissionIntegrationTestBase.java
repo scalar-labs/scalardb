@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.AdminTestUtils;
@@ -204,14 +203,13 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Put put = createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, null);
     storageForNormalUser.put(put);
-    ConditionalExpression conditionalExpression =
-        ConditionBuilder.buildConditionalExpression(
-            IntColumn.of(COL_NAME3, INT_COLUMN_VALUE1), ConditionalExpression.Operator.EQ);
     Put putWithPutIf =
         createPut(
             CLUSTERING_KEY_VALUE1,
             INT_COLUMN_VALUE2,
-            ConditionBuilder.putIf(conditionalExpression).build());
+            ConditionBuilder.putIf(
+                    ConditionBuilder.column(COL_NAME3).isEqualToInt(INT_COLUMN_VALUE1))
+                .build());
     // Act Assert
     assertThatCode(() -> storageForNormalUser.put(putWithPutIf)).doesNotThrowAnyException();
   }
@@ -251,12 +249,12 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Put put = createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, null);
     storageForNormalUser.put(put);
-    ConditionalExpression conditionalExpression =
-        ConditionBuilder.buildConditionalExpression(
-            IntColumn.of(COL_NAME3, INT_COLUMN_VALUE1), ConditionalExpression.Operator.EQ);
     Delete delete =
         createDelete(
-            CLUSTERING_KEY_VALUE1, ConditionBuilder.deleteIf(conditionalExpression).build());
+            CLUSTERING_KEY_VALUE1,
+            ConditionBuilder.deleteIf(
+                    ConditionBuilder.column(COL_NAME3).isEqualToInt(INT_COLUMN_VALUE1))
+                .build());
     // Act Assert
     assertThatCode(() -> storageForNormalUser.delete(delete)).doesNotThrowAnyException();
   }

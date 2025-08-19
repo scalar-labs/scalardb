@@ -8,11 +8,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -72,8 +71,8 @@ public abstract class BatchHandlerTestBase {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
@@ -82,8 +81,8 @@ public abstract class BatchHandlerTestBase {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
@@ -110,8 +109,8 @@ public abstract class BatchHandlerTestBase {
             .build();
     doThrow(toThrow).when(client).transactWriteItems(any(TransactWriteItemsRequest.class));
 
-    Put put = preparePut().withCondition(new PutIfNotExists());
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))
@@ -129,8 +128,8 @@ public abstract class BatchHandlerTestBase {
             .build();
     doThrow(toThrow).when(client).transactWriteItems(any(TransactWriteItemsRequest.class));
 
-    Put put = preparePut().withCondition(new PutIfNotExists());
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
+    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))

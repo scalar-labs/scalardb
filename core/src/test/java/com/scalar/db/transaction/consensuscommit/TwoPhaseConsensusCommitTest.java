@@ -73,21 +73,21 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .withValue(ANY_NAME_3, ANY_TEXT_3)
         .forNamespace(ANY_NAMESPACE)
@@ -95,8 +95,8 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE)
         .forTable(ANY_TABLE_NAME);

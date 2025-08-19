@@ -8,10 +8,13 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
@@ -40,20 +43,22 @@ public class FilteredResultTest {
   private static final IntValue ACCOUNT_ID_VALUE = new IntValue(ACCOUNT_ID, 0);
   private static final IntValue ACCOUNT_TYPE_VALUE = new IntValue(ACCOUNT_TYPE, 1);
   private static final IntValue BALANCE_VALUE = new IntValue(BALANCE, 2);
-  private static final TextValue ID_VALUE = Attribute.toIdValue("aaa");
-  private static final IntValue STATE_VALUE = Attribute.toStateValue(TransactionState.COMMITTED);
-  private static final IntValue VERSION_VALUE = Attribute.toVersionValue(4);
-  private static final BigIntValue PREPARED_AT_VALUE = Attribute.toPreparedAtValue(5);
-  private static final BigIntValue COMMITTED_AT_VALUE = Attribute.toCommittedAtValue(6);
+  private static final TextColumn ID_VALUE = TextColumn.of(Attribute.ID, "aaa");
+  private static final IntColumn STATE_VALUE =
+      IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get());
+  private static final IntColumn VERSION_VALUE = IntColumn.of(Attribute.VERSION, 4);
+  private static final BigIntColumn PREPARED_AT_VALUE = BigIntColumn.of(Attribute.PREPARED_AT, 5);
+  private static final BigIntColumn COMMITTED_AT_VALUE = BigIntColumn.of(Attribute.COMMITTED_AT, 6);
   private static final IntValue BEFORE_BALANCE_VALUE =
       new IntValue(Attribute.BEFORE_PREFIX + BALANCE, 7);
-  private static final TextValue BEFORE_ID_VALUE = Attribute.toBeforeIdValue("bbb");
-  private static final IntValue BEFORE_STATE_VALUE =
-      Attribute.toBeforeStateValue(TransactionState.COMMITTED);
-  private static final IntValue BEFORE_VERSION_VALUE = Attribute.toBeforeVersionValue(8);
-  private static final BigIntValue BEFORE_PREPARED_AT_VALUE = Attribute.toBeforePreparedAtValue(9);
-  private static final BigIntValue BEFORE_COMMITTED_AT_VALUE =
-      Attribute.toBeforeCommittedAtValue(11);
+  private static final TextColumn BEFORE_ID_VALUE = TextColumn.of(Attribute.BEFORE_ID, "bbb");
+  private static final IntColumn BEFORE_STATE_VALUE =
+      IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get());
+  private static final IntColumn BEFORE_VERSION_VALUE = IntColumn.of(Attribute.BEFORE_VERSION, 8);
+  private static final BigIntColumn BEFORE_PREPARED_AT_VALUE =
+      BigIntColumn.of(Attribute.BEFORE_PREPARED_AT, 9);
+  private static final BigIntColumn BEFORE_COMMITTED_AT_VALUE =
+      BigIntColumn.of(Attribute.BEFORE_COMMITTED_AT, 11);
 
   private Result result;
 
@@ -65,17 +70,17 @@ public class FilteredResultTest {
             .put(ACCOUNT_ID, ScalarDbUtils.toColumn(ACCOUNT_ID_VALUE))
             .put(ACCOUNT_TYPE, ScalarDbUtils.toColumn(ACCOUNT_TYPE_VALUE))
             .put(BALANCE, ScalarDbUtils.toColumn(BALANCE_VALUE))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(ID_VALUE))
-            .put(Attribute.STATE, ScalarDbUtils.toColumn(STATE_VALUE))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(VERSION_VALUE))
-            .put(Attribute.PREPARED_AT, ScalarDbUtils.toColumn(PREPARED_AT_VALUE))
-            .put(Attribute.COMMITTED_AT, ScalarDbUtils.toColumn(COMMITTED_AT_VALUE))
+            .put(Attribute.ID, ID_VALUE)
+            .put(Attribute.STATE, STATE_VALUE)
+            .put(Attribute.VERSION, VERSION_VALUE)
+            .put(Attribute.PREPARED_AT, PREPARED_AT_VALUE)
+            .put(Attribute.COMMITTED_AT, COMMITTED_AT_VALUE)
             .put(Attribute.BEFORE_PREFIX + BALANCE, ScalarDbUtils.toColumn(BEFORE_BALANCE_VALUE))
-            .put(Attribute.BEFORE_ID, ScalarDbUtils.toColumn(BEFORE_ID_VALUE))
-            .put(Attribute.BEFORE_STATE, ScalarDbUtils.toColumn(BEFORE_STATE_VALUE))
-            .put(Attribute.BEFORE_VERSION, ScalarDbUtils.toColumn(BEFORE_VERSION_VALUE))
-            .put(Attribute.BEFORE_PREPARED_AT, ScalarDbUtils.toColumn(BEFORE_PREPARED_AT_VALUE))
-            .put(Attribute.BEFORE_COMMITTED_AT, ScalarDbUtils.toColumn(BEFORE_COMMITTED_AT_VALUE))
+            .put(Attribute.BEFORE_ID, BEFORE_ID_VALUE)
+            .put(Attribute.BEFORE_STATE, BEFORE_STATE_VALUE)
+            .put(Attribute.BEFORE_VERSION, BEFORE_VERSION_VALUE)
+            .put(Attribute.BEFORE_PREPARED_AT, BEFORE_PREPARED_AT_VALUE)
+            .put(Attribute.BEFORE_COMMITTED_AT, BEFORE_COMMITTED_AT_VALUE)
             .build();
 
     result = new ResultImpl(columns, TABLE_METADATA);
@@ -168,31 +173,38 @@ public class FilteredResultTest {
     assertThat(filteredResult.getValue(BALANCE).get()).isEqualTo(BALANCE_VALUE);
 
     assertThat(filteredResult.getValue(Attribute.ID)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.ID).get()).isEqualTo(ID_VALUE);
+    assertThat(filteredResult.getValue(Attribute.ID).get())
+        .isEqualTo(new TextValue(Attribute.ID, "aaa"));
     assertThat(filteredResult.getValue(Attribute.STATE)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.STATE).get()).isEqualTo(STATE_VALUE);
+    assertThat(filteredResult.getValue(Attribute.STATE).get())
+        .isEqualTo(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get()));
     assertThat(filteredResult.getValue(Attribute.VERSION)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.VERSION).get()).isEqualTo(VERSION_VALUE);
+    assertThat(filteredResult.getValue(Attribute.VERSION).get())
+        .isEqualTo(new IntValue(Attribute.VERSION, 4));
     assertThat(filteredResult.getValue(Attribute.PREPARED_AT)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.PREPARED_AT).get()).isEqualTo(PREPARED_AT_VALUE);
+    assertThat(filteredResult.getValue(Attribute.PREPARED_AT).get())
+        .isEqualTo(new BigIntValue(Attribute.PREPARED_AT, 5));
     assertThat(filteredResult.getValue(Attribute.COMMITTED_AT)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.COMMITTED_AT).get()).isEqualTo(COMMITTED_AT_VALUE);
+    assertThat(filteredResult.getValue(Attribute.COMMITTED_AT).get())
+        .isEqualTo(new BigIntValue(Attribute.COMMITTED_AT, 6));
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE).get())
         .isEqualTo(BEFORE_BALANCE_VALUE);
     assertThat(filteredResult.getValue(Attribute.BEFORE_ID)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.BEFORE_ID).get()).isEqualTo(BEFORE_ID_VALUE);
+    assertThat(filteredResult.getValue(Attribute.BEFORE_ID).get())
+        .isEqualTo(new TextValue(Attribute.BEFORE_ID, "bbb"));
     assertThat(filteredResult.getValue(Attribute.BEFORE_STATE)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.BEFORE_STATE).get()).isEqualTo(BEFORE_STATE_VALUE);
+    assertThat(filteredResult.getValue(Attribute.BEFORE_STATE).get())
+        .isEqualTo(new IntValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()));
     assertThat(filteredResult.getValue(Attribute.BEFORE_VERSION)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_VERSION).get())
-        .isEqualTo(BEFORE_VERSION_VALUE);
+        .isEqualTo(new IntValue(Attribute.BEFORE_VERSION, 8));
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREPARED_AT)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREPARED_AT).get())
-        .isEqualTo(BEFORE_PREPARED_AT_VALUE);
+        .isEqualTo(new BigIntValue(Attribute.BEFORE_PREPARED_AT, 9));
     assertThat(filteredResult.getValue(Attribute.BEFORE_COMMITTED_AT)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_COMMITTED_AT).get())
-        .isEqualTo(BEFORE_COMMITTED_AT_VALUE);
+        .isEqualTo(new BigIntValue(Attribute.BEFORE_COMMITTED_AT, 11));
 
     assertThat(filteredResult.getContainedColumnNames())
         .containsOnly(
@@ -373,7 +385,8 @@ public class FilteredResultTest {
     assertThat(filteredResult.getValue(Attribute.ID)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.STATE)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.VERSION)).isPresent();
-    assertThat(filteredResult.getValue(Attribute.VERSION).get()).isEqualTo(VERSION_VALUE);
+    assertThat(filteredResult.getValue(Attribute.VERSION).get())
+        .isEqualTo(new IntValue(Attribute.VERSION, 4));
     assertThat(filteredResult.getValue(Attribute.PREPARED_AT)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.COMMITTED_AT)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE)).isPresent();
