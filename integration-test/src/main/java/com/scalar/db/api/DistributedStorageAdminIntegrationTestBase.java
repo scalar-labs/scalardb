@@ -506,8 +506,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     DistributedStorage storage = null;
     try {
       // Arrange
-      Key partitionKey = new Key(getColumnName2(), "aaa", getColumnName1(), 1);
-      Key clusteringKey = new Key(getColumnName4(), 2, getColumnName3(), "bbb");
+      Key partitionKey = Key.of(getColumnName2(), "aaa", getColumnName1(), 1);
+      Key clusteringKey = Key.of(getColumnName4(), 2, getColumnName3(), "bbb");
       storage = storageFactory.getStorage();
       storage.put(
           new Put(partitionKey, clusteringKey)

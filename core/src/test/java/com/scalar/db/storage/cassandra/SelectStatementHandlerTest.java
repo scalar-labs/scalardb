@@ -60,26 +60,26 @@ public class SelectStatementHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGetWithClusteringKey() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGetWithReservedKeywords() {
-    Key partitionKey = new Key("from", ANY_TEXT_1);
-    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    Key partitionKey = Key.ofText("from", ANY_TEXT_1);
+    Key clusteringKey = Key.ofText("to", ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey).forNamespace("keyspace").forTable("table");
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
@@ -239,7 +239,7 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2)).withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
+    scan.withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2)).withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3));
 
     // Act
     handler.prepare(scan);
@@ -269,8 +269,8 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
-        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
+    scan.withStart(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+        .withEnd(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
 
     // Act
     handler.prepare(scan);
@@ -298,8 +298,8 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
+    scan.withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+        .withEnd(Key.ofText(ANY_NAME_2, ANY_TEXT_3), false);
 
     // Act
     handler.prepare(scan);
@@ -330,8 +330,8 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-        .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
+    scan.withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+        .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
         .withLimit(ANY_LIMIT);
 
     // Act
@@ -364,9 +364,9 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-        .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-        .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
+    scan.withStart(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+        .withOrdering(Scan.Ordering.asc(ANY_NAME_2))
+        .withOrdering(Scan.Ordering.desc(ANY_NAME_3))
         .withLimit(ANY_LIMIT);
 
     // Act
@@ -395,8 +395,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
-        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
+    scan.withStart(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+        .withEnd(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
 
     // Act
     handler.bind(prepared, scan);

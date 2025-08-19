@@ -48,16 +48,16 @@ public class PutTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey);
   }
 
   @Test
   public void getPartitionKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key expected = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key expected = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Put put = new Put(expected, clusteringKey);
 
     // Act
@@ -70,8 +70,8 @@ public class PutTest {
   @Test
   public void getClusteringKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key expected = new Key(ANY_NAME_1, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key expected = Key.ofText(ANY_NAME_1, ANY_TEXT_2);
     Put put = new Put(partitionKey, expected);
 
     // Act
@@ -84,7 +84,7 @@ public class PutTest {
   @Test
   public void getClusteringKey_ClusteringKeyNotGivenInConstructor_ShouldReturnNull() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Put put = new Put(partitionKey);
 
     // Act
@@ -474,7 +474,7 @@ public class PutTest {
     Put put =
         preparePut()
             .withValue("c1", 1)
-            .withCondition(new PutIfExists())
+            .withCondition(ConditionBuilder.putIfExists())
             .withConsistency(Consistency.EVENTUAL)
             .forNamespace("n1")
             .forTable("t1");
@@ -516,8 +516,8 @@ public class PutTest {
   @Test
   public void equals_SamePutWithPutIfExistsGiven_ShouldReturnTrue() {
     // Arrange
-    Put put = preparePut().withCondition(new PutIfExists());
-    Put another = preparePut().withCondition(new PutIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfExists());
+    Put another = preparePut().withCondition(ConditionBuilder.putIfExists());
 
     // Act
     boolean ret = put.equals(another);
@@ -530,8 +530,8 @@ public class PutTest {
   @Test
   public void equals_SamePutWithPutIfNotExistsGiven_ShouldReturnTrue() {
     // Arrange
-    Put put = preparePut().withCondition(new PutIfNotExists());
-    Put another = preparePut().withCondition(new PutIfNotExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
+    Put another = preparePut().withCondition(ConditionBuilder.putIfNotExists());
 
     // Act
     boolean ret = put.equals(another);
@@ -561,9 +561,9 @@ public class PutTest {
   public void equals_PutWithDifferentConditionsGiven_ShouldReturnFalse() {
     // Arrange
     Put put = preparePut();
-    put.withCondition(new PutIfExists());
+    put.withCondition(ConditionBuilder.putIfExists());
     Put another = preparePut();
-    another.withCondition(new PutIfNotExists());
+    another.withCondition(ConditionBuilder.putIfNotExists());
 
     // Act
     boolean ret = put.equals(another);

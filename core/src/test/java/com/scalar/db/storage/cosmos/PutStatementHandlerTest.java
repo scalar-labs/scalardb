@@ -19,10 +19,9 @@ import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -76,8 +75,8 @@ public class PutStatementHandlerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
@@ -121,7 +120,7 @@ public class PutStatementHandlerTest {
         .thenReturn(spResponse);
     when(spResponse.getResponseAsString()).thenReturn("true");
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Put put =
         new Put(partitionKey)
             .forNamespace(ANY_NAMESPACE_NAME)
@@ -171,7 +170,7 @@ public class PutStatementHandlerTest {
         .thenReturn(spResponse);
     when(spResponse.getResponseAsString()).thenReturn("true");
 
-    Put put = preparePut().withCondition(new PutIfNotExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
@@ -198,7 +197,7 @@ public class PutStatementHandlerTest {
     when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfExists());
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
@@ -227,7 +226,7 @@ public class PutStatementHandlerTest {
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -244,7 +243,7 @@ public class PutStatementHandlerTest {
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.RETRY_WITH.get());
 
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = preparePut().withCondition(ConditionBuilder.putIfExists());
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(put))
