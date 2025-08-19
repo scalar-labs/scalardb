@@ -22,9 +22,9 @@ import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -102,17 +102,15 @@ public class BatchHandlerTest {
   }
 
   private List<Mutation> prepareConditionalPuts() {
-    List<Mutation> mutations = prepareNonConditionalPuts();
-    List<Mutation> conditionalMutations = new ArrayList<>();
-    for (Mutation m : mutations) {
-      if (m instanceof Put) {
-        conditionalMutations.add(
-            Put.newBuilder((Put) m).condition(ConditionBuilder.putIfNotExists()).build());
-      } else {
-        conditionalMutations.add(m);
-      }
-    }
-    return conditionalMutations;
+    return prepareNonConditionalPuts().stream()
+        .map(
+            m -> {
+              if (m instanceof Put) {
+                return Put.newBuilder((Put) m).condition(ConditionBuilder.putIfNotExists()).build();
+              }
+              return m;
+            })
+        .collect(Collectors.toList());
   }
 
   private BatchHandler prepareSpiedBatchHandler() {
