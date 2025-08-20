@@ -346,9 +346,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
 
     // Act
-    Get get = prepareGet(pKey, cKey);
-    get.withProjections(
-        Arrays.asList(getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6()));
+    Get get =
+        Get.newBuilder(prepareGet(pKey, cKey))
+            .projections(getColumnName1(), getColumnName2(), getColumnName3(), getColumnName6())
+            .build();
     Optional<Result> actual = storage.get(get);
 
     // Assert
@@ -888,7 +889,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    puts.get(0).withCondition(ConditionBuilder.putIfNotExists());
+    puts.set(0, Put.newBuilder(puts.get(0)).condition(ConditionBuilder.putIfNotExists()).build());
     Key partitionKey = Key.ofInt(getColumnName1(), pKey);
     Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     Get get =
@@ -901,8 +902,13 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     storage.put(puts.get(0));
-    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
-    assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
+    assertThatThrownBy(
+            () ->
+                storage.put(
+                    Put.newBuilder(puts.get(0))
+                        .intValue(getColumnName3(), Integer.MAX_VALUE)
+                        .build()))
+        .isInstanceOf(NoMutationException.class);
 
     // Assert
     Optional<Result> actual = storage.get(get);
@@ -962,9 +968,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    puts.get(0).withCondition(ConditionBuilder.putIfNotExists());
-    puts.get(1).withCondition(ConditionBuilder.putIfNotExists());
-    puts.get(2).withCondition(ConditionBuilder.putIfNotExists());
+    puts.set(0, Put.newBuilder(puts.get(0)).condition(ConditionBuilder.putIfNotExists()).build());
+    puts.set(1, Put.newBuilder(puts.get(1)).condition(ConditionBuilder.putIfNotExists()).build());
+    puts.set(2, Put.newBuilder(puts.get(2)).condition(ConditionBuilder.putIfNotExists()).build());
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
@@ -1073,9 +1079,9 @@ public abstract class DistributedStorageIntegrationTestBase {
     int cKey = 0;
     List<Put> puts = preparePuts();
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
-    puts.get(0).withCondition(ConditionBuilder.putIfNotExists());
-    puts.get(1).withCondition(ConditionBuilder.putIfNotExists());
-    puts.get(2).withCondition(ConditionBuilder.putIfNotExists());
+    puts.set(0, Put.newBuilder(puts.get(0)).condition(ConditionBuilder.putIfNotExists()).build());
+    puts.set(1, Put.newBuilder(puts.get(1)).condition(ConditionBuilder.putIfNotExists()).build());
+    puts.set(2, Put.newBuilder(puts.get(2)).condition(ConditionBuilder.putIfNotExists()).build());
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
@@ -1100,11 +1106,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     List<Put> puts = preparePuts();
     storage.put(puts.get(1));
-    puts.get(0).withCondition(ConditionBuilder.putIfNotExists());
-    puts.get(1)
-        .withCondition(
-            ConditionBuilder.putIf(ConditionBuilder.column(getColumnName2()).isEqualToText("1"))
-                .build());
+    puts.set(0, Put.newBuilder(puts.get(0)).condition(ConditionBuilder.putIfNotExists()).build());
+    puts.set(
+        1,
+        Put.newBuilder(puts.get(1))
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(getColumnName2()).isEqualToText("1"))
+                    .build())
+            .build());
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1))))
@@ -1136,7 +1145,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    puts.get(0).withCondition(ConditionBuilder.putIfExists());
+    puts.set(0, Put.newBuilder(puts.get(0)).condition(ConditionBuilder.putIfExists()).build());
     Get get = prepareGet(pKey, cKey);
 
     // Act Assert
@@ -1158,9 +1167,14 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act Assert
     storage.put(puts.get(0));
-    puts.get(0).withCondition(ConditionBuilder.putIfExists());
-    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
-    assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
+    assertThatCode(
+            () ->
+                storage.put(
+                    Put.newBuilder(puts.get(0))
+                        .intValue(getColumnName3(), Integer.MAX_VALUE)
+                        .condition(ConditionBuilder.putIfExists())
+                        .build()))
+        .doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual = storage.get(get);
@@ -1185,13 +1199,18 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act Assert
     storage.put(puts.get(0));
-    puts.get(0)
-        .withCondition(
-            ConditionBuilder.putIf(
-                    ConditionBuilder.column(getColumnName3()).isEqualToInt(pKey + cKey))
-                .build());
-    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
-    assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
+    assertThatCode(
+            () ->
+                storage.put(
+                    Put.newBuilder(puts.get(0))
+                        .intValue(getColumnName3(), Integer.MAX_VALUE)
+                        .condition(
+                            ConditionBuilder.putIf(
+                                    ConditionBuilder.column(getColumnName3())
+                                        .isEqualToInt(pKey + cKey))
+                                .build())
+                        .build()))
+        .doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual = storage.get(get);
@@ -1216,13 +1235,18 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act Assert
     storage.put(puts.get(0));
-    puts.get(0)
-        .withCondition(
-            ConditionBuilder.putIf(
-                    ConditionBuilder.column(getColumnName3()).isEqualToInt(pKey + cKey + 1))
-                .build());
-    puts.get(0).withValue(getColumnName3(), Integer.MAX_VALUE);
-    assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
+    assertThatThrownBy(
+            () ->
+                storage.put(
+                    Put.newBuilder(puts.get(0))
+                        .intValue(getColumnName3(), Integer.MAX_VALUE)
+                        .condition(
+                            ConditionBuilder.putIf(
+                                    ConditionBuilder.column(getColumnName3())
+                                        .isEqualToInt(pKey + cKey + 1))
+                                .build())
+                        .build()))
+        .isInstanceOf(NoMutationException.class);
 
     // Assert
     Optional<Result> actual = storage.get(get);
@@ -1242,8 +1266,11 @@ public abstract class DistributedStorageIntegrationTestBase {
     Put put = preparePuts().get(0);
     storage.put(put);
 
-    put.withTextValue(getColumnName2(), null);
-    put.withBooleanValue(getColumnName5(), null);
+    put =
+        Put.newBuilder(put)
+            .textValue(getColumnName2(), null)
+            .booleanValue(getColumnName5(), null)
+            .build();
 
     // Act
     storage.put(put);
@@ -1365,8 +1392,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act Assert
     Delete delete = prepareDelete(pKey, Integer.MAX_VALUE);
-    delete.withCondition(ConditionBuilder.deleteIfExists());
-    assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
+    Delete deleteWithCondition =
+        Delete.newBuilder(delete).condition(ConditionBuilder.deleteIfExists()).build();
+    assertThatThrownBy(() -> storage.delete(deleteWithCondition))
+        .isInstanceOf(NoMutationException.class);
   }
 
   @Test
@@ -1381,8 +1410,9 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
-    delete.withCondition(ConditionBuilder.deleteIfExists());
-    assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
+    Delete deleteWithCondition =
+        Delete.newBuilder(delete).condition(ConditionBuilder.deleteIfExists()).build();
+    assertThatCode(() -> storage.delete(deleteWithCondition)).doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual =
@@ -1408,12 +1438,16 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
-    delete.withCondition(
-        ConditionBuilder.deleteIf(
-                ConditionBuilder.column(getColumnName2())
-                    .isEqualToText(Integer.toString(Integer.MAX_VALUE)))
-            .build());
-    assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
+    Delete deleteWithCondition =
+        Delete.newBuilder(delete)
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(getColumnName2())
+                            .isEqualToText(Integer.toString(Integer.MAX_VALUE)))
+                    .build())
+            .build();
+    assertThatThrownBy(() -> storage.delete(deleteWithCondition))
+        .isInstanceOf(NoMutationException.class);
 
     // Assert
     Optional<Result> actual =
@@ -1439,11 +1473,15 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
-    delete.withCondition(
-        ConditionBuilder.deleteIf(
-                ConditionBuilder.column(getColumnName2()).isEqualToText(Integer.toString(pKey)))
-            .build());
-    assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
+    Delete deleteWithCondition =
+        Delete.newBuilder(delete)
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(getColumnName2())
+                            .isEqualToText(Integer.toString(pKey)))
+                    .build())
+            .build();
+    assertThatCode(() -> storage.delete(deleteWithCondition)).doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual =
@@ -1464,12 +1502,16 @@ public abstract class DistributedStorageIntegrationTestBase {
     List<Put> puts = preparePuts();
     List<Delete> deletes = prepareDeletes();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
-    deletes.get(0).withCondition(ConditionBuilder.deleteIfExists());
-    deletes
-        .get(1)
-        .withCondition(
-            ConditionBuilder.deleteIf(ConditionBuilder.column(getColumnName2()).isEqualToText("1"))
-                .build());
+    deletes.set(
+        0, Delete.newBuilder(deletes.get(0)).condition(ConditionBuilder.deleteIfExists()).build());
+    deletes.set(
+        1,
+        Delete.newBuilder(deletes.get(1))
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(getColumnName2()).isEqualToText("1"))
+                    .build())
+            .build());
 
     // Act
     assertThatCode(
@@ -1540,8 +1582,6 @@ public abstract class DistributedStorageIntegrationTestBase {
     // Arrange
     populateRecords();
     List<Put> puts = preparePuts();
-    puts.get(1).withValue(getColumnName3(), Integer.MAX_VALUE);
-    puts.get(2).withValue(getColumnName3(), Integer.MIN_VALUE);
 
     int pKey = 0;
     int cKey = 0;
@@ -1555,7 +1595,17 @@ public abstract class DistributedStorageIntegrationTestBase {
             .build();
 
     // Act
-    assertThatCode(() -> storage.mutate(Arrays.asList(delete, puts.get(1), puts.get(2))))
+    assertThatCode(
+            () ->
+                storage.mutate(
+                    Arrays.asList(
+                        delete,
+                        Put.newBuilder(puts.get(1))
+                            .intValue(getColumnName3(), Integer.MAX_VALUE)
+                            .build(),
+                        Put.newBuilder(puts.get(2))
+                            .intValue(getColumnName3(), Integer.MIN_VALUE)
+                            .build())))
         .doesNotThrowAnyException();
 
     // Assert
@@ -1692,8 +1742,11 @@ public abstract class DistributedStorageIntegrationTestBase {
   @Test
   public void put_PutGivenForIndexedColumnWithNullValue_ShouldPut() throws ExecutionException {
     // Arrange
-    storage.put(preparePuts().get(0).withValue(IntColumn.ofNull(getColumnName3()))); // (0,0)
-    Get get = new Get(prepareGet(0, 0));
+    storage.put(
+        Put.newBuilder(preparePuts().get(0))
+            .value(IntColumn.ofNull(getColumnName3()))
+            .build()); // (0,0)
+    Get get = prepareGet(0, 0);
 
     // Act
     Optional<Result> actual = storage.get(get);
@@ -2179,16 +2232,23 @@ public abstract class DistributedStorageIntegrationTestBase {
       throws ExecutionException {
     // Arrange
     Put put =
-        new Put(Key.ofInt(getColumnName1(), 0), Key.ofInt(getColumnName4(), 0))
-            .withTextValue(getColumnName2(), "foo")
-            .withIntValue(getColumnName3(), 0)
-            .withBooleanValue(getColumnName5(), true)
-            .forNamespace(namespace)
-            .forTable(getTableName());
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(getTableName())
+            .partitionKey(Key.ofInt(getColumnName1(), 0))
+            .clusteringKey(Key.ofInt(getColumnName4(), 0))
+            .textValue(getColumnName2(), "foo")
+            .intValue(getColumnName3(), 0)
+            .booleanValue(getColumnName5(), true)
+            .build();
     storage.put(put);
 
     // Act
-    Get get = prepareGet(0, 0).withProjection(getColumnName3()).withProjection(getColumnName5());
+    Get get =
+        Get.newBuilder(prepareGet(0, 0))
+            .projection(getColumnName3())
+            .projection(getColumnName5())
+            .build();
     Optional<Result> actual = storage.get(get);
 
     // Assert

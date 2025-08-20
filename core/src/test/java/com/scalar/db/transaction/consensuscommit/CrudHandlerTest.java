@@ -130,9 +130,12 @@ public class CrudHandlerTest {
   private Get prepareGet() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Get toGetForStorageFrom(Get get) {
@@ -141,7 +144,11 @@ public class CrudHandlerTest {
 
   private Scan prepareScan() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private Scan prepareCrossPartitionScan() {
@@ -226,7 +233,7 @@ public class CrudHandlerTest {
                     expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
     verify(storage).get(getForStorage);
     verify(snapshot).putIntoReadSet(key, Optional.of((TransactionResult) expected.get()));
-    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).putIntoGetSet(getForStorage, Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -266,7 +273,7 @@ public class CrudHandlerTest {
                     expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
     verify(storage).get(getForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).putIntoGetSet(getForStorage, Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -350,7 +357,7 @@ public class CrudHandlerTest {
                     expected.get(), Collections.emptyList(), TABLE_METADATA, false)));
     verify(storage).get(getForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).putIntoGetSet(getForStorage, Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -401,7 +408,7 @@ public class CrudHandlerTest {
                 .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_3).isEqualToText(ANY_TEXT_3))
                 .build());
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot).putIntoGetSet(get, Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).putIntoGetSet(getForStorage, Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -855,8 +862,9 @@ public class CrudHandlerTest {
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build();
+    Get getForStorage = toGetForStorageFrom(get);
 
-    when(tableMetadataManager.getTransactionTableMetadata(get)).thenReturn(null);
+    when(tableMetadataManager.getTransactionTableMetadata(getForStorage)).thenReturn(null);
 
     // Act Assert
     assertThatThrownBy(() -> handler.get(get)).isInstanceOf(IllegalArgumentException.class);
@@ -923,8 +931,9 @@ public class CrudHandlerTest {
     // Assert
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
-    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
+    verify(snapshot)
+        .putIntoScanSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, expected));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -964,7 +973,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
+    verify(snapshot)
+        .putIntoScanSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     verify(snapshot, never()).verifyNoOverlap(any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
@@ -1049,7 +1059,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
+    verify(snapshot)
+        .putIntoScanSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
     verify(snapshot, never()).verifyNoOverlap(any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
@@ -1331,7 +1342,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<TransactionResult> transactionResult = Optional.of(new TransactionResult(result));
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
-    when(snapshot.getResult(key, get)).thenReturn(transactionResult);
+    when(snapshot.getResult(key, getForStorage)).thenReturn(transactionResult);
     when(snapshot.getResult(key)).thenReturn(transactionResult);
 
     // Act
@@ -1373,7 +1384,8 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scan)).thenReturn(scanner);
     Get get = prepareGet();
-    when(storage.get(get)).thenReturn(Optional.of(result));
+    Get getForStorage = toGetForStorageFrom(get);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
 
     // Act
     List<Result> results = scanOrGetScanner(scan, scanType);
@@ -1381,7 +1393,7 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).scan(scan);
-    verify(storage).get(get);
+    verify(storage).get(getForStorage);
     verify(scanner).close();
 
     assertThat(results.size()).isEqualTo(1);
@@ -1448,9 +1460,12 @@ public class CrudHandlerTest {
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     Delete delete =
-        new Delete(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_3))
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3))
+            .build();
 
     // Act Assert
     handler.delete(delete);
@@ -1472,6 +1487,7 @@ public class CrudHandlerTest {
           ScanType scanType) throws ExecutionException, CrudException, IOException {
     // Arrange
     Scan scan = prepareCrossPartitionScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
     if (scanType == ScanType.SCAN) {
@@ -1489,8 +1505,9 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
     verify(snapshot)
-        .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, transactionResult));
+        .putIntoScanSet(
+            scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key, transactionResult));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(
@@ -1621,8 +1638,9 @@ public class CrudHandlerTest {
       throws CrudException, ExecutionException, IOException {
     // Arrange
     Scan scanWithoutLimit = prepareScan();
+    Scan scanWithoutLimitForStorage = toScanForStorageFrom(scanWithoutLimit);
     Scan scanWithLimit = Scan.newBuilder(scanWithoutLimit).limit(2).build();
-    Scan scanForStorage = toScanForStorageFrom(scanWithoutLimit);
+    Scan scanWithLimitForStorage = toScanForStorageFrom(scanWithLimit);
 
     Result result1 = prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
     Result result2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED);
@@ -1642,7 +1660,7 @@ public class CrudHandlerTest {
           .thenReturn(Optional.of(result2))
           .thenReturn(Optional.empty());
     }
-    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(storage.scan(scanWithoutLimitForStorage)).thenReturn(scanner);
 
     // Act
     List<Result> results = scanOrGetScanner(scanWithLimit, scanType);
@@ -1663,7 +1681,7 @@ public class CrudHandlerTest {
     @SuppressWarnings("unchecked")
     ArgumentCaptor<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsCaptor =
         ArgumentCaptor.forClass(LinkedHashMap.class);
-    verify(snapshot).putIntoScanSet(eq(scanWithLimit), resultsCaptor.capture());
+    verify(snapshot).putIntoScanSet(eq(scanWithLimitForStorage), resultsCaptor.capture());
 
     LinkedHashMap<Snapshot.Key, TransactionResult> capturedResults = resultsCaptor.getValue();
     assertThat(capturedResults).hasSize(2);
@@ -1890,8 +1908,8 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key1, Optional.of(txResult1));
     verify(snapshot)
-        .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key1, txResult1));
+        .putIntoScannerSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
+    verify(snapshot).verifyNoOverlap(scanForStorage, ImmutableMap.of(key1, txResult1));
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
@@ -1978,7 +1996,7 @@ public class CrudHandlerTest {
     // Assert
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot)
-        .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
+        .putIntoScannerSet(scanForStorage, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
     verify(snapshot, never()).verifyNoOverlap(any(), any());
 
     assertThat(actualResult)

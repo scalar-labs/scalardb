@@ -160,7 +160,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     get = copyAndSetTargetToIfNot(get);
 
     try {
-      return storage.get(get.withConsistency(Consistency.LINEARIZABLE));
+      return storage.get(Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build());
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, null);
     }
@@ -171,7 +171,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     scan = copyAndSetTargetToIfNot(scan);
 
     try (com.scalar.db.api.Scanner scanner =
-        storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
+        storage.scan(Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build())) {
       return scanner.all();
     } catch (ExecutionException | IOException e) {
       throw new CrudException(e.getMessage(), e, null);
@@ -226,7 +226,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     put = copyAndSetTargetToIfNot(put);
 
     try {
-      storage.put(put.withConsistency(Consistency.LINEARIZABLE));
+      storage.put(Put.newBuilder(put).consistency(Consistency.LINEARIZABLE).build());
     } catch (NoMutationException e) {
       throwUnsatisfiedConditionException(put);
     } catch (ExecutionException e) {
@@ -331,7 +331,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     delete = copyAndSetTargetToIfNot(delete);
 
     try {
-      storage.delete(delete.withConsistency(Consistency.LINEARIZABLE));
+      storage.delete(Delete.newBuilder(delete).consistency(Consistency.LINEARIZABLE).build());
     } catch (NoMutationException e) {
       throwUnsatisfiedConditionException(delete);
     } catch (ExecutionException e) {

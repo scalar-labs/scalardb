@@ -121,14 +121,17 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
     Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
 
-    return new Delete(partitionKey, clusteringKey.orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withCondition(
+    return Delete.newBuilder()
+        .namespace(base.forNamespace().get())
+        .table(base.forTable().get())
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey.orElse(null))
+        .condition(
             ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
                 .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
                 .build())
-        .withConsistency(Consistency.LINEARIZABLE);
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Optional<TransactionResult> getLatestResult(
@@ -155,10 +158,13 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     }
 
     Get get =
-        new Get(partitionKey, clusteringKey)
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(operation.forNamespace().get())
-            .forTable(operation.forTable().get());
+        Get.newBuilder()
+            .namespace(operation.forNamespace().get())
+            .table(operation.forTable().get())
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
 
     return storage.get(get).map(TransactionResult::new);
   }

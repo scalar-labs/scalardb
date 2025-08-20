@@ -18,7 +18,6 @@ import com.scalar.db.util.TestUtils;
 import com.scalar.db.util.TestUtils.ExpectedResult;
 import com.scalar.db.util.TestUtils.ExpectedResult.ExpectedResultBuilder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -262,7 +261,7 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
     populateSingleRecord();
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan(0, 0, 0))
-            .projections(Arrays.asList(BALANCE, SOME_COLUMN))
+            .projections(BALANCE, SOME_COLUMN)
             .build();
 
     // Act

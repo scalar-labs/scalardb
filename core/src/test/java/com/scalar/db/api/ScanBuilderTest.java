@@ -80,7 +80,22 @@ public class ScanBuilderTest {
     Scan actual = Scan.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual).isEqualTo(new Scan(partitionKey1).forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(
+            new Scan(
+                null,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -155,11 +170,20 @@ public class ScanBuilderTest {
 
     // Assert
     Scan expectedScan =
-        new Scan(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withStart(startClusteringKey1, true)
-            .withEnd(endClusteringKey1, true);
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            startClusteringKey1,
+            true,
+            endClusteringKey1,
+            true,
+            Collections.emptyList(),
+            0);
     assertThat(scan1).isEqualTo(expectedScan);
     assertThat(scan2).isEqualTo(expectedScan);
   }
@@ -178,11 +202,20 @@ public class ScanBuilderTest {
 
     // Assert
     Scan expectedScan =
-        new Scan(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withStart(startClusteringKey1, false)
-            .withEnd(endClusteringKey1, false);
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            startClusteringKey1,
+            false,
+            endClusteringKey1,
+            false,
+            Collections.emptyList(),
+            0);
     assertThat(scan).isEqualTo(expectedScan);
   }
 
@@ -190,16 +223,20 @@ public class ScanBuilderTest {
   public void buildScan_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Scan existingScan =
-        new Scan(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withStart(startClusteringKey1)
-            .withEnd(endClusteringKey1)
-            .withOrdering(ordering1)
-            .withOrdering(ordering2)
-            .withLimit(10)
-            .withProjections(Arrays.asList("pk1", "ck1"));
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(),
+            Arrays.asList("pk1", "ck1"),
+            ImmutableSet.of(),
+            startClusteringKey1,
+            true,
+            endClusteringKey1,
+            true,
+            Arrays.asList(ordering1, ordering2),
+            10);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).build();
@@ -315,37 +352,103 @@ public class ScanBuilderTest {
   public void buildScan_FromExistingAndClearBoundaries_ShouldBuildScanWithoutBoundaries() {
     // Arrange
     Scan existingScan =
-        new Scan(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withStart(startClusteringKey1)
-            .withEnd(endClusteringKey1);
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            startClusteringKey1,
+            true,
+            endClusteringKey1,
+            true,
+            Collections.emptyList(),
+            0);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).clearStart().clearEnd().build();
 
     // Assert
     assertThat(newScan)
-        .isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
   public void buildScan_FromExistingAndClearNamespace_ShouldBuildScanWithoutNamespace() {
     // Arrange
-    Scan existingScan = new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    Scan existingScan =
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            null,
+            false,
+            null,
+            false,
+            Collections.emptyList(),
+            0);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).clearNamespace().build();
 
     // Assert
-    assertThat(newScan).isEqualTo(new Scan(partitionKey1).forTable(TABLE_1));
+    assertThat(newScan)
+        .isEqualTo(
+            new Scan(
+                null,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
   public void
       buildScan_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    Scan existingScan = new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    Scan existingScan =
+        new Scan(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            null,
+            false,
+            null,
+            false,
+            Collections.emptyList(),
+            0);
 
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).indexKey(indexKey1))
@@ -358,7 +461,17 @@ public class ScanBuilderTest {
     Scan actual = Scan.newBuilder().table(TABLE_1).all().build();
 
     // Assert
-    assertThat(actual).isEqualTo(new ScanAll().forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(
+            new ScanAll(
+                null,
+                TABLE_1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -410,12 +523,15 @@ public class ScanBuilderTest {
   public void buildScanAll_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Scan existingScan =
-        new ScanAll()
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withLimit(10)
-            .withProjections(Arrays.asList("pk1", "ck1"));
+        new ScanAll(
+            NAMESPACE_1,
+            TABLE_1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(),
+            Arrays.asList("pk1", "ck1"),
+            ImmutableSet.of(),
+            Collections.emptyList(),
+            10);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).build();
@@ -509,7 +625,16 @@ public class ScanBuilderTest {
   public void
       buildScanAll_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    Scan existingScan = new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    Scan existingScan =
+        new ScanAll(
+            NAMESPACE_1,
+            TABLE_1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            Collections.emptyList(),
+            0);
 
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).partitionKey(partitionKey1))
@@ -533,13 +658,32 @@ public class ScanBuilderTest {
   @Test
   public void buildScanAll_FromExistingAndClearNamespace_ShouldBuildScanWithoutNamespace() {
     // Arrange
-    ScanAll existingScan = new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    ScanAll existingScan =
+        new ScanAll(
+            NAMESPACE_1,
+            TABLE_1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            Collections.emptyList(),
+            0);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).clearNamespace().build();
 
     // Assert
-    assertThat(newScan).isEqualTo(new ScanAll().forTable(TABLE_1));
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanAll(
+                null,
+                TABLE_1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -548,7 +692,17 @@ public class ScanBuilderTest {
     Scan actual = Scan.newBuilder().table(TABLE_1).indexKey(indexKey1).build();
 
     // Assert
-    assertThat(actual).isEqualTo(new ScanWithIndex(indexKey1).forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(
+            new ScanWithIndex(
+                null,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                0));
   }
 
   @Test
@@ -595,12 +749,15 @@ public class ScanBuilderTest {
   public void buildScanWithIndex_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Scan existingScan =
-        new ScanWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withConsistency(Consistency.EVENTUAL)
-            .withLimit(10)
-            .withProjections(Arrays.asList("pk1", "ck1"));
+        new ScanWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.EVENTUAL,
+            ImmutableMap.of(),
+            Arrays.asList("pk1", "ck1"),
+            ImmutableSet.of(),
+            10);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).build();
@@ -691,7 +848,16 @@ public class ScanBuilderTest {
   public void
       buildScanWithIndex_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    Scan existingScan = new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+    Scan existingScan =
+        new ScanWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            0);
 
     // Act Assert
     assertThatThrownBy(() -> Scan.newBuilder(existingScan).partitionKey(partitionKey1))
@@ -718,13 +884,31 @@ public class ScanBuilderTest {
   public void buildScanWithIndex_FromExistingAndClearNamespace_ShouldBuildScanWithoutNamespace() {
     // Arrange
     ScanWithIndex existingScan =
-        new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new ScanWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of(),
+            0);
 
     // Act
     Scan newScan = Scan.newBuilder(existingScan).clearNamespace().build();
 
     // Assert
-    assertThat(newScan).isEqualTo(new ScanWithIndex(indexKey1).forTable(TABLE_1));
+    assertThat(newScan)
+        .isEqualTo(
+            new ScanWithIndex(
+                null,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                0));
   }
 
   @Test
@@ -1269,7 +1453,22 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -1286,7 +1485,22 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -1302,7 +1516,22 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -1318,7 +1547,22 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new Scan(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new Scan(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                null,
+                false,
+                null,
+                false,
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -1758,7 +2002,16 @@ public class ScanBuilderTest {
 
     // Assert
     assertThat(scan)
-        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new ScanWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                0));
   }
 
   @Test
@@ -1776,7 +2029,16 @@ public class ScanBuilderTest {
 
     // Assert
     assertThat(scan)
-        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new ScanWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                0));
   }
 
   @Test
@@ -1793,7 +2055,16 @@ public class ScanBuilderTest {
 
     // Assert
     assertThat(scan)
-        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new ScanWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                0));
   }
 
   @Test
@@ -1810,7 +2081,16 @@ public class ScanBuilderTest {
 
     // Assert
     assertThat(scan)
-        .isEqualTo(new ScanWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new ScanWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                0));
   }
 
   @Test
@@ -2871,7 +3151,17 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll(
+                NAMESPACE_1,
+                TABLE_1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -2888,7 +3178,17 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll(
+                NAMESPACE_1,
+                TABLE_1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -2904,7 +3204,17 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll(
+                NAMESPACE_1,
+                TABLE_1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                Collections.emptyList(),
+                0));
   }
 
   @Test
@@ -2920,7 +3230,17 @@ public class ScanBuilderTest {
             .build();
 
     // Assert
-    assertThat(scan).isEqualTo(new ScanAll().forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(scan)
+        .isEqualTo(
+            new ScanAll(
+                NAMESPACE_1,
+                TABLE_1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of(),
+                Collections.emptyList(),
+                0));
   }
 
   @Test

@@ -98,26 +98,35 @@ public class CommitMutationComposerTest {
   private Put preparePut() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .build();
   }
 
   private Delete prepareDelete() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Get prepareGet() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private TransactionResult prepareResult(TransactionState state) {
@@ -193,16 +202,21 @@ public class CommitMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     Put expected =
-        new Put(put.getPartitionKey(), put.getClusteringKey().orElse(null))
-            .forNamespace(put.forNamespace().get())
-            .forTable(put.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
-            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get()))
-            .build());
-    expected.withBigIntValue(Attribute.COMMITTED_AT, ANY_TIME_2);
-    expected.withIntValue(Attribute.STATE, TransactionState.COMMITTED.get());
+        Put.newBuilder()
+            .namespace(put.forNamespace().get())
+            .table(put.forTable().get())
+            .partitionKey(put.getPartitionKey())
+            .clusteringKey(put.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build())
+            .bigIntValue(Attribute.COMMITTED_AT, ANY_TIME_2)
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 
@@ -218,11 +232,15 @@ public class CommitMutationComposerTest {
 
     // Assert
     Delete actual = (Delete) composer.get().get(0);
-    delete.withConsistency(Consistency.LINEARIZABLE);
-    delete.withCondition(
-        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
-            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
-            .build());
+    delete =
+        Delete.newBuilder(delete)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+                    .and(
+                        ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                    .build())
+            .build();
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -237,11 +255,15 @@ public class CommitMutationComposerTest {
 
     // Assert
     Delete actual = (Delete) composer.get().get(0);
-    delete.withConsistency(Consistency.LINEARIZABLE);
-    delete.withCondition(
-        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
-            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
-            .build());
+    delete =
+        Delete.newBuilder(delete)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+                    .and(
+                        ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                    .build())
+            .build();
     assertThat(actual).isEqualTo(delete);
   }
 
@@ -305,14 +327,18 @@ public class CommitMutationComposerTest {
     // Assert
     Delete actual = (Delete) composer.get().get(0);
     Delete expected =
-        new Delete(get.getPartitionKey(), get.getClusteringKey().orElse(null))
-            .forNamespace(get.forNamespace().get())
-            .forTable(get.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
-            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
-            .build());
+        Delete.newBuilder()
+            .namespace(get.forNamespace().get())
+            .table(get.forTable().get())
+            .partitionKey(get.getPartitionKey())
+            .clusteringKey(get.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID))
+                    .and(
+                        ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                    .build())
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 }

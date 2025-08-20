@@ -40,7 +40,17 @@ public class GetBuilderTest {
     Get actual = Get.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual).isEqualTo(new Get(partitionKey1).forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(
+            new Get(
+                null,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -57,7 +67,15 @@ public class GetBuilderTest {
     // Assert
     assertThat(get)
         .isEqualTo(
-            new Get(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -567,7 +585,17 @@ public class GetBuilderTest {
             .build();
 
     // Assert
-    assertThat(get).isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(get)
+        .isEqualTo(
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -583,7 +611,17 @@ public class GetBuilderTest {
             .build();
 
     // Assert
-    assertThat(get).isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(get)
+        .isEqualTo(
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -598,7 +636,17 @@ public class GetBuilderTest {
             .build();
 
     // Assert
-    assertThat(get).isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(get)
+        .isEqualTo(
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -613,18 +661,32 @@ public class GetBuilderTest {
             .build();
 
     // Assert
-    assertThat(get).isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+    assertThat(get)
+        .isEqualTo(
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
   public void buildGet_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Get existingGet =
-        new Get(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withProjections(Arrays.asList("c1", "c2"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(),
+            Arrays.asList("c1", "c2"),
+            ImmutableSet.of());
 
     // Act
     Get newGet = Get.newBuilder(existingGet).build();
@@ -1207,14 +1269,31 @@ public class GetBuilderTest {
   public void buildGet_FromExistingAndClearClusteringKey_ShouldBuildGetWithoutClusteringKey() {
     // Arrange
     Get existingGet =
-        new Get(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of());
 
     // Act
     Get newGet = Get.newBuilder(existingGet).clearClusteringKey().build();
 
     // Assert
     assertThat(newGet)
-        .isEqualTo(new Get(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new Get(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1222,7 +1301,15 @@ public class GetBuilderTest {
       buildGet_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
     Get existingGet =
-        new Get(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of());
 
     // Act Assert
     assertThatThrownBy(() -> Get.newBuilder(existingGet).indexKey(indexKey1))
@@ -1252,7 +1339,16 @@ public class GetBuilderTest {
     Get actual = Get.newBuilder().table(TABLE_1).indexKey(indexKey1).build();
 
     // Assert
-    assertThat(actual).isEqualTo(new GetWithIndex(indexKey1).forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(
+            new GetWithIndex(
+                null,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1680,7 +1776,15 @@ public class GetBuilderTest {
 
     // Assert
     assertThat(get)
-        .isEqualTo(new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1698,7 +1802,15 @@ public class GetBuilderTest {
 
     // Assert
     assertThat(get)
-        .isEqualTo(new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1715,7 +1827,15 @@ public class GetBuilderTest {
 
     // Assert
     assertThat(get)
-        .isEqualTo(new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
@@ -1732,18 +1852,29 @@ public class GetBuilderTest {
 
     // Assert
     assertThat(get)
-        .isEqualTo(new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new GetWithIndex(
+                NAMESPACE_1,
+                TABLE_1,
+                indexKey1,
+                null,
+                ImmutableMap.of(),
+                Collections.emptyList(),
+                ImmutableSet.of()));
   }
 
   @Test
   public void buildGetWithIndex_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     GetWithIndex existingGet =
-        new GetWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withProjections(Arrays.asList("c1", "c2"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(),
+            Arrays.asList("c1", "c2"),
+            ImmutableSet.of());
 
     // Act
     Get newGet = Get.newBuilder(existingGet).build();
@@ -1942,7 +2073,14 @@ public class GetBuilderTest {
       buildGetWithIndex_FromExistingWithUnsupportedOperation_ShouldThrowUnsupportedOperationException() {
     // Arrange
     GetWithIndex existingGet =
-        new GetWithIndex(indexKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            null,
+            ImmutableMap.of(),
+            Collections.emptyList(),
+            ImmutableSet.of());
 
     // Act Assert
     assertThatThrownBy(() -> Get.newBuilder(existingGet).partitionKey(partitionKey1))
@@ -1957,11 +2095,15 @@ public class GetBuilderTest {
   public void buildGet_FromExistingAndClearNamespace_ShouldBuildGetWithoutNamespace() {
     // Arrange
     Get existingGet =
-        new Get(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withProjections(Arrays.asList("c1", "c2"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new Get(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            null,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(),
+            Arrays.asList("c1", "c2"),
+            ImmutableSet.of());
 
     // Act
     Get newGet = Get.newBuilder(existingGet).clearNamespace().build();
@@ -1969,21 +2111,29 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new Get(indexKey1)
-                .forTable(TABLE_1)
-                .withProjections(Arrays.asList("c1", "c2"))
-                .withConsistency(Consistency.LINEARIZABLE));
+            new Get(
+                null,
+                TABLE_1,
+                indexKey1,
+                null,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of(),
+                Arrays.asList("c1", "c2"),
+                ImmutableSet.of()));
   }
 
   @Test
   public void buildGetWithIndex_FromExistingAndClearNamespace_ShouldBuildGetWithoutNamespace() {
     // Arrange
     GetWithIndex existingGet =
-        new GetWithIndex(indexKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withProjections(Arrays.asList("c1", "c2"))
-            .withConsistency(Consistency.LINEARIZABLE);
+        new GetWithIndex(
+            NAMESPACE_1,
+            TABLE_1,
+            indexKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(),
+            Arrays.asList("c1", "c2"),
+            ImmutableSet.of());
 
     // Act
     Get newGet = Get.newBuilder(existingGet).clearNamespace().build();
@@ -1991,9 +2141,13 @@ public class GetBuilderTest {
     // Assert
     assertThat(newGet)
         .isEqualTo(
-            new GetWithIndex(indexKey1)
-                .forTable(TABLE_1)
-                .withProjections(Arrays.asList("c1", "c2"))
-                .withConsistency(Consistency.LINEARIZABLE));
+            new GetWithIndex(
+                null,
+                TABLE_1,
+                indexKey1,
+                Consistency.LINEARIZABLE,
+                ImmutableMap.of(),
+                Arrays.asList("c1", "c2"),
+                ImmutableSet.of()));
   }
 }

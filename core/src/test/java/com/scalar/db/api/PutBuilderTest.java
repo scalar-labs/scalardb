@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -58,7 +59,17 @@ public class PutBuilderTest {
     Put actual = Put.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual).isEqualTo(new Put(partitionKey1).forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(
+            new Put(
+                null,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                null,
+                new LinkedHashMap<>()));
   }
 
   @Test
@@ -75,7 +86,15 @@ public class PutBuilderTest {
     // Assert
     assertThat(put)
         .isEqualTo(
-            new Put(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+            new Put(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                null,
+                ImmutableMap.of(),
+                null,
+                new LinkedHashMap<>()));
   }
 
   @Test
@@ -220,10 +239,15 @@ public class PutBuilderTest {
     // Assert
     assertThat(put)
         .isEqualTo(
-            new Put(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withTextValue("bigint", "a_value"));
+            new Put(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                null,
+                ImmutableMap.of("bigint", TextColumn.of("bigint", "a_value"))));
   }
 
   @Test
@@ -386,11 +410,18 @@ public class PutBuilderTest {
   public void build_FromExistingAndClearValue_ShouldBuildPutWithoutClearedValues() {
     // Arrange
     Put existingPut =
-        new Put(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withBooleanValue("bool", Boolean.TRUE)
-            .withDoubleValue("double", Double.MIN_VALUE);
+        new Put(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            null,
+            ImmutableMap.of(),
+            null,
+            ImmutableMap.<String, Column<?>>builder()
+                .put("bool", BooleanColumn.of("bool", true))
+                .put("double", DoubleColumn.of("double", Double.MIN_VALUE))
+                .build());
 
     // Act
     Put newPut =
@@ -399,53 +430,107 @@ public class PutBuilderTest {
     // Assert
     assertThat(newPut)
         .isEqualTo(
-            new Put(partitionKey1)
-                .forNamespace(NAMESPACE_1)
-                .forTable(TABLE_1)
-                .withBooleanValue("bool", Boolean.TRUE));
+            new Put(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                null,
+                ImmutableMap.of("bool", BooleanColumn.of("bool", true))));
   }
 
   @Test
   public void build_FromExistingAndClearCondition_ShouldBuildPutWithoutCondition() {
     // Arrange
     Put existingPut =
-        new Put(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withCondition(condition1);
+        new Put(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            null,
+            null,
+            ImmutableMap.of(),
+            condition1,
+            new LinkedHashMap<>());
 
     // Act
     Put newPut = Put.newBuilder(existingPut).clearCondition().build();
 
     // Assert
     assertThat(newPut)
-        .isEqualTo(new Put(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new Put(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                null,
+                new LinkedHashMap<>()));
   }
 
   @Test
   public void build_FromExistingAndClearClusteringKey_ShouldBuildPutWithoutClusteringKey() {
     // Arrange
     Put existingPut =
-        new Put(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new Put(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            null,
+            ImmutableMap.of(),
+            null,
+            new LinkedHashMap<>());
 
     // Act
     Put newPut = Put.newBuilder(existingPut).clearClusteringKey().build();
 
     // Assert
     assertThat(newPut)
-        .isEqualTo(new Put(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new Put(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                null,
+                null,
+                ImmutableMap.of(),
+                null,
+                new LinkedHashMap<>()));
   }
 
   @Test
   public void build_FromExistingAndClearNamespace_ShouldBuildPutWithoutNamespace() {
     // Arrange
     Put existingPut =
-        new Put(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new Put(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            null,
+            ImmutableMap.of(),
+            null,
+            new LinkedHashMap<>());
 
     // Act
     Put newPut = Put.newBuilder(existingPut).clearNamespace().build();
 
     // Assert
-    assertThat(newPut).isEqualTo(new Put(partitionKey1, clusteringKey1).forTable(TABLE_1));
+    assertThat(newPut)
+        .isEqualTo(
+            new Put(
+                null,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                null,
+                ImmutableMap.of(),
+                null,
+                new LinkedHashMap<>()));
   }
 }

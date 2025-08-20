@@ -78,19 +78,25 @@ public class PrepareMutationComposerTest {
   private Put preparePut() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_3)
-        .withValue(ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_3);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_3)
+        .intValue(ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_3)
+        .build();
   }
 
   private Delete prepareDelete() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
@@ -166,20 +172,23 @@ public class PrepareMutationComposerTest {
 
     // Assert
     Put actual = (Put) composer.get().get(0);
-    put.withConsistency(Consistency.LINEARIZABLE);
-    put.withCondition(
-        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)).build());
-    put.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
-    put.withValue(Attribute.ID, ANY_ID_3);
-    put.withValue(Attribute.STATE, TransactionState.PREPARED.get());
-    put.withValue(Attribute.VERSION, 3);
-    put.withValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_3);
-    put.withValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_4);
-    put.withValue(Attribute.BEFORE_ID, ANY_ID_2);
-    put.withValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get());
-    put.withValue(Attribute.BEFORE_VERSION, 2);
-    put.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2);
-    put.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2);
+    put =
+        Put.newBuilder(put)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)).build())
+            .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
+            .textValue(Attribute.ID, ANY_ID_3)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 3)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_3)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_4)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_2)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 2)
+            .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2)
+            .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2)
+            .build();
     assertThat(actual).isEqualTo(put);
   }
 
@@ -225,12 +234,15 @@ public class PrepareMutationComposerTest {
 
     // Assert
     Put actual = (Put) composer.get().get(0);
-    put.withConsistency(Consistency.LINEARIZABLE);
-    put.withCondition(ConditionBuilder.putIfNotExists());
-    put.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
-    put.withValue(Attribute.ID, ANY_ID_3);
-    put.withValue(Attribute.STATE, TransactionState.PREPARED.get());
-    put.withValue(Attribute.VERSION, 1);
+    put =
+        Put.newBuilder(put)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(ConditionBuilder.putIfNotExists())
+            .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
+            .textValue(Attribute.ID, ANY_ID_3)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 1)
+            .build();
     assertThat(actual).isEqualTo(put);
   }
 
@@ -296,23 +308,26 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     Put expected =
-        new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
-            .forNamespace(delete.forNamespace().get())
-            .forTable(delete.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)).build());
-    expected.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
-    expected.withValue(Attribute.ID, ANY_ID_3);
-    expected.withValue(Attribute.STATE, TransactionState.DELETED.get());
-    expected.withValue(Attribute.VERSION, 3);
-    expected.withValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_3);
-    expected.withValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_4);
-    expected.withValue(Attribute.BEFORE_ID, ANY_ID_2);
-    expected.withValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get());
-    expected.withValue(Attribute.BEFORE_VERSION, 2);
-    expected.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2);
-    expected.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2);
+        Put.newBuilder()
+            .namespace(delete.forNamespace().get())
+            .table(delete.forTable().get())
+            .partitionKey(delete.getPartitionKey())
+            .clusteringKey(delete.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2)).build())
+            .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
+            .textValue(Attribute.ID, ANY_ID_3)
+            .intValue(Attribute.STATE, TransactionState.DELETED.get())
+            .intValue(Attribute.VERSION, 3)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, ANY_TIME_3)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, ANY_TIME_4)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_2)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 2)
+            .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2)
+            .intValue(Attribute.BEFORE_PREFIX + ANY_NAME_WITH_BEFORE_PREFIX, ANY_INT_2)
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 
@@ -363,15 +378,18 @@ public class PrepareMutationComposerTest {
     // Assert
     Put actual = (Put) composer.get().get(0);
     Put expected =
-        new Put(delete.getPartitionKey(), delete.getClusteringKey().orElse(null))
-            .forNamespace(delete.forNamespace().get())
-            .forTable(delete.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(ConditionBuilder.putIfNotExists());
-    expected.withValue(Attribute.PREPARED_AT, ANY_TIME_5);
-    expected.withValue(Attribute.ID, ANY_ID_3);
-    expected.withValue(Attribute.STATE, TransactionState.DELETED.get());
-    expected.withValue(Attribute.VERSION, 1);
+        Put.newBuilder()
+            .namespace(delete.forNamespace().get())
+            .table(delete.forTable().get())
+            .partitionKey(delete.getPartitionKey())
+            .clusteringKey(delete.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(ConditionBuilder.putIfNotExists())
+            .bigIntValue(Attribute.PREPARED_AT, ANY_TIME_5)
+            .textValue(Attribute.ID, ANY_ID_3)
+            .intValue(Attribute.STATE, TransactionState.DELETED.get())
+            .intValue(Attribute.VERSION, 1)
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 

@@ -215,7 +215,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues(operator, dataType)).condition(condition).build();
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -239,7 +240,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
       MutationCondition condition =
           ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-      Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
+      Put put =
+          Put.newBuilder(preparePutWithRandomValues(operator, dataType))
+              .condition(condition)
+              .build();
 
       boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -263,7 +267,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues(operator, dataType)).condition(condition).build();
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -286,7 +291,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.putIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Put put = preparePutWithRandomValues(operator, dataType).withCondition(condition);
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues(operator, dataType)).condition(condition).build();
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -337,8 +343,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
     Put put =
-        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(condition);
+        Put.newBuilder(
+                preparePutWithRandomValues(
+                    firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(condition)
+            .build();
 
     boolean shouldMutate =
         shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -385,8 +394,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
               .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
               .build();
       Put put =
-          preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
-              .withCondition(condition);
+          Put.newBuilder(
+                  preparePutWithRandomValues(
+                      firstOperator, firstDataType, secondOperator, secondDataType))
+              .condition(condition)
+              .build();
 
       boolean shouldMutate =
           shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -432,8 +444,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
     Put put =
-        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(condition);
+        Put.newBuilder(
+                preparePutWithRandomValues(
+                    firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(condition)
+            .build();
 
     boolean shouldMutate =
         shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -478,8 +493,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .and(buildConditionalExpression(secondColumnToCompare, secondOperator))
             .build();
     Put put =
-        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(condition);
+        Put.newBuilder(
+                preparePutWithRandomValues(
+                    firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(condition)
+            .build();
 
     boolean shouldMutate =
         shouldMutate(initialData.get(firstColumnName), firstColumnToCompare, firstOperator)
@@ -597,7 +615,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     // Arrange
     putInitialDataWithRandomValues();
 
-    Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfExists());
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues())
+            .condition(ConditionBuilder.putIfExists())
+            .build();
 
     // Act
     storage.put(put);
@@ -645,7 +666,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     random.get().setSeed(seed);
 
     // Arrange
-    Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfExists());
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues())
+            .condition(ConditionBuilder.putIfExists())
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> storage.put(put)).isInstanceOf(NoMutationException.class);
@@ -660,7 +684,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     random.get().setSeed(seed);
 
     // Arrange
-    Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfNotExists());
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
 
     // Act
     storage.put(put);
@@ -710,7 +737,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     // Arrange
     Map<String, Column<?>> initialData = putInitialDataWithRandomValues();
 
-    Put put = preparePutWithRandomValues().withCondition(ConditionBuilder.putIfNotExists());
+    Put put =
+        Put.newBuilder(preparePutWithRandomValues())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> storage.put(put)).isInstanceOf(NoMutationException.class);
@@ -783,7 +813,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Delete delete = prepareDelete(operator, dataType).withCondition(condition);
+    Delete delete =
+        Delete.newBuilder(prepareDelete(operator, dataType)).condition(condition).build();
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -807,7 +838,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
       MutationCondition condition =
           ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-      Delete delete = prepareDelete(operator, dataType).withCondition(condition);
+      Delete delete =
+          Delete.newBuilder(prepareDelete(operator, dataType)).condition(condition).build();
 
       boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -832,7 +864,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Delete delete = prepareDelete(operator, dataType).withCondition(condition);
+    Delete delete =
+        Delete.newBuilder(prepareDelete(operator, dataType)).condition(condition).build();
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -855,7 +888,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
     MutationCondition condition =
         ConditionBuilder.deleteIf(buildConditionalExpression(columnToCompare, operator)).build();
-    Delete delete = prepareDelete(operator, dataType).withCondition(condition);
+    Delete delete =
+        Delete.newBuilder(prepareDelete(operator, dataType)).condition(condition).build();
 
     boolean shouldMutate = shouldMutate(initialData.get(columnName), columnToCompare, operator);
 
@@ -912,8 +946,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
                 initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
     Delete delete =
-        prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(condition);
+        Delete.newBuilder(
+                prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(condition)
+            .build();
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
@@ -961,8 +997,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
                   initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
       Delete delete =
-          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-              .withCondition(condition);
+          Delete.newBuilder(
+                  prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+              .condition(condition)
+              .build();
 
       // Act Assert
       delete_withDeleteIf_shouldPutProperly(
@@ -1010,8 +1048,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
                 initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
     Delete delete =
-        prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(condition);
+        Delete.newBuilder(
+                prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(condition)
+            .build();
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
@@ -1058,8 +1098,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
                 initialData.get(secondColumnName), secondColumnToCompare, secondOperator);
 
     Delete delete =
-        prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(condition);
+        Delete.newBuilder(
+                prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(condition)
+            .build();
 
     // Act Assert
     delete_withDeleteIf_shouldPutProperly(
@@ -1175,7 +1217,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     // Arrange
     putInitialDataWithRandomValues();
 
-    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act
     storage.delete(delete);
@@ -1191,7 +1234,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     random.get().setSeed(seed);
 
     // Arrange
-    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
@@ -1213,13 +1257,15 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       DataType firstDataType,
       @Nullable Operator secondOperator,
       @Nullable DataType secondDataType) {
-    return new Get(
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(
             Key.ofText(
                 PARTITION_KEY,
                 getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Put preparePutWithRandomValues() {
@@ -1275,13 +1321,15 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       DataType firstDataType,
       @Nullable Operator secondOperator,
       @Nullable DataType secondDataType) {
-    return new Delete(
+    return Delete.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(
             Key.ofText(
                 PARTITION_KEY,
                 getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Map<String, Column<?>> putInitialDataWithRandomValues() throws ExecutionException {
@@ -1301,15 +1349,20 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     try {
       storage.delete(
-          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-              .withCondition(ConditionBuilder.deleteIfExists()));
+          Delete.newBuilder(
+                  prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+              .condition(ConditionBuilder.deleteIfExists())
+              .build());
     } catch (NoMutationException ignored) {
       // ignored
     }
 
     Put initialPut =
-        preparePutWithRandomValues(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(ConditionBuilder.putIfNotExists());
+        Put.newBuilder(
+                preparePutWithRandomValues(
+                    firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     storage.put(initialPut);
     return initialPut.getColumns();
   }
@@ -1327,15 +1380,20 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     try {
       storage.delete(
-          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-              .withCondition(ConditionBuilder.deleteIfExists()));
+          Delete.newBuilder(
+                  prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+              .condition(ConditionBuilder.deleteIfExists())
+              .build());
     } catch (NoMutationException ignored) {
       // ignored
     }
 
     Put initialPut =
-        preparePutWithNullValues(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(ConditionBuilder.putIfNotExists());
+        Put.newBuilder(
+                preparePutWithNullValues(
+                    firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     storage.put(initialPut);
     return initialPut.getColumns();
   }
@@ -1386,15 +1444,20 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       throws ExecutionException {
     try {
       storage.delete(
-          prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType)
-              .withCondition(ConditionBuilder.deleteIfExists()));
+          Delete.newBuilder(
+                  prepareDelete(firstOperator, firstDataType, secondOperator, secondDataType))
+              .condition(ConditionBuilder.deleteIfExists())
+              .build());
     } catch (NoMutationException ignored) {
       // ignored
     }
 
     Put initialPut =
-        preparePutWithoutValues(firstOperator, firstDataType, secondOperator, secondDataType)
-            .withCondition(ConditionBuilder.putIfNotExists());
+        Put.newBuilder(
+                preparePutWithoutValues(
+                    firstOperator, firstDataType, secondOperator, secondDataType))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     storage.put(initialPut);
     ImmutableMap.Builder<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
@@ -1426,13 +1489,15 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       DataType firstDataType,
       @Nullable Operator secondOperator,
       @Nullable DataType secondDataType) {
-    return new Put(
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(
             Key.ofText(
                 PARTITION_KEY,
                 getPartitionKeyValue(firstOperator, firstDataType, secondOperator, secondDataType)))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(namespace)
-        .forTable(TABLE);
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private String getPartitionKeyValue(
