@@ -74,10 +74,10 @@ public final class ScalarDbUtils {
       Get get, Optional<String> namespace, Optional<String> tableName) {
     GetBuilder.BuildableGetOrGetWithIndexFromExisting builder = Get.newBuilder(get); // copy
     if (!get.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!get.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Get ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -88,10 +88,10 @@ public final class ScalarDbUtils {
       Scan scan, Optional<String> namespace, Optional<String> tableName) {
     ScanBuilder.BuildableScanOrScanAllFromExisting builder = Scan.newBuilder(scan); // copy
     if (!scan.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!scan.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Scan ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -118,10 +118,10 @@ public final class ScalarDbUtils {
       Put put, Optional<String> namespace, Optional<String> tableName) {
     PutBuilder.BuildableFromExisting builder = Put.newBuilder(put); // copy
     if (!put.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!put.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Put ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -132,10 +132,10 @@ public final class ScalarDbUtils {
       Delete delete, Optional<String> namespace, Optional<String> tableName) {
     DeleteBuilder.BuildableFromExisting builder = Delete.newBuilder(delete); // copy
     if (!delete.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!delete.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Delete ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -146,10 +146,10 @@ public final class ScalarDbUtils {
       Insert insert, Optional<String> namespace, Optional<String> tableName) {
     InsertBuilder.BuildableFromExisting builder = Insert.newBuilder(insert); // copy
     if (!insert.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!insert.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Insert ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -160,10 +160,10 @@ public final class ScalarDbUtils {
       Upsert upsert, Optional<String> namespace, Optional<String> tableName) {
     UpsertBuilder.BuildableFromExisting builder = Upsert.newBuilder(upsert); // copy
     if (!upsert.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!upsert.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Upsert ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -174,10 +174,10 @@ public final class ScalarDbUtils {
       Update update, Optional<String> namespace, Optional<String> tableName) {
     UpdateBuilder.BuildableFromExisting builder = Update.newBuilder(update); // copy
     if (!update.forNamespace().isPresent() && namespace.isPresent()) {
-      builder.namespace(namespace.get());
+      builder = builder.namespace(namespace.get());
     }
     if (!update.forTable().isPresent() && tableName.isPresent()) {
-      builder.table(tableName.get());
+      builder = builder.table(tableName.get());
     }
     Update ret = builder.build();
     checkIfTargetIsSet(ret);
@@ -316,9 +316,11 @@ public final class ScalarDbUtils {
     List<String> projections = get.getProjections();
     if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
-      ScalarDbUtils.getColumnNamesUsedIn(get.getConjunctions()).stream()
-          .filter(columnName -> !projections.contains(columnName))
-          .forEach(builder::projection);
+      for (String columnName : getColumnNamesUsedIn(get.getConjunctions())) {
+        if (!projections.contains(columnName)) {
+          builder = builder.projection(columnName);
+        }
+      }
     }
     return builder.build();
   }
@@ -329,14 +331,16 @@ public final class ScalarDbUtils {
     List<String> projections = scan.getProjections();
     if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
-      ScalarDbUtils.getColumnNamesUsedIn(scan.getConjunctions()).stream()
-          .filter(columnName -> !projections.contains(columnName))
-          .forEach(builder::projection);
+      for (String columnName : getColumnNamesUsedIn(scan.getConjunctions())) {
+        if (!projections.contains(columnName)) {
+          builder = builder.projection(columnName);
+        }
+      }
     }
     return builder.build();
   }
 
-  public static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {
+  private static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {
     Set<String> columns = new HashSet<>();
     conjunctions.forEach(
         conjunction ->

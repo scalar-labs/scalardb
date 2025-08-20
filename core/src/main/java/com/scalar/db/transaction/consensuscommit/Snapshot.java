@@ -8,7 +8,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Streams;
 import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -165,14 +164,16 @@ public class Snapshot {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(originalPut);
-      put.getColumns().values().forEach(putBuilder::value);
+      for (Column<?> value : put.getColumns().values()) {
+        putBuilder = putBuilder.value(value);
+      }
 
       // If the implicit pre-read is enabled for the new put, it should also be enabled for the
       // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
       // because, in insert mode, the read set is not used during the preparation phase. Therefore,
       // we only need to enable the implicit pre-read if the previous put is not in insert mode
       if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
-        putBuilder.enableImplicitPreRead();
+        putBuilder = putBuilder.enableImplicitPreRead();
       }
 
       writeSet.put(key, putBuilder.build());
@@ -598,10 +599,12 @@ public class Snapshot {
       ScanBuilder.BuildableScanOrScanAllFromExisting builder =
           Scan.newBuilder(scan).clearProjections().projection(Attribute.ID);
       TableMetadata tableMetadata = getTableMetadata(scan);
-      Streams.concat(
-              tableMetadata.getPartitionKeyNames().stream(),
-              tableMetadata.getClusteringKeyNames().stream())
-          .forEach(builder::projection);
+      for (String partitionKeyName : tableMetadata.getPartitionKeyNames()) {
+        builder = builder.projection(partitionKeyName);
+      }
+      for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
+        builder = builder.projection(clusteringKeyName);
+      }
       scan = builder.build();
 
       if (scan.getLimit() == 0) {

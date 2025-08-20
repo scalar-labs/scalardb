@@ -342,7 +342,7 @@ public class Coordinator {
             .condition(ConditionBuilder.putIfNotExists());
 
     if (!childIds.isEmpty()) {
-      builder.textValue(Attribute.CHILD_IDS, childIds);
+      builder = builder.textValue(Attribute.CHILD_IDS, childIds);
     }
     return builder.build();
   }
