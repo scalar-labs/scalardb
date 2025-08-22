@@ -10,13 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
 
-    permissions:
-      pull-requests: write
-
     steps:
       - name: Assign ScalarDB team as reviewers for Dependabot PRs
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ASSIGN_PR_REVIEWERS_PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
         run: gh pr edit $PR_NUMBER --repo $REPOSITORY --add-reviewer scalar-labs/scalardb
