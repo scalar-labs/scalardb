@@ -1158,6 +1158,10 @@ jobs:
           sa-password: "SqlServer17"
           version: 2017
 
+      - name: Create database with Japanese collation for integration test
+        run: |
+          sqlcmd -S localhost -U sa -P SqlServer17 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
@@ -1195,16 +1199,11 @@ jobs:
           }
           echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
 
-      - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer17 10 3
-        shell: bash
-        timeout-minutes: 1
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=no_superuser" "-Dscalardb.jdbc.password=no_superuser_password" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -1239,6 +1238,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Create database with Japanese collation for integration test
+        run: |
+          docker exec sqlserver19 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer19 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
@@ -1266,15 +1269,11 @@ jobs:
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
-      - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer19 10 3 sqlserver19
-        timeout-minutes: 1
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -1309,6 +1308,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Create database with Japanese collation for integration test
+        run: |
+          docker exec sqlserver22 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer22 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v4
         with:
@@ -1336,15 +1339,11 @@ jobs:
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
-      - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer22 10 3 sqlserver22
-        timeout-minutes: 1
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
