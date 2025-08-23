@@ -157,7 +157,8 @@ public class CrudHandler {
       if (key == null) {
         // Only for a Get with index, the argument `key` is null. In that case, create a key from
         // the result
-        key = new Snapshot.Key(get, result.get());
+        TableMetadata tableMetadata = getTableMetadata(get);
+        key = new Snapshot.Key(get, result.get(), tableMetadata);
       }
 
       result = executeRecovery(key, get, result.get());
@@ -186,7 +187,8 @@ public class CrudHandler {
         if (result.isPresent()) {
           // Only when we can get the record with the Get with index, we can put it into the read
           // set
-          key = new Snapshot.Key(get, result.get());
+          TableMetadata tableMetadata = getTableMetadata(get);
+          key = new Snapshot.Key(get, result.get(), tableMetadata);
           putIntoReadSetInSnapshot(key, result);
         }
       }
@@ -255,7 +257,8 @@ public class CrudHandler {
 
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
-        Snapshot.Key key = new Snapshot.Key(scan, r);
+        TableMetadata tableMetadata = getTableMetadata(scan);
+        Snapshot.Key key = new Snapshot.Key(scan, r, tableMetadata);
         Optional<TransactionResult> processedScanResult = processScanResult(key, scan, result);
         processedScanResult.ifPresent(res -> results.put(key, res));
 
@@ -810,7 +813,8 @@ public class CrudHandler {
             return Optional.empty();
           }
 
-          Snapshot.Key key = new Snapshot.Key(scan, r.get());
+          TableMetadata tableMetadata = getTableMetadata(scan);
+          Snapshot.Key key = new Snapshot.Key(scan, r.get(), tableMetadata);
           TransactionResult result = new TransactionResult(r.get());
 
           Optional<TransactionResult> processedScanResult = processScanResult(key, scan, result);
