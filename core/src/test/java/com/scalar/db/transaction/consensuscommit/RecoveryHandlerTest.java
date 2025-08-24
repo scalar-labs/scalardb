@@ -27,8 +27,6 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.TextColumn;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -80,7 +78,7 @@ public class RecoveryHandlerTest {
   private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ANY_NAME_1, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
             .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_1))
             .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, preparedAt))
             .put(Attribute.STATE, IntColumn.of(Attribute.STATE, transactionState.get()))

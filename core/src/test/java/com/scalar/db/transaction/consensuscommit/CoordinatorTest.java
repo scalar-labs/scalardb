@@ -28,7 +28,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import java.util.Arrays;
@@ -183,7 +182,8 @@ public class CoordinatorTest {
     Put put = coordinator.createPutWith(state);
 
     // Assert
-    assertThat(put.getPartitionKey().get().get(0)).isEqualTo(new TextValue(Attribute.ID, ANY_ID_1));
+    assertThat(put.getPartitionKey().getColumnName(0)).isEqualTo(Attribute.ID);
+    assertThat(put.getPartitionKey().getTextValue(0)).isEqualTo(ANY_ID_1);
     assertThat(put.getColumns().get(Attribute.STATE))
         .isEqualTo(IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()));
     assertThat(put.getColumns().get(Attribute.CREATED_AT))

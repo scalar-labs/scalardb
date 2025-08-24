@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class GetTest {
@@ -48,7 +48,7 @@ public class GetTest {
     Key actual = get.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
+    Assertions.<Key>assertThat(expected).isEqualTo(actual);
   }
 
   @Test

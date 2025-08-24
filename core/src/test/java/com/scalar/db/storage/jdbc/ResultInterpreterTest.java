@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -87,7 +86,7 @@ public class ResultInterpreterTest {
     when(resultSet.getString(ANY_NAME_2)).thenReturn(ANY_TEXT_2);
     when(resultSet.getBoolean(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(resultSet.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
-    when(resultSet.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntValue.MAX_VALUE);
+    when(resultSet.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntColumn.MAX_VALUE);
     when(resultSet.getDouble(ANY_COLUMN_NAME_4)).thenReturn((double) Float.MAX_VALUE);
     when(resultSet.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(resultSet.getString(ANY_COLUMN_NAME_6)).thenReturn("string");

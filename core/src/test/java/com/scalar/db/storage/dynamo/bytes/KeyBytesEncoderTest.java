@@ -7,16 +7,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
+import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -236,62 +236,62 @@ public class KeyBytesEncoderTest {
     IntStream.range(0, ATTEMPT_COUNT).forEach(i -> test.run());
   }
 
-  private Value<?> getMinValue(String columnName, DataType dataType) {
+  private Column<?> getMinValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
+        return BigIntColumn.of(columnName, BigIntColumn.MIN_VALUE);
       case INT:
-        return new IntValue(columnName, Integer.MIN_VALUE);
+        return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
-        return new FloatValue(columnName, Float.MIN_VALUE);
+        return FloatColumn.of(columnName, Float.MIN_VALUE);
       case DOUBLE:
-        return new DoubleValue(columnName, Double.MIN_VALUE);
+        return DoubleColumn.of(columnName, Double.MIN_VALUE);
       case BLOB:
-        return new BlobValue(columnName, new byte[0]);
+        return BlobColumn.of(columnName, new byte[0]);
       case TEXT:
-        return new TextValue(columnName, "");
+        return TextColumn.of(columnName, "");
       case BOOLEAN:
-        return new BooleanValue(columnName, false);
+        return BooleanColumn.of(columnName, false);
       default:
         throw new AssertionError();
     }
   }
 
-  private Value<?> getMaxValue(String columnName, DataType dataType) {
+  private Column<?> getMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MAX_VALUE);
+        return BigIntColumn.of(columnName, BigIntColumn.MAX_VALUE);
       case INT:
-        return new IntValue(columnName, Integer.MAX_VALUE);
+        return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:
-        return new FloatValue(columnName, Float.MAX_VALUE);
+        return FloatColumn.of(columnName, Float.MAX_VALUE);
       case DOUBLE:
-        return new DoubleValue(columnName, Double.MAX_VALUE);
+        return DoubleColumn.of(columnName, Double.MAX_VALUE);
       case BLOB:
         byte[] blobBytes = new byte[BLOB_MAX_LENGTH];
         Arrays.fill(blobBytes, (byte) 0xff);
-        return new BlobValue(columnName, blobBytes);
+        return BlobColumn.of(columnName, blobBytes);
       case TEXT:
         byte[] textBytes = new byte[TEXT_MAX_COUNT];
         Arrays.fill(textBytes, (byte) 0xff);
-        return new TextValue(columnName, new String(textBytes, StandardCharsets.UTF_8));
+        return TextColumn.of(columnName, new String(textBytes, StandardCharsets.UTF_8));
       case BOOLEAN:
-        return new BooleanValue(columnName, true);
+        return BooleanColumn.of(columnName, true);
       default:
         throw new AssertionError();
     }
   }
 
-  private static Value<?> getRandomValue(String columnName, DataType dataType, Order order) {
+  private static Column<?> getRandomValue(String columnName, DataType dataType, Order order) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, nextBigInt());
+        return BigIntColumn.of(columnName, nextBigInt());
       case INT:
-        return new IntValue(columnName, random.nextInt());
+        return IntColumn.of(columnName, random.nextInt());
       case FLOAT:
-        return new FloatValue(columnName, nextFloat());
+        return FloatColumn.of(columnName, nextFloat());
       case DOUBLE:
-        return new DoubleValue(columnName, nextDouble());
+        return DoubleColumn.of(columnName, nextDouble());
       case BLOB:
         int length = random.nextInt(BLOB_MAX_LENGTH);
         byte[] bytes = new byte[length];
@@ -306,13 +306,13 @@ public class KeyBytesEncoderTest {
           }
         }
 
-        return new BlobValue(columnName, bytes);
+        return BlobColumn.of(columnName, bytes);
       case TEXT:
         int count = random.nextInt(TEXT_MAX_COUNT);
-        return new TextValue(
+        return TextColumn.of(
             columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
       case BOOLEAN:
-        return new BooleanValue(columnName, random.nextBoolean());
+        return BooleanColumn.of(columnName, random.nextBoolean());
       default:
         throw new AssertionError();
     }
@@ -320,7 +320,7 @@ public class KeyBytesEncoderTest {
 
   private static long nextBigInt() {
     OptionalLong randomLong =
-        random.longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1)).limit(1).findFirst();
+        random.longs(BigIntColumn.MIN_VALUE, (BigIntColumn.MAX_VALUE + 1)).limit(1).findFirst();
     return randomLong.orElse(0);
   }
 
@@ -353,8 +353,8 @@ public class KeyBytesEncoderTest {
 
       ComparisonChain comparisonChain = ComparisonChain.start();
       for (int i = 0; i < o1.size(); i++) {
-        Value<?> left = o1.get().get(i);
-        Value<?> right = o2.get().get(i);
+        Column<?> left = o1.getColumns().get(i);
+        Column<?> right = o2.getColumns().get(i);
         if (!left.getName().equals(right.getName())) {
           throw new IllegalArgumentException("The value name is different");
         }

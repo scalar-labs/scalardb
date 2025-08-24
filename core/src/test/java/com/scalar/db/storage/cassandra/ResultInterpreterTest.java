@@ -8,7 +8,6 @@ import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -81,7 +80,7 @@ public class ResultInterpreterTest {
     when(row.getString(ANY_NAME_2)).thenReturn(ANY_TEXT_2);
     when(row.getBool(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(row.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
-    when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntValue.MAX_VALUE);
+    when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntColumn.MAX_VALUE);
     when(row.getFloat(ANY_COLUMN_NAME_4)).thenReturn(Float.MAX_VALUE);
     when(row.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(row.getString(ANY_COLUMN_NAME_6)).thenReturn("string");
