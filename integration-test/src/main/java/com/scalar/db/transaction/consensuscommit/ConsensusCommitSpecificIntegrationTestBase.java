@@ -51,7 +51,6 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -8209,19 +8208,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     List<Get> fromGets = prepareGets(fromNamespace, fromTable);
     List<Get> toGets = differentTables ? prepareGets(toNamespace, toTable) : fromGets;
+
     Optional<Result> fromResult = transaction.get(fromGets.get(fromId));
     assertThat(fromResult).isPresent();
-    IntValue fromBalance = new IntValue(BALANCE, getBalance(fromResult.get()) - amount);
+
     Optional<Result> toResult = transaction.get(toGets.get(toId));
     assertThat(toResult).isPresent();
-    IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
 
     List<Put> fromPuts = preparePuts(fromNamespace, fromTable);
     List<Put> toPuts = differentTables ? preparePuts(toNamespace, toTable) : fromPuts;
-    fromPuts.get(fromId).withValue(fromBalance);
-    toPuts.get(toId).withValue(toBalance);
-    transaction.put(fromPuts.get(fromId));
-    transaction.put(toPuts.get(toId));
+
+    transaction.put(
+        Put.newBuilder(fromPuts.get(fromId))
+            .intValue(BALANCE, getBalance(fromResult.get()) - amount)
+            .build());
+    transaction.put(
+        Put.newBuilder(toPuts.get(toId))
+            .intValue(BALANCE, getBalance(toResult.get()) + amount)
+            .build());
 
     return transaction;
   }

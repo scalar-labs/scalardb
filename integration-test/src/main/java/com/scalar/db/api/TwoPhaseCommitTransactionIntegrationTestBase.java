@@ -25,7 +25,6 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
@@ -708,17 +707,19 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
     Optional<Result> fromResult = transaction.get(gets.get(fromId));
     assertThat(fromResult.isPresent()).isTrue();
-    IntValue fromBalance = new IntValue(BALANCE, getBalance(fromResult.get()) - amount);
 
     Optional<Result> toResult = transaction.get(gets.get(toId));
     assertThat(toResult.isPresent()).isTrue();
-    IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
 
     List<Put> puts = preparePuts(namespace1, TABLE_1);
-    puts.get(fromId).withValue(fromBalance);
-    puts.get(toId).withValue(toBalance);
-    transaction.put(puts.get(fromId));
-    transaction.put(puts.get(toId));
+    transaction.put(
+        Put.newBuilder(puts.get(fromId))
+            .intValue(BALANCE, getBalance(fromResult.get()) - amount)
+            .build());
+    transaction.put(
+        Put.newBuilder(puts.get(toId))
+            .intValue(BALANCE, getBalance(toResult.get()) + amount)
+            .build());
 
     transaction.prepare();
     transaction.validate();

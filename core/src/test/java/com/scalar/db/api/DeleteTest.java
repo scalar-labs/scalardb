@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class DeleteTest {
@@ -32,7 +32,7 @@ public class DeleteTest {
     Key actual = del.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
+    Assertions.<Key>assertThat(expected).isEqualTo(actual);
   }
 
   @Test
