@@ -88,7 +88,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getAdmin();
+    admin = factory.getStorageAdmin();
     namespace = getNamespace();
     createTable();
     storage = factory.getStorage();

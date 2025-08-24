@@ -80,7 +80,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getAdmin();
+    admin = factory.getStorageAdmin();
     namespaceBaseName = getNamespaceBaseName();
     clusteringKeyTypes = getClusteringKeyTypes();
     executorService = Executors.newFixedThreadPool(getThreadNum());

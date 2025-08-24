@@ -64,7 +64,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getAdmin();
+    admin = factory.getStorageAdmin();
     namespaceBaseName = getNamespaceBaseName();
     partitionKeyTypes = getPartitionKeyTypes();
     executorService = Executors.newFixedThreadPool(getThreadNum());

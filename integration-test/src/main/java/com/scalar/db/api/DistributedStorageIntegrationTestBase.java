@@ -62,7 +62,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize(getTestName());
     StorageFactory factory = StorageFactory.create(getProperties(getTestName()));
-    admin = factory.getAdmin();
+    admin = factory.getStorageAdmin();
     namespace = getNamespace();
     createTable();
     storage = factory.getStorage();

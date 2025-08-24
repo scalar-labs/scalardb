@@ -76,14 +76,14 @@ public class MultiStorageIntegrationTest {
   private void initCassandraAndCassandraAdmin() throws ExecutionException {
     StorageFactory factory =
         StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
-    cassandraAdmin = factory.getAdmin();
+    cassandraAdmin = factory.getStorageAdmin();
     createTables(cassandraAdmin);
     cassandra = factory.getStorage();
   }
 
   private void initJdbcDatabaseAndJdbcAdmin() throws ExecutionException {
     StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    jdbcAdmin = factory.getAdmin();
+    jdbcAdmin = factory.getStorageAdmin();
     createTables(jdbcAdmin);
     jdbcDatabase = factory.getStorage();
   }
