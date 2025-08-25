@@ -172,8 +172,8 @@ public class ResultImplTest {
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
-    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
@@ -397,8 +397,8 @@ public class ResultImplTest {
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
-    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
@@ -539,8 +539,8 @@ public class ResultImplTest {
 
     // Assert
     assertThat(key.isPresent()).isTrue();
-    assertThat(key.get().get().size()).isEqualTo(1);
-    assertThat(key.get().get().get(0)).isEqualTo(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    assertThat(key.get().getColumns().size()).isEqualTo(1);
+    assertThat(key.get().getColumns().get(0)).isEqualTo(TextColumn.of(ANY_NAME_1, ANY_TEXT_1));
   }
 
   @Test
@@ -570,8 +570,8 @@ public class ResultImplTest {
 
     // Assert
     assertThat(key.isPresent()).isTrue();
-    assertThat(key.get().get().size()).isEqualTo(1);
-    assertThat(key.get().get().get(0)).isEqualTo(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    assertThat(key.get().getColumns().size()).isEqualTo(1);
+    assertThat(key.get().getColumns().get(0)).isEqualTo(TextColumn.of(ANY_NAME_2, ANY_TEXT_2));
   }
 
   @Test
