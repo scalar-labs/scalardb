@@ -1443,20 +1443,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public void dropColumnFromTable(String nonPrefixedNamespace, String table, String columnName)
       throws ExecutionException {
-    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-    try {
-      TableMetadata currentTableMetadata = getTableMetadata(nonPrefixedNamespace, table);
-      TableMetadata updatedTableMetadata =
-          TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
-
-      upsertTableMetadata(namespace, table, updatedTableMetadata);
-    } catch (ExecutionException e) {
-      throw new ExecutionException(
-          String.format(
-              "Dropping the %s column from the %s table failed",
-              columnName, getFullTableName(namespace, table)),
-          e);
-    }
+    throw new UnsupportedOperationException(
+        "Drop column functionality is not supported in DynamoDB");
   }
 
   @Override
