@@ -684,6 +684,12 @@ public enum CoreError implements ScalarDbError {
       "The column %s is specified as a primary key or an index key",
       "",
       ""),
+  COSMOS_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "Drop column functionality is not supported in Cosmos DB",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
