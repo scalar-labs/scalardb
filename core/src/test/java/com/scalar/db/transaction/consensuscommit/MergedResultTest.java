@@ -107,8 +107,12 @@ public class MergedResultTest {
   public void getPartitionKey_ResultAndPutGiven_ShouldReturnCorrectKey() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
 
@@ -123,8 +127,12 @@ public class MergedResultTest {
   public void getPartitionKey_OnlyPutGiven_ShouldReturnCorrectKey() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.empty(), put, TABLE_METADATA);
 
@@ -139,8 +147,12 @@ public class MergedResultTest {
   public void getClusteringKey_ResultAndPutGiven_ShouldReturnCorrectKey() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
 
@@ -155,8 +167,12 @@ public class MergedResultTest {
   public void getClusteringKey_OnlyPutGiven_ShouldReturnCorrectKey() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.empty(), put, TABLE_METADATA);
 
@@ -171,8 +187,12 @@ public class MergedResultTest {
   public void getValue_ResultAndPutGiven_ShouldReturnMergedValue() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
 
@@ -319,8 +339,12 @@ public class MergedResultTest {
   public void getValue_OnlyPutGiven_ShouldReturnMergedValue() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.empty(), put, TABLE_METADATA);
 
@@ -462,9 +486,13 @@ public class MergedResultTest {
   public void getValue_ResultAndPutWithNullValueGiven_ShouldReturnMergedValue() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3)
-            .withTextValue(ANY_NAME_4, null);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .textValue(ANY_NAME_4, null)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
 
@@ -611,8 +639,12 @@ public class MergedResultTest {
   public void getValues_ResultAndPutGiven_ShouldReturnMergedValues() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
 
@@ -651,8 +683,12 @@ public class MergedResultTest {
   public void getValues_OnlyPutGiven_ShouldReturnMergedValues() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.empty(), put, TABLE_METADATA);
 
@@ -689,9 +725,13 @@ public class MergedResultTest {
   public void getValues_ResultAndPutWithNullValueGiven_ShouldReturnMergedValues() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3)
-            .withTextValue(ANY_NAME_4, null);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .textValue(ANY_NAME_4, null)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
 
@@ -730,8 +770,12 @@ public class MergedResultTest {
   public void equals_SamePutAndResultGiven_ShouldReturnTrue() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
     MergedResult anotherMergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
@@ -747,8 +791,12 @@ public class MergedResultTest {
   public void equals_DifferentPutAndResultGiven_ShouldReturnFalse() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
     MergedResult anotherMergedResult = new MergedResult(Optional.empty(), put, TABLE_METADATA);
@@ -764,8 +812,12 @@ public class MergedResultTest {
   public void equals_ResultImplWithSamePutAndResultGiven_ShouldReturnTrue() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
     Result another =
@@ -811,8 +863,12 @@ public class MergedResultTest {
   public void equals_ResultImplWithDifferentPutAndResultGiven_ShouldReturnFalse() {
     // Arrange
     Put put =
-        new Put(Key.ofText(ANY_NAME_1, ANY_TEXT_1), Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .withValue(ANY_NAME_3, ANY_INT_3);
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
 
     MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
     Result another = new ResultImpl(Collections.emptyMap(), TABLE_METADATA);

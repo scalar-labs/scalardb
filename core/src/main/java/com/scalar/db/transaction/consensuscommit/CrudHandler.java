@@ -713,9 +713,19 @@ public class CrudHandler {
   }
 
   private Selection prepareStorageSelection(Selection selection) {
-    selection.clearProjections();
-    selection.withConsistency(Consistency.LINEARIZABLE);
-    return selection;
+    if (selection instanceof Get) {
+      return Get.newBuilder((Get) selection)
+          .clearProjections()
+          .consistency(Consistency.LINEARIZABLE)
+          .build();
+    } else {
+      assert selection instanceof Scan;
+
+      return Scan.newBuilder((Scan) selection)
+          .clearProjections()
+          .consistency(Consistency.LINEARIZABLE)
+          .build();
+    }
   }
 
   private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
