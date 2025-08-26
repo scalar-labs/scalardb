@@ -79,19 +79,25 @@ public class BatchHandlerTest {
   private Put preparePut() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1)
-        .withValue(ANY_NAME_4, ANY_INT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .intValue(ANY_NAME_4, ANY_INT_2)
+        .build();
   }
 
   private Delete prepareDelete() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -103,9 +109,10 @@ public class BatchHandlerTest {
         .thenReturn(spResponse);
 
     Put put1 = preparePut();
-    Put put2 = preparePut().withCondition(ConditionBuilder.putIfNotExists());
+    Put put2 = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfNotExists()).build();
     Delete delete1 = prepareDelete();
-    Delete delete2 = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
+    Delete delete2 =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
     CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadata);
     CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadata);
     CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadata);
@@ -155,8 +162,9 @@ public class BatchHandlerTest {
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
-    Put put = preparePut().withCondition(ConditionBuilder.putIfNotExists());
-    Delete delete = prepareDelete().withCondition(ConditionBuilder.deleteIfExists());
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfNotExists()).build();
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))

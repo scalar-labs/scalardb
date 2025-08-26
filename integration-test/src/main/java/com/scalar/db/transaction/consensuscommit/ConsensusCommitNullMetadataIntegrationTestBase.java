@@ -1101,7 +1101,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     // Arrange
     populateRecordsWithNullMetadata(namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(1);
+    Scan scanAll = Scan.newBuilder(prepareScanAll(namespace1, TABLE_1)).limit(1).build();
 
     // Act
     List<Result> results = transaction.scan(scanAll);

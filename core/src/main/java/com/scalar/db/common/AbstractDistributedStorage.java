@@ -76,12 +76,4 @@ public abstract class AbstractDistributedStorage implements DistributedStorage {
   protected Delete copyAndSetTargetToIfNot(Delete delete) {
     return ScalarDbUtils.copyAndSetTargetToIfNot(delete, namespace, tableName);
   }
-
-  protected Get copyAndPrepareForDynamicFiltering(Get get) {
-    return ScalarDbUtils.copyAndPrepareForDynamicFiltering(get);
-  }
-
-  protected Scan copyAndPrepareForDynamicFiltering(Scan scan) {
-    return ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan);
-  }
 }
