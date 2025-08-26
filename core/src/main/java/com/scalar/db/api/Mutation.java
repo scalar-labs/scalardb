@@ -54,16 +54,6 @@ public abstract class Mutation extends Operation {
     condition = mutation.condition;
   }
 
-  Mutation(
-      @Nullable String namespace,
-      String tableName,
-      Key partitionKey,
-      @Nullable Key clusteringKey,
-      @Nullable MutationCondition condition) {
-    super(namespace, tableName, partitionKey, clusteringKey);
-    this.condition = condition;
-  }
-
   /**
    * Returns the {@link MutationCondition}
    *

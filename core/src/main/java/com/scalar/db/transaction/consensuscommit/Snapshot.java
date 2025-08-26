@@ -18,6 +18,7 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
@@ -163,14 +164,16 @@ public class Snapshot {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(originalPut);
-      put.getColumns().values().forEach(putBuilder::value);
+      for (Column<?> value : put.getColumns().values()) {
+        putBuilder = putBuilder.value(value);
+      }
 
       // If the implicit pre-read is enabled for the new put, it should also be enabled for the
       // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
       // because, in insert mode, the read set is not used during the preparation phase. Therefore,
       // we only need to enable the implicit pre-read if the previous put is not in insert mode
       if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
-        putBuilder.enableImplicitPreRead();
+        putBuilder = putBuilder.enableImplicitPreRead();
       }
 
       writeSet.put(key, putBuilder.build());
@@ -593,9 +596,16 @@ public class Snapshot {
     Scanner scanner = null;
     try {
       // Only get tx_id and primary key columns because we use only them to compare
-      scan.clearProjections();
-      scan.withProjection(Attribute.ID);
-      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
+      ScanBuilder.BuildableScanOrScanAllFromExisting builder =
+          Scan.newBuilder(scan).clearProjections().projection(Attribute.ID);
+      TableMetadata tableMetadata = getTableMetadata(scan);
+      for (String partitionKeyName : tableMetadata.getPartitionKeyNames()) {
+        builder = builder.projection(partitionKeyName);
+      }
+      for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
+        builder = builder.projection(clusteringKeyName);
+      }
+      scan = builder.build();
 
       if (scan.getLimit() == 0) {
         scanner = storage.scan(scan);
@@ -744,8 +754,7 @@ public class Snapshot {
       DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
       throws ExecutionException, ValidationConflictException {
     // Only get the tx_id column because we use only them to compare
-    get.clearProjections();
-    get.withProjection(Attribute.ID);
+    get = Get.newBuilder(get).clearProjections().projection(Attribute.ID).build();
 
     // Check if a read record is not changed
     Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);

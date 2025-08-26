@@ -114,14 +114,17 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private Delete composeDelete(Operation base, @Nullable TransactionResult result)
       throws ExecutionException {
-    return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(
+    return Delete.newBuilder()
+        .namespace(base.forNamespace().get())
+        .table(base.forTable().get())
+        .partitionKey(getPartitionKey(base, result))
+        .clusteringKey(getClusteringKey(base, result).orElse(null))
+        .consistency(Consistency.LINEARIZABLE)
+        .condition(
             ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
                 .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
-                .build());
+                .build())
+        .build();
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)
