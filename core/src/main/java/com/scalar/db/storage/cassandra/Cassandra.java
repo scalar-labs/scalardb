@@ -21,6 +21,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -100,7 +101,9 @@ public class Cassandra extends AbstractDistributedStorage {
       if (get.getConjunctions().isEmpty()) {
         scanner = getInternal(get);
       } else {
-        scanner = new FilterableScanner(get, getInternal(copyAndPrepareForDynamicFiltering(get)));
+        scanner =
+            new FilterableScanner(
+                get, getInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)));
       }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
@@ -134,7 +137,8 @@ public class Cassandra extends AbstractDistributedStorage {
     if (scan.getConjunctions().isEmpty()) {
       return scanInternal(scan);
     } else {
-      return new FilterableScanner(scan, scanInternal(copyAndPrepareForDynamicFiltering(scan)));
+      return new FilterableScanner(
+          scan, scanInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)));
     }
   }
 

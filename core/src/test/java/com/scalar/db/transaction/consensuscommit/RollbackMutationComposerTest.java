@@ -149,18 +149,23 @@ public class RollbackMutationComposerTest {
   private Get prepareGet() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Scan prepareScan() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Put preparePut() {
@@ -801,14 +806,19 @@ public class RollbackMutationComposerTest {
     // Assert
     Delete actual = (Delete) composer.get().get(0);
     Delete expected =
-        new Delete(scan.getPartitionKey(), result.getClusteringKey().orElse(null))
-            .forNamespace(scan.forNamespace().get())
-            .forTable(scan.forTable().get());
-    expected.withConsistency(Consistency.LINEARIZABLE);
-    expected.withCondition(
-        ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
-            .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.PREPARED.get()))
-            .build());
+        Delete.newBuilder()
+            .namespace(scan.forNamespace().get())
+            .table(scan.forTable().get())
+            .partitionKey(scan.getPartitionKey())
+            .clusteringKey(result.getClusteringKey().orElse(null))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build())
+            .build();
     assertThat(actual).isEqualTo(expected);
   }
 }
