@@ -539,7 +539,7 @@ public class ResultImplTest {
 
     // Assert
     assertThat(key.isPresent()).isTrue();
-    assertThat(key.get().getColumns().size()).isEqualTo(1);
+    assertThat(key.get().size()).isEqualTo(1);
     assertThat(key.get().getColumns().get(0)).isEqualTo(TextColumn.of(ANY_NAME_1, ANY_TEXT_1));
   }
 
@@ -570,7 +570,7 @@ public class ResultImplTest {
 
     // Assert
     assertThat(key.isPresent()).isTrue();
-    assertThat(key.get().getColumns().size()).isEqualTo(1);
+    assertThat(key.get().size()).isEqualTo(1);
     assertThat(key.get().getColumns().get(0)).isEqualTo(TextColumn.of(ANY_NAME_2, ANY_TEXT_2));
   }
 

@@ -94,12 +94,12 @@ public class FilteredResultTest {
 
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
-    assertThat(filteredResult.getPartitionKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_ID_VALUE);
 
     assertThat(filteredResult.getClusteringKey()).isPresent();
-    assertThat(filteredResult.getClusteringKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getClusteringKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getClusteringKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_TYPE_VALUE);
 
@@ -164,7 +164,7 @@ public class FilteredResultTest {
 
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
-    assertThat(filteredResult.getPartitionKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_ID_VALUE);
 
@@ -316,7 +316,7 @@ public class FilteredResultTest {
 
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
-    assertThat(filteredResult.getPartitionKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_ID_VALUE);
 
@@ -384,7 +384,7 @@ public class FilteredResultTest {
 
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
-    assertThat(filteredResult.getPartitionKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_ID_VALUE);
 
@@ -462,7 +462,7 @@ public class FilteredResultTest {
 
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
-    assertThat(filteredResult.getPartitionKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_ID_VALUE);
 
@@ -524,7 +524,7 @@ public class FilteredResultTest {
         .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getClusteringKey()).isPresent();
-    assertThat(filteredResult.getClusteringKey().get().getColumns().size()).isEqualTo(1);
+    assertThat(filteredResult.getClusteringKey().get().size()).isEqualTo(1);
     assertThat(filteredResult.getClusteringKey().get().getColumns().get(0))
         .isEqualTo(ACCOUNT_TYPE_VALUE);
 
