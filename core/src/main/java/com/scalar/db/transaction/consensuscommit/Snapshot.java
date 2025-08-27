@@ -18,7 +18,6 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
@@ -596,16 +595,14 @@ public class Snapshot {
     Scanner scanner = null;
     try {
       // Only get tx_id and primary key columns because we use only them to compare
-      ScanBuilder.BuildableScanOrScanAllFromExisting builder =
-          Scan.newBuilder(scan).clearProjections().projection(Attribute.ID);
       TableMetadata tableMetadata = getTableMetadata(scan);
-      for (String partitionKeyName : tableMetadata.getPartitionKeyNames()) {
-        builder = builder.projection(partitionKeyName);
-      }
-      for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
-        builder = builder.projection(clusteringKeyName);
-      }
-      scan = builder.build();
+      scan =
+          Scan.newBuilder(scan)
+              .clearProjections()
+              .projection(Attribute.ID)
+              .projections(tableMetadata.getPartitionKeyNames())
+              .projections(tableMetadata.getClusteringKeyNames())
+              .build();
 
       if (scan.getLimit() == 0) {
         scanner = storage.scan(scan);
