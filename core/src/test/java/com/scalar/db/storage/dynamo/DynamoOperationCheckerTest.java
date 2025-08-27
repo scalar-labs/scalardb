@@ -72,7 +72,13 @@ public class DynamoOperationCheckerTest {
   @Test
   public void check_ForPutWithNullIndex_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0)).withIntValue(COL1, null);
+    Put put =
+        Put.newBuilder()
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .intValue(COL1, null)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -82,7 +88,13 @@ public class DynamoOperationCheckerTest {
   @Test
   public void check_ForPutWithNonNullIndex_ShouldDoNothing() {
     // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0)).withIntValue(COL1, 1);
+    Put put =
+        Put.newBuilder()
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .intValue(COL1, 1)
+            .build();
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
@@ -91,7 +103,12 @@ public class DynamoOperationCheckerTest {
   @Test
   public void check_ForPutWithoutSettingIndex_ShouldDoNothing() {
     // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0));
+    Put put =
+        Put.newBuilder()
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .build();
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();

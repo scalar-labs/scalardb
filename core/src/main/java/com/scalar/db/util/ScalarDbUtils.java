@@ -1,27 +1,33 @@
 package com.scalar.db.util;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Streams;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Insert;
+import com.scalar.db.api.InsertBuilder;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
+import com.scalar.db.api.UpdateBuilder;
 import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -66,15 +72,29 @@ public final class ScalarDbUtils {
 
   public static Get copyAndSetTargetToIfNot(
       Get get, Optional<String> namespace, Optional<String> tableName) {
-    Get ret = Get.newBuilder(get).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    GetBuilder.BuildableGetOrGetWithIndexFromExisting builder = Get.newBuilder(get); // copy
+    if (!get.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!get.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Get ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
   public static Scan copyAndSetTargetToIfNot(
       Scan scan, Optional<String> namespace, Optional<String> tableName) {
-    Scan ret = Scan.newBuilder(scan).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    ScanBuilder.BuildableScanOrScanAllFromExisting builder = Scan.newBuilder(scan); // copy
+    if (!scan.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!scan.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Scan ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
@@ -96,47 +116,75 @@ public final class ScalarDbUtils {
 
   public static Put copyAndSetTargetToIfNot(
       Put put, Optional<String> namespace, Optional<String> tableName) {
-    Put ret = Put.newBuilder(put).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    PutBuilder.BuildableFromExisting builder = Put.newBuilder(put); // copy
+    if (!put.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!put.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Put ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
   public static Delete copyAndSetTargetToIfNot(
       Delete delete, Optional<String> namespace, Optional<String> tableName) {
-    Delete ret = Delete.newBuilder(delete).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    DeleteBuilder.BuildableFromExisting builder = Delete.newBuilder(delete); // copy
+    if (!delete.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!delete.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Delete ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
   public static Insert copyAndSetTargetToIfNot(
       Insert insert, Optional<String> namespace, Optional<String> tableName) {
-    Insert ret = Insert.newBuilder(insert).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    InsertBuilder.BuildableFromExisting builder = Insert.newBuilder(insert); // copy
+    if (!insert.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!insert.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Insert ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
   public static Upsert copyAndSetTargetToIfNot(
       Upsert upsert, Optional<String> namespace, Optional<String> tableName) {
-    Upsert ret = Upsert.newBuilder(upsert).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    UpsertBuilder.BuildableFromExisting builder = Upsert.newBuilder(upsert); // copy
+    if (!upsert.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!upsert.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Upsert ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
   public static Update copyAndSetTargetToIfNot(
       Update update, Optional<String> namespace, Optional<String> tableName) {
-    Update ret = Update.newBuilder(update).build(); // copy
-    setTargetToIfNot(ret, namespace, tableName);
+    UpdateBuilder.BuildableFromExisting builder = Update.newBuilder(update); // copy
+    if (!update.forNamespace().isPresent() && namespace.isPresent()) {
+      builder = builder.namespace(namespace.get());
+    }
+    if (!update.forTable().isPresent() && tableName.isPresent()) {
+      builder = builder.table(tableName.get());
+    }
+    Update ret = builder.build();
+    checkIfTargetIsSet(ret);
     return ret;
   }
 
-  private static void setTargetToIfNot(
-      Operation operation, Optional<String> namespace, Optional<String> tableName) {
-    if (!operation.forNamespace().isPresent()) {
-      operation.forNamespace(namespace.orElse(null));
-    }
-    if (!operation.forTable().isPresent()) {
-      operation.forTable(tableName.orElse(null));
-    }
+  private static void checkIfTargetIsSet(Operation operation) {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME.buildMessage(operation));
@@ -156,17 +204,6 @@ public final class ScalarDbUtils {
     }
 
     return false;
-  }
-
-  public static void addProjectionsForKeys(Selection selection, TableMetadata metadata) {
-    List<String> projections = selection.getProjections();
-    if (projections.isEmpty()) { // meaning projecting all
-      return;
-    }
-    Streams.concat(
-            metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
-        .filter(n -> !projections.contains(n))
-        .forEach(selection::withProjection);
   }
 
   public static <T> Future<T> takeUninterruptibly(CompletionService<T> completionService) {
@@ -275,31 +312,35 @@ public final class ScalarDbUtils {
   }
 
   public static Get copyAndPrepareForDynamicFiltering(Get get) {
-    Get ret = Get.newBuilder(get).build(); // copy
-    List<String> projections = ret.getProjections();
+    GetBuilder.BuildableGetOrGetWithIndexFromExisting builder = Get.newBuilder(get); // copy
+    List<String> projections = get.getProjections();
     if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
-      ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
-          .filter(columnName -> !projections.contains(columnName))
-          .forEach(ret::withProjection);
+      for (String columnName : getColumnNamesUsedIn(get.getConjunctions())) {
+        if (!projections.contains(columnName)) {
+          builder = builder.projection(columnName);
+        }
+      }
     }
-    return ret;
+    return builder.build();
   }
 
   public static Scan copyAndPrepareForDynamicFiltering(Scan scan) {
     // Ignore limit to control it during dynamic filtering
-    Scan ret = Scan.newBuilder(scan).limit(0).build(); // copy
-    List<String> projections = ret.getProjections();
+    ScanBuilder.BuildableScanOrScanAllFromExisting builder = Scan.newBuilder(scan).limit(0); // copy
+    List<String> projections = scan.getProjections();
     if (!projections.isEmpty()) {
       // Add columns in conditions into projections to use them in dynamic filtering
-      ScalarDbUtils.getColumnNamesUsedIn(ret.getConjunctions()).stream()
-          .filter(columnName -> !projections.contains(columnName))
-          .forEach(ret::withProjection);
+      for (String columnName : getColumnNamesUsedIn(scan.getConjunctions())) {
+        if (!projections.contains(columnName)) {
+          builder = builder.projection(columnName);
+        }
+      }
     }
-    return ret;
+    return builder.build();
   }
 
-  public static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {
+  private static Set<String> getColumnNamesUsedIn(Set<Conjunction> conjunctions) {
     Set<String> columns = new HashSet<>();
     conjunctions.forEach(
         conjunction ->

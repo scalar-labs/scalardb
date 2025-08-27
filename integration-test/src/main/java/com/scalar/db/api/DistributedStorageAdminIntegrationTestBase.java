@@ -510,23 +510,31 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       Key clusteringKey = Key.of(getColumnName4(), 2, getColumnName3(), "bbb");
       storage = storageFactory.getStorage();
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withValue(getColumnName5(), 3)
-              .withValue(getColumnName6(), "ccc")
-              .withValue(getColumnName7(), 4L)
-              .withValue(getColumnName8(), 1.0f)
-              .withValue(getColumnName9(), 1.0d)
-              .withValue(getColumnName10(), true)
-              .withValue(getColumnName11(), "ddd".getBytes(StandardCharsets.UTF_8))
-              .forNamespace(namespace1)
-              .forTable(getTable1()));
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(getTable1())
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .intValue(getColumnName5(), 3)
+              .textValue(getColumnName6(), "ccc")
+              .bigIntValue(getColumnName7(), 4L)
+              .floatValue(getColumnName8(), 1.0f)
+              .doubleValue(getColumnName9(), 1.0d)
+              .booleanValue(getColumnName10(), true)
+              .blobValue(getColumnName11(), "ddd".getBytes(StandardCharsets.UTF_8))
+              .build());
 
       // Act
       admin.truncateTable(namespace1, getTable1());
 
       // Assert
       Scanner scanner =
-          storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(getTable1()));
+          storage.scan(
+              Scan.newBuilder()
+                  .namespace(namespace1)
+                  .table(getTable1())
+                  .partitionKey(partitionKey)
+                  .build());
       assertThat(scanner.all()).isEmpty();
       scanner.close();
     } finally {

@@ -432,23 +432,31 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       Key clusteringKey = Key.of(COL_NAME4, 2, COL_NAME3, "bbb");
       manager = transactionFactory.getTransactionManager();
       manager.put(
-          new Put(partitionKey, clusteringKey)
-              .withValue(COL_NAME5, 3)
-              .withValue(COL_NAME6, "ccc")
-              .withValue(COL_NAME7, 4L)
-              .withValue(COL_NAME8, 1.0f)
-              .withValue(COL_NAME9, 1.0d)
-              .withValue(COL_NAME10, true)
-              .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
-              .forNamespace(namespace1)
-              .forTable(TABLE1));
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE1)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .intValue(COL_NAME5, 3)
+              .textValue(COL_NAME6, "ccc")
+              .bigIntValue(COL_NAME7, 4L)
+              .floatValue(COL_NAME8, 1.0f)
+              .doubleValue(COL_NAME9, 1.0d)
+              .booleanValue(COL_NAME10, true)
+              .blobValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
+              .build());
 
       // Act
       admin.truncateTable(namespace1, TABLE1);
 
       // Assert
       List<Result> results =
-          manager.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+          manager.scan(
+              Scan.newBuilder()
+                  .namespace(namespace1)
+                  .table(TABLE1)
+                  .partitionKey(partitionKey)
+                  .build());
       assertThat(results).isEmpty();
     } finally {
       if (manager != null) {

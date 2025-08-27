@@ -77,31 +77,44 @@ public class ConsensusCommitTest {
   private Get prepareGet() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private Put preparePut() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withValue(ANY_NAME_3, ANY_TEXT_3)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .textValue(ANY_NAME_3, ANY_TEXT_3)
+        .build();
   }
 
   private Delete prepareDelete() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
