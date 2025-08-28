@@ -443,12 +443,14 @@ public interface Admin {
   }
 
   /**
-   * Drops a column from an existing table. The column cannot be a partition or clustering key.
+   * Drops a column from an existing table. The column cannot be a partition key, clustering key, or
+   * indexed.
    *
    * @param namespace the table namespace
    * @param table the table name
    * @param columnName the name of the column to drop
-   * @throws IllegalArgumentException if the table does not exist or the column does not exist
+   * @throws IllegalArgumentException if the table or column does not exist, or the column is a
+   *     partition key column, clustering key column, or is indexed
    * @throws ExecutionException if the operation fails
    */
   void dropColumnFromTable(String namespace, String table, String columnName)
@@ -462,7 +464,8 @@ public interface Admin {
    * @param columnName the name of the column to drop
    * @param IfExists if set to true, the column will be dropped only if it exists. If set to false,
    *     it will throw an exception if it does not exist
-   * @throws IllegalArgumentException if the table does not exist
+   * @throws IllegalArgumentException if the table does not exist, or the column is a partition key
+   *     column, clustering key column, or is indexed
    * @throws ExecutionException if the operation fails
    */
   default void dropColumnFromTable(
