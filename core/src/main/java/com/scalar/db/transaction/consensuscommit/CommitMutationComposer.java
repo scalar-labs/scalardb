@@ -9,6 +9,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -114,17 +115,20 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private Delete composeDelete(Operation base, @Nullable TransactionResult result)
       throws ExecutionException {
-    return Delete.newBuilder()
-        .namespace(base.forNamespace().get())
-        .table(base.forTable().get())
-        .partitionKey(getPartitionKey(base, result))
-        .clusteringKey(getClusteringKey(base, result).orElse(null))
-        .consistency(Consistency.LINEARIZABLE)
-        .condition(
-            ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
-                .and(ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
-                .build())
-        .build();
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(getPartitionKey(base, result))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(
+                        ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                    .build());
+    getClusteringKey(base, result).ifPresent(deleteBuilder::clusteringKey);
+
+    return deleteBuilder.build();
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)
