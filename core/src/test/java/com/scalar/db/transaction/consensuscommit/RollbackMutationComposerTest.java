@@ -43,6 +43,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.ScalarDbUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -749,7 +750,7 @@ public class RollbackMutationComposerTest {
             .namespace(scan.forNamespace().get())
             .table(scan.forTable().get())
             .partitionKey(scan.getPartitionKey())
-            .clusteringKey(result.getClusteringKey().orElse(null))
+            .clusteringKey(ScalarDbUtils.getClusteringKey(result, TABLE_METADATA).orElse(null))
             .consistency(Consistency.LINEARIZABLE)
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
@@ -797,7 +798,7 @@ public class RollbackMutationComposerTest {
             .namespace(scan.forNamespace().get())
             .table(scan.forTable().get())
             .partitionKey(scan.getPartitionKey())
-            .clusteringKey(result.getClusteringKey().orElse(null))
+            .clusteringKey(ScalarDbUtils.getClusteringKey(result, TABLE_METADATA).orElse(null))
             .consistency(Consistency.LINEARIZABLE)
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))
@@ -845,7 +846,7 @@ public class RollbackMutationComposerTest {
             .namespace(scan.forNamespace().get())
             .table(scan.forTable().get())
             .partitionKey(scan.getPartitionKey())
-            .clusteringKey(result.getClusteringKey().orElse(null))
+            .clusteringKey(ScalarDbUtils.getClusteringKey(result, TABLE_METADATA).orElse(null))
             .consistency(Consistency.LINEARIZABLE)
             .condition(
                 ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(ANY_ID_2))

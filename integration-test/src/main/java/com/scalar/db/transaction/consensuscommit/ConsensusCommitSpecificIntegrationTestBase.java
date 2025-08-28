@@ -51,9 +51,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
@@ -3206,8 +3204,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     List<Get> toGets = differentTables ? prepareGets(toNamespace, toTable) : fromGets;
 
     int amount = 100;
-    IntValue fromBalance = new IntValue(BALANCE, INITIAL_BALANCE - amount);
-    IntValue toBalance = new IntValue(BALANCE, INITIAL_BALANCE + amount);
     int from = 0;
     int to = NUM_TYPES;
 
@@ -3219,10 +3215,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(fromGets.get(from));
     assertThat(fromResult).isPresent();
-    assertThat(fromResult.get().getValue(BALANCE)).isEqualTo(Optional.of(fromBalance));
+    assertThat(fromResult.get().contains(BALANCE)).isTrue();
+    assertThat(fromResult.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE - amount);
     Optional<Result> toResult = another.get(toGets.get(to));
     assertThat(toResult).isPresent();
-    assertThat(toResult.get().getValue(BALANCE)).isEqualTo(Optional.of(toBalance));
+    assertThat(toResult.get().contains(BALANCE)).isTrue();
+    assertThat(toResult.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + amount);
     another.commit();
   }
 
@@ -8458,19 +8456,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     List<Get> fromGets = prepareGets(fromNamespace, fromTable);
     List<Get> toGets = differentTables ? prepareGets(toNamespace, toTable) : fromGets;
+
     Optional<Result> fromResult = transaction.get(fromGets.get(fromId));
     assertThat(fromResult).isPresent();
-    IntValue fromBalance = new IntValue(BALANCE, getBalance(fromResult.get()) - amount);
+
     Optional<Result> toResult = transaction.get(toGets.get(toId));
     assertThat(toResult).isPresent();
-    IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
 
     List<Put> fromPuts = preparePuts(fromNamespace, fromTable);
     List<Put> toPuts = differentTables ? preparePuts(toNamespace, toTable) : fromPuts;
-    fromPuts.get(fromId).withValue(fromBalance);
-    toPuts.get(toId).withValue(toBalance);
-    transaction.put(fromPuts.get(fromId));
-    transaction.put(toPuts.get(toId));
+
+    transaction.put(
+        Put.newBuilder(fromPuts.get(fromId))
+            .intValue(BALANCE, getBalance(fromResult.get()) - amount)
+            .build());
+    transaction.put(
+        Put.newBuilder(toPuts.get(toId))
+            .intValue(BALANCE, getBalance(toResult.get()) + amount)
+            .build());
 
     return transaction;
   }
@@ -8709,9 +8712,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   private int getBalance(Result result) {
-    Optional<Value<?>> balance = result.getValue(BALANCE);
-    assertThat(balance).isPresent();
-    return balance.get().getAsInt();
+    assertThat(result.contains(BALANCE)).isTrue();
+    return result.getInt(BALANCE);
   }
 
   private ConsensusCommitManager createConsensusCommitManager(Isolation isolation) {

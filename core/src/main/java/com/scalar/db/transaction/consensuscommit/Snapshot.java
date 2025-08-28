@@ -18,7 +18,6 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
-import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
@@ -596,16 +595,14 @@ public class Snapshot {
     Scanner scanner = null;
     try {
       // Only get tx_id and primary key columns because we use only them to compare
-      ScanBuilder.BuildableScanOrScanAllFromExisting builder =
-          Scan.newBuilder(scan).clearProjections().projection(Attribute.ID);
       TableMetadata tableMetadata = getTableMetadata(scan);
-      for (String partitionKeyName : tableMetadata.getPartitionKeyNames()) {
-        builder = builder.projection(partitionKeyName);
-      }
-      for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
-        builder = builder.projection(clusteringKeyName);
-      }
-      scan = builder.build();
+      scan =
+          Scan.newBuilder(scan)
+              .clearProjections()
+              .projection(Attribute.ID)
+              .projections(tableMetadata.getPartitionKeyNames())
+              .projections(tableMetadata.getClusteringKeyNames())
+              .build();
 
       if (scan.getLimit() == 0) {
         scanner = storage.scan(scan);
@@ -626,7 +623,7 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult);
+        Key key = new Key(scan, latestTxResult, tableMetadata);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
@@ -744,7 +741,9 @@ public class Snapshot {
             .build();
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r), r));
+    TableMetadata tableMetadata = getTableMetadata(scanWithIndex);
+    originalResult.ifPresent(
+        r -> results.put(new Snapshot.Key(scanWithIndex, r, tableMetadata), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false);
@@ -812,11 +811,11 @@ public class Snapshot {
       this((Operation) get);
     }
 
-    public Key(Get get, Result result) {
+    public Key(Get get, Result result, TableMetadata tableMetadata) {
       this.namespace = get.forNamespace().get();
       this.table = get.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     public Key(Put put) {
@@ -827,11 +826,11 @@ public class Snapshot {
       this((Operation) delete);
     }
 
-    public Key(Scan scan, Result result) {
+    public Key(Scan scan, Result result, TableMetadata tableMetadata) {
       this.namespace = scan.forNamespace().get();
       this.table = scan.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     private Key(Operation operation) {
