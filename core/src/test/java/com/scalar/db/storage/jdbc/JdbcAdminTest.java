@@ -3027,6 +3027,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"ns\".\"table\"')",
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
