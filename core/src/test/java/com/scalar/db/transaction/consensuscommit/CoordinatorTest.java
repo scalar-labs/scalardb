@@ -68,7 +68,7 @@ public class CoordinatorTest {
     // Arrange
     Result result = mock(Result.class);
     when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
-    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.contains(Attribute.CHILD_IDS)).thenReturn(false);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
@@ -112,6 +112,7 @@ public class CoordinatorTest {
 
     Result result = mock(Result.class);
     when(result.getText(Attribute.ID)).thenReturn(parentId);
+    when(result.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(childIdsStr);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
@@ -139,6 +140,7 @@ public class CoordinatorTest {
 
     Result result = mock(Result.class);
     when(result.getText(Attribute.ID)).thenReturn(fullId);
+    when(result.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
@@ -220,6 +222,7 @@ public class CoordinatorTest {
 
     Result result = mock(Result.class);
     when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
@@ -297,6 +300,7 @@ public class CoordinatorTest {
 
     Result resultForGroupCommitState = mock(Result.class);
     when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
@@ -353,6 +357,7 @@ public class CoordinatorTest {
 
     Result resultForGroupCommitState = mock(Result.class);
     when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
         .thenReturn(Joiner.on(',').join(dummyChildIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
@@ -360,6 +365,7 @@ public class CoordinatorTest {
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(fullId);
+    when(resultForSingleCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
@@ -410,6 +416,7 @@ public class CoordinatorTest {
 
     Result resultForGroupCommitState = mock(Result.class);
     when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
@@ -464,6 +471,7 @@ public class CoordinatorTest {
 
     Result resultForGroupCommitState = mock(Result.class);
     when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
@@ -471,6 +479,7 @@ public class CoordinatorTest {
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(targetFullId);
+    when(resultForSingleCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
@@ -522,6 +531,7 @@ public class CoordinatorTest {
 
     Result resultForGroupCommitState = mock(Result.class);
     when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.contains(Attribute.CHILD_IDS)).thenReturn(true);
     when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
