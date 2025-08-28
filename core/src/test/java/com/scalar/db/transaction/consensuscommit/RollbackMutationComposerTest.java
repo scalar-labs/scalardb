@@ -189,6 +189,25 @@ public class RollbackMutationComposerTest {
         .build();
   }
 
+  private Put preparePutWithoutCk() {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .intValue(ANY_NAME_3, ANY_INT_3)
+        .booleanValue(ANY_NAME_4, false)
+        .bigIntValue(ANY_NAME_5, ANY_BIGINT_3)
+        .floatValue(ANY_NAME_6, ANY_FLOAT_3)
+        .doubleValue(ANY_NAME_7, ANY_DOUBLE_3)
+        .textValue(ANY_NAME_8, ANY_TEXT_4)
+        .blobValue(ANY_NAME_9, ANY_BLOB_3)
+        .dateValue(ANY_NAME_10, ANY_DATE_3)
+        .timeValue(ANY_NAME_11, ANY_TIME_3)
+        .timestampValue(ANY_NAME_12, ANY_TIMESTAMP_3)
+        .timestampTZValue(ANY_NAME_13, ANY_TIMESTAMPTZ_3)
+        .build();
+  }
+
   private TransactionResult prepareResult(TransactionState state) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
@@ -540,6 +559,22 @@ public class RollbackMutationComposerTest {
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.PREPARED);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
+
+    // Act
+    composer.add(put, null);
+
+    // Assert
+    assertThat(composer.get().size()).isEqualTo(0);
+    verify(storage).get(any(Get.class));
+  }
+
+  @Test
+  public void add_PutWithoutCkAndNullResultGivenAndOldResultGivenFromStorage_ShouldDoNothing()
+      throws ExecutionException {
+    // Arrange
+    TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.PREPARED);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+    Put put = preparePutWithoutCk();
 
     // Act
     composer.add(put, null);
