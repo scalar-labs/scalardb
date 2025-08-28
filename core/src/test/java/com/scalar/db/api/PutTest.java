@@ -36,6 +36,7 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class PutTest {
@@ -64,7 +65,7 @@ public class PutTest {
     Key actual = put.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
+    Assertions.<Key>assertThat(expected).isEqualTo(actual);
   }
 
   @Test

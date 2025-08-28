@@ -7,7 +7,6 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +30,6 @@ public class DynamoMutationTest {
   private static final int ANY_INT_1 = 1;
   private static final int ANY_INT_2 = 2;
   private static final int ANY_INT_3 = 3;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
   @Mock private TableMetadata metadata;
 
@@ -98,9 +96,8 @@ public class DynamoMutationTest {
   public void getCondition_PutGiven_ShouldReturnCondition() {
     // Arrange
     PutIf conditions =
-        ConditionBuilder.putIf(
-                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()))
-            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()))
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
             .build();
     Put put = Put.newBuilder(preparePut()).condition(conditions).build();
 
@@ -126,9 +123,8 @@ public class DynamoMutationTest {
   public void getConditionColumnMap_PutGiven_ShouldReturnCondition() {
     // Arrange
     PutIf conditions =
-        ConditionBuilder.putIf(
-                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()))
-            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()))
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
             .build();
     Put put = Put.newBuilder(preparePut()).condition(conditions).build();
 
@@ -172,9 +168,8 @@ public class DynamoMutationTest {
   public void getConditionBindMap_PutWithPutIfGiven_ShouldReturnBindMap() {
     // Arrange
     PutIf conditions =
-        ConditionBuilder.putIf(
-                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()))
-            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()))
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
             .build();
     Put put = Put.newBuilder(preparePut()).condition(conditions).build();
     Map<String, AttributeValue> expected = new HashMap<>();

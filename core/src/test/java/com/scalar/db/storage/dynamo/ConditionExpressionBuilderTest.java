@@ -7,7 +7,6 @@ import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.io.IntValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
@@ -18,7 +17,6 @@ public class ConditionExpressionBuilderTest {
   private static final String ANY_NAME_3 = "name3";
   private static final String ANY_NAME_4 = "name4";
   private static final int ANY_INT = 1;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -43,9 +41,8 @@ public class ConditionExpressionBuilderTest {
   public void build_PutIfAcceptCalled_ShouldReturnCondition() {
     // Arrange
     PutIf condition =
-        ConditionBuilder.putIf(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.getAsInt()))
-            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.getAsInt()))
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT))
             .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
             .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
             .build();
@@ -101,9 +98,8 @@ public class ConditionExpressionBuilderTest {
   public void visit_DeleteIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     DeleteIf condition =
-        ConditionBuilder.deleteIf(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.getAsInt()))
-            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.getAsInt()))
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT))
             .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
             .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
             .build();
