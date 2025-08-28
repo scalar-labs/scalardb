@@ -421,7 +421,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     try {
       String alterTableQuery =
           SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
-              .dropColumn(columnName)
+              .dropColumn(quoteIfNecessary(columnName))
               .getQueryString();
 
       clusterManager.getSession().execute(alterTableQuery);
