@@ -681,7 +681,7 @@ public enum CoreError implements ScalarDbError {
   COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY(
       Category.USER_ERROR,
       "0216",
-      "The column %s is specified as a primary key or an index key",
+      "The column is specified as a primary key or an index key. Table: %s; Column: %s",
       "",
       ""),
   COSMOS_DROP_COLUMN_NOT_SUPPORTED(

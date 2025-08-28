@@ -868,19 +868,19 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
-      String addNewColumnStatement =
+      String dropColumnStatement =
           "ALTER TABLE "
               + encloseFullTableName(namespace, table)
               + " DROP COLUMN "
               + enclose(columnName);
       try (Connection connection = dataSource.getConnection()) {
-        execute(connection, addNewColumnStatement);
+        execute(connection, dropColumnStatement);
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new %s column to the %s table failed",
+              "Dropping the %s column from the %s table failed",
               columnName, getFullTableName(namespace, table)),
           e);
     }

@@ -933,9 +933,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .removeColumn("c10")
               .removeColumn("c11")
               .removeColumn("c12");
-      if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder.removeColumn("c11").removeColumn("c12");
-      }
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
     } finally {
