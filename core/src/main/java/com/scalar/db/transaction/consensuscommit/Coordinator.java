@@ -403,9 +403,14 @@ public class Coordinator {
       id = result.getText(Attribute.ID);
       state = TransactionState.getInstance(result.getInt(Attribute.STATE));
       createdAt = result.getBigInt(Attribute.CREATED_AT);
-      String childIdsStr = result.getText(Attribute.CHILD_IDS);
-      if (childIdsStr != null) {
-        childIds = Splitter.on(CHILD_IDS_DELIMITER).omitEmptyStrings().splitToList(childIdsStr);
+
+      if (result.contains(Attribute.CHILD_IDS)) {
+        String childIdsStr = result.getText(Attribute.CHILD_IDS);
+        if (childIdsStr != null) {
+          childIds = Splitter.on(CHILD_IDS_DELIMITER).omitEmptyStrings().splitToList(childIdsStr);
+        } else {
+          childIds = EMPTY_CHILD_IDS;
+        }
       } else {
         childIds = EMPTY_CHILD_IDS;
       }
