@@ -916,7 +916,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
     TransactionResult expected = new TransactionResult(result);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -959,7 +959,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
     TransactionResult expected = new TransactionResult(result);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -1045,7 +1045,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
     TransactionResult expected = new TransactionResult(result);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -1084,7 +1084,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     when(snapshot.getId()).thenReturn(ANY_ID_1);
 
@@ -1141,7 +1141,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     when(snapshot.getId()).thenReturn(ANY_ID_1);
 
@@ -1207,7 +1207,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     when(snapshot.getId()).thenReturn(ANY_ID_1);
 
@@ -1257,7 +1257,7 @@ public class CrudHandlerTest {
       when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
+    Snapshot.Key key = new Snapshot.Key(scanForStorage, result, TABLE_METADATA);
     when(snapshot.getResults(scanForStorage))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, expected))));
@@ -1489,7 +1489,7 @@ public class CrudHandlerTest {
     Scan scan = prepareCrossPartitionScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1524,7 +1524,7 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scan);
 
     result = prepareResult(TransactionState.PREPARED);
-    Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
+    Snapshot.Key key = new Snapshot.Key(scanForStorage, result, TABLE_METADATA);
     when(snapshot.getId()).thenReturn(ANY_ID_1);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -1585,7 +1585,7 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scan);
 
     result = prepareResult(TransactionState.PREPARED);
-    Snapshot.Key key = new Snapshot.Key(scanForStorage, result);
+    Snapshot.Key key = new Snapshot.Key(scanForStorage, result, TABLE_METADATA);
     when(snapshot.getId()).thenReturn(ANY_ID_1);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -1645,8 +1645,8 @@ public class CrudHandlerTest {
     Result result1 = prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
     Result result2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED);
 
-    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, result2);
+    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, result2, TABLE_METADATA);
 
     TransactionResult transactionResult1 = new TransactionResult(result1);
     TransactionResult transactionResult2 = new TransactionResult(result2);
@@ -1699,7 +1699,7 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scanWithoutLimit);
 
     Result result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result);
+    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result, TABLE_METADATA);
     TransactionResult transactionResult1 = new TransactionResult(result);
 
     // Set up mock scanner to return one result (less than limit)
@@ -1734,9 +1734,9 @@ public class CrudHandlerTest {
     Result uncommittedResult2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.PREPARED);
     Result uncommittedResult3 = prepareResult(ANY_TEXT_1, ANY_TEXT_4, TransactionState.PREPARED);
 
-    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, uncommittedResult1);
-    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, uncommittedResult2);
-    Snapshot.Key key3 = new Snapshot.Key(scanWithLimit, uncommittedResult3);
+    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, uncommittedResult1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, uncommittedResult2, TABLE_METADATA);
+    Snapshot.Key key3 = new Snapshot.Key(scanWithLimit, uncommittedResult3, TABLE_METADATA);
 
     // Set up mock scanner to return one committed and one uncommitted result
     if (scanType == ScanType.SCAN) {
@@ -1891,7 +1891,7 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result1 = prepareResult(TransactionState.COMMITTED);
     Result result2 = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     TransactionResult txResult1 = new TransactionResult(result1);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
@@ -1980,7 +1980,7 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result1 = prepareResult(TransactionState.COMMITTED);
     Result result2 = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     TransactionResult txResult1 = new TransactionResult(result1);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
@@ -2620,8 +2620,11 @@ public class CrudHandlerTest {
           throws CrudException, ExecutionException {
     // Arrange
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
-    when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
-    when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
+    when(result.getColumns())
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1),
+                ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2)));
     when(storage.get(any())).thenReturn(Optional.of(result));
 
     Get getWithIndex =
@@ -2639,7 +2642,8 @@ public class CrudHandlerTest {
     verify(storage).get(any());
     verify(snapshot)
         .putIntoReadSet(
-            new Snapshot.Key(getWithIndex, result), Optional.of(new TransactionResult(result)));
+            new Snapshot.Key(getWithIndex, result, TABLE_METADATA),
+            Optional.of(new TransactionResult(result)));
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(new TransactionResult(result)));
   }
 
@@ -2649,8 +2653,11 @@ public class CrudHandlerTest {
           throws ExecutionException, CrudException {
     // Arrange
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
-    when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
-    when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
+    when(result.getColumns())
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1),
+                ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2)));
     when(storage.get(any())).thenReturn(Optional.of(result));
 
     Get getWithIndex =
@@ -2662,7 +2669,7 @@ public class CrudHandlerTest {
     when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
     when(snapshot.getId()).thenReturn(ANY_ID_1);
 
-    Snapshot.Key key = new Snapshot.Key(getWithIndex, result);
+    Snapshot.Key key = new Snapshot.Key(getWithIndex, result, TABLE_METADATA);
 
     TransactionResult recoveredResult = mock(TransactionResult.class);
     @SuppressWarnings("unchecked")
@@ -3048,8 +3055,11 @@ public class CrudHandlerTest {
       throws CrudException, ExecutionException {
     // Arrange
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
-    when(result.getPartitionKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
-    when(result.getClusteringKey()).thenReturn(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
+    when(result.getColumns())
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1),
+                ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2)));
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(any())).thenReturn(scanner);
 

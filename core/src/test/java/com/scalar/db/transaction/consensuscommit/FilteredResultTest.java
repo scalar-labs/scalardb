@@ -40,17 +40,17 @@ public class FilteredResultTest {
               .addClusteringKey(ACCOUNT_TYPE)
               .build());
 
-  private static final IntValue ACCOUNT_ID_VALUE = new IntValue(ACCOUNT_ID, 0);
-  private static final IntValue ACCOUNT_TYPE_VALUE = new IntValue(ACCOUNT_TYPE, 1);
-  private static final IntValue BALANCE_VALUE = new IntValue(BALANCE, 2);
+  private static final IntColumn ACCOUNT_ID_VALUE = IntColumn.of(ACCOUNT_ID, 0);
+  private static final IntColumn ACCOUNT_TYPE_VALUE = IntColumn.of(ACCOUNT_TYPE, 1);
+  private static final IntColumn BALANCE_VALUE = IntColumn.of(BALANCE, 2);
   private static final TextColumn ID_VALUE = TextColumn.of(Attribute.ID, "aaa");
   private static final IntColumn STATE_VALUE =
       IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get());
   private static final IntColumn VERSION_VALUE = IntColumn.of(Attribute.VERSION, 4);
   private static final BigIntColumn PREPARED_AT_VALUE = BigIntColumn.of(Attribute.PREPARED_AT, 5);
   private static final BigIntColumn COMMITTED_AT_VALUE = BigIntColumn.of(Attribute.COMMITTED_AT, 6);
-  private static final IntValue BEFORE_BALANCE_VALUE =
-      new IntValue(Attribute.BEFORE_PREFIX + BALANCE, 7);
+  private static final IntColumn BEFORE_BALANCE_VALUE =
+      IntColumn.of(Attribute.BEFORE_PREFIX + BALANCE, 7);
   private static final TextColumn BEFORE_ID_VALUE = TextColumn.of(Attribute.BEFORE_ID, "bbb");
   private static final IntColumn BEFORE_STATE_VALUE =
       IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get());
@@ -67,15 +67,15 @@ public class FilteredResultTest {
     // Arrange
     Map<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ACCOUNT_ID, ScalarDbUtils.toColumn(ACCOUNT_ID_VALUE))
-            .put(ACCOUNT_TYPE, ScalarDbUtils.toColumn(ACCOUNT_TYPE_VALUE))
-            .put(BALANCE, ScalarDbUtils.toColumn(BALANCE_VALUE))
+            .put(ACCOUNT_ID, ACCOUNT_ID_VALUE)
+            .put(ACCOUNT_TYPE, ACCOUNT_TYPE_VALUE)
+            .put(BALANCE, BALANCE_VALUE)
             .put(Attribute.ID, ID_VALUE)
             .put(Attribute.STATE, STATE_VALUE)
             .put(Attribute.VERSION, VERSION_VALUE)
             .put(Attribute.PREPARED_AT, PREPARED_AT_VALUE)
             .put(Attribute.COMMITTED_AT, COMMITTED_AT_VALUE)
-            .put(Attribute.BEFORE_PREFIX + BALANCE, ScalarDbUtils.toColumn(BEFORE_BALANCE_VALUE))
+            .put(Attribute.BEFORE_PREFIX + BALANCE, BEFORE_BALANCE_VALUE)
             .put(Attribute.BEFORE_ID, BEFORE_ID_VALUE)
             .put(Attribute.BEFORE_STATE, BEFORE_STATE_VALUE)
             .put(Attribute.BEFORE_VERSION, BEFORE_VERSION_VALUE)
@@ -95,18 +95,23 @@ public class FilteredResultTest {
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_ID_VALUE);
 
     assertThat(filteredResult.getClusteringKey()).isPresent();
     assertThat(filteredResult.getClusteringKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getClusteringKey().get().get().get(0)).isEqualTo(ACCOUNT_TYPE_VALUE);
+    assertThat(filteredResult.getClusteringKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_TYPE_VALUE);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_ID).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_ID_VALUE));
     assertThat(filteredResult.getValue(ACCOUNT_TYPE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_TYPE).get()).isEqualTo(ACCOUNT_TYPE_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_TYPE).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_TYPE_VALUE));
     assertThat(filteredResult.getValue(BALANCE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(BALANCE).get()).isEqualTo(BALANCE_VALUE);
+    assertThat(filteredResult.getValue(BALANCE).get())
+        .isEqualTo(ScalarDbUtils.toValue(BALANCE_VALUE));
 
     assertThat(filteredResult.getValue(Attribute.ID)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.STATE)).isNotPresent();
@@ -160,17 +165,23 @@ public class FilteredResultTest {
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_ID_VALUE);
 
     assertThat(filteredResult.getClusteringKey()).isPresent();
     assertThat(filteredResult.getClusteringKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getClusteringKey().get().get().get(0)).isEqualTo(ACCOUNT_TYPE_VALUE);
+    assertThat(filteredResult.getClusteringKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_TYPE_VALUE);
+
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_ID).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_ID_VALUE));
     assertThat(filteredResult.getValue(ACCOUNT_TYPE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_TYPE).get()).isEqualTo(ACCOUNT_TYPE_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_TYPE).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_TYPE_VALUE));
     assertThat(filteredResult.getValue(BALANCE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(BALANCE).get()).isEqualTo(BALANCE_VALUE);
+    assertThat(filteredResult.getValue(BALANCE).get())
+        .isEqualTo(ScalarDbUtils.toValue(BALANCE_VALUE));
 
     assertThat(filteredResult.getValue(Attribute.ID)).isPresent();
     assertThat(filteredResult.getValue(Attribute.ID).get())
@@ -189,7 +200,7 @@ public class FilteredResultTest {
         .isEqualTo(new BigIntValue(Attribute.COMMITTED_AT, 6));
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE).get())
-        .isEqualTo(BEFORE_BALANCE_VALUE);
+        .isEqualTo(ScalarDbUtils.toValue(BEFORE_BALANCE_VALUE));
     assertThat(filteredResult.getValue(Attribute.BEFORE_ID)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_ID).get())
         .isEqualTo(new TextValue(Attribute.BEFORE_ID, "bbb"));
@@ -306,16 +317,19 @@ public class FilteredResultTest {
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_ID_VALUE);
 
     assertThat(catchThrowable(filteredResult::getClusteringKey))
         .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_ID).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_ID_VALUE));
     assertThat(filteredResult.getValue(ACCOUNT_TYPE)).isNotPresent();
     assertThat(filteredResult.getValue(BALANCE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(BALANCE).get()).isEqualTo(BALANCE_VALUE);
+    assertThat(filteredResult.getValue(BALANCE).get())
+        .isEqualTo(ScalarDbUtils.toValue(BALANCE_VALUE));
 
     assertThat(filteredResult.getValue(Attribute.ID)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.STATE)).isNotPresent();
@@ -371,16 +385,19 @@ public class FilteredResultTest {
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_ID_VALUE);
 
     assertThat(catchThrowable(filteredResult::getClusteringKey))
         .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_ID).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_ID_VALUE));
     assertThat(filteredResult.getValue(ACCOUNT_TYPE)).isNotPresent();
     assertThat(filteredResult.getValue(BALANCE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(BALANCE).get()).isEqualTo(BALANCE_VALUE);
+    assertThat(filteredResult.getValue(BALANCE).get())
+        .isEqualTo(ScalarDbUtils.toValue(BALANCE_VALUE));
 
     assertThat(filteredResult.getValue(Attribute.ID)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.STATE)).isNotPresent();
@@ -391,7 +408,7 @@ public class FilteredResultTest {
     assertThat(filteredResult.getValue(Attribute.COMMITTED_AT)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE)).isPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_PREFIX + BALANCE).get())
-        .isEqualTo(BEFORE_BALANCE_VALUE);
+        .isEqualTo(ScalarDbUtils.toValue(BEFORE_BALANCE_VALUE));
     assertThat(filteredResult.getValue(Attribute.BEFORE_ID)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_STATE)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.BEFORE_VERSION)).isNotPresent();
@@ -446,13 +463,15 @@ public class FilteredResultTest {
     // Act Assert
     assertThat(filteredResult.getPartitionKey()).isPresent();
     assertThat(filteredResult.getPartitionKey().get().size()).isEqualTo(1);
-    assertThat(filteredResult.getPartitionKey().get().get().get(0)).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getPartitionKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_ID_VALUE);
 
     assertThat(catchThrowable(filteredResult::getClusteringKey))
         .isInstanceOf(IllegalStateException.class);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_ID).get()).isEqualTo(ACCOUNT_ID_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_ID).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_ID_VALUE));
     assertThat(filteredResult.getValue(ACCOUNT_TYPE)).isNotPresent();
     assertThat(filteredResult.getValue(BALANCE)).isNotPresent();
 
@@ -506,12 +525,13 @@ public class FilteredResultTest {
 
     assertThat(filteredResult.getClusteringKey()).isPresent();
     assertThat(filteredResult.getClusteringKey().get().size()).isEqualTo(1);
-
-    assertThat(filteredResult.getClusteringKey().get().get().get(0)).isEqualTo(ACCOUNT_TYPE_VALUE);
+    assertThat(filteredResult.getClusteringKey().get().getColumns().get(0))
+        .isEqualTo(ACCOUNT_TYPE_VALUE);
 
     assertThat(filteredResult.getValue(ACCOUNT_ID)).isNotPresent();
     assertThat(filteredResult.getValue(ACCOUNT_TYPE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(ACCOUNT_TYPE).get()).isEqualTo(ACCOUNT_TYPE_VALUE);
+    assertThat(filteredResult.getValue(ACCOUNT_TYPE).get())
+        .isEqualTo(ScalarDbUtils.toValue(ACCOUNT_TYPE_VALUE));
     assertThat(filteredResult.getValue(BALANCE)).isNotPresent();
 
     assertThat(filteredResult.getValue(Attribute.ID)).isNotPresent();
@@ -567,7 +587,8 @@ public class FilteredResultTest {
     assertThat(filteredResult.getValue(ACCOUNT_ID)).isNotPresent();
     assertThat(filteredResult.getValue(ACCOUNT_TYPE)).isNotPresent();
     assertThat(filteredResult.getValue(BALANCE).isPresent()).isTrue();
-    assertThat(filteredResult.getValue(BALANCE).get()).isEqualTo(BALANCE_VALUE);
+    assertThat(filteredResult.getValue(BALANCE).get())
+        .isEqualTo(ScalarDbUtils.toValue(BALANCE_VALUE));
 
     assertThat(filteredResult.getValue(Attribute.ID)).isNotPresent();
     assertThat(filteredResult.getValue(Attribute.STATE)).isNotPresent();
@@ -664,11 +685,11 @@ public class FilteredResultTest {
         new ResultImpl(
             ImmutableMap.of(
                 ACCOUNT_ID,
-                ScalarDbUtils.toColumn(ACCOUNT_ID_VALUE),
+                ACCOUNT_ID_VALUE,
                 ACCOUNT_TYPE,
-                ScalarDbUtils.toColumn(ACCOUNT_TYPE_VALUE),
+                ACCOUNT_TYPE_VALUE,
                 BALANCE,
-                ScalarDbUtils.toColumn(BALANCE_VALUE)),
+                BALANCE_VALUE),
             TABLE_METADATA);
 
     // Act
@@ -696,9 +717,7 @@ public class FilteredResultTest {
     // Arrange
     Result filteredResult =
         new FilteredResult(result, Collections.singletonList(BALANCE), TABLE_METADATA, false);
-    Result anotherResult =
-        new ResultImpl(
-            ImmutableMap.of(BALANCE, ScalarDbUtils.toColumn(BALANCE_VALUE)), TABLE_METADATA);
+    Result anotherResult = new ResultImpl(ImmutableMap.of(BALANCE, BALANCE_VALUE), TABLE_METADATA);
 
     // Act
     boolean isEqual = filteredResult.equals(anotherResult);

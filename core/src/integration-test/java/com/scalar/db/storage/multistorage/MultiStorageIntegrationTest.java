@@ -74,14 +74,14 @@ public class MultiStorageIntegrationTest {
   private void initCassandraAndCassandraAdmin() throws ExecutionException {
     StorageFactory factory =
         StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
-    cassandraAdmin = factory.getAdmin();
+    cassandraAdmin = factory.getStorageAdmin();
     createTables(cassandraAdmin);
     cassandra = factory.getStorage();
   }
 
   private void initJdbcDatabaseAndJdbcAdmin() throws ExecutionException {
     StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    jdbcAdmin = factory.getAdmin();
+    jdbcAdmin = factory.getStorageAdmin();
     createTables(jdbcAdmin);
     jdbcDatabase = factory.getStorage();
   }
@@ -1178,28 +1178,32 @@ public class MultiStorageIntegrationTest {
   }
 
   private int getCol1Value(Result result) {
-    assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
-    return result.getValue(COL_NAME1).get().getAsInt();
+    assertThat(result.contains(COL_NAME1)).isTrue();
+    assertThat(result.isNull(COL_NAME1)).isFalse();
+    return result.getInt(COL_NAME1);
   }
 
   private String getCol2Value(Result result) {
-    assertThat(result.getValue(COL_NAME2).isPresent()).isTrue();
-    assertThat(result.getValue(COL_NAME2).get().getAsString().isPresent()).isTrue();
-    return result.getValue(COL_NAME2).get().getAsString().get();
+    assertThat(result.contains(COL_NAME2)).isTrue();
+    assertThat(result.isNull(COL_NAME2)).isFalse();
+    return result.getText(COL_NAME2);
   }
 
   private int getCol3Value(Result result) {
-    assertThat(result.getValue(COL_NAME3).isPresent()).isTrue();
-    return result.getValue(COL_NAME3).get().getAsInt();
+    assertThat(result.contains(COL_NAME3)).isTrue();
+    assertThat(result.isNull(COL_NAME3)).isFalse();
+    return result.getInt(COL_NAME3);
   }
 
   private int getCol4Value(Result result) {
-    assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
-    return result.getValue(COL_NAME4).get().getAsInt();
+    assertThat(result.contains(COL_NAME4)).isTrue();
+    assertThat(result.isNull(COL_NAME4)).isFalse();
+    return result.getInt(COL_NAME4);
   }
 
   private boolean getCol5Value(Result result) {
-    assertThat(result.getValue(COL_NAME5).isPresent()).isTrue();
-    return result.getValue(COL_NAME5).get().getAsBoolean();
+    assertThat(result.contains(COL_NAME5)).isTrue();
+    assertThat(result.isNull(COL_NAME5)).isFalse();
+    return result.getBoolean(COL_NAME5);
   }
 }

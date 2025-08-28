@@ -68,7 +68,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     initialize(getTestName());
     Properties properties = getProperties(getTestName());
     storageFactory = StorageFactory.create(properties);
-    admin = storageFactory.getAdmin();
+    admin = storageFactory.getStorageAdmin();
     systemNamespaceName = getSystemNamespaceName(properties);
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();

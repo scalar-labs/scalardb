@@ -50,7 +50,7 @@ public class MultiStorageAdminIntegrationTest {
   private void initCassandraAdmin() throws ExecutionException {
     Properties properties = MultiStorageEnv.getPropertiesForCassandra(TEST_NAME);
     StorageFactory factory = StorageFactory.create(properties);
-    cassandraAdmin = factory.getAdmin();
+    cassandraAdmin = factory.getStorageAdmin();
 
     // create tables
     cassandraAdmin.createNamespace(NAMESPACE1, true);
@@ -79,7 +79,7 @@ public class MultiStorageAdminIntegrationTest {
 
   private void initJdbcAdmin() throws ExecutionException {
     StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    jdbcAdmin = factory.getAdmin();
+    jdbcAdmin = factory.getStorageAdmin();
 
     // create tables
     jdbcAdmin.createNamespace(NAMESPACE1, true);

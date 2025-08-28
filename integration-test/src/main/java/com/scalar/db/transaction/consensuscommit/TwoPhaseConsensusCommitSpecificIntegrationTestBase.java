@@ -25,7 +25,6 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Collections;
@@ -2500,18 +2499,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
       int amount)
       throws TransactionException {
     int fromBalance =
-        fromTx
-            .get(prepareGet(fromId, fromType, fromNamespace, fromTable))
-            .get()
-            .getValue(BALANCE)
-            .get()
-            .getAsInt();
-    int toBalance =
-        toTx.get(prepareGet(toId, toType, toNamespace, toTable))
-            .get()
-            .getValue(BALANCE)
-            .get()
-            .getAsInt();
+        fromTx.get(prepareGet(fromId, fromType, fromNamespace, fromTable)).get().getInt(BALANCE);
+    int toBalance = toTx.get(prepareGet(toId, toType, toNamespace, toTable)).get().getInt(BALANCE);
     fromTx.put(
         Put.newBuilder(preparePut(fromId, fromType, fromNamespace, fromTable))
             .intValue(BALANCE, fromBalance - amount)
@@ -2599,21 +2588,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private int getAccountId(Result result) {
-    Optional<Value<?>> id = result.getValue(ACCOUNT_ID);
-    assertThat(id).isPresent();
-    return id.get().getAsInt();
+    assertThat(result.contains(ACCOUNT_ID)).isTrue();
+    return result.getInt(ACCOUNT_ID);
   }
 
   private int getAccountType(Result result) {
-    Optional<Value<?>> type = result.getValue(ACCOUNT_TYPE);
-    assertThat(type).isPresent();
-    return type.get().getAsInt();
+    assertThat(result.contains(ACCOUNT_TYPE)).isTrue();
+    return result.getInt(ACCOUNT_TYPE);
   }
 
   private int getBalance(Result result) {
-    Optional<Value<?>> balance = result.getValue(BALANCE);
-    assertThat(balance).isPresent();
-    return balance.get().getAsInt();
+    assertThat(result.contains(BALANCE)).isTrue();
+    return result.getInt(BALANCE);
   }
 
   private enum SelectionType {
