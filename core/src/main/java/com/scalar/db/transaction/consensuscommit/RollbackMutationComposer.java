@@ -8,8 +8,10 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -121,17 +123,19 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
     Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
 
-    return Delete.newBuilder()
-        .namespace(base.forNamespace().get())
-        .table(base.forTable().get())
-        .partitionKey(partitionKey)
-        .clusteringKey(clusteringKey.orElse(null))
-        .condition(
-            ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
-                .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
-                .build())
-        .consistency(Consistency.LINEARIZABLE)
-        .build();
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(partitionKey)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE);
+    clusteringKey.ifPresent(deleteBuilder::clusteringKey);
+
+    return deleteBuilder.build();
   }
 
   private Optional<TransactionResult> getLatestResult(
@@ -157,15 +161,16 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       }
     }
 
-    Get get =
+    GetBuilder.BuildableGetWithPartitionKey getBuilder =
         Get.newBuilder()
             .namespace(operation.forNamespace().get())
             .table(operation.forTable().get())
             .partitionKey(partitionKey)
-            .clusteringKey(clusteringKey)
-            .consistency(Consistency.LINEARIZABLE)
-            .build();
+            .consistency(Consistency.LINEARIZABLE);
+    if (clusteringKey != null) {
+      getBuilder.clusteringKey(clusteringKey);
+    }
 
-    return storage.get(get).map(TransactionResult::new);
+    return storage.get(getBuilder.build()).map(TransactionResult::new);
   }
 }
