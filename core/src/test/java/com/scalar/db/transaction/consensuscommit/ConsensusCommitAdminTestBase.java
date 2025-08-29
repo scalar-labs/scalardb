@@ -603,6 +603,29 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String targetColumn = "col2";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(targetColumn, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.dropColumnFromTable(NAMESPACE, TABLE, targetColumn);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).dropColumnFromTable(NAMESPACE, TABLE, targetColumn);
+    verify(distributedStorageAdmin)
+        .dropColumnFromTable(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + targetColumn);
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");

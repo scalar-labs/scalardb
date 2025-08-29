@@ -229,6 +229,20 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String column = "c1";
+
+    // Act
+    admin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(jdbcAdmin).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
   public void importTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

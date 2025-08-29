@@ -1149,11 +1149,13 @@ public class CosmosAdminTest {
             () ->
                 admin.importTable(
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
+    Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

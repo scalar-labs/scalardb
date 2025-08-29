@@ -2940,6 +2940,146 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ForMysql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + METADATA_SCHEMA
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` DROP COLUMN `c2`",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForOracle_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForPostgresql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + METADATA_SCHEMA
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "ALTER TABLE [ns].[table] DROP COLUMN [c2]",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForSqlite_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns$table\" DROP COLUMN \"c2\"",
+        "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,FALSE,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForDb2_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"ns\".\"table\"')",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  private void dropColumnFromTable_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String column1 = "c1";
+    String column2 = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                column1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                column2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.dropColumnFromTable(namespace, table, column2);
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_forMysql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
         RdbEngine.MYSQL, "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");

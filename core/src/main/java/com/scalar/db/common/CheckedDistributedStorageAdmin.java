@@ -296,6 +296,39 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    if (!tableMetadata.getColumnNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)
+        || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    try {
+      admin.dropColumnFromTable(namespace, table, columnName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.DROPPING_COLUMN_FROM_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName),
+          e);
+    }
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       Set<String> namespaceNames = admin.getNamespaceNames();

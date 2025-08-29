@@ -239,6 +239,22 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
+
+    admin.dropColumnFromTable(namespace, table, columnName);
+    admin.dropColumnFromTable(namespace, table, beforeColumnName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return admin.getNamespaceNames().stream()
         .filter(namespace -> !namespace.equals(coordinatorNamespace))
