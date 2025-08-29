@@ -1012,6 +1012,19 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
   @Test
   public void
+      addNewColumnToTable_IfNotExists_ForAlreadyExistingColumn_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(
+            () ->
+                admin.addNewColumnToTable(
+                    namespace1, getTable1(), getColumnName7(), DataType.TEXT, false, true))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
           throws Exception {
     AdminTestUtils adminTestUtils = getAdminTestUtils(getTestName());
