@@ -296,6 +296,46 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    if (!tableMetadata.getColumnNames().contains(oldColumnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), oldColumnName));
+    }
+
+    if (tableMetadata.getColumnNames().contains(newColumnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), newColumnName));
+    }
+
+    if (tableMetadata.getPartitionKeyNames().contains(oldColumnName)
+        || tableMetadata.getClusteringKeyNames().contains(oldColumnName)
+        || tableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), oldColumnName));
+    }
+
+    try {
+      admin.renameColumn(namespace, table, oldColumnName, newColumnName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.RENAMING_COLUMN_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), oldColumnName, newColumnName),
+          e);
+    }
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       Set<String> namespaceNames = admin.getNamespaceNames();

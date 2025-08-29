@@ -188,6 +188,13 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType, boolean encrypted)
       throws ExecutionException {

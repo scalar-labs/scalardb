@@ -4,6 +4,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegration
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminIntegrationTestWithDynamo
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -27,4 +28,20 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new DynamoAdminTestUtils(getProperties(testName));
   }
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
 }

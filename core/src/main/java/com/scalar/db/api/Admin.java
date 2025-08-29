@@ -442,6 +442,21 @@ public interface Admin {
   }
 
   /**
+   * Renames an existing column of an existing table.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param oldColumnName the current name of the column to rename
+   * @param newColumnName the new name of the column
+   * @throws IllegalArgumentException if the table or the old column does not exist, the new column
+   *     already exists, or the column is a partition key column, clustering key column, or is
+   *     indexed
+   * @throws ExecutionException if the operation fails
+   */
+  void renameColumn(String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException;
+
+  /**
    * Imports an existing table that is not managed by ScalarDB.
    *
    * @param namespace an existing namespace

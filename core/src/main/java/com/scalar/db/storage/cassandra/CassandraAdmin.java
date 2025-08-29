@@ -416,6 +416,29 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    try {
+      String alterTableQuery =
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .renameColumn(quoteIfNecessary(oldColumnName))
+              .to(quoteIfNecessary(newColumnName))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s column to %s in the %s table failed",
+              oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       if (clusterManager.getMetadata(metadataKeyspace, NAMESPACES_TABLE) == null) {

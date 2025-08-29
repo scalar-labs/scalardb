@@ -59,4 +59,9 @@ public class DynamoAdminPermissionIntegrationTest
   @Override
   @Disabled("Import-related functionality is not supported in DynamoDB")
   public void importTable_WithSufficientPermission_ShouldSucceed() {}
+
+  @Test
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_WithSufficientPermission_ShouldSucceed() {}
 }
