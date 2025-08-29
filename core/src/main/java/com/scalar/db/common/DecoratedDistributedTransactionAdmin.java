@@ -190,6 +190,19 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void addNewColumnToTable(
+      String namespace,
+      String table,
+      String columnName,
+      DataType columnType,
+      boolean encrypted,
+      boolean ifNotExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.addNewColumnToTable(
+        namespace, table, columnName, columnType, encrypted, ifNotExists);
+  }
+
+  @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
     distributedTransactionAdmin.importTable(namespace, table, options);

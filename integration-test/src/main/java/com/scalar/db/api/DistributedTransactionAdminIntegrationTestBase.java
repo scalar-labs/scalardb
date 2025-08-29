@@ -908,6 +908,19 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void
+      addNewColumnToTable_IfNotExists_ForAlreadyExistingColumn_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(
+            () ->
+                admin.addNewColumnToTable(
+                    namespace1, TABLE1, COL_NAME7, DataType.TEXT, false, true))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
     // Arrange
