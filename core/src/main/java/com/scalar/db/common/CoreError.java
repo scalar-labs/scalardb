@@ -678,6 +678,18 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
+  COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY(
+      Category.USER_ERROR,
+      "0216",
+      "The column %s is specified as a primary key or an index key",
+      "",
+      ""),
+  COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "Rename column functionality is not supported in Cosmos DB",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -960,6 +972,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
+  RENAMING_COLUMN_FAILED(
+      Category.INTERNAL_ERROR,
+      "0059",
+      "Renaming the column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category

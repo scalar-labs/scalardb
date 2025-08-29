@@ -862,6 +862,33 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      DataType columnType = currentTableMetadata.getColumnDataType(oldColumnName);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .removeColumn(oldColumnName)
+              .addColumn(newColumnName, columnType)
+              .build();
+      String renameColumnStatement =
+          rdbEngine.renameColumnSql(namespace, table, oldColumnName, newColumnName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameColumnStatement);
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s column to %s in the %s table failed",
+              oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

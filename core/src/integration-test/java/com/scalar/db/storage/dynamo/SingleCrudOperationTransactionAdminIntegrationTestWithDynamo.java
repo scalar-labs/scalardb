@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class SingleCrudOperationTransactionAdminIntegrationTestWithDynamo
     extends SingleCrudOperationTransactionAdminIntegrationTestBase {
@@ -21,4 +22,20 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithDynamo
   protected boolean isIndexOnBooleanColumnSupported() {
     return false;
   }
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
 }

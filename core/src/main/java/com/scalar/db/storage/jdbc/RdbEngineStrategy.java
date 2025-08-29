@@ -98,6 +98,16 @@ public interface RdbEngineStrategy {
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
+  default String renameColumnSql(
+      String namespace, String table, String oldColumnName, String newColumnName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " RENAME COLUMN "
+        + enclose(oldColumnName)
+        + " TO "
+        + enclose(newColumnName);
+  }
+
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);

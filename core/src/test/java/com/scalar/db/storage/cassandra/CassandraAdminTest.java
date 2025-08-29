@@ -866,6 +866,26 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void renameColumn_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String oldColumnName = "c2";
+    String newColumnName = "c3";
+
+    // Act
+    cassandraAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+
+    // Assert
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table)
+            .renameColumn(oldColumnName)
+            .to(newColumnName)
+            .getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
   public void getNamespacesNames_WithNonExistingKeyspaces_ShouldReturnEmptySet()
       throws ExecutionException {
     // Arrange
