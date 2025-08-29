@@ -8,7 +8,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,7 +29,6 @@ public class CosmosMutationTest {
   private static final int ANY_INT_1 = 1;
   private static final int ANY_INT_2 = 2;
   private static final int ANY_INT_3 = 3;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
   @Mock private TableMetadata metadata;
 
@@ -45,19 +43,25 @@ public class CosmosMutationTest {
   private Put preparePut() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1)
-        .withValue(ANY_NAME_4, ANY_INT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .intValue(ANY_NAME_4, ANY_INT_2)
+        .build();
   }
 
   private Delete prepareDelete() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -84,7 +88,7 @@ public class CosmosMutationTest {
   public void makeRecord_PutWithNullValueGiven_ShouldReturnWithValues() {
     // Arrange
     Put put = preparePut();
-    put.withIntValue(ANY_NAME_3, null);
+    put = Put.newBuilder(put).intValue(ANY_NAME_3, null).build();
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     String id = cosmosMutation.getId();
     String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
@@ -138,7 +142,11 @@ public class CosmosMutationTest {
 
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Delete delete =
-        new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .build();
 
     CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
@@ -163,9 +171,12 @@ public class CosmosMutationTest {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Delete delete =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
@@ -190,11 +201,10 @@ public class CosmosMutationTest {
   public void makeConditionalQuery_MutationWithConditionsGiven_ShouldReturnQuery() {
     // Arrange
     PutIf conditions =
-        ConditionBuilder.putIf(
-                ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_VALUE.get()))
-            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_VALUE.get()))
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
             .build();
-    Put put = preparePut().withCondition(conditions);
+    Put put = Put.newBuilder(preparePut()).condition(conditions).build();
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     String id = cosmosMutation.getId();
 

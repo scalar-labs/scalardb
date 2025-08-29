@@ -33,7 +33,8 @@ public class DeleteBuilderTest {
     Delete actual = Delete.newBuilder().table(TABLE_1).partitionKey(partitionKey1).build();
 
     // Assert
-    assertThat(actual).isEqualTo(new Delete(partitionKey1).forTable(TABLE_1));
+    assertThat(actual)
+        .isEqualTo(new Delete(null, TABLE_1, partitionKey1, null, null, ImmutableMap.of(), null));
   }
 
   @Test
@@ -50,7 +51,14 @@ public class DeleteBuilderTest {
     // Assert
     assertThat(delete)
         .isEqualTo(
-            new Delete(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+            new Delete(
+                NAMESPACE_1,
+                TABLE_1,
+                partitionKey1,
+                clusteringKey1,
+                null,
+                ImmutableMap.of(),
+                null));
   }
 
   @Test
@@ -97,11 +105,14 @@ public class DeleteBuilderTest {
   public void build_FromExistingWithoutChange_ShouldCopy() {
     // Arrange
     Delete existingDelete =
-        new Delete(partitionKey1, clusteringKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withCondition(condition1)
-            .withConsistency(Consistency.LINEARIZABLE);
+        new Delete(
+            NAMESPACE_1,
+            TABLE_1,
+            partitionKey1,
+            clusteringKey1,
+            Consistency.LINEARIZABLE,
+            ImmutableMap.of(),
+            condition1);
 
     // Act
     Delete newDelete = Delete.newBuilder(existingDelete).build();
@@ -195,43 +206,47 @@ public class DeleteBuilderTest {
   public void build_FromExistingAndClearCondition_ShouldBuildDeleteWithoutCondition() {
     // Arrange
     Delete existingDelete =
-        new Delete(partitionKey1)
-            .forNamespace(NAMESPACE_1)
-            .forTable(TABLE_1)
-            .withCondition(condition1);
+        new Delete(NAMESPACE_1, TABLE_1, partitionKey1, null, null, ImmutableMap.of(), condition1);
 
     // Act
     Delete newDelete = Delete.newBuilder(existingDelete).clearCondition().build();
 
     // Assert
     assertThat(newDelete)
-        .isEqualTo(new Delete(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new Delete(NAMESPACE_1, TABLE_1, partitionKey1, null, null, ImmutableMap.of(), null));
   }
 
   @Test
   public void build_FromExistingAndClearClusteringKey_ShouldBuildDeleteWithoutClusteringKey() {
     // Arrange
     Delete existingDelete =
-        new Delete(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new Delete(
+            NAMESPACE_1, TABLE_1, partitionKey1, clusteringKey1, null, ImmutableMap.of(), null);
 
     // Act
     Delete newDelete = Delete.newBuilder(existingDelete).clearClusteringKey().build();
 
     // Assert
     assertThat(newDelete)
-        .isEqualTo(new Delete(partitionKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1));
+        .isEqualTo(
+            new Delete(NAMESPACE_1, TABLE_1, partitionKey1, null, null, ImmutableMap.of(), null));
   }
 
   @Test
   public void build_FromExistingAndClearNamespace_ShouldBuildDeleteWithoutNamespace() {
     // Arrange
     Delete existingDelete =
-        new Delete(partitionKey1, clusteringKey1).forNamespace(NAMESPACE_1).forTable(TABLE_1);
+        new Delete(
+            NAMESPACE_1, TABLE_1, partitionKey1, clusteringKey1, null, ImmutableMap.of(), null);
 
     // Act
     Delete newDelete = Delete.newBuilder(existingDelete).clearNamespace().build();
 
     // Assert
-    assertThat(newDelete).isEqualTo(new Delete(partitionKey1, clusteringKey1).forTable(TABLE_1));
+    assertThat(newDelete)
+        .isEqualTo(
+            new Delete(
+                null, TABLE_1, partitionKey1, clusteringKey1, null, ImmutableMap.of(), null));
   }
 }

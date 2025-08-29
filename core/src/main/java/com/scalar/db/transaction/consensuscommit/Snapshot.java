@@ -163,14 +163,16 @@ public class Snapshot {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(originalPut);
-      put.getColumns().values().forEach(putBuilder::value);
+      for (Column<?> value : put.getColumns().values()) {
+        putBuilder = putBuilder.value(value);
+      }
 
       // If the implicit pre-read is enabled for the new put, it should also be enabled for the
       // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
       // because, in insert mode, the read set is not used during the preparation phase. Therefore,
       // we only need to enable the implicit pre-read if the previous put is not in insert mode
       if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
-        putBuilder.enableImplicitPreRead();
+        putBuilder = putBuilder.enableImplicitPreRead();
       }
 
       writeSet.put(key, putBuilder.build());
@@ -593,9 +595,14 @@ public class Snapshot {
     Scanner scanner = null;
     try {
       // Only get tx_id and primary key columns because we use only them to compare
-      scan.clearProjections();
-      scan.withProjection(Attribute.ID);
-      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
+      TableMetadata tableMetadata = getTableMetadata(scan);
+      scan =
+          Scan.newBuilder(scan)
+              .clearProjections()
+              .projection(Attribute.ID)
+              .projections(tableMetadata.getPartitionKeyNames())
+              .projections(tableMetadata.getClusteringKeyNames())
+              .build();
 
       if (scan.getLimit() == 0) {
         scanner = storage.scan(scan);
@@ -616,7 +623,7 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult);
+        Key key = new Key(scan, latestTxResult, tableMetadata);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
@@ -734,7 +741,9 @@ public class Snapshot {
             .build();
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r), r));
+    TableMetadata tableMetadata = getTableMetadata(scanWithIndex);
+    originalResult.ifPresent(
+        r -> results.put(new Snapshot.Key(scanWithIndex, r, tableMetadata), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false);
@@ -744,8 +753,7 @@ public class Snapshot {
       DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
       throws ExecutionException, ValidationConflictException {
     // Only get the tx_id column because we use only them to compare
-    get.clearProjections();
-    get.withProjection(Attribute.ID);
+    get = Get.newBuilder(get).clearProjections().projection(Attribute.ID).build();
 
     // Check if a read record is not changed
     Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
@@ -803,11 +811,11 @@ public class Snapshot {
       this((Operation) get);
     }
 
-    public Key(Get get, Result result) {
+    public Key(Get get, Result result, TableMetadata tableMetadata) {
       this.namespace = get.forNamespace().get();
       this.table = get.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     public Key(Put put) {
@@ -818,11 +826,11 @@ public class Snapshot {
       this((Operation) delete);
     }
 
-    public Key(Scan scan, Result result) {
+    public Key(Scan scan, Result result, TableMetadata tableMetadata) {
       this.namespace = scan.forNamespace().get();
       this.table = scan.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     private Key(Operation operation) {

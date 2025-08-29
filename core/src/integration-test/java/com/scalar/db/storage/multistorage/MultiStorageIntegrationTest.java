@@ -76,14 +76,14 @@ public class MultiStorageIntegrationTest {
   private void initCassandraAndCassandraAdmin() throws ExecutionException {
     StorageFactory factory =
         StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
-    cassandraAdmin = factory.getAdmin();
+    cassandraAdmin = factory.getStorageAdmin();
     createTables(cassandraAdmin);
     cassandra = factory.getStorage();
   }
 
   private void initJdbcDatabaseAndJdbcAdmin() throws ExecutionException {
     StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    jdbcAdmin = factory.getAdmin();
+    jdbcAdmin = factory.getStorageAdmin();
     createTables(jdbcAdmin);
     jdbcDatabase = factory.getStorage();
   }
@@ -186,18 +186,27 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME2, "val2")
-            .withValue(COL_NAME3, 3)
-            .withValue(COL_NAME5, true)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(COL_NAME2, "val2")
+            .intValue(COL_NAME3, 3)
+            .booleanValue(COL_NAME5, true)
+            .build();
 
     // Act
     multiStorage.put(put);
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
@@ -228,18 +237,27 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME2, "val2")
-            .withValue(COL_NAME3, 3)
-            .withValue(COL_NAME5, true)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(COL_NAME2, "val2")
+            .intValue(COL_NAME3, 3)
+            .booleanValue(COL_NAME5, true)
+            .build();
 
     // Act
     multiStorage.put(put);
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
@@ -271,18 +289,27 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
 
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME2, "val2")
-            .withValue(COL_NAME3, 3)
-            .withValue(COL_NAME5, true)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(COL_NAME2, "val2")
+            .intValue(COL_NAME3, 3)
+            .booleanValue(COL_NAME5, true)
+            .build();
 
     // Act
     multiStorage.put(put);
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
@@ -317,21 +344,32 @@ public class MultiStorageIntegrationTest {
 
     cassandra.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey1)
-                .withValue(COL_NAME3, 2)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 1)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey3)
-                .withValue(COL_NAME3, 0)
-                .forNamespace(namespace)
-                .forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .intValue(COL_NAME3, 2)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 1)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey3)
+                .intValue(COL_NAME3, 0)
+                .build()));
 
     // Act
-    List<Result> results = scanAll(new Scan(partitionKey).forNamespace(namespace).forTable(table));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build());
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
@@ -359,21 +397,32 @@ public class MultiStorageIntegrationTest {
 
     jdbcDatabase.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey1)
-                .withValue(COL_NAME3, 2)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 1)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey3)
-                .withValue(COL_NAME3, 0)
-                .forNamespace(namespace)
-                .forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .intValue(COL_NAME3, 2)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 1)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey3)
+                .intValue(COL_NAME3, 0)
+                .build()));
 
     // Act
-    List<Result> results = scanAll(new Scan(partitionKey).forNamespace(namespace).forTable(table));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build());
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
@@ -401,21 +450,32 @@ public class MultiStorageIntegrationTest {
 
     cassandra.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey1)
-                .withValue(COL_NAME3, 2)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 1)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey3)
-                .withValue(COL_NAME3, 0)
-                .forNamespace(namespace)
-                .forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .intValue(COL_NAME3, 2)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 1)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey3)
+                .intValue(COL_NAME3, 0)
+                .build()));
 
     // Act
-    List<Result> results = scanAll(new Scan(partitionKey).forNamespace(namespace).forTable(table));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build());
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
@@ -445,20 +505,34 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
-        new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table));
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build());
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -482,20 +556,34 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
-        new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table));
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build());
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -519,20 +607,34 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
-        new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table));
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build());
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -556,10 +658,13 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
     Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
-        new Put(partitionKey, clusteringKey1)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
@@ -567,15 +672,35 @@ public class MultiStorageIntegrationTest {
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
-    Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table);
-    Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(namespace).forTable(table);
+    Get get1 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey2)
+            .build();
 
     Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
@@ -611,10 +736,13 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
     Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
-        new Put(partitionKey, clusteringKey1)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
@@ -622,15 +750,35 @@ public class MultiStorageIntegrationTest {
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
-    Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table);
-    Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(namespace).forTable(table);
+    Get get1 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey2)
+            .build();
 
     Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
@@ -666,10 +814,13 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
     Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
-        new Put(partitionKey, clusteringKey1)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
@@ -677,15 +828,35 @@ public class MultiStorageIntegrationTest {
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
-    Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table);
-    Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(namespace).forTable(table);
+    Get get1 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey2)
+            .build();
 
     Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
@@ -721,18 +892,27 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME2, "val2")
-            .withValue(COL_NAME3, 3)
-            .withValue(COL_NAME5, true)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(COL_NAME2, "val2")
+            .intValue(COL_NAME3, 3)
+            .booleanValue(COL_NAME5, true)
+            .build();
 
     // Act
     multiStorage.put(put);
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
@@ -767,21 +947,32 @@ public class MultiStorageIntegrationTest {
 
     jdbcDatabase.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey1)
-                .withValue(COL_NAME3, 2)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 1)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Put(partitionKey, clusteringKey3)
-                .withValue(COL_NAME3, 0)
-                .forNamespace(namespace)
-                .forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .intValue(COL_NAME3, 2)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 1)
+                .build(),
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey3)
+                .intValue(COL_NAME3, 0)
+                .build()));
 
     // Act
-    List<Result> results = scanAll(new Scan(partitionKey).forNamespace(namespace).forTable(table));
+    List<Result> results =
+        scanAll(
+            Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build());
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
@@ -805,20 +996,34 @@ public class MultiStorageIntegrationTest {
     Key partitionKey = Key.ofInt(COL_NAME1, 1);
     Key clusteringKey = Key.ofInt(COL_NAME4, 4);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
 
     // Act
     multiStorage.delete(
-        new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table));
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build());
 
     // Assert
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -843,10 +1048,13 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey1 = Key.ofInt(COL_NAME4, 1);
     Key clusteringKey2 = Key.ofInt(COL_NAME4, 2);
     Put put =
-        new Put(partitionKey, clusteringKey1)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     cassandra.put(put);
     jdbcDatabase.put(put);
@@ -854,15 +1062,35 @@ public class MultiStorageIntegrationTest {
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
-    Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table);
-    Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(namespace).forTable(table);
+    Get get1 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey2)
+            .build();
 
     Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
@@ -961,28 +1189,32 @@ public class MultiStorageIntegrationTest {
   }
 
   private int getCol1Value(Result result) {
-    assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
-    return result.getValue(COL_NAME1).get().getAsInt();
+    assertThat(result.contains(COL_NAME1)).isTrue();
+    assertThat(result.isNull(COL_NAME1)).isFalse();
+    return result.getInt(COL_NAME1);
   }
 
   private String getCol2Value(Result result) {
-    assertThat(result.getValue(COL_NAME2).isPresent()).isTrue();
-    assertThat(result.getValue(COL_NAME2).get().getAsString().isPresent()).isTrue();
-    return result.getValue(COL_NAME2).get().getAsString().get();
+    assertThat(result.contains(COL_NAME2)).isTrue();
+    assertThat(result.isNull(COL_NAME2)).isFalse();
+    return result.getText(COL_NAME2);
   }
 
   private int getCol3Value(Result result) {
-    assertThat(result.getValue(COL_NAME3).isPresent()).isTrue();
-    return result.getValue(COL_NAME3).get().getAsInt();
+    assertThat(result.contains(COL_NAME3)).isTrue();
+    assertThat(result.isNull(COL_NAME3)).isFalse();
+    return result.getInt(COL_NAME3);
   }
 
   private int getCol4Value(Result result) {
-    assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
-    return result.getValue(COL_NAME4).get().getAsInt();
+    assertThat(result.contains(COL_NAME4)).isTrue();
+    assertThat(result.isNull(COL_NAME4)).isFalse();
+    return result.getInt(COL_NAME4);
   }
 
   private boolean getCol5Value(Result result) {
-    assertThat(result.getValue(COL_NAME5).isPresent()).isTrue();
-    return result.getValue(COL_NAME5).get().getAsBoolean();
+    assertThat(result.contains(COL_NAME5)).isTrue();
+    assertThat(result.isNull(COL_NAME5)).isFalse();
+    return result.getBoolean(COL_NAME5);
   }
 }

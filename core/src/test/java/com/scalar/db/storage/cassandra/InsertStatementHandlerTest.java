@@ -61,29 +61,37 @@ public class InsertStatementHandlerTest {
 
   private Put preparePut() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
-    return new Put(partitionKey)
-        .withValue(ANY_NAME_2, ANY_INT_1)
-        .withValue(ANY_NAME_3, ANY_INT_2)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .intValue(ANY_NAME_2, ANY_INT_1)
+        .intValue(ANY_NAME_3, ANY_INT_2)
+        .build();
   }
 
   private Put preparePutWithClusteringKey() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withValue(ANY_NAME_3, ANY_INT_1)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .build();
   }
 
   private Put preparePutWithReservedKeywords() {
     Key partitionKey = Key.ofText("from", ANY_TEXT_1);
     Key clusteringKey = Key.ofText("to", ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withValue("one", ANY_INT_1)
-        .forNamespace("keyspace")
-        .forTable("table");
+    return Put.newBuilder()
+        .namespace("keyspace")
+        .table("table")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue("one", ANY_INT_1)
+        .build();
   }
 
   private InsertStatementHandler prepareSpiedInsertStatementHandler() {
@@ -215,8 +223,10 @@ public class InsertStatementHandlerTest {
                   "IF NOT EXISTS;"
                 });
     configureBehavior(expected);
-    put = preparePutWithClusteringKey();
-    put.withCondition(ConditionBuilder.putIfNotExists());
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
 
     // Act
     handler.prepare(put);
@@ -231,7 +241,7 @@ public class InsertStatementHandlerTest {
     configureBehavior(null);
     put = preparePutWithClusteringKey();
     PutIfNotExists putIfNotExists = spy(ConditionBuilder.putIfNotExists());
-    put.withCondition(putIfNotExists);
+    put = Put.newBuilder(put).condition(putIfNotExists).build();
 
     // Act
     handler.prepare(put);
@@ -259,8 +269,7 @@ public class InsertStatementHandlerTest {
   public void bind_PutOperationWithNullValueGiven_ShouldBindProperly() {
     // Arrange
     configureBehavior(null);
-    put = preparePutWithClusteringKey();
-    put.withIntValue(ANY_NAME_3, null);
+    put = Put.newBuilder(preparePutWithClusteringKey()).intValue(ANY_NAME_3, null).build();
 
     // Act
     handler.bind(prepared, put);
@@ -275,8 +284,7 @@ public class InsertStatementHandlerTest {
   public void setConsistency_PutOperationWithStrongConsistencyGiven_ShouldPrepareWithQuorum() {
     // Arrange
     configureBehavior(null);
-    put = preparePutWithClusteringKey();
-    put.withConsistency(Consistency.SEQUENTIAL);
+    put = Put.newBuilder(preparePutWithClusteringKey()).consistency(Consistency.SEQUENTIAL).build();
 
     // Act
     handler.setConsistency(bound, put);
@@ -289,8 +297,7 @@ public class InsertStatementHandlerTest {
   public void setConsistency_PutOperationWithEventualConsistencyGiven_ShouldPrepareWithOne() {
     // Arrange
     configureBehavior(null);
-    put = preparePutWithClusteringKey();
-    put.withConsistency(Consistency.EVENTUAL);
+    put = Put.newBuilder(preparePutWithClusteringKey()).consistency(Consistency.EVENTUAL).build();
 
     // Act
     handler.setConsistency(bound, put);
@@ -304,8 +311,8 @@ public class InsertStatementHandlerTest {
       setConsistency_PutOperationWithLinearizableConsistencyGiven_ShouldPrepareWithQuorum() {
     // Arrange
     configureBehavior(null);
-    put = preparePutWithClusteringKey();
-    put.withConsistency(Consistency.LINEARIZABLE);
+    put =
+        Put.newBuilder(preparePutWithClusteringKey()).consistency(Consistency.LINEARIZABLE).build();
 
     // Act
     handler.setConsistency(bound, put);
@@ -318,8 +325,11 @@ public class InsertStatementHandlerTest {
   public void setConsistency_PutOperationWithIfNotExistsGiven_ShouldPrepareWithQuorumAndSerial() {
     // Arrange
     configureBehavior(null);
-    put = preparePutWithClusteringKey();
-    put.withCondition(ConditionBuilder.putIfNotExists()).withConsistency(Consistency.EVENTUAL);
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(ConditionBuilder.putIfNotExists())
+            .consistency(Consistency.EVENTUAL)
+            .build();
 
     // Act
     handler.setConsistency(bound, put);
@@ -332,8 +342,10 @@ public class InsertStatementHandlerTest {
   @Test
   public void handle_WTEWithCasThrown_ShouldThrowExecutionException() {
     // Arrange
-    put = preparePutWithClusteringKey();
-    put.withCondition(ConditionBuilder.putIfNotExists());
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     spy = prepareSpiedInsertStatementHandler();
 
     WriteTimeoutException toThrow = mock(WriteTimeoutException.class);
@@ -349,8 +361,10 @@ public class InsertStatementHandlerTest {
   @Test
   public void handle_PutWithConditionGivenAndWTEWithSimpleThrown_ShouldThrowExecutionException() {
     // Arrange
-    put = preparePutWithClusteringKey();
-    put.withCondition(ConditionBuilder.putIfNotExists());
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     spy = prepareSpiedInsertStatementHandler();
 
     WriteTimeoutException toThrow = mock(WriteTimeoutException.class);
@@ -398,8 +412,10 @@ public class InsertStatementHandlerTest {
   @Test
   public void handle_PutWithConditionButNoMutationApplied_ShouldThrowProperExecutionException() {
     // Arrange
-    put = preparePutWithClusteringKey();
-    put.withCondition(ConditionBuilder.putIfNotExists());
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     spy = prepareSpiedInsertStatementHandler();
 
     ResultSet results = mock(ResultSet.class);
@@ -415,8 +431,10 @@ public class InsertStatementHandlerTest {
   @Test
   public void handle_PutWithoutConditionButNoMutationApplied_ShouldThrowProperExecutionException() {
     // Arrange
-    put = preparePutWithClusteringKey();
-    put.withCondition(ConditionBuilder.putIfNotExists());
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
     spy = prepareSpiedInsertStatementHandler();
 
     ResultSet results = mock(ResultSet.class);

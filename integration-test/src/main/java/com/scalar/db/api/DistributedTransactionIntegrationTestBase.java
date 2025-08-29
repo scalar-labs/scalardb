@@ -25,13 +25,11 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.io.Value;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.util.TestUtils;
 import com.scalar.db.util.TestUtils.ExpectedResult;
@@ -220,10 +218,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Get get =
-        prepareGet(0, 0)
-            .withProjection(ACCOUNT_ID)
-            .withProjection(ACCOUNT_TYPE)
-            .withProjection(BALANCE);
+        Get.newBuilder(prepareGet(0, 0))
+            .projection(ACCOUNT_ID)
+            .projection(ACCOUNT_TYPE)
+            .projection(BALANCE)
+            .build();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -369,10 +368,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scan =
-        prepareScan(1, 0, 2)
-            .withProjection(ACCOUNT_ID)
-            .withProjection(ACCOUNT_TYPE)
-            .withProjection(BALANCE);
+        Scan.newBuilder(prepareScan(1, 0, 2))
+            .projection(ACCOUNT_ID)
+            .projection(ACCOUNT_TYPE)
+            .projection(BALANCE)
+            .build();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scan, scanType);
@@ -403,7 +403,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Scan scan = prepareScan(1, 0, 2).withOrdering(Ordering.desc(ACCOUNT_TYPE));
+    Scan scan = Scan.newBuilder(prepareScan(1, 0, 2)).ordering(Ordering.desc(ACCOUNT_TYPE)).build();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scan, scanType);
@@ -434,7 +434,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    Scan scan = prepareScan(1, 0, 2).withLimit(2);
+    Scan scan = Scan.newBuilder(prepareScan(1, 0, 2)).limit(2).build();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scan, scanType);
@@ -502,10 +502,12 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     transaction = manager.start();
     Get getBuiltByConstructor =
-        new Get(Key.ofInt(SOME_COLUMN, 2))
-            .forNamespace(namespace)
-            .forTable(TABLE)
-            .withConsistency(Consistency.LINEARIZABLE);
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(SOME_COLUMN, 2))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
 
     Get getBuiltByBuilder =
         Get.newBuilder()
@@ -538,10 +540,12 @@ public abstract class DistributedTransactionIntegrationTestBase {
     populateRecords();
     DistributedTransaction transaction = manager.start();
     Scan scanBuiltByConstructor =
-        new Scan(Key.ofInt(SOME_COLUMN, 2))
-            .forNamespace(namespace)
-            .forTable(TABLE)
-            .withConsistency(Consistency.LINEARIZABLE);
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .indexKey(Key.ofInt(SOME_COLUMN, 2))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
 
     Scan scanBuiltByBuilder =
         Scan.newBuilder()
@@ -610,7 +614,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    ScanAll scanAll = prepareScanAll();
+    Scan scanAll = prepareScanAll();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
@@ -641,7 +645,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     insert(prepareInsert(1, 1), prepareInsert(1, 2), prepareInsert(2, 1), prepareInsert(3, 0));
 
     DistributedTransaction scanAllTransaction = manager.start();
-    ScanAll scanAll = prepareScanAll().withLimit(2);
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).limit(2).build();
 
     // Act
     List<Result> results = scanOrGetScanner(scanAllTransaction, scanAll, scanType);
@@ -681,7 +685,8 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateRecords();
     DistributedTransaction transaction = manager.start();
-    ScanAll scanAll = prepareScanAll().withProjection(ACCOUNT_TYPE).withProjection(BALANCE);
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll()).projection(ACCOUNT_TYPE).projection(BALANCE).build();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
@@ -709,7 +714,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
       throws TransactionException {
     // Arrange
     DistributedTransaction transaction = manager.start();
-    ScanAll scanAll = prepareScanAll();
+    Scan scanAll = prepareScanAll();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
@@ -780,7 +785,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void putWithNullValueAndCommit_ShouldCreateRecordProperly() throws TransactionException {
     // Arrange
-    Put put = preparePut(0, 0).withIntValue(BALANCE, null);
+    Put put = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, null).build();
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -810,17 +815,19 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
     Optional<Result> fromResult = transaction.get(gets.get(fromId));
     assertThat(fromResult.isPresent()).isTrue();
-    IntValue fromBalance = new IntValue(BALANCE, getBalance(fromResult.get()) - amount);
 
     Optional<Result> toResult = transaction.get(gets.get(toId));
     assertThat(toResult.isPresent()).isTrue();
-    IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
 
     List<Put> puts = preparePuts();
-    puts.get(fromId).withValue(fromBalance);
-    puts.get(toId).withValue(toBalance);
-    transaction.put(puts.get(fromId));
-    transaction.put(puts.get(toId));
+    transaction.put(
+        Put.newBuilder(puts.get(fromId))
+            .intValue(BALANCE, getBalance(fromResult.get()) - amount)
+            .build());
+    transaction.put(
+        Put.newBuilder(puts.get(toId))
+            .intValue(BALANCE, getBalance(toResult.get()) + amount)
+            .build());
 
     transaction.commit();
 
@@ -839,7 +846,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void putAndAbort_ShouldNotCreateRecord() throws TransactionException {
     // Arrange
-    Put put = preparePut(0, 0).withValue(BALANCE, INITIAL_BALANCE);
+    Put put = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -857,7 +864,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @Test
   public void putAndRollback_ShouldNotCreateRecord() throws TransactionException {
     // Arrange
-    Put put = preparePut(0, 0).withValue(BALANCE, INITIAL_BALANCE);
+    Put put = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -955,7 +962,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     populateRecords();
     Get get1 = prepareGet(0, 0);
     Get get2 = prepareGet(1, 0);
-    Put put = preparePut(0, 0).withIntValue(BALANCE, INITIAL_BALANCE - 100);
+    Put put = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE - 100).build();
     Delete delete = prepareDelete(1, 0);
 
     DistributedTransaction transaction = manager.begin();
@@ -1017,7 +1024,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.get(prepareGet(0, 0));
-    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
     transaction.commit();
 
     // Act
@@ -1032,11 +1039,11 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     DistributedTransaction transaction1 = manager.begin();
     transaction1.get(prepareGet(0, 0));
-    transaction1.put(preparePut(0, 0).withValue(BALANCE, 1));
+    transaction1.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
 
     DistributedTransaction transaction2 = manager.begin();
     transaction2.get(prepareGet(0, 0));
-    transaction2.put(preparePut(0, 0).withValue(BALANCE, 1));
+    transaction2.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
     transaction2.commit();
 
     assertThatCode(transaction1::commit).isInstanceOf(CommitConflictException.class);
@@ -1053,7 +1060,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.get(prepareGet(0, 0));
-    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
 
     // Act
     manager.abort(transaction.getId());
@@ -1070,7 +1077,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     DistributedTransaction transaction = manager.begin();
     transaction.get(prepareGet(0, 0));
-    transaction.put(preparePut(0, 0).withValue(BALANCE, 1));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
 
     // Act
     manager.rollback(transaction.getId());
@@ -1089,7 +1096,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateSingleRecord();
     DistributedTransaction transaction = manager.begin();
-    Get get = prepareGet(0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+    Get get = Get.newBuilder(prepareGet(0, 0)).projections(BALANCE, SOME_COLUMN).build();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -1110,7 +1117,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateSingleRecord();
     DistributedTransaction transaction = manager.begin();
-    Scan scan = prepareScan(0, 0, 0).withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+    Scan scan = Scan.newBuilder(prepareScan(0, 0, 0)).projections(BALANCE, SOME_COLUMN).build();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scan, scanType);
@@ -1133,7 +1140,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Arrange
     populateSingleRecord();
     DistributedTransaction transaction = manager.begin();
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(BALANCE, SOME_COLUMN));
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).projections(BALANCE, SOME_COLUMN).build();
 
     // Act
     List<Result> results = scanOrGetScanner(transaction, scanAll, scanType);
@@ -2675,10 +2682,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   protected void populateSingleRecord() throws TransactionException {
     Put put =
-        new Put(Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0))
-            .forNamespace(namespace)
-            .forTable(TABLE)
-            .withIntValue(BALANCE, INITIAL_BALANCE);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build();
     DistributedTransaction transaction = manager.start();
     transaction.put(put);
     transaction.commit();
@@ -2687,10 +2697,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
   protected Get prepareGet(int id, int type) {
     Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE);
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   protected List<Get> prepareGets() {
@@ -2702,28 +2715,35 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   protected Scan prepareScan(int id, int fromType, int toType) {
     Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
-    return new Scan(partitionKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(Key.ofInt(ACCOUNT_TYPE, fromType))
-        .withEnd(Key.ofInt(ACCOUNT_TYPE, toType));
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .start(Key.ofInt(ACCOUNT_TYPE, fromType))
+        .end(Key.ofInt(ACCOUNT_TYPE, toType))
+        .build();
   }
 
-  protected ScanAll prepareScanAll() {
-    return new ScanAll()
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE);
+  protected Scan prepareScanAll() {
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .all()
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   protected Put preparePut(int id, int type) {
     Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE);
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   protected Insert prepareInsert(int id, int type) {
@@ -2751,16 +2771,18 @@ public abstract class DistributedTransactionIntegrationTestBase {
   protected Delete prepareDelete(int id, int type) {
     Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(namespace)
-        .forTable(TABLE)
-        .withConsistency(Consistency.LINEARIZABLE);
+    return Delete.newBuilder()
+        .namespace(namespace)
+        .table(TABLE)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   protected int getBalance(Result result) {
-    Optional<Value<?>> balance = result.getValue(BALANCE);
-    assertThat(balance).isPresent();
-    return balance.get().getAsInt();
+    assertThat(result.contains(BALANCE)).isTrue();
+    return result.getInt(BALANCE);
   }
 
   protected boolean isTimestampTypeSupported() {
