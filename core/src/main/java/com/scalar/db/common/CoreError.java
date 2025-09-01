@@ -690,6 +690,12 @@ public enum CoreError implements ScalarDbError {
       "Drop column functionality is not supported in Cosmos DB",
       "",
       ""),
+  DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0218",
+      "Drop column functionality is not supported in DynamoDB",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

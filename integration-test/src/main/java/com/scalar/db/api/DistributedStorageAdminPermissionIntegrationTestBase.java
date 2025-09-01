@@ -314,6 +314,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.dropColumnFromTable(NAMESPACE, TABLE, COL_NAME3))
         .doesNotThrowAnyException();
