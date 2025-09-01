@@ -70,7 +70,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     initialize(getTestName());
     Properties properties = getProperties(getTestName());
     storageFactory = StorageFactory.create(properties);
-    admin = storageFactory.getAdmin();
+    admin = storageFactory.getStorageAdmin();
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
     namespace3 = getNamespace3();
@@ -518,27 +518,35 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     DistributedStorage storage = null;
     try {
       // Arrange
-      Key partitionKey = new Key(getColumnName2(), "aaa", getColumnName1(), 1);
-      Key clusteringKey = new Key(getColumnName4(), 2, getColumnName3(), "bbb");
+      Key partitionKey = Key.of(getColumnName2(), "aaa", getColumnName1(), 1);
+      Key clusteringKey = Key.of(getColumnName4(), 2, getColumnName3(), "bbb");
       storage = storageFactory.getStorage();
       storage.put(
-          new Put(partitionKey, clusteringKey)
-              .withValue(getColumnName5(), 3)
-              .withValue(getColumnName6(), "ccc")
-              .withValue(getColumnName7(), 4L)
-              .withValue(getColumnName8(), 1.0f)
-              .withValue(getColumnName9(), 1.0d)
-              .withValue(getColumnName10(), true)
-              .withValue(getColumnName11(), "ddd".getBytes(StandardCharsets.UTF_8))
-              .forNamespace(namespace1)
-              .forTable(getTable1()));
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(getTable1())
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .intValue(getColumnName5(), 3)
+              .textValue(getColumnName6(), "ccc")
+              .bigIntValue(getColumnName7(), 4L)
+              .floatValue(getColumnName8(), 1.0f)
+              .doubleValue(getColumnName9(), 1.0d)
+              .booleanValue(getColumnName10(), true)
+              .blobValue(getColumnName11(), "ddd".getBytes(StandardCharsets.UTF_8))
+              .build());
 
       // Act
       admin.truncateTable(namespace1, getTable1());
 
       // Assert
       Scanner scanner =
-          storage.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(getTable1()));
+          storage.scan(
+              Scan.newBuilder()
+                  .namespace(namespace1)
+                  .table(getTable1())
+                  .partitionKey(partitionKey)
+                  .build());
       assertThat(scanner.all()).isEmpty();
       scanner.close();
     } finally {
@@ -1106,6 +1114,19 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     // Act Assert
     assertThatCode(
             () -> admin.dropColumnFromTable(namespace1, getTable1(), "nonExistingColumn", true))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      addNewColumnToTable_IfNotExists_ForAlreadyExistingColumn_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(
+            () ->
+                admin.addNewColumnToTable(
+                    namespace1, getTable1(), getColumnName7(), DataType.TEXT, false, true))
         .doesNotThrowAnyException();
   }
 

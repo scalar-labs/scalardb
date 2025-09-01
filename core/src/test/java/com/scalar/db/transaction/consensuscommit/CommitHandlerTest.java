@@ -120,35 +120,44 @@ public class CommitHandlerTest {
   }
 
   private Put preparePut1() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .build();
   }
 
   private Put preparePut2() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_3);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_3);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_4);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_2)
+        .build();
   }
 
   private Put preparePut3() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_2)
+        .build();
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     return Get.newBuilder()
         .namespace(ANY_NAMESPACE_NAME)
         .table(ANY_TABLE_NAME)

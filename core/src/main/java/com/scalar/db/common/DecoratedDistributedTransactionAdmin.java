@@ -196,6 +196,19 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void addNewColumnToTable(
+      String namespace,
+      String table,
+      String columnName,
+      DataType columnType,
+      boolean encrypted,
+      boolean ifNotExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.addNewColumnToTable(
+        namespace, table, columnName, columnType, encrypted, ifNotExists);
+  }
+
+  @Override
   public void dropColumnFromTable(String namespace, String table, String columnName)
       throws ExecutionException {
     distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName);

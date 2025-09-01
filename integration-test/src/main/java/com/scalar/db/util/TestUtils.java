@@ -6,7 +6,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
@@ -167,7 +166,7 @@ public final class TestUtils {
       String columnName, DataType dataType, boolean allowEmpty) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BigIntValue.MIN_VALUE);
+        return BigIntColumn.of(columnName, BigIntColumn.MIN_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
@@ -196,7 +195,7 @@ public final class TestUtils {
   public static Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BigIntValue.MAX_VALUE);
+        return BigIntColumn.of(columnName, BigIntColumn.MAX_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:

@@ -22,10 +22,11 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -77,13 +78,11 @@ public class RecoveryHandlerTest {
   private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ANY_NAME_1, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_1)))
-            .put(
-                Attribute.PREPARED_AT,
-                ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(preparedAt)))
-            .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(transactionState)))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(1)))
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_1))
+            .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, preparedAt))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, transactionState.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 1))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }

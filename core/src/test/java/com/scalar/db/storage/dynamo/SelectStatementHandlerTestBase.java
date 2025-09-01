@@ -15,7 +15,6 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -59,8 +58,6 @@ public abstract class SelectStatementHandlerTestBase {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
-  private static final Scan.Ordering.Order ASC_ORDER = Scan.Ordering.Order.ASC;
-  private static final Scan.Ordering.Order DESC_ORDER = Scan.Ordering.Order.DESC;
   private static final int ANY_LIMIT = 100;
 
   private SelectStatementHandler handler;
@@ -95,20 +92,27 @@ public abstract class SelectStatementHandlerTestBase {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
-  private ScanAll prepareScanAll() {
-    return new ScanAll().forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  private Scan prepareScanAll() {
+    return Scan.newBuilder().namespace(ANY_NAMESPACE_NAME).table(ANY_TABLE_NAME).all().build();
   }
 
   @Test
@@ -158,8 +162,13 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
-    Get get = new Get(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(indexKey)
+            .build();
     String expectedKeyCondition =
         DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
@@ -225,8 +234,13 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
-    Scan scan = new Scan(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(indexKey)
+            .build();
     String expectedKeyCondition =
         DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
@@ -251,13 +265,15 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Scan scan =
-        new Scan(indexKey)
-            .withProjection(ANY_NAME_1)
-            .withProjection(ANY_NAME_2)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(indexKey)
+            .projection(ANY_NAME_1)
+            .projection(ANY_NAME_2)
+            .build();
     String expectedKeyCondition =
         DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
@@ -307,9 +323,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -335,7 +352,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
         DynamoOperation.END_CLUSTERING_KEY_ALIAS,
@@ -343,7 +361,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_3), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_3), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -366,9 +385,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -396,7 +416,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -408,7 +428,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_3),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -432,7 +452,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -456,7 +477,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -478,7 +500,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -502,7 +525,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -524,7 +548,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), true);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -548,7 +573,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -570,7 +596,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -594,7 +621,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -625,9 +653,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), true);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -654,7 +683,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                             metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
@@ -664,7 +693,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
                             metadata.getClusteringOrders())))
             .build());
 
@@ -697,9 +726,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), true);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -726,7 +756,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
                             metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
@@ -736,7 +766,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                             metadata.getClusteringOrders())))
             .build());
 
@@ -768,9 +798,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -798,7 +829,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -810,7 +841,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -844,9 +875,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -874,7 +906,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -886,7 +918,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -919,9 +951,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -947,7 +980,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
         DynamoOperation.END_CLUSTERING_KEY_ALIAS,
@@ -957,7 +991,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_3),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -990,9 +1024,10 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1020,7 +1055,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1030,7 +1065,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_3), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_3), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -1061,7 +1097,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1088,7 +1126,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                             metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
@@ -1099,7 +1137,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1133,7 +1171,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1159,7 +1199,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
         DynamoOperation.END_CLUSTERING_KEY_ALIAS,
@@ -1168,7 +1209,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                             metadata.getClusteringOrders())))
             .build());
 
@@ -1200,7 +1241,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1228,7 +1271,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1240,7 +1283,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1274,7 +1317,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1300,7 +1345,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
         DynamoOperation.END_CLUSTERING_KEY_ALIAS,
@@ -1310,7 +1356,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1342,7 +1388,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1366,7 +1413,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -1396,7 +1444,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1422,7 +1471,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1455,7 +1504,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true);
+        Scan.newBuilder(prepareScan())
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1481,7 +1532,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
         DynamoOperation.END_CLUSTERING_KEY_ALIAS,
@@ -1490,7 +1542,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                             metadata.getClusteringOrders())))
             .build());
 
@@ -1523,7 +1575,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true);
+        Scan.newBuilder(prepareScan())
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), true)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1550,7 +1604,7 @@ public abstract class SelectStatementHandlerTestBase {
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
                         .encode(
-                            new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                            Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                             metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
@@ -1561,7 +1615,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1594,7 +1648,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1620,7 +1676,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
     expectedBindMap.put(
         DynamoOperation.END_CLUSTERING_KEY_ALIAS,
@@ -1630,7 +1687,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1664,7 +1721,9 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3), false)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1692,7 +1751,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
+                                    Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1704,7 +1763,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1736,7 +1795,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), true);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1762,7 +1822,7 @@ public abstract class SelectStatementHandlerTestBase {
                     BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
-                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    Key.ofText(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1794,7 +1854,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    Scan scan = prepareScan().withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false);
+    Scan scan =
+        Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false).build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1818,7 +1879,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -1840,10 +1902,11 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-            .withLimit(ANY_LIMIT);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .limit(ANY_LIMIT)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1865,7 +1928,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -1889,11 +1953,12 @@ public abstract class SelectStatementHandlerTestBase {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
-            .withLimit(ANY_LIMIT);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .ordering(Scan.Ordering.desc(ANY_NAME_3))
+            .limit(ANY_LIMIT)
+            .build();
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -1915,7 +1980,8 @@ public abstract class SelectStatementHandlerTestBase {
             .b(
                 SdkBytes.fromByteBuffer(
                     new KeyBytesEncoder()
-                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+                        .encode(
+                            Key.ofText(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
             .build());
 
     // Act Assert
@@ -1938,7 +2004,7 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
     when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    ScanAll scanAll = prepareScanAll().withLimit(ANY_LIMIT);
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).limit(ANY_LIMIT).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -1957,7 +2023,7 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
     when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    ScanAll scanAll = prepareScanAll();
+    Scan scanAll = prepareScanAll();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -1976,12 +2042,8 @@ public abstract class SelectStatementHandlerTestBase {
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
     when(scanResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
-    ScanAll scanAll =
-        prepareScanAll()
-            .withProjection(ANY_NAME_1)
-            .withProjection(ANY_NAME_2)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+    Scan scanAll =
+        Scan.newBuilder(prepareScanAll()).projection(ANY_NAME_1).projection(ANY_NAME_2).build();
 
     Map<String, String> expectedExpressionAttributeNames = new HashMap<>();
     expectedExpressionAttributeNames.put(DynamoOperation.COLUMN_NAME_ALIAS + "0", ANY_NAME_1);

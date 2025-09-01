@@ -53,8 +53,13 @@ public class CosmosOperationTest {
     // Arrange
     when(metadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
-    Get get = new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .build();
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -70,12 +75,15 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Get get =
-        new Get(partitionKey, clusteringKey)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -91,9 +99,13 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
+    Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
     Delete delete =
-        new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .build();
     CosmosOperation cosmosOperation = new CosmosOperation(delete, metadata);
 
     // Act
@@ -110,8 +122,13 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
-        new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
-    Get get = new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+        Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .build();
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -128,8 +145,13 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
-        new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
-    Get get = new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+        Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .build();
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -147,12 +169,15 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Get get =
-        new Get(partitionKey, clusteringKey)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act

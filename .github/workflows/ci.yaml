@@ -48,10 +48,10 @@ jobs:
     name: Gradle check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -107,10 +107,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
@@ -146,16 +146,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -210,16 +210,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -270,16 +270,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -369,16 +369,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -428,16 +428,16 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -487,16 +487,16 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -546,16 +546,16 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -610,16 +610,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -674,16 +674,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -738,16 +738,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -802,16 +802,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -866,16 +866,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -930,16 +930,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1001,16 +1001,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1085,16 +1085,16 @@ jobs:
           done
           echo "Container is ready"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1149,7 +1149,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Sql Server 2017
         uses: rails-sqlserver/setup-mssql@v1
@@ -1158,14 +1158,18 @@ jobs:
           sa-password: "SqlServer17"
           version: 2017
 
+      - name: Create database with Japanese collation for integration test
+        run: |
+          sqlcmd -S localhost -U sa -P SqlServer17 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1195,16 +1199,11 @@ jobs:
           }
           echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
 
-      - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer17 10 3
-        shell: bash
-        timeout-minutes: 1
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=no_superuser" "-Dscalardb.jdbc.password=no_superuser_password" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -1237,16 +1236,20 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Create database with Japanese collation for integration test
+        run: |
+          docker exec sqlserver19 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer19 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1266,15 +1269,11 @@ jobs:
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
-      - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer19 10 3 sqlserver19
-        timeout-minutes: 1
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -1307,16 +1306,20 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Create database with Japanese collation for integration test
+        run: |
+          docker exec sqlserver22 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer22 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1336,15 +1339,11 @@ jobs:
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
-      - name: Create no superuser
-        run: ./ci/no-superuser/create-no-superuser-sqlserver.sh SqlServer22 10 3 sqlserver22
-        timeout-minutes: 1
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=no_superuser -Dscalardb.jdbc.password=no_superuser_password ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -1366,16 +1365,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1428,16 +1427,16 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1487,16 +1486,16 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:11.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1546,16 +1545,16 @@ jobs:
         run: |
           docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1613,16 +1612,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1690,16 +1689,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
@@ -1772,16 +1771,16 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}

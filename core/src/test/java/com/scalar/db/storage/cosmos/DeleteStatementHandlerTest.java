@@ -24,8 +24,8 @@ import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
 import com.azure.cosmos.models.PartitionKey;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -81,13 +81,16 @@ public class DeleteStatementHandlerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -145,10 +148,14 @@ public class DeleteStatementHandlerTest {
     when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     Delete delete =
-        new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .build();
 
     CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String query = cosmosMutation.makeConditionalQuery();
@@ -174,7 +181,8 @@ public class DeleteStatementHandlerTest {
     when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
     CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String query = cosmosMutation.makeConditionalQuery();
 
@@ -202,7 +210,8 @@ public class DeleteStatementHandlerTest {
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -218,7 +227,8 @@ public class DeleteStatementHandlerTest {
         .when(storedProcedure)
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(delete))

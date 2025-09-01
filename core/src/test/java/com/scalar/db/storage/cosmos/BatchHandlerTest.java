@@ -19,11 +19,10 @@ import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -78,21 +77,27 @@ public class BatchHandlerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1)
-        .withValue(ANY_NAME_4, ANY_INT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .intValue(ANY_NAME_4, ANY_INT_2)
+        .build();
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -104,9 +109,10 @@ public class BatchHandlerTest {
         .thenReturn(spResponse);
 
     Put put1 = preparePut();
-    Put put2 = preparePut().withCondition(new PutIfNotExists());
+    Put put2 = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfNotExists()).build();
     Delete delete1 = prepareDelete();
-    Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
+    Delete delete2 =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
     CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadata);
     CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadata);
     CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadata);
@@ -156,8 +162,9 @@ public class BatchHandlerTest {
         .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
-    Put put = preparePut().withCondition(new PutIfNotExists());
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfNotExists()).build();
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))

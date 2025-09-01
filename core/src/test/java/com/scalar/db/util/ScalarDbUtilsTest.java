@@ -554,7 +554,7 @@ public class ScalarDbUtilsTest {
     Key actual = ScalarDbUtils.getPartitionKey(result, tableMetadata);
 
     // Assert
-    assertThat(actual.getColumns().size()).isEqualTo(2);
+    assertThat(actual.size()).isEqualTo(2);
     assertThat(actual.getColumns().get(0)).isInstanceOf(TextColumn.class);
     assertThat(actual.getColumns().get(0).getName()).isEqualTo("c1");
     assertThat(actual.getColumns().get(0).getTextValue()).isEqualTo("v1");
@@ -594,7 +594,7 @@ public class ScalarDbUtilsTest {
 
     // Assert
     assertThat(actual).isPresent();
-    assertThat(actual.get().getColumns().size()).isEqualTo(2);
+    assertThat(actual.get().size()).isEqualTo(2);
     assertThat(actual.get().getColumns().get(0)).isInstanceOf(IntColumn.class);
     assertThat(actual.get().getColumns().get(0).getName()).isEqualTo("c3");
     assertThat(actual.get().getColumns().get(0).getIntValue()).isEqualTo(3);
