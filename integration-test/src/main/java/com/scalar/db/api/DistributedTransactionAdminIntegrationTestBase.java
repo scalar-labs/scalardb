@@ -993,6 +993,39 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addSecondaryIndex("c2")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.dropColumnFromTable(namespace1, TABLE4, "c2");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, TABLE4, "c2")).isFalse();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
   public void dropColumnFromTable_IfNotExists_ForNonExistingColumn_ShouldNotThrowAnyException() {
     // Arrange
 

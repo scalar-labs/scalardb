@@ -480,8 +480,8 @@ public interface Admin {
   }
 
   /**
-   * Drops a column from an existing table. The column cannot be a partition key, clustering key, or
-   * indexed.
+   * Drops a column from an existing table. The column cannot be a partition key or a clustering
+   * key.
    *
    * @param namespace the table namespace
    * @param table the table name
@@ -494,7 +494,8 @@ public interface Admin {
       throws ExecutionException;
 
   /**
-   * Drops a column from an existing table. The column cannot be a partition or clustering key.
+   * Drops a column from an existing table. The column cannot be a partition key or a clustering
+   * key.
    *
    * @param namespace the table namespace
    * @param table the table name

@@ -38,8 +38,11 @@ public class CosmosAdminCaseSensitivityIntegrationTest
 
   @Disabled("Cosmos DB does not support dropping columns")
   @Override
-  public void
-      dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("Cosmos DB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
   @Disabled("Cosmos DB does not support dropping columns")
   @Override

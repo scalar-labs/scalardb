@@ -41,6 +41,10 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
   public void
       dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
 
+  @Disabled("Cosmos DB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
+
   @Override
   @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_IfNotExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
