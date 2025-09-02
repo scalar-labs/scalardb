@@ -980,7 +980,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
@@ -988,8 +988,39 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, TABLE1, "c3"))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, TABLE1, "c5"))
-        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addSecondaryIndex("c2")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.dropColumnFromTable(namespace1, TABLE4, "c2");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, TABLE4, "c2")).isFalse();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
   }
 
   @Test

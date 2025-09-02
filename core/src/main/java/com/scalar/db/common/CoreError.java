@@ -678,10 +678,10 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
-  COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY(
+  COLUMN_SPECIFIED_AS_PRIMARY_KEY(
       Category.USER_ERROR,
       "0216",
-      "The column is specified as a primary key or an index key. Table: %s; Column: %s",
+      "The column is specified as a primary key. Table: %s; Column: %s",
       "",
       ""),
   COSMOS_DROP_COLUMN_NOT_SUPPORTED(

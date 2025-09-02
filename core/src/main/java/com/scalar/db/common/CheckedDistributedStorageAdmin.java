@@ -311,11 +311,14 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     }
 
     if (tableMetadata.getPartitionKeyNames().contains(columnName)
-        || tableMetadata.getClusteringKeyNames().contains(columnName)
-        || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+        || tableMetadata.getClusteringKeyNames().contains(columnName)) {
       throw new IllegalArgumentException(
-          CoreError.COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY.buildMessage(
+          CoreError.COLUMN_SPECIFIED_AS_PRIMARY_KEY.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    if (tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      dropIndex(namespace, table, columnName);
     }
 
     try {

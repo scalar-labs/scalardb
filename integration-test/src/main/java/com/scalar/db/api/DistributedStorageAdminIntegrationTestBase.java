@@ -1095,7 +1095,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
@@ -1103,8 +1103,39 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName3()))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName5()))
-        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName2());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
   }
 
   @Test

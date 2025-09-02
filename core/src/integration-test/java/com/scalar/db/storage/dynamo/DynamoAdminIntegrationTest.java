@@ -42,8 +42,11 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
 
   @Disabled("DynamoDB does not support dropping columns")
   @Override
-  public void
-      dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
   @Disabled("DynamoDB does not support dropping columns")
   @Override
