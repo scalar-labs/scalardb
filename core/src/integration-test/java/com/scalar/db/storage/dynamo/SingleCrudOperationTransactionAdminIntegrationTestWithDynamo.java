@@ -37,8 +37,7 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithDynamo
 
   @Override
   @Disabled("DynamoDB does not support dropping columns")
-  public void
-      dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
 
   @Disabled("DynamoDB does not support dropping columns")
   @Override

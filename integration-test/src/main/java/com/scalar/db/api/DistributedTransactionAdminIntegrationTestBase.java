@@ -980,15 +980,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void dropColumnFromTable_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
     assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, TABLE1, "c1"))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, TABLE1, "c3"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, TABLE1, "c5"))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
