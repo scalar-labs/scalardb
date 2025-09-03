@@ -678,24 +678,20 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
-  COLUMN_SPECIFIED_AS_PRIMARY_KEY(
+  DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0216",
-      "The column is specified as a primary key. Table: %s; Column: %s",
+      "Primary key columns cannot be dropped. Table: %s; Column: %s",
       "",
       ""),
   COSMOS_DROP_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0217",
-      "Drop column functionality is not supported in Cosmos DB",
+      "Cosmos DB does not support the dropping column feature",
       "",
       ""),
   DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0218",
-      "Drop column functionality is not supported in DynamoDB",
-      "",
-      ""),
+      Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
 
   //
   // Errors for the concurrency error category

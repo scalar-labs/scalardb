@@ -313,7 +313,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
     if (tableMetadata.getPartitionKeyNames().contains(columnName)
         || tableMetadata.getClusteringKeyNames().contains(columnName)) {
       throw new IllegalArgumentException(
-          CoreError.COLUMN_SPECIFIED_AS_PRIMARY_KEY.buildMessage(
+          CoreError.DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
