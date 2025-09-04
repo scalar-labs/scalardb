@@ -326,6 +326,18 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_WithSufficientPermission_ShouldSucceed()
+      throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.dropColumnFromTable(NAMESPACE, TABLE, COL_NAME3))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void importTable_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
     createNamespaceByRoot();

@@ -4,6 +4,7 @@ import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTestBa
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class DynamoAdminCaseSensitivityIntegrationTest
     extends DistributedStorageAdminCaseSensitivityIntegrationTestBase {
@@ -27,4 +28,28 @@ public class DynamoAdminCaseSensitivityIntegrationTest
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new DynamoAdminTestUtils(getProperties(testName));
   }
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_IfExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
 }

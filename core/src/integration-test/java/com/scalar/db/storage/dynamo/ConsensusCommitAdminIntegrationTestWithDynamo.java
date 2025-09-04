@@ -4,6 +4,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegration
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminIntegrationTestWithDynamo
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -27,4 +28,28 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new DynamoAdminTestUtils(getProperties(testName));
   }
+
+  @Override
+  @Disabled("DynamoDB does not support dropping columns")
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support dropping columns")
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support dropping columns")
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support dropping columns")
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support dropping columns")
+  public void dropColumnFromTable_IfNotExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
 }
