@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
+import org.assertj.core.util.Strings;
 
 public final class JdbcEnv {
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
@@ -9,6 +10,7 @@ public final class JdbcEnv {
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
   private static final String PROP_JDBC_NORMAL_USERNAME = "scalardb.jdbc.normal_username";
   private static final String PROP_JDBC_NORMAL_PASSWORD = "scalardb.jdbc.normal_password";
+  private static final String PROP_JDBC_ISOLATION_LEVEL = "scalardb.jdbc.isolation_level";
 
   private static final String DEFAULT_JDBC_URL = "jdbc:postgresql://localhost:5432/";
   private static final String DEFAULT_JDBC_USERNAME = "postgres";
@@ -22,6 +24,7 @@ public final class JdbcEnv {
     String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
+    String isolationLevel = System.getProperty(PROP_JDBC_ISOLATION_LEVEL);
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
@@ -31,6 +34,9 @@ public final class JdbcEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "true");
+    if (!Strings.isNullOrEmpty(isolationLevel)) {
+      properties.setProperty(JdbcConfig.ISOLATION_LEVEL, isolationLevel);
+    }
 
     // Add testName as a metadata schema suffix
     properties.setProperty(

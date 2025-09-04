@@ -603,6 +603,13 @@ public class JdbcAdminImportTestUtils {
               UNSUPPORTED_DATA_TYPES_MYSQL.stream()
                   .filter(type -> !type.equalsIgnoreCase("JSON"))
                   .collect(Collectors.toList())));
+    } else if (isTiDB()) {
+      data.addAll(
+          prepareCreateNonImportableTableSql(
+              namespace,
+              UNSUPPORTED_DATA_TYPES_MYSQL.stream()
+                  .filter(type -> !type.equalsIgnoreCase("GEOMETRY"))
+                  .collect(Collectors.toList())));
     } else {
       data.addAll(prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL));
     }
@@ -758,6 +765,15 @@ public class JdbcAdminImportTestUtils {
     try (Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database product version failed");
+    }
+  }
+
+  private boolean isTiDB() {
+    try (Connection connection = dataSource.getConnection()) {
+      String version = connection.getMetaData().getDatabaseProductVersion();
+      return version.contains("TiDB");
     } catch (SQLException e) {
       throw new RuntimeException("Get database product version failed");
     }
