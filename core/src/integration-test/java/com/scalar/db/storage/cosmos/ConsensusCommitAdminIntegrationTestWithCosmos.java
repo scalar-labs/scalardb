@@ -6,6 +6,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminIntegrationTestWithCosmos
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -39,4 +40,28 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
     return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
         .isCoordinatorGroupCommitEnabled();
   }
+
+  @Override
+  @Disabled("Cosmos DB does not support dropping columns")
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support dropping columns")
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support dropping columns")
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support dropping columns")
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("Cosmos DB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support dropping columns")
+  public void dropColumnFromTable_IfNotExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
 }

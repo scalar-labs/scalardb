@@ -499,6 +499,68 @@ public class MultiStorageAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ForTable1InNamespace1_ShouldCallDropColumnFromTableOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin1).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void
+      dropColumnFromTable_ForTable2InNamespace1_ShouldShouldCallDropColumnFromTableOfAdmin2()
+          throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin2).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void
+      dropColumnFromTable_ForTable3InNamespace1_ShouldCallDropColumnFromTableOfDefaultAdmin()
+          throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin3).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForTable1InNamespace2_ShouldCallDropColumnFromTableOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin2).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
   public void
       getNamespaceNames_WithExistingNamespacesNotInMapping_ShouldReturnExistingNamespacesInMappingAndFromDefaultAdmin()
           throws ExecutionException {

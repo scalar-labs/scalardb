@@ -166,6 +166,12 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    jdbcAdmin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return jdbcAdmin.getNamespaceNames();
   }

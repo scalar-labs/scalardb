@@ -79,4 +79,28 @@ public class DynamoAdminCaseSensitivityIntegrationTest
   @Test
   @Override
   public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
+
+  @Disabled("DynamoDB does not support dropping columns")
+  @Override
+  public void dropColumnFromTable_IfExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
 }
