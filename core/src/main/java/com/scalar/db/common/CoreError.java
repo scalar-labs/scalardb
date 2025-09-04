@@ -678,6 +678,18 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
+  DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0216",
+      "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

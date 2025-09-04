@@ -65,7 +65,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case BIGINT:
         return "BIGINT";
       case BLOB:
-        return "VARBINARY(32672)";
+        return "BLOB(2G)";
       case BOOLEAN:
         return "BOOLEAN";
       case FLOAT:
@@ -358,7 +358,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case TEXT:
         return "VARCHAR(" + keyColumnSize + ") NOT NULL";
       case BLOB:
-        return "VARBINARY(" + keyColumnSize + ") NOT NULL";
+        throw new UnsupportedOperationException(
+            CoreError.DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return getDataTypeForEngine(dataType) + " NOT NULL";
     }
@@ -371,7 +372,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case TEXT:
         return "VARCHAR(" + keyColumnSize + ")";
       case BLOB:
-        return "VARBINARY(" + keyColumnSize + ")";
+        throw new UnsupportedOperationException(
+            CoreError.DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return null;
     }

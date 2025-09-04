@@ -32,6 +32,7 @@ import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -414,6 +415,42 @@ public class OperationCheckerTest {
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithCrossPartitionScanEnabledWithOrderingOnBlobColumnWithDb2_shouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any()))
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn(PKEY1, DataType.BLOB)
+                .addColumn(COL1, DataType.INT)
+                .addColumn(COL2, DataType.BLOB)
+                .addPartitionKey(PKEY1)
+                .build());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .ordering(Scan.Ordering.asc(COL1))
+            .ordering(Scan.Ordering.desc(COL2))
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(true);
+    when(databaseConfig.getContactPoints())
+        .thenReturn(Collections.singletonList("jdbc:db2://localhost:50000/test_db"));
+    when(databaseConfig.getStorage()).thenReturn("jdbc");
+    when(databaseConfig.getProperties()).thenReturn(new Properties());
+
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scan))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContainingAll("Db2", "ordering", COL2);
   }
 
   @Test

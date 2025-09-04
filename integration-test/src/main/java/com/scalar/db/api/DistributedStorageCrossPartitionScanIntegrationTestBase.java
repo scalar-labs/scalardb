@@ -924,7 +924,13 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstColumnType : columnTypes.keySet()) {
+      if (firstColumnType == DataType.BLOB && !isOrderingOnBlobColumnSupported()) {
+        continue;
+      }
       for (DataType secondColumnType : columnTypes.get(firstColumnType)) {
+        if (secondColumnType == DataType.BLOB && !isOrderingOnBlobColumnSupported()) {
+          continue;
+        }
         testCallables.add(
             () -> {
               random.get().setSeed(seed);
@@ -1250,6 +1256,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isOrderingOnBlobColumnSupported() {
     return true;
   }
 }
