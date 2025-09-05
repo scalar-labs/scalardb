@@ -45,8 +45,8 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
   @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
   @Override

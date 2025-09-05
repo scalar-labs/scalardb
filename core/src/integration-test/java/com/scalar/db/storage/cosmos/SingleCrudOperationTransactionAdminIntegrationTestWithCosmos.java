@@ -34,8 +34,8 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCosmos
   @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
   @Override
