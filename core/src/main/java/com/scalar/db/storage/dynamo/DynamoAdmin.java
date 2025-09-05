@@ -9,6 +9,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -1238,6 +1239,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
               columnName, nonPrefixedNamespace, table),
           e);
     }
+  }
+
+  @Override
+  public void dropColumnFromTable(String nonPrefixedNamespace, String table, String columnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_DROP_COLUMN_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
