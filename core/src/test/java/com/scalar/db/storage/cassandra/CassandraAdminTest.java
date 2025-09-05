@@ -866,6 +866,33 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn("c1");
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+    when(clusterManager.getSession()).thenReturn(cassandraSession);
+
+    // Act
+    cassandraAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table).dropColumn(column).getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
   public void renameColumn_ShouldWorkProperly() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";

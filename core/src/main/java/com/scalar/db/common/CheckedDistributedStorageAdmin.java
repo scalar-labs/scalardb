@@ -296,6 +296,42 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    if (!tableMetadata.getColumnNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    if (tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      dropIndex(namespace, table, columnName);
+    }
+
+    try {
+      admin.dropColumnFromTable(namespace, table, columnName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.DROPPING_COLUMN_FROM_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName),
+          e);
+    }
+  }
+
+  @Override
   public void renameColumn(
       String namespace, String table, String oldColumnName, String newColumnName)
       throws ExecutionException {
@@ -321,7 +357,7 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
         || tableMetadata.getClusteringKeyNames().contains(oldColumnName)
         || tableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
       throw new IllegalArgumentException(
-          CoreError.COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY.buildMessage(
+          CoreError.RENAME_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table), oldColumnName));
     }
 

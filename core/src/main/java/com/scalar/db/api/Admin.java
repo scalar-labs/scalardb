@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -439,6 +440,84 @@ public interface Admin {
     } else {
       addNewColumnToTable(namespace, table, columnName, columnType);
     }
+  }
+
+  /**
+   * Adds a new column to an existing table. The new column cannot be a partition or clustering key.
+   * <br>
+   * See {@link #addNewColumnToTable(String, String, String, DataType)} for more information.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the new column
+   * @param columnType the type of the new column
+   * @param encrypted whether the new column should be encrypted
+   * @param ifNotExists if set to true, the column will be added only if it does not exist already.
+   *     If set to false, it will throw an exception if it already exists
+   * @throws IllegalArgumentException if the table does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void addNewColumnToTable(
+      String namespace,
+      String table,
+      String columnName,
+      DataType columnType,
+      boolean encrypted,
+      boolean ifNotExists)
+      throws ExecutionException {
+    if (encrypted) {
+      throw new UnsupportedOperationException(CoreError.ENCRYPTION_NOT_ENABLED.buildMessage());
+    }
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (ifNotExists && tableMetadata.getColumnNames().contains(columnName)) {
+      return;
+    }
+    addNewColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  /**
+   * Drops a column from an existing table. The column cannot be a partition key or a clustering
+   * key.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to drop
+   * @throws IllegalArgumentException if the table or column does not exist, or the column is a
+   *     partition key column or clustering key column
+   * @throws ExecutionException if the operation fails
+   */
+  void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException;
+
+  /**
+   * Drops a column from an existing table. The column cannot be a partition key or a clustering
+   * key.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to drop
+   * @param IfExists if set to true, the column will be dropped only if it exists. If set to false,
+   *     it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist, or the column is a partition key
+   *     column or clustering key column
+   * @throws ExecutionException if the operation fails
+   */
+  default void dropColumnFromTable(
+      String namespace, String table, String columnName, boolean IfExists)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (IfExists && !tableMetadata.getColumnNames().contains(columnName)) {
+      return;
+    }
+    dropColumnFromTable(namespace, table, columnName);
   }
 
   /**

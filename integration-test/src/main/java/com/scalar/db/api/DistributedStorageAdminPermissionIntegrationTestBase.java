@@ -120,6 +120,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.getImportTableMetadata(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
@@ -131,6 +132,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(
             () ->
@@ -142,6 +144,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   @Test
   public void createNamespace_WithSufficientPermission_ShouldSucceed() {
     // Arrange
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.createNamespace(NAMESPACE, getCreationOptions()))
         .doesNotThrowAnyException();
@@ -151,6 +154,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   public void createTable_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
     createNamespaceByRoot();
+
     // Act Assert
     assertThatCode(
             () ->
@@ -164,6 +168,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.dropTable(NAMESPACE, TABLE)).doesNotThrowAnyException();
   }
@@ -172,6 +177,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   public void dropNamespace_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
     createNamespaceByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.dropNamespace(NAMESPACE, true))
         .doesNotThrowAnyException();
@@ -182,6 +188,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.truncateTable(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
@@ -192,6 +199,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(
             () -> adminForNormalUser.createIndex(NAMESPACE, TABLE, COL_NAME3, getCreationOptions()))
@@ -203,6 +211,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.dropIndex(NAMESPACE, TABLE, COL_NAME4))
         .doesNotThrowAnyException();
@@ -213,6 +222,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.indexExists(NAMESPACE, TABLE, COL_NAME4))
         .doesNotThrowAnyException();
@@ -223,6 +233,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.getTableMetadata(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
@@ -234,6 +245,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.getNamespaceTableNames(NAMESPACE))
         .doesNotThrowAnyException();
@@ -244,6 +256,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.namespaceExists(NAMESPACE)).doesNotThrowAnyException();
   }
@@ -253,6 +266,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.tableExists(NAMESPACE, TABLE))
         .doesNotThrowAnyException();
@@ -269,6 +283,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     } finally {
       adminTestUtils.close();
     }
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.repairNamespace(NAMESPACE, getCreationOptions()))
         .doesNotThrowAnyException();
@@ -286,6 +301,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     } finally {
       adminTestUtils.close();
     }
+
     // Act Assert
     assertThatCode(
             () ->
@@ -300,6 +316,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(
             () ->
@@ -309,10 +326,23 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_WithSufficientPermission_ShouldSucceed()
+      throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.dropColumnFromTable(NAMESPACE, TABLE, COL_NAME3))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void renameColumn_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.renameColumn(NAMESPACE, TABLE, COL_NAME3, NEW_COL_NAME))
         .doesNotThrowAnyException();
@@ -330,6 +360,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     } finally {
       adminTestUtils.close();
     }
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.importTable(NAMESPACE, TABLE, getCreationOptions()))
         .doesNotThrowAnyException();
@@ -339,6 +370,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   public void getNamespaceNames_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
     createNamespaceByRoot();
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.getNamespaceNames()).doesNotThrowAnyException();
   }
@@ -354,6 +386,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     } finally {
       adminTestUtils.close();
     }
+
     // Act Assert
     assertThatCode(() -> adminForNormalUser.upgrade(getCreationOptions()))
         .doesNotThrowAnyException();

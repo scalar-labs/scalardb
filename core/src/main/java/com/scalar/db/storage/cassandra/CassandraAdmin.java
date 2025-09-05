@@ -416,6 +416,27 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      String alterTableQuery =
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .dropColumn(quoteIfNecessary(columnName))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Dropping the %s column from the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public void renameColumn(
       String namespace, String table, String oldColumnName, String newColumnName)
       throws ExecutionException {

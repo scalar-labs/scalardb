@@ -326,8 +326,9 @@ public class SelectStatementHandler {
 
   private Key getKeyWithoutLastValue(Key originalKey) {
     Key.Builder keyBuilder = Key.newBuilder();
-    for (int i = 0; i < originalKey.getColumns().size() - 1; i++) {
-      keyBuilder.add(originalKey.getColumns().get(i));
+    List<Column<?>> columns = originalKey.getColumns();
+    for (int i = 0; i < columns.size() - 1; i++) {
+      keyBuilder.add(columns.get(i));
     }
     return keyBuilder.build();
   }

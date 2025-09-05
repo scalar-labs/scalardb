@@ -95,6 +95,12 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    admin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
   public void renameColumn(
       String namespace, String table, String oldColumnName, String newColumnName)
       throws ExecutionException {

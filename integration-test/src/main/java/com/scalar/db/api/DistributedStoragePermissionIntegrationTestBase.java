@@ -117,6 +117,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .partitionKey(Key.ofInt(COL_NAME1, PARTITION_KEY_VALUE))
             .clusteringKey(Key.ofText(COL_NAME2, CLUSTERING_KEY_VALUE1))
             .build();
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.get(get)).doesNotThrowAnyException();
   }
@@ -130,6 +131,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .table(TABLE)
             .indexKey(Key.ofInt("c3", INT_COLUMN_VALUE1))
             .build();
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.get(get)).doesNotThrowAnyException();
   }
@@ -143,6 +145,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .table(TABLE)
             .partitionKey(Key.ofInt(COL_NAME1, PARTITION_KEY_VALUE))
             .build();
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
   }
@@ -156,6 +159,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             .table(TABLE)
             .indexKey(Key.ofInt("c3", INT_COLUMN_VALUE1))
             .build();
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
   }
@@ -164,6 +168,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   public void scanAll_WithSufficientPermission_ShouldSucceed() {
     // Arrange
     Scan scan = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.scan(scan).close()).doesNotThrowAnyException();
   }
@@ -172,6 +177,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   public void put_WithoutCondition_WithSufficientPermission_ShouldSucceed() {
     // Arrange
     Put put = createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, null);
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.put(put)).doesNotThrowAnyException();
   }
@@ -181,6 +187,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Put putWithPutIfNotExists =
         createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, ConditionBuilder.putIfNotExists());
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.put(putWithPutIfNotExists))
         .doesNotThrowAnyException();
@@ -194,6 +201,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     storageForNormalUser.put(put);
     Put putWithPutIfExists =
         createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE2, ConditionBuilder.putIfExists());
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.put(putWithPutIfExists)).doesNotThrowAnyException();
   }
@@ -210,6 +218,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             ConditionBuilder.putIf(
                     ConditionBuilder.column(COL_NAME3).isEqualToInt(INT_COLUMN_VALUE1))
                 .build());
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.put(putWithPutIf)).doesNotThrowAnyException();
   }
@@ -219,6 +228,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Put put1 = createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, null);
     Put put2 = createPut(CLUSTERING_KEY_VALUE2, INT_COLUMN_VALUE2, null);
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.put(Arrays.asList(put1, put2)))
         .doesNotThrowAnyException();
@@ -228,6 +238,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
   public void delete_WithSufficientPermission_ShouldSucceed() {
     // Arrange
     Delete delete = createDelete(CLUSTERING_KEY_VALUE1, null);
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.delete(delete)).doesNotThrowAnyException();
   }
@@ -239,6 +250,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     Put put = createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, null);
     storageForNormalUser.put(put);
     Delete delete = createDelete(CLUSTERING_KEY_VALUE1, ConditionBuilder.deleteIfExists());
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.delete(delete)).doesNotThrowAnyException();
   }
@@ -255,6 +267,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
             ConditionBuilder.deleteIf(
                     ConditionBuilder.column(COL_NAME3).isEqualToInt(INT_COLUMN_VALUE1))
                 .build());
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.delete(delete)).doesNotThrowAnyException();
   }
@@ -264,6 +277,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Delete delete1 = createDelete(CLUSTERING_KEY_VALUE1, null);
     Delete delete2 = createDelete(CLUSTERING_KEY_VALUE2, null);
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.delete(Arrays.asList(delete1, delete2)))
         .doesNotThrowAnyException();
@@ -274,6 +288,7 @@ public abstract class DistributedStoragePermissionIntegrationTestBase {
     // Arrange
     Put put = createPut(CLUSTERING_KEY_VALUE1, INT_COLUMN_VALUE1, null);
     Delete delete = createDelete(CLUSTERING_KEY_VALUE2, null);
+
     // Act Assert
     assertThatCode(() -> storageForNormalUser.mutate(Arrays.asList(put, delete)))
         .doesNotThrowAnyException();

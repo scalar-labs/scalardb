@@ -234,6 +234,21 @@ public class SingleCrudOperationTransactionAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String column = "c1";
+
+    // Act
+    admin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(distributedStorageAdmin).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
   public void renameColumn_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

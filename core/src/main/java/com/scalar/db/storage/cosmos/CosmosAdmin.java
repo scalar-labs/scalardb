@@ -645,6 +645,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.COSMOS_DROP_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public void renameColumn(
       String namespace, String table, String oldColumnName, String newColumnName) {
     throw new UnsupportedOperationException(

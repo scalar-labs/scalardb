@@ -678,18 +678,34 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
-  COLUMN_SPECIFIED_AS_PRIMARY_KEY_OR_INDEX_KEY(
+  DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0216",
-      "The column %s is specified as a primary key or an index key",
+      "Primary key columns cannot be dropped. Table: %s; Column: %s",
+      "",
+      ""),
+  COSMOS_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "Cosmos DB does not support the dropping column feature",
+      "",
+      ""),
+  DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
+  RENAME_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0219",
+      "Primary key columns cannot be renamed. Table: %s; Column: %s",
       "",
       ""),
   COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0217",
-      "Rename column functionality is not supported in Cosmos DB",
+      "0220",
+      "Cosmos DB does not support the renaming column feature",
       "",
       ""),
+  DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0221", "DynamoDB does not support the renaming column feature", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -972,10 +988,16 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
-  RENAMING_COLUMN_FAILED(
+  DROPPING_COLUMN_FROM_TABLE_FAILED(
       Category.INTERNAL_ERROR,
       "0059",
-      "Renaming the column failed. Table: %s; Old column name: %s; New column name: %s",
+      "Dropping a column from the table failed. Table: %s; Column: %s",
+      "",
+      ""),
+  RENAMING_COLUMN_FAILED(
+      Category.INTERNAL_ERROR,
+      "0060",
+      "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
       "",
       ""),
 

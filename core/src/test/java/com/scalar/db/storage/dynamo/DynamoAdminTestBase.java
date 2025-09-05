@@ -1717,13 +1717,15 @@ public abstract class DynamoAdminTestBase {
             () ->
                 admin.importTable(
                     NAMESPACE, TABLE, Collections.emptyMap(), Collections.emptyMap()));
-    Throwable thrown4 = catchThrowable(() -> admin.renameColumn(NAMESPACE, TABLE, "c1", "c2"));
+    Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(NAMESPACE, TABLE, "c1"));
+    Throwable thrown5 = catchThrowable(() -> admin.renameColumn(NAMESPACE, TABLE, "c1", "c2"));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
