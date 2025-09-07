@@ -1080,16 +1080,74 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
-  public void renameColumn_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {
-    // Arrange
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
 
-    // Act Assert
-    assertThatThrownBy(() -> admin.renameColumn(namespace1, TABLE1, "c1", "newColumnName"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> admin.renameColumn(namespace1, TABLE1, "c3", "newColumnName"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> admin.renameColumn(namespace1, TABLE1, "c5", "newColumnName"))
-        .isInstanceOf(IllegalArgumentException.class);
+      // Act
+      admin.renameColumn(namespace1, TABLE4, "c1", "c4");
+      admin.renameColumn(namespace1, TABLE4, "c2", "c5");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c4", DataType.INT)
+              .addColumn("c5", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c4")
+              .addClusteringKey("c5")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addSecondaryIndex("c3")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, TABLE4, "c3", "c4");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c4", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addSecondaryIndex("c4")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, TABLE4, "c3")).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, "c4")).isTrue();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
   }
 
   @Test

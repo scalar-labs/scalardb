@@ -1105,40 +1105,16 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+  public void
+      addNewColumnToTable_IfNotExists_ForAlreadyExistingColumn_ShouldNotThrowAnyException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(
-            () -> admin.renameColumn(namespace1, getTable4(), getColumnName2(), getColumnName3()))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(
+    assertThatCode(
             () ->
-                admin.renameColumn(namespace1, getTable1(), "nonExistingColumn", getColumnName3()))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void renameColumn_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> admin.renameColumn(namespace1, getTable1(), getColumnName1(), "newColumnName"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () -> admin.renameColumn(namespace1, getTable1(), getColumnName3(), "newColumnName"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () -> admin.renameColumn(namespace1, getTable1(), getColumnName5(), "newColumnName"))
-        .isInstanceOf(IllegalArgumentException.class);
+                admin.addNewColumnToTable(
+                    namespace1, getTable1(), getColumnName7(), DataType.TEXT, false, true))
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -1215,16 +1191,95 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
-  public void
-      addNewColumnToTable_IfNotExists_ForAlreadyExistingColumn_ShouldNotThrowAnyException() {
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
     // Act Assert
-    assertThatCode(
+    assertThatThrownBy(
+            () -> admin.renameColumn(namespace1, getTable4(), getColumnName2(), getColumnName3()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
             () ->
-                admin.addNewColumnToTable(
-                    namespace1, getTable1(), getColumnName7(), DataType.TEXT, false, true))
-        .doesNotThrowAnyException();
+                admin.renameColumn(namespace1, getTable1(), "nonExistingColumn", getColumnName3()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, getTable4(), getColumnName1(), getColumnName4());
+      admin.renameColumn(namespace1, getTable4(), getColumnName2(), getColumnName5());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName4(), DataType.INT)
+              .addColumn(getColumnName5(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName4())
+              .addClusteringKey(getColumnName5())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, getTable4(), getColumnName3(), getColumnName4());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName4())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
   }
 
   @Test

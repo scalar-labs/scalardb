@@ -891,15 +891,34 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       DataType columnType = currentTableMetadata.getColumnDataType(oldColumnName);
-      TableMetadata updatedTableMetadata =
+      TableMetadata.Builder tableMetadataBuilder =
           TableMetadata.newBuilder(currentTableMetadata)
               .removeColumn(oldColumnName)
-              .addColumn(newColumnName, columnType)
-              .build();
+              .addColumn(newColumnName, columnType);
+      if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
+        tableMetadataBuilder.removePartitionKey(oldColumnName);
+        tableMetadataBuilder.addPartitionKey(newColumnName);
+      } else if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+        Ordering.Order order = currentTableMetadata.getClusteringOrder(oldColumnName);
+        tableMetadataBuilder.removeClusteringKey(oldColumnName);
+        tableMetadataBuilder.addClusteringKey(newColumnName, order);
+      } else if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        tableMetadataBuilder.removeSecondaryIndex(oldColumnName);
+        tableMetadataBuilder.addSecondaryIndex(newColumnName);
+      }
+      TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
       String renameColumnStatement =
           rdbEngine.renameColumnSql(namespace, table, oldColumnName, newColumnName);
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameColumnStatement);
+        if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+          if (rdbEngine instanceof RdbEngineSqlite) {
+            dropIndex(namespace, table, oldColumnName);
+            createIndex(connection, namespace, table, newColumnName, false);
+          } else {
+            renameIndex(connection, namespace, table, oldColumnName, newColumnName);
+          }
+        }
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
     } catch (SQLException e) {
@@ -965,6 +984,19 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
+    execute(connection, sql);
+  }
+
+  private void renameIndex(
+      Connection connection,
+      String schema,
+      String table,
+      String oldIndexedColumn,
+      String newIndexedColumn)
+      throws SQLException {
+    String oldIndexName = getIndexName(schema, table, oldIndexedColumn);
+    String newIndexName = getIndexName(schema, table, newIndexedColumn);
+    String sql = rdbEngine.renameIndexSql(schema, table, oldIndexName, newIndexName);
     execute(connection, sql);
   }
 

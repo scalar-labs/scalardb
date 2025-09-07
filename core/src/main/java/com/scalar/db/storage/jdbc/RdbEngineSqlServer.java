@@ -131,6 +131,18 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameIndexSql(
+      String schema, String table, String oldIndexName, String newIndexName) {
+    return "EXEC sp_rename '"
+        + encloseFullTableName(schema, table)
+        + "."
+        + enclose(oldIndexName)
+        + "', '"
+        + newIndexName
+        + "', 'INDEX'";
+  }
+
+  @Override
   public boolean isDuplicateTableError(SQLException e) {
     // 2714: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;

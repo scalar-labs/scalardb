@@ -136,6 +136,17 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameIndexSql(
+      String schema, String table, String oldIndexName, String newIndexName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(schema, table)
+        + " RENAME INDEX "
+        + enclose(oldIndexName)
+        + " TO "
+        + enclose(newIndexName);
+  }
+
+  @Override
   public String enclose(String name) {
     return "`" + name + "`";
   }

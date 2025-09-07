@@ -164,6 +164,17 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameIndexSql(
+      String schema, String table, String oldIndexName, String newIndexName) {
+    return "ALTER INDEX "
+        + enclose(schema)
+        + "."
+        + enclose(oldIndexName)
+        + " RENAME TO "
+        + enclose(newIndexName);
+  }
+
+  @Override
   public String enclose(String name) {
     return "\"" + name + "\"";
   }

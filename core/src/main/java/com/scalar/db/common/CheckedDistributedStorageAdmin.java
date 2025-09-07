@@ -353,14 +353,6 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table), newColumnName));
     }
 
-    if (tableMetadata.getPartitionKeyNames().contains(oldColumnName)
-        || tableMetadata.getClusteringKeyNames().contains(oldColumnName)
-        || tableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-      throw new IllegalArgumentException(
-          CoreError.RENAME_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage(
-              ScalarDbUtils.getFullTableName(namespace, table), oldColumnName));
-    }
-
     try {
       admin.renameColumn(namespace, table, oldColumnName, newColumnName);
     } catch (ExecutionException e) {

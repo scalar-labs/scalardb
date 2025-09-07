@@ -134,6 +134,8 @@ public interface RdbEngineStrategy {
 
   String dropIndexSql(String schema, String table, String indexName);
 
+  String renameIndexSql(String schema, String table, String oldIndexName, String newIndexName);
+
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
    *

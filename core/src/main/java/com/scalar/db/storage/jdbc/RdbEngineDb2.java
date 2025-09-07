@@ -293,6 +293,17 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameIndexSql(
+      String schema, String table, String oldIndexName, String newIndexName) {
+    return "RENAME INDEX "
+        + enclose(schema)
+        + "."
+        + enclose(oldIndexName)
+        + " TO "
+        + enclose(newIndexName);
+  }
+
+  @Override
   public boolean isDuplicateIndexError(SQLException e) {
     // Even though the "create index if exists ..." syntax does not exist,
     // only a warning is raised when the index already exists but no error is thrown

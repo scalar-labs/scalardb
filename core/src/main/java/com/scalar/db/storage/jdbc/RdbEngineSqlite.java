@@ -267,6 +267,13 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameIndexSql(
+      String schema, String table, String oldIndexName, String newIndexName) {
+    // SQLite does not support renaming an index
+    return null;
+  }
+
+  @Override
   public String enclose(String name) {
     return "\"" + name + "\"";
   }

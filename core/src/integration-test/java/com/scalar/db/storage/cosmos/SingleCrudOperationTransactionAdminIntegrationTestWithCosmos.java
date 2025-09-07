@@ -56,5 +56,9 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCosmos
 
   @Override
   @Disabled("Cosmos DB does not support renaming columns")
-  public void renameColumn_ForPrimaryOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming columns")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 }
