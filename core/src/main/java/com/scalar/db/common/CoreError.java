@@ -706,6 +706,12 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR, "0221", "DynamoDB does not support the renaming column feature", "", ""),
+  CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0222",
+      "Cassandra does not support renaming non-primary key columns",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

@@ -5,6 +5,7 @@ import com.scalar.db.util.AdminTestUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
   @Override
@@ -26,4 +27,12 @@ public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegr
   protected boolean isTimestampTypeSupported() {
     return false;
   }
+
+  @Override
+  @Disabled("Renaming non-primary key columns is not supported in Cassandra")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Renaming non-primary key columns is not supported in Cassandra")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 }

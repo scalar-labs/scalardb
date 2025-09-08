@@ -4,6 +4,7 @@ import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransact
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 
 public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
     extends SingleCrudOperationTransactionAdminIntegrationTestBase {
@@ -22,4 +23,12 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
   protected boolean isTimestampTypeSupported() {
     return false;
   }
+
+  @Override
+  @Disabled("Renaming non-primary key columns is not supported in Cassandra")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Renaming non-primary key columns is not supported in Cassandra")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 }
