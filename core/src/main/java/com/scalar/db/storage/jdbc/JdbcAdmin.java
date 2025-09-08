@@ -908,7 +908,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
       TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
       String renameColumnStatement =
-          rdbEngine.renameColumnSql(namespace, table, oldColumnName, newColumnName);
+          rdbEngine.renameColumnSql(
+              namespace,
+              table,
+              oldColumnName,
+              newColumnName,
+              getVendorDbColumnType(updatedTableMetadata, newColumnName));
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameColumnStatement);
         if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {

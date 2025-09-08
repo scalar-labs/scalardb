@@ -108,7 +108,11 @@ public interface RdbEngineStrategy {
   }
 
   default String renameColumnSql(
-      String namespace, String table, String oldColumnName, String newColumnName) {
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " RENAME COLUMN "

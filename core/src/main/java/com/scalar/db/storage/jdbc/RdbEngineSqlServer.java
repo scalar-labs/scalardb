@@ -103,7 +103,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public String renameColumnSql(
-      String namespace, String table, String oldColumnName, String newColumnName) {
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
     return "EXEC sp_rename '"
         + encloseFullTableName(namespace, table)
         + "."

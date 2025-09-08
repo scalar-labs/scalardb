@@ -3086,7 +3086,7 @@ public class JdbcAdminTest {
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
-        "ALTER TABLE `ns`.`table` RENAME COLUMN `c2` TO `c3`",
+        "ALTER TABLE `ns`.`table` CHANGE COLUMN `c2` `c3` INT",
         "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
         "INSERT INTO `"
             + METADATA_SCHEMA
