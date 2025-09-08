@@ -293,14 +293,20 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String renameIndexSql(
-      String schema, String table, String oldIndexName, String newIndexName) {
-    return "RENAME INDEX "
-        + enclose(schema)
-        + "."
-        + enclose(oldIndexName)
-        + " TO "
-        + enclose(newIndexName);
+  public String[] renameIndexSqls(
+      String schema,
+      String table,
+      String oldIndexName,
+      String newIndexName,
+      String newIndexedColumn) {
+    return new String[] {
+      "RENAME INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override

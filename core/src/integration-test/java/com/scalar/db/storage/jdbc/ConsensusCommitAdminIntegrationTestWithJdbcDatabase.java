@@ -1,9 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -28,5 +31,26 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     // However, the index creation is successful on Db2 hosted on IBM Cloud.
     // So we disable these tests until the issue with the Db2 community edition is resolved.
     return !JdbcTestUtils.isDb2(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isDb2() {
+    return JdbcEnv.isDb2();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isDb2")
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
+      throws ExecutionException {
+    super.renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly();
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isDb2")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly()
+      throws ExecutionException {
+    super.renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly();
   }
 }

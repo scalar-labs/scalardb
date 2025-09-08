@@ -133,14 +133,20 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String renameIndexSql(
-      String schema, String table, String oldIndexName, String newIndexName) {
-    return "ALTER INDEX "
-        + enclose(schema)
-        + "."
-        + enclose(oldIndexName)
-        + " RENAME TO "
-        + enclose(newIndexName);
+  public String[] renameIndexSqls(
+      String schema,
+      String table,
+      String oldIndexName,
+      String newIndexName,
+      String newIndexedColumn) {
+    return new String[] {
+      "ALTER INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " RENAME TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override

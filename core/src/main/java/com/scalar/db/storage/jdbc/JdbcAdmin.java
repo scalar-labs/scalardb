@@ -890,6 +890,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      assert currentTableMetadata != null;
       DataType columnType = currentTableMetadata.getColumnDataType(oldColumnName);
       TableMetadata.Builder tableMetadataBuilder =
           TableMetadata.newBuilder(currentTableMetadata)
@@ -917,12 +918,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameColumnStatement);
         if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-          if (rdbEngine instanceof RdbEngineSqlite) {
-            dropIndex(namespace, table, oldColumnName);
-            createIndex(connection, namespace, table, newColumnName, false);
-          } else {
-            renameIndex(connection, namespace, table, oldColumnName, newColumnName);
-          }
+          renameIndex(connection, namespace, table, oldColumnName, newColumnName);
         }
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
@@ -1001,8 +997,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String oldIndexName = getIndexName(schema, table, oldIndexedColumn);
     String newIndexName = getIndexName(schema, table, newIndexedColumn);
-    String sql = rdbEngine.renameIndexSql(schema, table, oldIndexName, newIndexName);
-    execute(connection, sql);
+    String[] sqls =
+        rdbEngine.renameIndexSqls(schema, table, oldIndexName, newIndexName, newIndexedColumn);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   private String getIndexName(String schema, String table, String indexedColumn) {
