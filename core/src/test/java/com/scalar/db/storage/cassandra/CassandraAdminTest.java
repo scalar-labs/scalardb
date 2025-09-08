@@ -897,8 +897,18 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     String table = "tbl";
-    String oldColumnName = "c2";
-    String newColumnName = "c3";
+    String oldColumnName = "c1";
+    String newColumnName = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn(oldColumnName);
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
 
     // Act
     cassandraAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);

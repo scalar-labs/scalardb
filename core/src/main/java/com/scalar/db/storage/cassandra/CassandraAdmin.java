@@ -444,7 +444,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       TableMetadata tableMetadata = getTableMetadata(namespace, table);
       assert tableMetadata != null;
       if (!tableMetadata.getPartitionKeyNames().contains(oldColumnName)
-          || !tableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+          && !tableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
         throw new IllegalArgumentException(
             CoreError.CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
       }
