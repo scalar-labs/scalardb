@@ -895,9 +895,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
       if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
         tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
-      } else if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+      }
+      if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
         tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
-      } else if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+      }
+      if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
         tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
       }
       TableMetadata updatedTableMetadata = tableMetadataBuilder.build();

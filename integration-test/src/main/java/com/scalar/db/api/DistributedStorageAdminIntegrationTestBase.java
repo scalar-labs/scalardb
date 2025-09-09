@@ -1266,23 +1266,28 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName3(), DataType.TEXT)
               .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName1())
               .addSecondaryIndex(getColumnName3())
               .build();
       admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
 
       // Act
+      admin.renameColumn(namespace1, getTable4(), getColumnName1(), getColumnName5());
       admin.renameColumn(namespace1, getTable4(), getColumnName3(), getColumnName4());
 
       // Assert
       TableMetadata expectedTableMetadata =
           TableMetadata.newBuilder()
-              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName5(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName4(), DataType.TEXT)
-              .addPartitionKey(getColumnName1())
+              .addPartitionKey(getColumnName5())
               .addSecondaryIndex(getColumnName4())
+              .addSecondaryIndex(getColumnName5())
               .build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName1())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
     } finally {
