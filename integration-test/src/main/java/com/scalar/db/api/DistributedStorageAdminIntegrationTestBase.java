@@ -1222,23 +1222,31 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName1(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.INT)
+              .addColumn(getColumnName5(), DataType.INT)
               .addPartitionKey(getColumnName1())
-              .addClusteringKey(getColumnName2())
+              .addPartitionKey(getColumnName2())
+              .addClusteringKey(getColumnName3())
+              .addClusteringKey(getColumnName4())
               .build();
       admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
 
       // Act
-      admin.renameColumn(namespace1, getTable4(), getColumnName1(), getColumnName4());
-      admin.renameColumn(namespace1, getTable4(), getColumnName2(), getColumnName5());
+      admin.renameColumn(namespace1, getTable4(), getColumnName1(), getColumnName6());
+      admin.renameColumn(namespace1, getTable4(), getColumnName3(), getColumnName7());
 
       // Assert
       TableMetadata expectedTableMetadata =
           TableMetadata.newBuilder()
+              .addColumn(getColumnName6(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName7(), DataType.TEXT)
               .addColumn(getColumnName4(), DataType.INT)
               .addColumn(getColumnName5(), DataType.INT)
-              .addColumn(getColumnName3(), DataType.TEXT)
-              .addPartitionKey(getColumnName4())
-              .addClusteringKey(getColumnName5())
+              .addPartitionKey(getColumnName6())
+              .addPartitionKey(getColumnName2())
+              .addClusteringKey(getColumnName7())
+              .addClusteringKey(getColumnName4())
               .build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
     } finally {

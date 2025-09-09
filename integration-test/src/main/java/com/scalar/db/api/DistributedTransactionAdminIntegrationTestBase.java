@@ -1090,23 +1090,31 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
               .addColumn("c3", DataType.TEXT)
+              .addColumn("c4", DataType.INT)
+              .addColumn("c5", DataType.INT)
               .addPartitionKey("c1")
-              .addClusteringKey("c2")
+              .addPartitionKey("c2")
+              .addClusteringKey("c3")
+              .addClusteringKey("c4")
               .build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
 
       // Act
-      admin.renameColumn(namespace1, TABLE4, "c1", "c4");
-      admin.renameColumn(namespace1, TABLE4, "c2", "c5");
+      admin.renameColumn(namespace1, TABLE4, "c1", "c6");
+      admin.renameColumn(namespace1, TABLE4, "c3", "c7");
 
       // Assert
       TableMetadata expectedTableMetadata =
           TableMetadata.newBuilder()
+              .addColumn("c6", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c7", DataType.TEXT)
               .addColumn("c4", DataType.INT)
               .addColumn("c5", DataType.INT)
-              .addColumn("c3", DataType.TEXT)
-              .addPartitionKey("c4")
-              .addClusteringKey("c5")
+              .addPartitionKey("c6")
+              .addPartitionKey("c2")
+              .addClusteringKey("c7")
+              .addClusteringKey("c4")
               .build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
     } finally {

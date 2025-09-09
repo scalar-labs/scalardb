@@ -891,21 +891,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       assert currentTableMetadata != null;
-      DataType columnType = currentTableMetadata.getColumnDataType(oldColumnName);
       TableMetadata.Builder tableMetadataBuilder =
-          TableMetadata.newBuilder(currentTableMetadata)
-              .removeColumn(oldColumnName)
-              .addColumn(newColumnName, columnType);
+          TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
       if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
-        tableMetadataBuilder.removePartitionKey(oldColumnName);
-        tableMetadataBuilder.addPartitionKey(newColumnName);
+        tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
       } else if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
-        Ordering.Order order = currentTableMetadata.getClusteringOrder(oldColumnName);
-        tableMetadataBuilder.removeClusteringKey(oldColumnName);
-        tableMetadataBuilder.addClusteringKey(newColumnName, order);
+        tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
       } else if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-        tableMetadataBuilder.removeSecondaryIndex(oldColumnName);
-        tableMetadataBuilder.addSecondaryIndex(newColumnName);
+        tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
       }
       TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
       String renameColumnStatement =
