@@ -709,7 +709,7 @@ public enum CoreError implements ScalarDbError {
   CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0222",
-      "Cassandra does not support renaming the non-primary key column feature",
+      "Cassandra does not support renaming non-primary key columns",
       "",
       ""),
 
