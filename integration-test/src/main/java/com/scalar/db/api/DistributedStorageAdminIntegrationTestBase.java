@@ -59,7 +59,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String COL_NAME14 = "c14";
   private static final String COL_NAME15 = "c15";
   private StorageFactory storageFactory;
-  private DistributedStorageAdmin admin;
+  protected DistributedStorageAdmin admin;
   private String namespace1;
   private String namespace2;
   private String namespace3;

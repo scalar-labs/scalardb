@@ -455,6 +455,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
               .getQueryString();
 
       clusterManager.getSession().execute(alterTableQuery);
+      if (tableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        // Cassandra does not support renaming indexes
+        dropIndex(namespace, table, oldColumnName);
+        createIndex(namespace, table, newColumnName, Collections.emptyMap());
+      }
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (RuntimeException e) {
