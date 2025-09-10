@@ -1266,6 +1266,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName3(), DataType.TEXT)
               .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
               .addSecondaryIndex(getColumnName1())
               .addSecondaryIndex(getColumnName3())
               .build();
@@ -1282,6 +1283,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName4(), DataType.TEXT)
               .addPartitionKey(getColumnName5())
+              .addClusteringKey(getColumnName2())
               .addSecondaryIndex(getColumnName4())
               .addSecondaryIndex(getColumnName5())
               .build();

@@ -45,6 +45,7 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
               .addColumn("c2", DataType.INT)
               .addColumn("c3", DataType.TEXT)
               .addPartitionKey("c1")
+              .addClusteringKey("c2")
               .addSecondaryIndex("c1")
               .build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
@@ -59,6 +60,7 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
               .addColumn("c2", DataType.INT)
               .addColumn("c3", DataType.TEXT)
               .addPartitionKey("c4")
+              .addClusteringKey("c2")
               .addSecondaryIndex("c4")
               .build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);

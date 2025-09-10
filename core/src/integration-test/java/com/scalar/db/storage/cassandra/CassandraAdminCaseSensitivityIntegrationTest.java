@@ -50,6 +50,7 @@ public class CassandraAdminCaseSensitivityIntegrationTest
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName3(), DataType.TEXT)
               .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
               .addSecondaryIndex(getColumnName1())
               .build();
       admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
@@ -64,6 +65,7 @@ public class CassandraAdminCaseSensitivityIntegrationTest
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName3(), DataType.TEXT)
               .addPartitionKey(getColumnName4())
+              .addClusteringKey(getColumnName2())
               .addSecondaryIndex(getColumnName4())
               .build();
       assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
