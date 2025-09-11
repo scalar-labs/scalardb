@@ -890,8 +890,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
-      rdbEngine.throwIfRenameColumnNotSupported(oldColumnName, currentTableMetadata);
       assert currentTableMetadata != null;
+      rdbEngine.throwIfRenameColumnNotSupported(oldColumnName, currentTableMetadata);
       TableMetadata.Builder tableMetadataBuilder =
           TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
       if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {

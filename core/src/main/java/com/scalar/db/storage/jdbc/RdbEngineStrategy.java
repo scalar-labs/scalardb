@@ -273,7 +273,7 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Throws an exception if renaming columns is not supported in the underlying database.
+   * Throws an exception if renaming the column is not supported in the underlying database.
    *
    * @param columnName the current name of the column to rename
    * @param tableMetadata the current table metadata
