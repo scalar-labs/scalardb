@@ -894,12 +894,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       TableMetadata.Builder tableMetadataBuilder =
           TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
       if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
+        if (rdbEngine instanceof RdbEngineDb2) {
+          throw new UnsupportedOperationException(
+              CoreError.DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+        }
         tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
       }
       if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+        if (rdbEngine instanceof RdbEngineDb2) {
+          throw new UnsupportedOperationException(
+              CoreError.DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+        }
         tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
       }
       if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        if (rdbEngine instanceof RdbEngineDb2) {
+          throw new UnsupportedOperationException(
+              CoreError.DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+        }
         tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
       }
       TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
