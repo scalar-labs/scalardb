@@ -58,4 +58,8 @@ public final class JdbcEnv {
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(props)));
   }
+
+  public static boolean isDb2() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:db2:");
+  }
 }

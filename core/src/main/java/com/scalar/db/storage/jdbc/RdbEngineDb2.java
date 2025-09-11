@@ -288,6 +288,23 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public String[] renameIndexSqls(
+      String schema,
+      String table,
+      String oldIndexName,
+      String newIndexName,
+      String newIndexedColumn) {
+    return new String[] {
+      "RENAME INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " TO "
+          + enclose(newIndexName)
+    };
+  }
+
+  @Override
   public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }
@@ -479,6 +496,16 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     return projections.stream()
         .map(columnName -> getProjection(columnName, metadata.getColumnDataType(columnName)))
         .collect(Collectors.joining(","));
+  }
+
+  @Override
+  public void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)
+        || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+    }
   }
 
   private String getProjection(String columnName, DataType dataType) {

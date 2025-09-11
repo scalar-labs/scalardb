@@ -137,6 +137,23 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
+  public String[] renameIndexSqls(
+      String schema,
+      String table,
+      String oldIndexName,
+      String newIndexName,
+      String newIndexedColumn) {
+    return new String[] {
+      "ALTER INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " RENAME TO "
+          + enclose(newIndexName)
+    };
+  }
+
+  @Override
   public boolean isDuplicateTableError(SQLException e) {
     if (e.getSQLState() == null) {
       return false;
