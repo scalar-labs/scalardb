@@ -712,6 +712,30 @@ public enum CoreError implements ScalarDbError {
       "Db2 does not support renaming primary key or index key columns",
       "",
       ""),
+  DYNAMO_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0223",
+      "Import-related functionality is not supported in DynamoDB",
+      "",
+      ""),
+  DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0224",
+      "The BLOB type is supported only for the last column in partition key in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0225",
+      "The BLOB type is not supported for clustering keys in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0226",
+      "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
