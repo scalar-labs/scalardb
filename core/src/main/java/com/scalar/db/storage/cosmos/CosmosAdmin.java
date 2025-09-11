@@ -652,6 +652,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName) {
+    throw new UnsupportedOperationException(
+        CoreError.COSMOS_RENAME_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());

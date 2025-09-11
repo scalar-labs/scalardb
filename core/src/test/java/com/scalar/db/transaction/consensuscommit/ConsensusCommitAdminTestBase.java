@@ -626,6 +626,35 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void renameColumn_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String existingColumnName = "col2";
+    String newColumnName = "col3";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(existingColumnName, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.renameColumn(NAMESPACE, TABLE, existingColumnName, newColumnName);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin)
+        .renameColumn(NAMESPACE, TABLE, existingColumnName, newColumnName);
+    verify(distributedStorageAdmin)
+        .renameColumn(
+            NAMESPACE,
+            TABLE,
+            Attribute.BEFORE_PREFIX + existingColumnName,
+            Attribute.BEFORE_PREFIX + newColumnName);
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");

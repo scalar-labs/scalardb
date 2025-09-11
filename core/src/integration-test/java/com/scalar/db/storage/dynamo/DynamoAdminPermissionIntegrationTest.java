@@ -64,4 +64,9 @@ public class DynamoAdminPermissionIntegrationTest
   @Override
   @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_WithSufficientPermission_ShouldSucceed() {}
+
+  @Test
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_WithSufficientPermission_ShouldSucceed() {}
 }

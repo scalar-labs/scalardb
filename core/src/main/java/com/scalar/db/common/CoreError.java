@@ -692,6 +692,26 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
+  COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0219",
+      "Cosmos DB does not support the renaming column feature",
+      "",
+      ""),
+  DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0220", "DynamoDB does not support the renaming column feature", "", ""),
+  CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0221",
+      "Cassandra does not support renaming non-primary key columns",
+      "",
+      ""),
+  JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0222",
+      "Db2 does not support renaming primary key or index key columns",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -978,6 +998,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0059",
       "Dropping a column from the table failed. Table: %s; Column: %s",
+      "",
+      ""),
+  RENAMING_COLUMN_FAILED(
+      Category.INTERNAL_ERROR,
+      "0060",
+      "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
       "",
       ""),
 

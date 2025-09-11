@@ -107,6 +107,20 @@ public interface RdbEngineStrategy {
     };
   }
 
+  default String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " RENAME COLUMN "
+        + enclose(oldColumnName)
+        + " TO "
+        + enclose(newColumnName);
+  }
+
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
@@ -123,6 +137,13 @@ public interface RdbEngineStrategy {
   }
 
   String dropIndexSql(String schema, String table, String indexName);
+
+  String[] renameIndexSqls(
+      String schema,
+      String table,
+      String oldIndexName,
+      String newIndexName,
+      String newIndexedColumn);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -250,6 +271,15 @@ public interface RdbEngineStrategy {
   default void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
     // Do nothing
   }
+
+  /**
+   * Throws an exception if renaming the column is not supported in the underlying database.
+   *
+   * @param columnName the current name of the column to rename
+   * @param tableMetadata the current table metadata
+   * @throws UnsupportedOperationException if renaming the column is not supported
+   */
+  default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
 
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {

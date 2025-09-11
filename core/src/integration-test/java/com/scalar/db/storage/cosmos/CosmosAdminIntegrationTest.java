@@ -23,27 +23,47 @@ public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrati
     return new CosmosAdminTestUtils(getProperties(testName));
   }
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
-  @Disabled("Cosmos DB does not support dropping columns")
   @Override
+  @Disabled("Cosmos DB does not support dropping columns")
   public void dropColumnFromTable_IfExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming columns")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming columns")
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming columns")
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming columns")
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming columns")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 }

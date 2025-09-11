@@ -2,9 +2,11 @@ package com.scalar.db.storage.cassandra;
 
 import static com.scalar.db.storage.cassandra.CassandraPermissionTestUtils.MAX_RETRY_COUNT;
 import static com.scalar.db.storage.cassandra.CassandraPermissionTestUtils.SLEEP_BETWEEN_RETRIES_SECONDS;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorageAdminPermissionIntegrationTestBase;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.PermissionTestUtils;
 import java.util.Collections;
@@ -138,4 +140,17 @@ public class CassandraAdminPermissionIntegrationTest
   @Override
   @Disabled("Import-related functionality is not supported in Cassandra")
   public void importTable_WithSufficientPermission_ShouldSucceed() {}
+
+  @Test
+  @Override
+  public void renameColumn_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+
+    // Act Assert
+    // Cassandra does not support renaming non-primary key columns
+    assertThatCode(() -> adminForNormalUser.renameColumn(NAMESPACE, TABLE, COL_NAME1, NEW_COL_NAME))
+        .doesNotThrowAnyException();
+  }
 }

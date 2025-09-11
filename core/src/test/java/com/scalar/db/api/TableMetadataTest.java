@@ -263,4 +263,80 @@ public class TableMetadataTest {
 
     assertThat(tableMetadata.getEncryptedColumnNames()).containsOnly(COL_NAME10);
   }
+
+  @Test
+  public void builder_RenameColumns_ShouldRenameColumnsInTableMetadataCorrectly() {
+    // Arrange
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addColumn(COL_NAME3, DataType.TEXT)
+            .addColumn(COL_NAME4, DataType.INT)
+            .addColumn(COL_NAME5, DataType.INT)
+            .addColumn(COL_NAME6, DataType.TEXT)
+            .addColumn(COL_NAME7, DataType.BIGINT)
+            .addColumn(COL_NAME8, DataType.FLOAT)
+            .addColumn(COL_NAME9, DataType.DOUBLE)
+            .addColumn(COL_NAME10, DataType.BOOLEAN, true)
+            .addColumn(COL_NAME11, DataType.BLOB, true)
+            .addPartitionKey(COL_NAME2)
+            .addPartitionKey(COL_NAME1)
+            .addClusteringKey(COL_NAME4, Order.ASC)
+            .addClusteringKey(COL_NAME3, Order.DESC);
+
+    // Act
+    TableMetadata tableMetadata =
+        builder
+            .renameColumn(COL_NAME2, "new_" + COL_NAME2)
+            .renameColumn(COL_NAME4, "new_" + COL_NAME4)
+            .renameColumn(COL_NAME10, "new_" + COL_NAME10)
+            .renamePartitionKey(COL_NAME2, "new_" + COL_NAME2)
+            .renameClusteringKey(COL_NAME4, "new_" + COL_NAME4)
+            .build();
+
+    // Assert
+    assertThat(tableMetadata.getColumnNames().size()).isEqualTo(11);
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME2)).isFalse();
+    assertThat(tableMetadata.getColumnNames().contains("new_" + COL_NAME2)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME4)).isFalse();
+    assertThat(tableMetadata.getColumnNames().contains("new_" + COL_NAME4)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME10)).isFalse();
+    assertThat(tableMetadata.getColumnNames().contains("new_" + COL_NAME10)).isTrue();
+    assertThat(tableMetadata.getPartitionKeyNames().contains(COL_NAME2)).isFalse();
+    assertThat(tableMetadata.getPartitionKeyNames().contains("new_" + COL_NAME2)).isTrue();
+    assertThat(tableMetadata.getClusteringKeyNames().contains(COL_NAME4)).isFalse();
+    assertThat(tableMetadata.getClusteringKeyNames().contains("new_" + COL_NAME4)).isTrue();
+    assertThat(tableMetadata.getEncryptedColumnNames().contains(COL_NAME10)).isFalse();
+    assertThat(tableMetadata.getEncryptedColumnNames().contains("new_" + COL_NAME10)).isTrue();
+  }
+
+  @Test
+  public void builder_RenameSecondaryIndex_ShouldRenameSecondaryIndexInTableMetadataCorrectly() {
+    // Arrange
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addColumn(COL_NAME3, DataType.TEXT)
+            .addColumn(COL_NAME4, DataType.INT)
+            .addColumn(COL_NAME5, DataType.INT)
+            .addColumn(COL_NAME6, DataType.TEXT)
+            .addPartitionKey(COL_NAME2)
+            .addPartitionKey(COL_NAME1)
+            .addClusteringKey(COL_NAME4, Order.ASC)
+            .addClusteringKey(COL_NAME3, Order.DESC)
+            .addSecondaryIndex(COL_NAME5)
+            .addSecondaryIndex(COL_NAME6);
+
+    // Act
+    TableMetadata tableMetadata =
+        builder.renameSecondaryIndex(COL_NAME5, "new_" + COL_NAME5).build();
+
+    // Assert
+    assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
+    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isFalse();
+    assertThat(tableMetadata.getSecondaryIndexNames().contains("new_" + COL_NAME5)).isTrue();
+    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME6)).isTrue();
+  }
 }

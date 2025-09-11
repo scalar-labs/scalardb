@@ -28,13 +28,13 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
 
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageAdminPermissionIntegrationTestBase.class);
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String RAW_COL_NAME = "raw_col";
-  private static final String NEW_COL_NAME = "new_col";
-  private static final TableMetadata TABLE_METADATA =
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String RAW_COL_NAME = "raw_col";
+  protected static final String NEW_COL_NAME = "new_col";
+  protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
           .addColumn(COL_NAME2, DataType.TEXT)
@@ -45,8 +45,8 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
           .addSecondaryIndex(COL_NAME4)
           .build();
 
-  private DistributedStorageAdmin adminForRootUser;
-  private DistributedStorageAdmin adminForNormalUser;
+  protected DistributedStorageAdmin adminForRootUser;
+  protected DistributedStorageAdmin adminForNormalUser;
   private String normalUserName;
   private String normalUserPassword;
 
@@ -338,6 +338,17 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
+  public void renameColumn_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.renameColumn(NAMESPACE, TABLE, COL_NAME3, NEW_COL_NAME))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void importTable_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
     createNamespaceByRoot();
@@ -413,12 +424,12 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Default do nothing
   }
 
-  private void createNamespaceByRoot() throws ExecutionException {
+  protected void createNamespaceByRoot() throws ExecutionException {
     adminForRootUser.createNamespace(NAMESPACE, getCreationOptions());
     waitForNamespaceCreation();
   }
 
-  private void createTableByRoot() throws ExecutionException {
+  protected void createTableByRoot() throws ExecutionException {
     adminForRootUser.createTable(NAMESPACE, TABLE, TABLE_METADATA, getCreationOptions());
     waitForTableCreation();
   }

@@ -1033,6 +1033,134 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameColumn_ShouldRenameColumnCorrectly() throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, TABLE4, "c2", "c3");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameColumn(namespace1, TABLE4, "c2", "c3"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameColumn(namespace1, TABLE1, "nonExistingColumn", "c3"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addColumn("c4", DataType.INT)
+              .addColumn("c5", DataType.INT)
+              .addPartitionKey("c1")
+              .addPartitionKey("c2")
+              .addClusteringKey("c3")
+              .addClusteringKey("c4")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, TABLE4, "c1", "c6");
+      admin.renameColumn(namespace1, TABLE4, "c3", "c7");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c6", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c7", DataType.TEXT)
+              .addColumn("c4", DataType.INT)
+              .addColumn("c5", DataType.INT)
+              .addPartitionKey("c6")
+              .addPartitionKey("c2")
+              .addClusteringKey("c7")
+              .addClusteringKey("c4")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2")
+              .addSecondaryIndex("c3")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, TABLE4, "c3", "c4");
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c4", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2")
+              .addSecondaryIndex("c4")
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, TABLE4, "c3")).isFalse();
+      assertThat(admin.indexExists(namespace1, TABLE4, "c4")).isTrue();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
     // Arrange

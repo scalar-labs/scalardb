@@ -3080,6 +3080,160 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void renameColumn_ForMysql_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + METADATA_SCHEMA
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` CHANGE COLUMN `c2` `c3` INT",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c3','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void renameColumn_ForOracle_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void renameColumn_ForPostgresql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void renameColumn_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + METADATA_SCHEMA
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "EXEC sp_rename '[ns].[table].[c2]', 'c3', 'COLUMN'",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c3','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void renameColumn_ForSqlite_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns$table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,FALSE,2)");
+  }
+
+  @Test
+  public void renameColumn_ForDb2_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,false,2)");
+  }
+
+  private void renameColumn_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+    String columnName3 = "c3";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.renameColumn(namespace, table, columnName2, columnName3);
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_forMysql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
         RdbEngine.MYSQL, "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
