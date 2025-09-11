@@ -272,6 +272,15 @@ public interface RdbEngineStrategy {
     // Do nothing
   }
 
+  /**
+   * Throws an exception if renaming columns is not supported in the underlying database.
+   *
+   * @param columnName the current name of the column to rename
+   * @param tableMetadata the current table metadata
+   * @throws UnsupportedOperationException if renaming the column is not supported
+   */
+  default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
+
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {
     connection.setReadOnly(readOnly);

@@ -706,7 +706,7 @@ public enum CoreError implements ScalarDbError {
       "Cassandra does not support renaming non-primary key columns",
       "",
       ""),
-  DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED(
+  JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0222",
       "Db2 does not support renaming primary key or index key columns",

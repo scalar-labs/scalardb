@@ -527,6 +527,16 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         .collect(Collectors.joining(","));
   }
 
+  @Override
+  public void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)
+        || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+    }
+  }
+
   private String getProjection(String columnName, DataType dataType) {
     if (dataType == DataType.DATE) {
       // Selecting a DATE column requires special handling. We need to cast the DATE column values
