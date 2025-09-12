@@ -96,11 +96,31 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithDynamo
   @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
   @Override
   @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_IfNotExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 }

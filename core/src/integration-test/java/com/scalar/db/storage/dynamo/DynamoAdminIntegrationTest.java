@@ -79,27 +79,47 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Override
   public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
 
-  @Disabled("DynamoDB does not support dropping columns")
   @Override
+  @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_IfExists_ForNonExistingColumn_ShouldNotThrowAnyException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming columns")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 }

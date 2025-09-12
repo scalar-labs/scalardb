@@ -248,6 +248,29 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (tableMetadata.getPartitionKeyNames().contains(oldColumnName)
+        || tableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+      admin.renameColumn(namespace, table, oldColumnName, newColumnName);
+    } else {
+      String oldBeforeColumnName = getBeforeImageColumnName(oldColumnName, tableMetadata);
+      String newBeforeColumnName = getBeforeImageColumnName(newColumnName, tableMetadata);
+
+      admin.renameColumn(namespace, table, oldColumnName, newColumnName);
+      admin.renameColumn(namespace, table, oldBeforeColumnName, newBeforeColumnName);
+    }
+  }
+
+  @Override
   public void importTable(
       String namespace,
       String table,

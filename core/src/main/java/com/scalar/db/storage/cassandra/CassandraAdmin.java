@@ -366,6 +366,41 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    try {
+      TableMetadata tableMetadata = getTableMetadata(namespace, table);
+      assert tableMetadata != null;
+      if (!tableMetadata.getPartitionKeyNames().contains(oldColumnName)
+          && !tableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+        throw new IllegalArgumentException(
+            CoreError.CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+      }
+      String alterTableQuery =
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .renameColumn(quoteIfNecessary(oldColumnName))
+              .to(quoteIfNecessary(newColumnName))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+      if (tableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        // Cassandra does not support renaming indexes
+        dropIndex(namespace, table, oldColumnName);
+        createIndex(namespace, table, newColumnName, Collections.emptyMap());
+      }
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s column to %s in the %s table failed",
+              oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       // Retrieve user keyspace and filter out system ones. A downside is that this may include
