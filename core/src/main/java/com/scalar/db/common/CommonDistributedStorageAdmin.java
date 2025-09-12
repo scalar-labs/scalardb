@@ -13,13 +13,13 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
-public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
+public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
 
   private final DistributedStorageAdmin admin;
   private final String systemNamespaceName;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin, DatabaseConfig config) {
+  public CommonDistributedStorageAdmin(DistributedStorageAdmin admin, DatabaseConfig config) {
     this.admin = admin;
     systemNamespaceName = config.getSystemNamespaceName();
   }
