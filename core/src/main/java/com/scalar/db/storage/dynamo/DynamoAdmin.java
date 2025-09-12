@@ -285,24 +285,23 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
       if (metadata.getColumnDataType(partitionKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "BLOB type is supported only for the last column in partition key in DynamoDB: "
-                + partitionKeyName);
+            CoreError.DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(partitionKeyName));
       }
     }
 
     for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
       if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "Currently, BLOB type is not supported for clustering keys in DynamoDB: "
-                + clusteringKeyName);
+            CoreError.DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(
+                clusteringKeyName));
       }
     }
 
     for (String secondaryIndexName : metadata.getSecondaryIndexNames()) {
       if (metadata.getColumnDataType(secondaryIndexName) == DataType.BOOLEAN) {
         throw new IllegalArgumentException(
-            "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
-                + secondaryIndexName);
+            CoreError.DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED.buildMessage(
+                secondaryIndexName));
       }
     }
   }
@@ -814,16 +813,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
-
-    if (metadata == null) {
-      throw new IllegalArgumentException(
-          "Table " + getFullTableName(namespace, table) + " does not exist");
-    }
+    assert metadata != null;
 
     if (metadata.getColumnDataType(columnName) == DataType.BOOLEAN) {
       throw new IllegalArgumentException(
-          "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
-              + columnName);
+          CoreError.DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED.buildMessage(columnName));
     }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
@@ -1259,15 +1253,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+    throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+    throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
@@ -1276,8 +1268,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       String table,
       Map<String, String> options,
       Map<String, DataType> overrideColumnsType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+    throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
