@@ -721,7 +721,7 @@ public enum CoreError implements ScalarDbError {
   DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0224",
-      "The BLOB type is supported only for the last column in partition key in DynamoDB. Column: %s",
+      "The BLOB type is supported only for the last column in the partition key in DynamoDB. Column: %s",
       "",
       ""),
   DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
