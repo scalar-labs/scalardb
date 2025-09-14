@@ -1141,7 +1141,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup Sql Server 2017
-        uses: rails-sqlserver/setup-mssql@v1
+        uses: rails-sqlserver/setup-mssql@v2
         with:
           components: sqlcmd,sqlengine
           sa-password: "SqlServer17"
