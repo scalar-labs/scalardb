@@ -5,7 +5,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CheckedDistributedStorageAdmin;
+import com.scalar.db.common.CommonDistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -26,7 +26,7 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
     // If the database is SQLite, the namespace check is skipped because SQLite does not support
     // namespaces.
     boolean isSqlite = JdbcUtils.isSqlite(new JdbcConfig(databaseConfig));
-    jdbcAdmin = new CheckedDistributedStorageAdmin(new JdbcAdmin(databaseConfig), !isSqlite);
+    jdbcAdmin = new CommonDistributedStorageAdmin(new JdbcAdmin(databaseConfig), !isSqlite);
   }
 
   @VisibleForTesting

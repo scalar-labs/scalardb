@@ -3,7 +3,7 @@ package com.scalar.db.storage.cassandra;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedStorageProvider;
-import com.scalar.db.common.CheckedDistributedStorageAdmin;
+import com.scalar.db.common.CommonDistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 
 public class CassandraProvider implements DistributedStorageProvider {
@@ -19,6 +19,6 @@ public class CassandraProvider implements DistributedStorageProvider {
 
   @Override
   public DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    return new CheckedDistributedStorageAdmin(new CassandraAdmin(config));
+    return new CommonDistributedStorageAdmin(new CassandraAdmin(config));
   }
 }

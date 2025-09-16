@@ -16,18 +16,18 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class CheckedDistributedStorageAdminTest {
+public class CommonDistributedStorageAdminTest {
 
   @Mock private DistributedStorageAdmin admin;
 
-  private CheckedDistributedStorageAdmin checkedAdmin;
+  private CommonDistributedStorageAdmin commonDistributedStorageAdmin;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    checkedAdmin = new CheckedDistributedStorageAdmin(admin);
+    commonDistributedStorageAdmin = new CommonDistributedStorageAdmin(admin);
   }
 
   @Test
@@ -42,7 +42,7 @@ public class CheckedDistributedStorageAdminTest {
     when(admin.tableExists(namespaceName, tableName)).thenReturn(true);
 
     // Act
-    checkedAdmin.createTable(namespaceName, tableName, tableMetadata, options);
+    commonDistributedStorageAdmin.createTable(namespaceName, tableName, tableMetadata, options);
 
     // Assert
     verify(admin).createTable(namespaceName, tableName, tableMetadata, options);
@@ -66,7 +66,9 @@ public class CheckedDistributedStorageAdminTest {
 
     // Act Assert
     assertThatThrownBy(
-            () -> checkedAdmin.createTable(namespaceName, tableName, tableMetadata, options))
+            () ->
+                commonDistributedStorageAdmin.createTable(
+                    namespaceName, tableName, tableMetadata, options))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -80,7 +82,7 @@ public class CheckedDistributedStorageAdminTest {
     Map<String, String> options = ImmutableMap.of("name", "value");
 
     // Act
-    checkedAdmin.repairTable(namespaceName, tableName, tableMetadata, options);
+    commonDistributedStorageAdmin.repairTable(namespaceName, tableName, tableMetadata, options);
 
     // Assert
     verify(admin).repairTable(namespaceName, tableName, tableMetadata, options);
@@ -100,7 +102,9 @@ public class CheckedDistributedStorageAdminTest {
 
     // Act Assert
     assertThatThrownBy(
-            () -> checkedAdmin.repairTable(namespaceName, tableName, tableMetadata, options))
+            () ->
+                commonDistributedStorageAdmin.repairTable(
+                    namespaceName, tableName, tableMetadata, options))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 }
