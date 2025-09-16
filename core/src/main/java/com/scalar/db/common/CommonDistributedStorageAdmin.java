@@ -13,10 +13,9 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
+public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
 
-  private static final Logger logger =
-      LoggerFactory.getLogger(CheckedDistributedStorageAdmin.class);
+  private static final Logger logger = LoggerFactory.getLogger(CommonDistributedStorageAdmin.class);
 
   private final DistributedStorageAdmin admin;
 
@@ -26,12 +25,12 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
    */
   private final boolean checkNamespace;
 
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin) {
+  public CommonDistributedStorageAdmin(DistributedStorageAdmin admin) {
     this(admin, true);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin, boolean checkNamespace) {
+  public CommonDistributedStorageAdmin(DistributedStorageAdmin admin, boolean checkNamespace) {
     this.admin = admin;
     this.checkNamespace = checkNamespace;
   }
