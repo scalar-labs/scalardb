@@ -19,14 +19,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class CheckedDistributedStorageAdminTest {
+public class CommonDistributedStorageAdminTest {
 
   private static final String SYSTEM_NAMESPACE = "scalardb";
 
   @Mock private DistributedStorageAdmin admin;
   @Mock private DatabaseConfig databaseConfig;
 
-  private CheckedDistributedStorageAdmin checkedAdmin;
+  private CommonDistributedStorageAdmin commonDistributedStorageAdmin;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -34,7 +34,7 @@ public class CheckedDistributedStorageAdminTest {
 
     // Arrange
     when(databaseConfig.getSystemNamespaceName()).thenReturn(SYSTEM_NAMESPACE);
-    checkedAdmin = new CheckedDistributedStorageAdmin(admin, databaseConfig);
+    commonDistributedStorageAdmin = new CommonDistributedStorageAdmin(admin, databaseConfig);
   }
 
   @Test
@@ -42,7 +42,7 @@ public class CheckedDistributedStorageAdminTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> checkedAdmin.createNamespace(SYSTEM_NAMESPACE))
+    assertThatThrownBy(() -> commonDistributedStorageAdmin.createNamespace(SYSTEM_NAMESPACE))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -51,7 +51,7 @@ public class CheckedDistributedStorageAdminTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> checkedAdmin.dropNamespace(SYSTEM_NAMESPACE))
+    assertThatThrownBy(() -> commonDistributedStorageAdmin.dropNamespace(SYSTEM_NAMESPACE))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -67,7 +67,7 @@ public class CheckedDistributedStorageAdminTest {
     when(admin.tableExists(namespaceName, tableName)).thenReturn(true);
 
     // Act
-    checkedAdmin.createTable(namespaceName, tableName, tableMetadata, options);
+    commonDistributedStorageAdmin.createTable(namespaceName, tableName, tableMetadata, options);
 
     // Assert
     verify(admin).createTable(namespaceName, tableName, tableMetadata, options);
@@ -91,7 +91,9 @@ public class CheckedDistributedStorageAdminTest {
 
     // Act Assert
     assertThatThrownBy(
-            () -> checkedAdmin.createTable(namespaceName, tableName, tableMetadata, options))
+            () ->
+                commonDistributedStorageAdmin.createTable(
+                    namespaceName, tableName, tableMetadata, options))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -101,7 +103,7 @@ public class CheckedDistributedStorageAdminTest {
     // Arrange
 
     // Act
-    boolean actual = checkedAdmin.namespaceExists(SYSTEM_NAMESPACE);
+    boolean actual = commonDistributedStorageAdmin.namespaceExists(SYSTEM_NAMESPACE);
 
     // Assert
     assertThat(actual).isTrue();
@@ -114,7 +116,7 @@ public class CheckedDistributedStorageAdminTest {
     when(admin.getNamespaceNames()).thenReturn(Collections.emptySet());
 
     // Act
-    Set<String> actual = checkedAdmin.getNamespaceNames();
+    Set<String> actual = commonDistributedStorageAdmin.getNamespaceNames();
 
     // Assert
     assertThat(actual).containsExactly(SYSTEM_NAMESPACE);
@@ -130,7 +132,7 @@ public class CheckedDistributedStorageAdminTest {
     Map<String, String> options = ImmutableMap.of("name", "value");
 
     // Act
-    checkedAdmin.repairTable(namespaceName, tableName, tableMetadata, options);
+    commonDistributedStorageAdmin.repairTable(namespaceName, tableName, tableMetadata, options);
 
     // Assert
     verify(admin).repairTable(namespaceName, tableName, tableMetadata, options);
@@ -150,7 +152,9 @@ public class CheckedDistributedStorageAdminTest {
 
     // Act Assert
     assertThatThrownBy(
-            () -> checkedAdmin.repairTable(namespaceName, tableName, tableMetadata, options))
+            () ->
+                commonDistributedStorageAdmin.repairTable(
+                    namespaceName, tableName, tableMetadata, options))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 }
