@@ -1,6 +1,6 @@
 plugins {
     id "com.diffplug.spotless" version "6.13.0"
-    id "org.jreleaser" version "1.19.0"
+    id "org.jreleaser" version "1.20.0"
 }
 
 ext {
@@ -27,7 +27,7 @@ subprojects {
         guavaVersion = '32.1.3-jre'
         slf4jVersion = '1.7.36'
         cassandraDriverVersion = '3.11.5'
-        azureCosmosVersion = '4.73.1'
+        azureCosmosVersion = '4.74.0'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.33.0'
         commonsDbcp2Version = '2.13.0'
@@ -38,7 +38,7 @@ subprojects {
         sqliteDriverVersion = '3.50.3.0'
         yugabyteDriverVersion = '42.7.3-yb-4'
         db2DriverVersion = '12.1.2.0'
-        mariadDbDriverVersion = '3.5.5'
+        mariadDbDriverVersion = '3.5.6'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.14.0'
         junitVersion = '5.13.4'
@@ -48,7 +48,7 @@ subprojects {
         spotbugsVersion = '4.8.6'
         errorproneVersion = '2.10.0'
         errorproneJavacVersion = '9+181-r4173-1'
-        gsonVersion = '2.13.1'
+        gsonVersion = '2.13.2'
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
         errorpronePluginVersion = '3.1.0'

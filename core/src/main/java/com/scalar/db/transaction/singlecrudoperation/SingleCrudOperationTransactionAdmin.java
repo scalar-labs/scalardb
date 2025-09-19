@@ -110,6 +110,19 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    distributedStorageAdmin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    distributedStorageAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return distributedStorageAdmin.getNamespaceNames();
   }

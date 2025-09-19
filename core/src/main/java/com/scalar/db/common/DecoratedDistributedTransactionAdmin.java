@@ -209,6 +209,26 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void dropColumnFromTable(
+      String namespace, String table, String columnName, boolean ifExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName, ifExists);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
     distributedTransactionAdmin.importTable(namespace, table, options);

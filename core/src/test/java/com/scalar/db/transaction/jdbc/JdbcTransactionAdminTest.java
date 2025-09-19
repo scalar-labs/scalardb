@@ -229,6 +229,35 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String column = "c1";
+
+    // Act
+    admin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(jdbcAdmin).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void renameColumn_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+
+    // Act
+    admin.renameColumn(namespace, table, columnName1, columnName2);
+
+    // Assert
+    verify(jdbcAdmin).renameColumn(namespace, table, columnName1, columnName2);
+  }
+
+  @Test
   public void importTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

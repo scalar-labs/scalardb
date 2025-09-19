@@ -480,6 +480,61 @@ public interface Admin {
   }
 
   /**
+   * Drops a column from an existing table. The column cannot be a partition key or a clustering
+   * key.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to drop
+   * @throws IllegalArgumentException if the table or column does not exist, or the column is a
+   *     partition key column or clustering key column
+   * @throws ExecutionException if the operation fails
+   */
+  void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException;
+
+  /**
+   * Drops a column from an existing table. The column cannot be a partition key or a clustering
+   * key.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to drop
+   * @param IfExists if set to true, the column will be dropped only if it exists. If set to false,
+   *     it will throw an exception if it does not exist
+   * @throws IllegalArgumentException if the table does not exist, or the column is a partition key
+   *     column or clustering key column
+   * @throws ExecutionException if the operation fails
+   */
+  default void dropColumnFromTable(
+      String namespace, String table, String columnName, boolean IfExists)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (IfExists && !tableMetadata.getColumnNames().contains(columnName)) {
+      return;
+    }
+    dropColumnFromTable(namespace, table, columnName);
+  }
+
+  /**
+   * Renames an existing column of an existing table.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param oldColumnName the current name of the column to rename
+   * @param newColumnName the new name of the column
+   * @throws IllegalArgumentException if the table or the old column does not exist or the new
+   *     column already exists
+   * @throws ExecutionException if the operation fails
+   */
+  void renameColumn(String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException;
+
+  /**
    * Imports an existing table that is not managed by ScalarDB.
    *
    * @param namespace an existing namespace
