@@ -22,8 +22,8 @@ public class JdbcOperationChecker extends OperationChecker {
   }
 
   @Override
-  protected void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
-      ScanAll scanAll, TableMetadata metadata) {
+  protected void checkOrderingsForScanAll(ScanAll scanAll, TableMetadata metadata) {
+    super.checkOrderingsForScanAll(scanAll, metadata);
     rdbEngine.throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(scanAll, metadata);
   }
 }

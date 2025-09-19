@@ -32,12 +32,10 @@ public class JdbcOperationCheckerTest {
   }
 
   @Test
-  public void
-      throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported_ShouldDelegateToRdbEngine() {
+  public void checkOrderingsForScanAll_ShouldInvokeFurtherCheckOnRdbEngine() {
     // Arrange
     // Act
-    operationChecker.throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
-        scanAll, tableMetadata);
+    operationChecker.checkOrderingsForScanAll(scanAll, tableMetadata);
 
     // Assert
     verify(rdbEngine)

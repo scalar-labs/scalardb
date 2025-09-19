@@ -159,8 +159,7 @@ public class OperationChecker {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
-    throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(scanAll, metadata);
-    checkOrderings(scanAll, metadata);
+    checkOrderingsForScanAll(scanAll, metadata);
 
     if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
@@ -168,9 +167,6 @@ public class OperationChecker {
     }
     checkConjunctions(scanAll, metadata);
   }
-
-  protected void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
-      ScanAll scanAll, TableMetadata metadata) {};
 
   private void checkProjections(Selection selection, TableMetadata metadata) {
     for (String projection : selection.getProjections()) {
@@ -262,7 +258,7 @@ public class OperationChecker {
     }
   }
 
-  private void checkOrderings(ScanAll scanAll, TableMetadata metadata) {
+  protected void checkOrderingsForScanAll(ScanAll scanAll, TableMetadata metadata) {
     for (Scan.Ordering ordering : scanAll.getOrderings()) {
       if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
         throw new IllegalArgumentException(

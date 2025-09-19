@@ -4,9 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchException;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
@@ -19,7 +18,6 @@ import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
@@ -442,15 +440,10 @@ public class OperationCheckerTest {
     when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
     when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(true);
 
-    operationChecker =
-        spy(new OperationChecker(databaseConfig, metadataManager, storageInfoProvider));
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
 
-    // Act
-    operationChecker.check(scan);
-
-    // Assert
-    verify(operationChecker)
-        .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported((ScanAll) scan, metadata);
+    // Act Assert
+    assertDoesNotThrow(() -> operationChecker.check(scan));
   }
 
   @Test
