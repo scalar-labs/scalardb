@@ -736,6 +736,12 @@ public enum CoreError implements ScalarDbError {
       "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
       "",
       ""),
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

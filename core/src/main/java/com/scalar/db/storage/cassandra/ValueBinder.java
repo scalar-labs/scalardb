@@ -3,6 +3,7 @@ package com.scalar.db.storage.cassandra;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.datastax.driver.core.BoundStatement;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -134,7 +135,8 @@ public final class ValueBinder implements ColumnVisitor {
 
   @Override
   public void visit(TimestampColumn column) {
-    throw new UnsupportedOperationException("The TIMESTAMP type is not supported with Cassandra");
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(column.getName()));
   }
 
   @Override

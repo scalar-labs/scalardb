@@ -3,6 +3,7 @@ package com.scalar.db.storage.cassandra;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -86,7 +87,7 @@ public class ResultInterpreter {
             : TimeColumn.of(name, LocalTime.ofNanoOfDay(row.getTime(name)));
       case TIMESTAMP:
         throw new UnsupportedOperationException(
-            "The TIMESTAMP type is not supported with Cassandra.");
+            CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(name));
       case TIMESTAMPTZ:
         return row.isNull(name)
             ? TimestampTZColumn.ofNull(name)
