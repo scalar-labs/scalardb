@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchException;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
@@ -17,6 +19,7 @@ import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
@@ -32,7 +35,6 @@ import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -418,18 +420,17 @@ public class OperationCheckerTest {
   }
 
   @Test
-  public void
-      whenCheckingScanAllOperationWithCrossPartitionScanEnabledWithOrderingOnBlobColumnWithDb2_shouldThrowIllegalArgumentException()
-          throws ExecutionException {
+  public void whenCheckingScanAllOperationWithCrossPartitionScanEnabledWithOrdering_shouldNotThrow()
+      throws ExecutionException {
     // Arrange
-    when(metadataManager.getTableMetadata(any()))
-        .thenReturn(
-            TableMetadata.newBuilder()
-                .addColumn(PKEY1, DataType.BLOB)
-                .addColumn(COL1, DataType.INT)
-                .addColumn(COL2, DataType.BLOB)
-                .addPartitionKey(PKEY1)
-                .build());
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(PKEY1, DataType.BLOB)
+            .addColumn(COL1, DataType.INT)
+            .addColumn(COL2, DataType.BLOB)
+            .addPartitionKey(PKEY1)
+            .build();
+    when(metadataManager.getTableMetadata(any())).thenReturn(metadata);
     Scan scan =
         Scan.newBuilder()
             .namespace(NAMESPACE)
@@ -440,17 +441,16 @@ public class OperationCheckerTest {
             .build();
     when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
     when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(true);
-    when(databaseConfig.getContactPoints())
-        .thenReturn(Collections.singletonList("jdbc:db2://localhost:50000/test_db"));
-    when(databaseConfig.getStorage()).thenReturn("jdbc");
-    when(databaseConfig.getProperties()).thenReturn(new Properties());
 
-    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+    operationChecker =
+        spy(new OperationChecker(databaseConfig, metadataManager, storageInfoProvider));
 
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(scan))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContainingAll("Db2", "ordering", COL2);
+    // Act
+    operationChecker.check(scan);
+
+    // Assert
+    verify(operationChecker)
+        .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported((ScanAll) scan, metadata);
   }
 
   @Test

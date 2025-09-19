@@ -8,7 +8,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
@@ -20,14 +19,11 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -163,17 +159,7 @@ public class OperationChecker {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
-    Optional<Ordering> orderingOnBlobColumn =
-        scanAll.getOrderings().stream()
-            .filter(
-                ordering -> metadata.getColumnDataType(ordering.getColumnName()) == DataType.BLOB)
-            .findFirst();
-    if (orderingOnBlobColumn.isPresent()
-        && new JdbcConfig(config).getJdbcUrl().startsWith("jdbc:db2:")) {
-      throw new IllegalArgumentException(
-          CoreError.DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage(
-              orderingOnBlobColumn.get()));
-    }
+    throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(scanAll, metadata);
     checkOrderings(scanAll, metadata);
 
     if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
@@ -182,6 +168,9 @@ public class OperationChecker {
     }
     checkConjunctions(scanAll, metadata);
   }
+
+  protected void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {};
 
   private void checkProjections(Selection selection, TableMetadata metadata) {
     for (String projection : selection.getProjections()) {

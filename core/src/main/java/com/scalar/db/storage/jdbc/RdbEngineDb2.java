@@ -6,6 +6,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.ibm.db2.jcc.DB2BaseDataSource;
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -510,5 +513,20 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       return "CHAR(" + enclose(columnName) + ") AS " + enclose(columnName);
     }
     return enclose(columnName);
+  }
+
+  @Override
+  public void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {
+    Optional<Ordering> orderingOnBlobColumn =
+        scanAll.getOrderings().stream()
+            .filter(
+                ordering -> metadata.getColumnDataType(ordering.getColumnName()) == DataType.BLOB)
+            .findFirst();
+    if (orderingOnBlobColumn.isPresent()) {
+      throw new UnsupportedOperationException(
+          CoreError.DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage(
+              orderingOnBlobColumn.get()));
+    }
   }
 }
