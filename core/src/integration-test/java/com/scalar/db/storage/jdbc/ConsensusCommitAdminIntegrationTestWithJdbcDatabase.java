@@ -31,8 +31,8 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   }
 
   @Override
-  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
-    // "admin.createIndex()" for TEXT and BLOB columns fails (the "create index" query runs
+  protected boolean isCreateIndexOnTextColumnEnabled() {
+    // "admin.createIndex()" for TEXT column fails (the "create index" query runs
     // indefinitely) on the Db2 community edition docker version which we use for the CI.
     // However, the index creation is successful on Db2 hosted on IBM Cloud.
     // So we disable these tests until the issue with the Db2 community edition is resolved.
@@ -88,5 +88,10 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
+  }
+
+  @Override
+  protected boolean isIndexOnBlobColumnSupported() {
+    return !JdbcTestUtils.isDb2(rdbEngine);
   }
 }
