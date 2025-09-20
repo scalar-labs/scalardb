@@ -108,6 +108,13 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    admin.alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {

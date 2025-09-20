@@ -472,6 +472,14 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       if (clusterManager.getMetadata(metadataKeyspace, NAMESPACES_TABLE) == null) {

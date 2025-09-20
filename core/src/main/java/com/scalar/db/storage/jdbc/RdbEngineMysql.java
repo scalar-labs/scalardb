@@ -136,7 +136,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
-        + " MODIFY"
+        + " MODIFY "
         + enclose(columnName)
         + " "
         + columnType;

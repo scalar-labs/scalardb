@@ -174,6 +174,13 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    jdbcAdmin.alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return jdbcAdmin.getNamespaceNames();
   }

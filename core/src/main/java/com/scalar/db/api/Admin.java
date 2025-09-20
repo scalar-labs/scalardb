@@ -535,6 +535,19 @@ public interface Admin {
       throws ExecutionException;
 
   /**
+   * Alters the data type of existing column of an existing table.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to alter
+   * @param newColumnType the new data type of the column
+   * @throws IllegalArgumentException if the table or the column does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  void alterColumnType(String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException;
+
+  /**
    * Imports an existing table that is not managed by ScalarDB.
    *
    * @param namespace an existing namespace

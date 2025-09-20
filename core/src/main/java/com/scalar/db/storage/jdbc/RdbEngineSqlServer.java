@@ -120,8 +120,12 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    // SQLServer does not require changes in column data types when making indices.
-    throw new AssertionError();
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " ALTER COLUMN "
+        + enclose(columnName)
+        + " "
+        + columnType;
   }
 
   @Override

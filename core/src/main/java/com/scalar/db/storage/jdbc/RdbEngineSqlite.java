@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -356,5 +357,11 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
     // Do nothing. SQLite does not support read-only mode.
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported() {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
   }
 }

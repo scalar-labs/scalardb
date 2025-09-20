@@ -264,6 +264,22 @@ public class SingleCrudOperationTransactionAdminTest {
   }
 
   @Test
+  public void alterColumnType_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String columnName = "col";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    admin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(distributedStorageAdmin).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
   public void importTable_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

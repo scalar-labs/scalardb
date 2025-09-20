@@ -36,6 +36,7 @@ import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatColumn;
@@ -474,5 +475,32 @@ public final class ScalarDbUtils {
       builder.add(column);
     }
     return Optional.of(builder.build());
+  }
+
+  public static boolean isTypeConversionSupported(DataType from, DataType to) {
+    if (from == to) {
+      return true;
+    }
+    switch (from) {
+      case BOOLEAN:
+      case BIGINT:
+      case DOUBLE:
+      case BLOB:
+      case TIME:
+      case TIMESTAMPTZ:
+        return to == DataType.TEXT;
+      case INT:
+        return to == DataType.BIGINT || to == DataType.TEXT;
+      case FLOAT:
+        return to == DataType.DOUBLE || to == DataType.TEXT;
+      case DATE:
+        return to == DataType.TEXT || to == DataType.TIMESTAMP || to == DataType.TIMESTAMPTZ;
+      case TIMESTAMP:
+        return to == DataType.TEXT || to == DataType.TIMESTAMPTZ;
+      case TEXT:
+        return false;
+      default:
+        throw new AssertionError("Unknown data type: " + from);
+    }
   }
 }

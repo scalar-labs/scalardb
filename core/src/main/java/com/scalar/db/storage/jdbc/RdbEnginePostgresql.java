@@ -116,7 +116,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN"
+        + " ALTER COLUMN "
         + enclose(columnName)
         + " TYPE "
         + columnType;

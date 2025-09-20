@@ -281,6 +281,13 @@ public interface RdbEngineStrategy {
    */
   default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
 
+  /**
+   * Throws an exception if altering the column type is not supported in the underlying database.
+   *
+   * @throws UnsupportedOperationException if altering the column type is not supported
+   */
+  default void throwIfAlterColumnTypeNotSupported() {}
+
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {
     connection.setReadOnly(readOnly);

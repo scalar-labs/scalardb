@@ -928,6 +928,37 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    try {
+      rdbEngine.throwIfAlterColumnTypeNotSupported();
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      assert currentTableMetadata != null;
+
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .removeColumn(columnName)
+              .addColumn(columnName, newColumnType)
+              .build();
+      String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
+      String alterColumnTypeStatement =
+          rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
+
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, alterColumnTypeStatement);
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Altering the %s column type to %s in the %s table failed",
+              columnName, newColumnType, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

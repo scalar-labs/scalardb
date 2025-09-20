@@ -736,6 +736,42 @@ public enum CoreError implements ScalarDbError {
       "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
       "",
       ""),
+  INVALID_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0227",
+      "Invalid column type conversion from %s to %s. Column: %s",
+      "",
+      ""),
+  CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
+      "Cassandra does not support the altering column type feature",
+      "",
+      ""),
+  COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0229",
+      "Cosmos DB does not support the altering column type feature",
+      "",
+      ""),
+  DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0230",
+      "DynamoDB does not support the altering column type feature",
+      "",
+      ""),
+  JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0231",
+      "SQLite does not support the altering column type feature",
+      "",
+      ""),
+  ALTER_IMPORTED_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0232",
+      "Altering the data type of an imported column is not supported. Column: %s; Data type: %s; ",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1028,6 +1064,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0060",
       "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
+  ALTERING_COLUMN_TYPE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
 

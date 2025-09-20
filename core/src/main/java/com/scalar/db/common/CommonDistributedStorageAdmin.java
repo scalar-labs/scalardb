@@ -364,6 +364,42 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    if (!tableMetadata.getColumnNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    DataType currentColumnType = tableMetadata.getColumnDataType(columnName);
+    if (currentColumnType == newColumnType) {
+      return;
+    }
+    if (!ScalarDbUtils.isTypeConversionSupported(currentColumnType, newColumnType)) {
+      throw new IllegalArgumentException(
+          CoreError.INVALID_COLUMN_TYPE_CONVERSION.buildMessage(
+              currentColumnType, newColumnType, columnName));
+    }
+
+    try {
+      admin.alterColumnType(namespace, table, columnName, newColumnType);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.ALTERING_COLUMN_TYPE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName, newColumnType),
+          e);
+    }
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       Set<String> namespaceNames = admin.getNamespaceNames();

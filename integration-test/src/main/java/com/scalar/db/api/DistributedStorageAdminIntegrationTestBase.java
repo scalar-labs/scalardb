@@ -1072,6 +1072,130 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
+          throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TIMESTAMP)
+            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName4(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName5(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName6(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName7(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName8(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName9(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName10(), DataType.TEXT);
+      if (isTimestampTypeSupported()) {
+        admin.alterColumnType(namespace1, getTable4(), getColumnName11(), DataType.TEXT);
+        admin.alterColumnType(namespace1, getTable4(), getColumnName12(), DataType.TEXT);
+      }
+
+      // Assert
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addColumn(getColumnName5(), DataType.TEXT)
+              .addColumn(getColumnName6(), DataType.TEXT)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.TEXT)
+              .addColumn(getColumnName9(), DataType.TEXT)
+              .addColumn(getColumnName10(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TEXT)
+            .addColumn(getColumnName12(), DataType.TEXT);
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.FLOAT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn(getColumnName5(), DataType.DATE)
+            .addColumn(getColumnName6(), DataType.DATE)
+            .addColumn(getColumnName7(), DataType.TIMESTAMP);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.BIGINT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName4(), DataType.DOUBLE);
+      if (isTimestampTypeSupported()) {
+        admin.alterColumnType(namespace1, getTable4(), getColumnName5(), DataType.TIMESTAMP);
+        admin.alterColumnType(namespace1, getTable4(), getColumnName6(), DataType.TIMESTAMPTZ);
+        admin.alterColumnType(namespace1, getTable4(), getColumnName7(), DataType.TIMESTAMPTZ);
+      }
+
+      // Assert
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.BIGINT)
+              .addColumn(getColumnName4(), DataType.DOUBLE)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .addColumn(getColumnName5(), DataType.TIMESTAMP)
+            .addColumn(getColumnName6(), DataType.TIMESTAMPTZ)
+            .addColumn(getColumnName7(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
     // Arrange
 
