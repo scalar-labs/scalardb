@@ -1072,6 +1072,33 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, getTable4(), newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(currentTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
     // Arrange
 
@@ -1294,6 +1321,40 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), "newTableName"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+      admin.createTable(namespace1, newTableName, currentTableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), newTableName))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
     }
   }
 

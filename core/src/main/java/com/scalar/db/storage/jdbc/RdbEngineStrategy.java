@@ -121,6 +121,8 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
+  String renameTableSql(String namespace, String oldTableName, String newTableName);
+
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);

@@ -108,6 +108,12 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    admin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {

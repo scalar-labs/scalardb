@@ -349,6 +349,18 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+    String newTableName = TABLE + "_new";
+
+    // Act Assert
+    assertThatCode(() -> adminForNormalUser.renameTable(NAMESPACE, TABLE, newTableName))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void importTable_WithSufficientPermission_ShouldSucceed() throws Exception {
     // Arrange
     createNamespaceByRoot();

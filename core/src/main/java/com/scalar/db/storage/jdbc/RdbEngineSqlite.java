@@ -250,6 +250,14 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + encloseFullTableName(namespace, newTableName);
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     throw new AssertionError(

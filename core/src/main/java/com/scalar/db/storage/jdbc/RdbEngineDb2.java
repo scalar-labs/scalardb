@@ -258,6 +258,14 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "RENAME "
+        + encloseFullTableName(namespace, oldTableName)
+        + " TO "
+        + enclose(newTableName);
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "

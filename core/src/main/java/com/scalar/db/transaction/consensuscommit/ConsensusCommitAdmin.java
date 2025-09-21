@@ -278,6 +278,20 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, oldTableName)));
+    }
+    admin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return admin.getNamespaceNames().stream()
         .filter(namespace -> !namespace.equals(coordinatorNamespace))

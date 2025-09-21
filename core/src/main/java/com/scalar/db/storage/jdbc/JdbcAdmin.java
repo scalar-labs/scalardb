@@ -928,6 +928,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    try {
+      TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+      assert tableMetadata != null;
+      String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameTableStatement);
+        execute(connection, getDeleteTableMetadataStatement(namespace, oldTableName));
+        addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s table to %s failed",
+              getFullTableName(namespace, oldTableName), getFullTableName(namespace, newTableName)),
+          e);
+    }
+  }
+
+  @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

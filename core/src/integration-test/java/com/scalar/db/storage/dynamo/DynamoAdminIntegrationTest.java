@@ -71,4 +71,16 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Override
   @Disabled("DynamoDB does not support renaming columns")
   public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming tables")
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming tables")
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming tables")
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
 }

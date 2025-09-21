@@ -1161,6 +1161,67 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, TABLE4, newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(currentTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameTable(namespace1, TABLE4, "newTableName"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+      admin.createTable(namespace1, newTableName, currentTableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.renameTable(namespace1, TABLE4, newTableName))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
     // Arrange

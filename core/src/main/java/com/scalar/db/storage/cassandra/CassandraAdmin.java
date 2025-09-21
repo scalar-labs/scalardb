@@ -472,6 +472,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       if (clusterManager.getMetadata(metadataKeyspace, NAMESPACES_TABLE) == null) {
