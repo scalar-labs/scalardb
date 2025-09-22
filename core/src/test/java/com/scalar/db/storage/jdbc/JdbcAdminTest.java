@@ -4381,7 +4381,6 @@ public class JdbcAdminTest {
             .addPartitionKey("pk")
             .addClusteringKey("ck")
             .addColumn("pk", DataType.INT)
-            .addColumn("ck", DataType.INT)
             .addColumn("ck", DataType.BLOB)
             .build();
     TableMetadata metadata3 =
