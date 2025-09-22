@@ -390,7 +390,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         return "VARCHAR(" + keyColumnSize + ") NOT NULL";
       case BLOB:
         throw new UnsupportedOperationException(
-            CoreError.DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
+            CoreError.JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return getDataTypeForEngine(dataType) + " NOT NULL";
     }
@@ -404,7 +404,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         return "VARCHAR(" + keyColumnSize + ")";
       case BLOB:
         throw new UnsupportedOperationException(
-            CoreError.DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
+            CoreError.JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return null;
     }
@@ -563,8 +563,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
             .findFirst();
     if (orderingOnBlobColumn.isPresent()) {
       throw new UnsupportedOperationException(
-          CoreError.DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage(
-              orderingOnBlobColumn.get()));
+          CoreError.JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED
+              .buildMessage(orderingOnBlobColumn.get()));
     }
   }
 }
