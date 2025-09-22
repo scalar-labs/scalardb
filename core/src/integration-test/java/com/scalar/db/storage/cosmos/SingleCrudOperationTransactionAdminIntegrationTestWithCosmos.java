@@ -73,4 +73,8 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCosmos
   @Override
   @Disabled("Cosmos DB does not support renaming tables")
   public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming tables")
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
 }

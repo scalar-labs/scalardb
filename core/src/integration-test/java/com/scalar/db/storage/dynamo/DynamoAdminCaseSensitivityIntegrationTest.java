@@ -84,4 +84,8 @@ public class DynamoAdminCaseSensitivityIntegrationTest
   @Override
   @Disabled("DynamoDB does not support renaming tables")
   public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not support renaming tables")
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
 }

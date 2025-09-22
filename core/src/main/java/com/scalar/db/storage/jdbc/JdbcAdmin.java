@@ -914,7 +914,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameColumnStatement);
         if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-          renameIndex(connection, namespace, table, oldColumnName, newColumnName);
+          String oldIndexName = getIndexName(namespace, table, oldColumnName);
+          String newIndexName = getIndexName(namespace, table, newColumnName);
+          renameIndexInternal(
+              connection, namespace, table, newColumnName, oldIndexName, newIndexName);
         }
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
@@ -937,6 +940,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameTableStatement);
         execute(connection, getDeleteTableMetadataStatement(namespace, oldTableName));
+        for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
+          String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
+          String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
+          renameIndexInternal(
+              connection, namespace, newTableName, indexedColumnName, oldIndexName, newIndexName);
+        }
         addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
       }
     } catch (SQLException e) {
@@ -1005,17 +1014,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, sql);
   }
 
-  private void renameIndex(
+  private void renameIndexInternal(
       Connection connection,
       String schema,
       String table,
-      String oldIndexedColumn,
-      String newIndexedColumn)
+      String column,
+      String oldIndexName,
+      String newIndexName)
       throws SQLException {
-    String oldIndexName = getIndexName(schema, table, oldIndexedColumn);
-    String newIndexName = getIndexName(schema, table, newIndexedColumn);
-    String[] sqls =
-        rdbEngine.renameIndexSqls(schema, table, oldIndexName, newIndexName, newIndexedColumn);
+    String[] sqls = rdbEngine.renameIndexSqls(schema, table, column, oldIndexName, newIndexName);
     for (String sql : sqls) {
       execute(connection, sql);
     }
