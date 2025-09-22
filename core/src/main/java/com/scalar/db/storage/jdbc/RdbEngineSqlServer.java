@@ -113,7 +113,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         + "."
         + enclose(oldColumnName)
         + "', '"
-        + enclose(newColumnName)
+        + newColumnName
         + "', 'COLUMN'";
   }
 
@@ -122,7 +122,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     return "EXEC sp_rename '"
         + encloseFullTableName(namespace, oldTableName)
         + "', '"
-        + enclose(newTableName)
+        + newTableName
         + "'";
   }
 

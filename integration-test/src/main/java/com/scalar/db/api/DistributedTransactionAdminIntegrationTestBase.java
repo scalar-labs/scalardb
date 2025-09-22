@@ -1166,13 +1166,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata currentTableMetadata =
+      TableMetadata tableMetadata =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
               .addPartitionKey("c1")
               .build();
-      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+      admin.createTable(namespace1, TABLE4, tableMetadata, options);
 
       // Act
       admin.renameTable(namespace1, TABLE4, newTableName);
@@ -1180,7 +1180,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       // Assert
       assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
       assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
-      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(currentTableMetadata);
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
       admin.dropTable(namespace1, newTableName, true);
@@ -1203,14 +1203,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata currentTableMetadata =
+      TableMetadata tableMetadata =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
               .addPartitionKey("c1")
               .build();
-      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
-      admin.createTable(namespace1, newTableName, currentTableMetadata, options);
+      admin.createTable(namespace1, TABLE4, tableMetadata, options);
+      admin.createTable(namespace1, newTableName, tableMetadata, options);
 
       // Act Assert
       assertThatThrownBy(() -> admin.renameTable(namespace1, TABLE4, newTableName))

@@ -1077,13 +1077,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata currentTableMetadata =
+      TableMetadata tableMetadata =
           TableMetadata.newBuilder()
               .addColumn(getColumnName1(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
               .addPartitionKey(getColumnName1())
               .build();
-      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
 
       // Act
       admin.renameTable(namespace1, getTable4(), newTableName);
@@ -1091,7 +1091,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       // Assert
       assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
       assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
-      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(currentTableMetadata);
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
       admin.dropTable(namespace1, newTableName, true);
@@ -1340,14 +1340,14 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata currentTableMetadata =
+      TableMetadata tableMetadata =
           TableMetadata.newBuilder()
               .addColumn(getColumnName1(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
               .addPartitionKey(getColumnName1())
               .build();
-      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
-      admin.createTable(namespace1, newTableName, currentTableMetadata, options);
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+      admin.createTable(namespace1, newTableName, tableMetadata, options);
 
       // Act Assert
       assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), newTableName))

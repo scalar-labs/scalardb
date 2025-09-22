@@ -540,8 +540,8 @@ public interface Admin {
    * @param namespace the table namespace
    * @param oldTableName the current name of the table to rename
    * @param newTableName the new name of the table
-   * @throws IllegalArgumentException if the table to rename does not exist or the new table already
-   *     exists
+   * @throws IllegalArgumentException if the table to rename does not exist or the table with the
+   *     new name already exists
    * @throws ExecutionException if the operation fails
    */
   void renameTable(String namespace, String oldTableName, String newTableName)

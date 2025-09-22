@@ -3143,7 +3143,7 @@ public class JdbcAdminTest {
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
             + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
-        "EXEC sp_rename '[ns].[table].[c2]', '[c3]', 'COLUMN'",
+        "EXEC sp_rename '[ns].[table].[c2]', 'c3', 'COLUMN'",
         "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
         "INSERT INTO ["
             + METADATA_SCHEMA
@@ -3297,7 +3297,7 @@ public class JdbcAdminTest {
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
             + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
-        "EXEC sp_rename '[ns].[table]', '[table_new]'",
+        "EXEC sp_rename '[ns].[table]', 'table_new'",
         "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
         "INSERT INTO ["
             + METADATA_SCHEMA
