@@ -3242,6 +3242,7 @@ public class JdbcAdminTest {
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `ns`.`table` RENAME TO `ns`.`table_new`",
         "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
         "INSERT INTO `"
             + METADATA_SCHEMA
             + "`.`metadata` VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3261,6 +3262,7 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3281,6 +3283,7 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3299,6 +3302,7 @@ public class JdbcAdminTest {
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "EXEC sp_rename '[ns].[table]', 'table_new'",
         "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
         "INSERT INTO ["
             + METADATA_SCHEMA
             + "].[metadata] VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3316,6 +3320,7 @@ public class JdbcAdminTest {
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns$table\" RENAME TO \"ns$table_new\"",
         "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "$metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,FALSE,1)",
@@ -3335,6 +3340,7 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3353,19 +3359,23 @@ public class JdbcAdminTest {
     String columnName2 = "c2";
 
     PreparedStatement selectStatement = mock(PreparedStatement.class);
-    ResultSet resultSet =
+    ResultSet resultSet1 =
         mockResultSet(
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 columnName2, DataType.INT.toString(), null, null, false));
-    when(selectStatement.executeQuery()).thenReturn(resultSet);
-
+    when(selectStatement.executeQuery()).thenReturn(resultSet1);
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
+    for (String expectedSqlStatement : expectedSqlStatements) {
+      Statement mock = mock(Statement.class);
+      expectedStatements.add(mock);
+      if (expectedSqlStatement.startsWith("SELECT DISTINCT ")) {
+        ResultSet resultSet2 = mock(ResultSet.class);
+        when(resultSet2.next()).thenReturn(true);
+        when(mock.executeQuery(any())).thenReturn(resultSet2);
+      }
     }
     when(connection.createStatement())
         .thenReturn(
@@ -3382,7 +3392,11 @@ public class JdbcAdminTest {
     verify(selectStatement).setString(1, getFullTableName(namespace, table));
     verify(connection).prepareStatement(expectedGetMetadataStatement);
     for (int i = 0; i < expectedSqlStatements.length; i++) {
-      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+      if (expectedSqlStatements[i].startsWith("SELECT DISTINCT ")) {
+        verify(expectedStatements.get(i)).executeQuery(expectedSqlStatements[i]);
+      } else {
+        verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+      }
     }
   }
 

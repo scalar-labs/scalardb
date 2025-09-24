@@ -1042,6 +1042,12 @@ public enum CoreError implements ScalarDbError {
       "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
       "",
       ""),
+  RENAMING_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category

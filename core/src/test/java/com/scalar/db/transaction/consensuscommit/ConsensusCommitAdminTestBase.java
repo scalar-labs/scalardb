@@ -659,16 +659,11 @@ public abstract class ConsensusCommitAdminTestBase {
     // Arrange
     String existingTableName = "tbl1";
     String newTableName = "tbl2";
-    TableMetadata tableMetadata =
-        TableMetadata.newBuilder().addColumn("col1", DataType.INT).addPartitionKey("col1").build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, existingTableName))
-        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
 
     // Act
     admin.renameTable(NAMESPACE, existingTableName, newTableName);
 
     // Assert
-    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, existingTableName);
     verify(distributedStorageAdmin).renameTable(NAMESPACE, existingTableName, newTableName);
   }
 
