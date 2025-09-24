@@ -939,7 +939,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameTableStatement);
-        execute(connection, getDeleteTableMetadataStatement(namespace, oldTableName));
+        deleteTableMetadata(connection, namespace, oldTableName);
         for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
           String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
           String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);

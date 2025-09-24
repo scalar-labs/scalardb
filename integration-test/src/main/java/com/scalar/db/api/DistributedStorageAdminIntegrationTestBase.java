@@ -1383,6 +1383,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
       assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
       assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
       assertThat(admin.indexExists(namespace1, newTableName, getColumnName2())).isTrue();
       assertThat(admin.indexExists(namespace1, newTableName, getColumnName3())).isTrue();
       assertThatCode(() -> admin.dropIndex(namespace1, newTableName, getColumnName2()))

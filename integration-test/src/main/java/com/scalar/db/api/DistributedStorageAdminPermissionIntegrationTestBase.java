@@ -353,7 +353,7 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
     // Arrange
     createNamespaceByRoot();
     createTableByRoot();
-    String newTableName = TABLE + "_new";
+    String newTableName = "new_" + TABLE;
 
     // Act Assert
     assertThatCode(() -> adminForNormalUser.renameTable(NAMESPACE, TABLE, newTableName))
