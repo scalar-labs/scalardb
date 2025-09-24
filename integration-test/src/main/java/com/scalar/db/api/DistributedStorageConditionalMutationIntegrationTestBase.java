@@ -121,13 +121,15 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .addColumn(COL_NAME4, DataType.FLOAT)
             .addColumn(COL_NAME5, DataType.DOUBLE)
             .addColumn(COL_NAME6, DataType.TEXT)
-            .addColumn(COL_NAME7, DataType.BLOB)
-            .addColumn(COL_NAME8, DataType.DATE)
-            .addColumn(COL_NAME9, DataType.TIME)
-            .addColumn(COL_NAME10, DataType.TIMESTAMPTZ)
+            .addColumn(COL_NAME7, DataType.DATE)
+            .addColumn(COL_NAME8, DataType.TIME)
+            .addColumn(COL_NAME9, DataType.TIMESTAMPTZ)
             .addPartitionKey(PARTITION_KEY);
     if (isTimestampTypeSupported()) {
-      tableMetadata.addColumn(COL_NAME11, DataType.TIMESTAMP);
+      tableMetadata.addColumn(COL_NAME10, DataType.TIMESTAMP);
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      tableMetadata.addColumn(COL_NAME11, DataType.BLOB);
     }
 
     Map<String, String> options = getCreationOptions();
@@ -178,6 +180,9 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     List<DataType> dataTypes = Lists.newArrayList(DataType.values());
     if (!isTimestampTypeSupported()) {
       dataTypes.remove(DataType.TIMESTAMP);
+    }
+    if (!isConditionOnBlobColumnSupported()) {
+      dataTypes.remove(DataType.BLOB);
     }
 
     List<OperatorAndDataType> ret = new ArrayList<>();
@@ -546,9 +551,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             COL_NAME6,
             COL_NAME7,
             COL_NAME8,
-            COL_NAME9,
-            COL_NAME10);
+            COL_NAME9);
     if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME10);
+    }
+    if (isConditionOnBlobColumnSupported()) {
       columnNames.add(COL_NAME11);
     }
     assertThat(result.get().getContainedColumnNames())
@@ -589,22 +596,24 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     assertThat(result.get().getText(COL_NAME6))
         .describedAs(description)
         .isEqualTo(expected.get(COL_NAME6).getTextValue());
-    assertThat(result.get().getBlob(COL_NAME7))
+    assertThat(result.get().getDate(COL_NAME7))
         .describedAs(description)
-        .isEqualTo(expected.get(COL_NAME7).getBlobValue());
-    assertThat(result.get().getDate(COL_NAME8))
+        .isEqualTo(expected.get(COL_NAME7).getDateValue());
+    assertThat(result.get().getTime(COL_NAME8))
         .describedAs(description)
-        .isEqualTo(expected.get(COL_NAME8).getDateValue());
-    assertThat(result.get().getTime(COL_NAME9))
+        .isEqualTo(expected.get(COL_NAME8).getTimeValue());
+    assertThat(result.get().getTimestampTZ(COL_NAME9))
         .describedAs(description)
-        .isEqualTo(expected.get(COL_NAME9).getTimeValue());
-    assertThat(result.get().getTimestampTZ(COL_NAME10))
-        .describedAs(description)
-        .isEqualTo(expected.get(COL_NAME10).getTimestampTZValue());
+        .isEqualTo(expected.get(COL_NAME9).getTimestampTZValue());
     if (isTimestampTypeSupported()) {
-      assertThat(result.get().getTimestamp(COL_NAME11))
+      assertThat(result.get().getTimestamp(COL_NAME10))
           .describedAs(description)
-          .isEqualTo(expected.get(COL_NAME11).getTimestampValue());
+          .isEqualTo(expected.get(COL_NAME10).getTimestampValue());
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      assertThat(result.get().getBlob(COL_NAME11))
+          .describedAs(description)
+          .isEqualTo(expected.get(COL_NAME11).getBlobValue());
     }
   }
 
@@ -637,9 +646,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             COL_NAME6,
             COL_NAME7,
             COL_NAME8,
-            COL_NAME9,
-            COL_NAME10);
+            COL_NAME9);
     if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME10);
+    }
+    if (isConditionOnBlobColumnSupported()) {
       columnNames.add(COL_NAME11);
     }
     assertThat(result.get().getContainedColumnNames()).isEqualTo(columnNames);
@@ -649,14 +660,16 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     assertThat(result.get().getFloat(COL_NAME4)).isEqualTo(put.getFloatValue(COL_NAME4));
     assertThat(result.get().getDouble(COL_NAME5)).isEqualTo(put.getDoubleValue(COL_NAME5));
     assertThat(result.get().getText(COL_NAME6)).isEqualTo(put.getTextValue(COL_NAME6));
-    assertThat(result.get().getBlob(COL_NAME7)).isEqualTo(put.getBlobValue(COL_NAME7));
-    assertThat(result.get().getDate(COL_NAME8)).isEqualTo(put.getDateValue(COL_NAME8));
-    assertThat(result.get().getTime(COL_NAME9)).isEqualTo(put.getTimeValue(COL_NAME9));
-    assertThat(result.get().getTimestampTZ(COL_NAME10))
-        .isEqualTo(put.getTimestampTZValue(COL_NAME10));
+    assertThat(result.get().getDate(COL_NAME7)).isEqualTo(put.getDateValue(COL_NAME7));
+    assertThat(result.get().getTime(COL_NAME8)).isEqualTo(put.getTimeValue(COL_NAME8));
+    assertThat(result.get().getTimestampTZ(COL_NAME9))
+        .isEqualTo(put.getTimestampTZValue(COL_NAME9));
     if (isTimestampTypeSupported()) {
-      assertThat(result.get().getTimestamp(COL_NAME11))
-          .isEqualTo(put.getTimestampValue(COL_NAME11));
+      assertThat(result.get().getTimestamp(COL_NAME10))
+          .isEqualTo(put.getTimestampValue(COL_NAME10));
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      assertThat(result.get().getBlob(COL_NAME11)).isEqualTo(put.getBlobValue(COL_NAME11));
     }
   }
 
@@ -706,9 +719,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             COL_NAME6,
             COL_NAME7,
             COL_NAME8,
-            COL_NAME9,
-            COL_NAME10);
+            COL_NAME9);
     if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME10);
+    }
+    if (isConditionOnBlobColumnSupported()) {
       columnNames.add(COL_NAME11);
     }
     assertThat(result.get().getContainedColumnNames()).isEqualTo(columnNames);
@@ -718,14 +733,16 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     assertThat(result.get().getFloat(COL_NAME4)).isEqualTo(put.getFloatValue(COL_NAME4));
     assertThat(result.get().getDouble(COL_NAME5)).isEqualTo(put.getDoubleValue(COL_NAME5));
     assertThat(result.get().getText(COL_NAME6)).isEqualTo(put.getTextValue(COL_NAME6));
-    assertThat(result.get().getBlob(COL_NAME7)).isEqualTo(put.getBlobValue(COL_NAME7));
-    assertThat(result.get().getDate(COL_NAME8)).isEqualTo(put.getDateValue(COL_NAME8));
-    assertThat(result.get().getTime(COL_NAME9)).isEqualTo(put.getTimeValue(COL_NAME9));
-    assertThat(result.get().getTimestampTZ(COL_NAME10))
-        .isEqualTo(put.getTimestampTZValue(COL_NAME10));
+    assertThat(result.get().getDate(COL_NAME7)).isEqualTo(put.getDateValue(COL_NAME7));
+    assertThat(result.get().getTime(COL_NAME8)).isEqualTo(put.getTimeValue(COL_NAME8));
+    assertThat(result.get().getTimestampTZ(COL_NAME9))
+        .isEqualTo(put.getTimestampTZValue(COL_NAME9));
     if (isTimestampTypeSupported()) {
-      assertThat(result.get().getTimestamp(COL_NAME11))
-          .isEqualTo(put.getTimestampValue(COL_NAME11));
+      assertThat(result.get().getTimestamp(COL_NAME10))
+          .isEqualTo(put.getTimestampValue(COL_NAME10));
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      assertThat(result.get().getBlob(COL_NAME1)).isEqualTo(put.getBlobValue(COL_NAME11));
     }
   }
 
@@ -758,9 +775,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             COL_NAME6,
             COL_NAME7,
             COL_NAME8,
-            COL_NAME9,
-            COL_NAME10);
+            COL_NAME9);
     if (isTimestampTypeSupported()) {
+      columnNames.add(COL_NAME10);
+    }
+    if (isConditionOnBlobColumnSupported()) {
       columnNames.add(COL_NAME11);
     }
     assertThat(result.get().getContainedColumnNames()).isEqualTo(columnNames);
@@ -775,17 +794,19 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
         .isEqualTo(initialData.get(COL_NAME5).getDoubleValue());
     assertThat(result.get().getText(COL_NAME6))
         .isEqualTo(initialData.get(COL_NAME6).getTextValue());
-    assertThat(result.get().getBlob(COL_NAME7))
-        .isEqualTo(initialData.get(COL_NAME7).getBlobValue());
-    assertThat(result.get().getDate(COL_NAME8))
-        .isEqualTo(initialData.get(COL_NAME8).getDateValue());
-    assertThat(result.get().getTime(COL_NAME9))
-        .isEqualTo(initialData.get(COL_NAME9).getTimeValue());
-    assertThat(result.get().getTimestampTZ(COL_NAME10))
-        .isEqualTo(initialData.get(COL_NAME10).getTimestampTZValue());
+    assertThat(result.get().getDate(COL_NAME7))
+        .isEqualTo(initialData.get(COL_NAME7).getDateValue());
+    assertThat(result.get().getTime(COL_NAME8))
+        .isEqualTo(initialData.get(COL_NAME8).getTimeValue());
+    assertThat(result.get().getTimestampTZ(COL_NAME9))
+        .isEqualTo(initialData.get(COL_NAME9).getTimestampTZValue());
     if (isTimestampTypeSupported()) {
-      assertThat(result.get().getTimestamp(COL_NAME11))
-          .isEqualTo(initialData.get(COL_NAME11).getTimestampValue());
+      assertThat(result.get().getTimestamp(COL_NAME10))
+          .isEqualTo(initialData.get(COL_NAME10).getTimestampValue());
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      assertThat(result.get().getBlob(COL_NAME11))
+          .isEqualTo(initialData.get(COL_NAME11).getBlobValue());
     }
   }
 
@@ -1147,9 +1168,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
               COL_NAME6,
               COL_NAME7,
               COL_NAME8,
-              COL_NAME9,
-              COL_NAME10);
+              COL_NAME9);
       if (isTimestampTypeSupported()) {
+        columnNames.add(COL_NAME10);
+      }
+      if (isConditionOnBlobColumnSupported()) {
         columnNames.add(COL_NAME11);
       }
       assertThat(result.get().getContainedColumnNames())
@@ -1189,22 +1212,24 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       assertThat(result.get().getText(COL_NAME6))
           .describedAs(description)
           .isEqualTo(initialData.get(COL_NAME6).getTextValue());
-      assertThat(result.get().getBlob(COL_NAME7))
+      assertThat(result.get().getDate(COL_NAME7))
           .describedAs(description)
-          .isEqualTo(initialData.get(COL_NAME7).getBlobValue());
-      assertThat(result.get().getDate(COL_NAME8))
+          .isEqualTo(initialData.get(COL_NAME7).getDateValue());
+      assertThat(result.get().getTime(COL_NAME8))
           .describedAs(description)
-          .isEqualTo(initialData.get(COL_NAME8).getDateValue());
-      assertThat(result.get().getTime(COL_NAME9))
+          .isEqualTo(initialData.get(COL_NAME8).getTimeValue());
+      assertThat(result.get().getTimestampTZ(COL_NAME9))
           .describedAs(description)
-          .isEqualTo(initialData.get(COL_NAME9).getTimeValue());
-      assertThat(result.get().getTimestampTZ(COL_NAME10))
-          .describedAs(description)
-          .isEqualTo(initialData.get(COL_NAME10).getTimestampTZValue());
+          .isEqualTo(initialData.get(COL_NAME9).getTimestampTZValue());
       if (isTimestampTypeSupported()) {
-        assertThat(result.get().getTimestamp(COL_NAME11))
+        assertThat(result.get().getTimestamp(COL_NAME10))
             .describedAs(description)
-            .isEqualTo(initialData.get(COL_NAME11).getTimestampValue());
+            .isEqualTo(initialData.get(COL_NAME10).getTimestampValue());
+      }
+      if (isConditionOnBlobColumnSupported()) {
+        assertThat(result.get().getBlob(COL_NAME11))
+            .describedAs(description)
+            .isEqualTo(initialData.get(COL_NAME11).getBlobValue());
       }
     }
   }
@@ -1296,15 +1321,16 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .value(getColumnWithRandomValue(random.get(), COL_NAME4, DataType.FLOAT))
             .value(getColumnWithRandomValue(random.get(), COL_NAME5, DataType.DOUBLE))
             .value(getColumnWithRandomValue(random.get(), COL_NAME6, DataType.TEXT))
-            .value(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.BLOB))
-            .value(getColumnWithRandomValue(random.get(), COL_NAME8, DataType.DATE))
-            .value(getColumnWithRandomValue(random.get(), COL_NAME9, DataType.TIME))
-            .value(getColumnWithRandomValue(random.get(), COL_NAME10, DataType.TIMESTAMPTZ))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME7, DataType.DATE))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME8, DataType.TIME))
+            .value(getColumnWithRandomValue(random.get(), COL_NAME9, DataType.TIMESTAMPTZ))
             .consistency(Consistency.LINEARIZABLE);
     if (isTimestampTypeSupported()) {
-      put.value(getColumnWithRandomValue(random.get(), COL_NAME11, DataType.TIMESTAMP));
+      put.value(getColumnWithRandomValue(random.get(), COL_NAME10, DataType.TIMESTAMP));
     }
-
+    if (isConditionOnBlobColumnSupported()) {
+      put.value(getColumnWithRandomValue(random.get(), COL_NAME11, DataType.BLOB));
+    }
     return put.build();
   }
 
@@ -1418,14 +1444,16 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .floatValue(COL_NAME4, null)
             .doubleValue(COL_NAME5, null)
             .textValue(COL_NAME6, null)
-            .blobValue(COL_NAME7, (ByteBuffer) null)
-            .dateValue(COL_NAME8, null)
-            .timeValue(COL_NAME9, null)
-            .timestampTZValue(COL_NAME10, null)
+            .dateValue(COL_NAME7, null)
+            .timeValue(COL_NAME8, null)
+            .timestampTZValue(COL_NAME9, null)
             .consistency(Consistency.LINEARIZABLE);
 
     if (isTimestampTypeSupported()) {
-      put.timestampValue(COL_NAME11, null);
+      put.timestampValue(COL_NAME10, null);
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      put.blobValue(COL_NAME11, (ByteBuffer) null);
     }
 
     return put.build();
@@ -1473,12 +1501,14 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
             .put(COL_NAME4, FloatColumn.ofNull(COL_NAME4))
             .put(COL_NAME5, DoubleColumn.ofNull(COL_NAME5))
             .put(COL_NAME6, TextColumn.ofNull(COL_NAME6))
-            .put(COL_NAME7, BlobColumn.ofNull(COL_NAME7))
-            .put(COL_NAME8, DateColumn.ofNull(COL_NAME8))
-            .put(COL_NAME9, TimeColumn.ofNull(COL_NAME9))
-            .put(COL_NAME10, TimestampTZColumn.ofNull(COL_NAME10));
+            .put(COL_NAME7, DateColumn.ofNull(COL_NAME7))
+            .put(COL_NAME8, TimeColumn.ofNull(COL_NAME8))
+            .put(COL_NAME9, TimestampTZColumn.ofNull(COL_NAME9));
     if (isTimestampTypeSupported()) {
-      columns.put(COL_NAME11, TimestampColumn.ofNull(COL_NAME11));
+      columns.put(COL_NAME10, TimestampColumn.ofNull(COL_NAME10));
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      columns.put(COL_NAME11, BlobColumn.ofNull(COL_NAME11));
     }
 
     return columns.build();
@@ -1526,15 +1556,15 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
         return COL_NAME5;
       case TEXT:
         return COL_NAME6;
-      case BLOB:
-        return COL_NAME7;
       case DATE:
-        return COL_NAME8;
+        return COL_NAME7;
       case TIME:
-        return COL_NAME9;
+        return COL_NAME8;
       case TIMESTAMPTZ:
-        return COL_NAME10;
+        return COL_NAME9;
       case TIMESTAMP:
+        return COL_NAME10;
+      case BLOB:
         return COL_NAME11;
       default:
         throw new AssertionError();
@@ -1726,6 +1756,10 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isConditionOnBlobColumnSupported() {
     return true;
   }
 }

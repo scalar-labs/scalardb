@@ -137,13 +137,7 @@ jobs:
         ports:
           - 9042:9042
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -179,7 +173,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestCassandra' task
-        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestCassandra  --tests CassandraColumnValueIntegrationTest
 
       - name: Upload Gradle test reports
         if: always()
@@ -201,13 +195,7 @@ jobs:
         ports:
           - 9042:9042
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -243,7 +231,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestCassandra' task
-        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestCassandra  --tests CassandraColumnValueIntegrationTest
 
       - name: Upload Gradle test reports
         if: always()
@@ -261,13 +249,7 @@ jobs:
       SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
       SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -341,7 +323,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestCosmos' task
-        run: ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew.bat integrationTestCosmos "--tests" "CosmosColumnValueIntegrationTest" "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
 
       - name: Upload Gradle test reports
         if: always()
@@ -360,13 +342,7 @@ jobs:
         ports:
           - 8000:8000
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -402,7 +378,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestDynamo' task
-        run: ./gradlew integrationTestDynamo ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestDynamo --tests DynamoDatabaseColumnValueIntegrationTest
 
       - name: Upload Gradle test reports
         if: always()
@@ -415,13 +391,7 @@ jobs:
     name: MySQL 5.7 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Run MySQL 5.7
@@ -461,7 +431,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql 
 
       - name: Upload Gradle test reports
         if: always()
@@ -474,13 +444,7 @@ jobs:
     name: MySQL 8.0 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Run MySQL 8.0
@@ -520,7 +484,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql 
 
       - name: Upload Gradle test reports
         if: always()
@@ -533,13 +497,7 @@ jobs:
     name: MySQL 8.4 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Run MySQL 8.4
@@ -579,7 +537,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql 
 
       - name: Upload Gradle test reports
         if: always()
@@ -601,13 +559,7 @@ jobs:
         ports:
           - 5432:5432
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -643,7 +595,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest 
 
       - name: Upload Gradle test reports
         if: always()
@@ -665,13 +617,7 @@ jobs:
         ports:
           - 5432:5432
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -707,7 +653,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest 
 
       - name: Upload Gradle test reports
         if: always()
@@ -729,13 +675,7 @@ jobs:
         ports:
           - 5432:5432
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -771,7 +711,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest 
 
       - name: Upload Gradle test reports
         if: always()
@@ -793,13 +733,7 @@ jobs:
         ports:
           - 5432:5432
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -835,7 +769,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest 
 
       - name: Upload Gradle test reports
         if: always()
@@ -857,13 +791,7 @@ jobs:
         ports:
           - 5432:5432
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -899,7 +827,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest 
 
       - name: Upload Gradle test reports
         if: always()
@@ -921,13 +849,7 @@ jobs:
         ports:
           - 1521:1521
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -963,7 +885,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle 
 
       - name: Upload Gradle test reports
         if: always()
@@ -992,13 +914,7 @@ jobs:
           --health-timeout 5s
           --health-retries 120
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1034,7 +950,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1047,13 +963,7 @@ jobs:
     name: Oracle 23 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Free up ~14GB of disk space by removing the Android SDK
@@ -1118,7 +1028,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle 
 
       - name: Stop Oracle 23 container
         if: always()
@@ -1140,13 +1050,7 @@ jobs:
       SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
       SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1203,7 +1107,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1227,13 +1131,7 @@ jobs:
           - 1433:1433
         options: --name sqlserver19
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1273,7 +1171,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1297,13 +1195,7 @@ jobs:
           - 1433:1433
         options: --name sqlserver22
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1343,7 +1235,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1356,13 +1248,7 @@ jobs:
     name: SQLite 3 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1401,7 +1287,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1414,13 +1300,7 @@ jobs:
     name: MariaDB 10 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Run MariaDB 10.11
@@ -1460,7 +1340,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1473,13 +1353,7 @@ jobs:
     name: MariaDB 11.4 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Run MariaDB 11.4
@@ -1519,7 +1393,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1532,13 +1406,7 @@ jobs:
     name: YugabyteDB 2 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - name: Run YugabyteDB 2
@@ -1578,7 +1446,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1603,13 +1471,7 @@ jobs:
           - 50000:50000
         options: --privileged --name db2
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1655,7 +1517,7 @@ jobs:
           echo "Container is ready"
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1680,13 +1542,7 @@ jobs:
           - 50000:50000
         options: --privileged --name db2
 
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+
 
     steps:
       - uses: actions/checkout@v5
@@ -1732,7 +1588,7 @@ jobs:
           echo "Container is ready"
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew core:integrationTestJdbc  --tests JdbcDatabaseColumnValueIntegrationTest -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1 
 
       - name: Upload Gradle test reports
         if: always()
@@ -1741,74 +1597,3 @@ jobs:
           name: db2_12.1_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
-  integration-test-for-multi-storage:
-    name: Multi-storage integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-
-      cassandra:
-        image: cassandra:3.11
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
-    strategy:
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Execute Gradle 'integrationTestMultiStorage' task
-        run: ./gradlew integrationTestMultiStorage ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: multi_storage_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestMultiStorage
