@@ -45,11 +45,13 @@ public class JdbcOperationCheckerTest {
         .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(scanAll, tableMetadata);
   }
 
-    @Test
+  @Test
   public void checkOrderingsForScanAll_WhenAdditionalCheckThrows_ShouldPropagateException() {
     // Arrange
     Exception exception = new RuntimeException();
-    doThrow(exception).when(rdbEngine).throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(any(), any());
+    doThrow(exception)
+        .when(rdbEngine)
+        .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(any(), any());
 
     // Act
     Assertions.assertThatThrownBy(
