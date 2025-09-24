@@ -736,12 +736,18 @@ public enum CoreError implements ScalarDbError {
       "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
       "",
       ""),
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
   CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
-      Category.USER_ERROR, "0227", "Renaming tables is not supported in Cassandra", "", ""),
+      Category.USER_ERROR, "0228", "Renaming tables is not supported in Cassandra", "", ""),
   COSMOS_RENAME_TABLE_NOT_SUPPORTED(
-      Category.USER_ERROR, "0228", "Renaming tables is not supported in Cosmos DB", "", ""),
+      Category.USER_ERROR, "0229", "Renaming tables is not supported in Cosmos DB", "", ""),
   DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
-      Category.USER_ERROR, "0229", "Renaming tables is not supported in DynamoDB", "", ""),
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in DynamoDB", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -1034,12 +1040,6 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0060",
       "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
-      "",
-      ""),
-  RENAMING_TABLE_FAILED(
-      Category.INTERNAL_ERROR,
-      "0061",
-      "Renaming a table failed. Old table name: %s; New table name: %s",
       "",
       ""),
 
