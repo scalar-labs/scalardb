@@ -14,6 +14,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -219,6 +220,11 @@ public interface RdbEngineStrategy {
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
   }
 
+  default void bindBlobColumnToPreparedStatement(
+      PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
+    preparedStatement.setBytes(index, bytes);
+  }
+
   default DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
     return DateColumn.of(columnName, resultSet.getObject(columnName, LocalDate.class));
   }
@@ -304,5 +310,17 @@ public interface RdbEngineStrategy {
    *     column, and it is not supported in the underlying storage
    */
   default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {}
+
+  /**
+   * Throws an exception if a cross-partition scan operation with a condition on a blob column is
+   * specified and is not supported in the underlying storage.
+   *
+   * @param scanAll the ScanAll operation
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if the ScanAll operation contains a condition on a blob
+   *     column, and it is not supported in the underlying storage
+   */
+  default void throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
       ScanAll scanAll, TableMetadata metadata) {}
 }

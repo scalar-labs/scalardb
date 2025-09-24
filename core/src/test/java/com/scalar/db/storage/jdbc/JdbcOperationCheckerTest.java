@@ -2,8 +2,10 @@ package com.scalar.db.storage.jdbc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.StorageInfoProvider;
@@ -22,6 +24,7 @@ public class JdbcOperationCheckerTest {
   @Mock private StorageInfoProvider storageInfoProvider;
   @Mock private RdbEngineStrategy rdbEngine;
   @Mock private ScanAll scanAll;
+  @Mock private Scan scan;
   @Mock private TableMetadata tableMetadata;
   private JdbcOperationChecker operationChecker;
 
@@ -51,7 +54,8 @@ public class JdbcOperationCheckerTest {
     Exception exception = new RuntimeException();
     doThrow(exception)
         .when(rdbEngine)
-        .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(any(), any());
+        .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+            any(ScanAll.class), any(TableMetadata.class));
 
     // Act
     Assertions.assertThatThrownBy(
@@ -61,5 +65,45 @@ public class JdbcOperationCheckerTest {
     // Assert
     verify(rdbEngine)
         .throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(scanAll, tableMetadata);
+  }
+
+  @Test
+  public void checkConjunctions_WithScanAll_ShouldInvokeAdditionalCheckOnRdbEngine() {
+    // Arrange
+    // Act
+    operationChecker.checkConjunctions(scanAll, tableMetadata);
+
+    // Assert
+    verify(rdbEngine)
+        .throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(scanAll, tableMetadata);
+  }
+
+  @Test
+  public void checkConjunctions_WithScan_ShouldNotInvokeAdditionalCheckOnRdbEngine() {
+    // Arrange
+    // Act
+    operationChecker.checkConjunctions(scan, tableMetadata);
+
+    // Assert
+    verify(rdbEngine, never())
+        .throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(any(), any());
+  }
+
+  @Test
+  public void checkConjunctions_WithScanAll_WhenAdditionalCheckThrows_ShouldPropagateException() {
+    // Arrange
+    Exception exception = new RuntimeException();
+    doThrow(exception)
+        .when(rdbEngine)
+        .throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
+            any(ScanAll.class), any(TableMetadata.class));
+
+    // Act
+    Assertions.assertThatThrownBy(() -> operationChecker.checkConjunctions(scanAll, tableMetadata))
+        .isEqualTo(exception);
+
+    // Assert
+    verify(rdbEngine)
+        .throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(scanAll, tableMetadata);
   }
 }
