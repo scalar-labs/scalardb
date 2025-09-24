@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchException;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
@@ -414,6 +415,35 @@ public class OperationCheckerTest {
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void whenCheckingScanAllOperationWithCrossPartitionScanEnabledWithOrdering_shouldNotThrow()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(PKEY1, DataType.BLOB)
+            .addColumn(COL1, DataType.INT)
+            .addColumn(COL2, DataType.BLOB)
+            .addPartitionKey(PKEY1)
+            .build();
+    when(metadataManager.getTableMetadata(any())).thenReturn(metadata);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .ordering(Scan.Ordering.asc(COL1))
+            .ordering(Scan.Ordering.desc(COL2))
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(true);
+
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertDoesNotThrow(() -> operationChecker.check(scan));
   }
 
   @Test

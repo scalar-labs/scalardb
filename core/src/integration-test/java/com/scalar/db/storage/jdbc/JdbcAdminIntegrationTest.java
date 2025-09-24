@@ -105,8 +105,8 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @Override
-  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
-    // "admin.createIndex()" for TEXT and BLOB columns fails (the "create index" query runs
+  protected boolean isCreateIndexOnTextColumnEnabled() {
+    // "admin.createIndex()" for TEXT columns fails (the "create index" query runs
     // indefinitely) on Db2 community edition version but works on Db2 hosted on IBM Cloud.
     // So we disable these tests until the issue is resolved.
     return !JdbcTestUtils.isDb2(rdbEngine);
@@ -170,5 +170,10 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     } finally {
       admin.dropTable(getNamespace1(), getTable4(), true);
     }
+  }
+
+  @Override
+  protected boolean isIndexOnBlobColumnSupported() {
+    return !JdbcTestUtils.isDb2(rdbEngine);
   }
 }
