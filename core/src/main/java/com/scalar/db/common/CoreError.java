@@ -736,15 +736,21 @@ public enum CoreError implements ScalarDbError {
       "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
       "",
       ""),
-  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
+  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
       "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
       "",
       ""),
   JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0228",
+      "0229",
       "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
       "",
       ""),
