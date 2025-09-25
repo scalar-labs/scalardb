@@ -128,6 +128,14 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + enclose(newTableName);
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "
@@ -165,11 +173,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn) {
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
     return new String[] {
       "ALTER INDEX "
           + enclose(schema)

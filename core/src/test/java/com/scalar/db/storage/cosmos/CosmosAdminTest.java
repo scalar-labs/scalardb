@@ -1152,6 +1152,7 @@ public class CosmosAdminTest {
     Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
     Throwable thrown5 =
         catchThrowable(() -> admin.renameColumn(namespace, table, column, "newCol"));
+    Throwable thrown6 = catchThrowable(() -> admin.renameTable(namespace, table, "newTable"));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
@@ -1159,6 +1160,7 @@ public class CosmosAdminTest {
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown6).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

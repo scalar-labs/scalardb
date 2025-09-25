@@ -258,6 +258,20 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
+  public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String tableName1 = "tbl1";
+    String tableName2 = "tbl2";
+
+    // Act
+    admin.renameTable(namespace, tableName1, tableName2);
+
+    // Assert
+    verify(jdbcAdmin).renameTable(namespace, tableName1, tableName2);
+  }
+
+  @Test
   public void importTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";
