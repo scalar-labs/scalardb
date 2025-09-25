@@ -1,12 +1,17 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.TestUtils;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 
 public class JdbcDatabaseSecondaryIndexIntegrationTest
     extends DistributedStorageSecondaryIndexIntegrationTestBase {
@@ -67,5 +72,15 @@ public class JdbcDatabaseSecondaryIndexIntegrationTest
       }
     }
     return super.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  @Override
+  protected Set<DataType> getSecondaryIndexTypes() {
+    // BLOB type cannot be used as a secondary index in Db2
+    return Sets.newHashSet(
+        JdbcTestUtils.filterDataTypes(
+            Arrays.asList(DataType.values()),
+            rdbEngine,
+            ImmutableMap.of(RdbEngineDb2.class, ImmutableList.of(DataType.BLOB))));
   }
 }

@@ -559,11 +559,17 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
+      if (isCreateIndexOnTextColumnEnabled()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
+      }
       admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
       }
       admin.createIndex(namespace1, TABLE4, COL_NAME10, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME11, options);
@@ -571,18 +577,20 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME13, options);
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
-        admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
-      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
+      }
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
       }
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME9)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isTrue();
@@ -590,10 +598,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME12)).isTrue();
       if (isTimestampTypeSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME13)).isTrue();
-      }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
       }
 
       Set<String> actualSecondaryIndexNames =
@@ -609,9 +613,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         assertThat(actualSecondaryIndexNames).contains(COL_NAME13);
         indexCount++;
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(actualSecondaryIndexNames).contains(COL_NAME3, COL_NAME8);
-        indexCount += 2;
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME3);
+        indexCount += 1;
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME8);
+        indexCount += 1;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
 
@@ -718,7 +726,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME4)
               .addSecondaryIndex(COL_NAME5)
               .addSecondaryIndex(COL_NAME6)
-              .addSecondaryIndex(COL_NAME8)
               .addSecondaryIndex(COL_NAME9)
               .addSecondaryIndex(COL_NAME9)
               .addSecondaryIndex(COL_NAME10)
@@ -726,6 +733,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME12);
       if (isIndexOnBooleanColumnSupported()) {
         metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME7);
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME8);
       }
       if (isTimestampTypeSupported()) {
         metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
@@ -767,7 +777,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       if (isIndexOnBooleanColumnSupported()) {
         admin.dropIndex(namespace1, TABLE4, COL_NAME7);
       }
-      admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      if (isIndexOnBlobColumnSupported()) {
+        admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      }
       admin.dropIndex(namespace1, TABLE4, COL_NAME10);
       admin.dropIndex(namespace1, TABLE4, COL_NAME11);
       admin.dropIndex(namespace1, TABLE4, COL_NAME12);
@@ -1372,11 +1384,15 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     return true;
   }
 
+  protected boolean isIndexOnBlobColumnSupported() {
+    return true;
+  }
+
   protected boolean isTimestampTypeSupported() {
     return true;
   }
 
-  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
+  protected boolean isCreateIndexOnTextColumnEnabled() {
     return true;
   }
 }
