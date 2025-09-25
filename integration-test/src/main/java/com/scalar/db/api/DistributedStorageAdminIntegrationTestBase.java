@@ -643,11 +643,17 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Act
       admin.createIndex(namespace1, getTable4(), getColumnName2(), options);
+      if (isCreateIndexOnTextColumnEnabled()) {
+        admin.createIndex(namespace1, getTable4(), getColumnName3(), options);
+      }
       admin.createIndex(namespace1, getTable4(), getColumnName4(), options);
       admin.createIndex(namespace1, getTable4(), getColumnName5(), options);
       admin.createIndex(namespace1, getTable4(), getColumnName6(), options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, getTable4(), getColumnName7(), options);
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        admin.createIndex(namespace1, getTable4(), getColumnName8(), options);
       }
       admin.createIndex(namespace1, getTable4(), getColumnName10(), options);
       admin.createIndex(namespace1, getTable4(), getColumnName11(), options);
@@ -655,18 +661,20 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         admin.createIndex(namespace1, getTable4(), getColumnName13(), options);
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        admin.createIndex(namespace1, getTable4(), getColumnName3(), options);
-        admin.createIndex(namespace1, getTable4(), getColumnName8(), options);
-      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isTrue();
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isTrue();
+      }
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName6())).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, getTable4(), getColumnName7())).isTrue();
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName8())).isTrue();
       }
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName9())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName10())).isTrue();
@@ -674,10 +682,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName12())).isTrue();
       if (isTimestampTypeSupported()) {
         assertThat(admin.indexExists(namespace1, getTable4(), getColumnName13())).isTrue();
-      }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isTrue();
-        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName8())).isTrue();
       }
 
       Set<String> actualSecondaryIndexNames =
@@ -700,9 +704,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         assertThat(actualSecondaryIndexNames).contains(getColumnName13());
         indexCount++;
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(actualSecondaryIndexNames).contains(getColumnName3(), getColumnName8());
-        indexCount += 2;
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(actualSecondaryIndexNames).contains(getColumnName3());
+        indexCount++;
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(getColumnName8());
+        indexCount++;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
 
@@ -817,7 +825,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addSecondaryIndex(getColumnName4())
               .addSecondaryIndex(getColumnName5())
               .addSecondaryIndex(getColumnName6())
-              .addSecondaryIndex(getColumnName8())
               .addSecondaryIndex(getColumnName9())
               .addSecondaryIndex(getColumnName10())
               .addSecondaryIndex(getColumnName11())
@@ -828,6 +835,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         metadataBuilder.addColumn(getColumnName13(), DataType.TIMESTAMP);
         metadataBuilder.addSecondaryIndex(getColumnName13());
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        metadataBuilder.addSecondaryIndex(getColumnName8());
       }
       admin.createTable(namespace1, getTable4(), metadataBuilder.build(), options);
       storage = storageFactory.getStorage();
@@ -866,7 +876,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isIndexOnBooleanColumnSupported()) {
         admin.dropIndex(namespace1, getTable4(), getColumnName7());
       }
-      admin.dropIndex(namespace1, getTable4(), getColumnName8());
+      if (isIndexOnBlobColumnSupported()) {
+        admin.dropIndex(namespace1, getTable4(), getColumnName8());
+      }
       admin.dropIndex(namespace1, getTable4(), getColumnName10());
       admin.dropIndex(namespace1, getTable4(), getColumnName11());
       admin.dropIndex(namespace1, getTable4(), getColumnName12());
@@ -1289,11 +1301,15 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     return true;
   }
 
+  protected boolean isIndexOnBlobColumnSupported() {
+    return true;
+  }
+
   protected boolean isTimestampTypeSupported() {
     return true;
   }
 
-  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
+  protected boolean isCreateIndexOnTextColumnEnabled() {
     return true;
   }
 }

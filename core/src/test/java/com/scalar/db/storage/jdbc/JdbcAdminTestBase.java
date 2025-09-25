@@ -443,8 +443,8 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c4`))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c5`))",
+        "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "INSERT INTO `"
             + tableMetadataSchemaName
@@ -454,13 +454,13 @@ public abstract class JdbcAdminTestBase {
             + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
         "INSERT INTO `"
             + tableMetadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO `"
             + tableMetadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -487,8 +487,8 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c4`))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL, PRIMARY KEY (`c3`,`c1`,`c5`))",
+        "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "INSERT INTO `"
             + tableMetadataSchemaName
@@ -498,13 +498,13 @@ public abstract class JdbcAdminTestBase {
             + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
         "INSERT INTO `"
             + tableMetadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO `"
             + tableMetadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -530,8 +530,8 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -541,13 +541,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -573,9 +573,8 @@ public abstract class JdbcAdminTestBase {
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c5]))",
+        "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "INSERT INTO ["
             + tableMetadataSchemaName
@@ -585,13 +584,13 @@ public abstract class JdbcAdminTestBase {
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
         "INSERT INTO ["
             + tableMetadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',1,3)",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO ["
             + tableMetadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,0,5)",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
@@ -610,9 +609,9 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -622,13 +621,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',1,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,0,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
@@ -648,9 +647,9 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -660,13 +659,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',1,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,0,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
@@ -691,8 +690,8 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -702,13 +701,13 @@ public abstract class JdbcAdminTestBase {
             + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',TRUE,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',TRUE,3)",
+            + "$metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',TRUE,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,FALSE,5)",
+            + "$metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,FALSE,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
@@ -734,8 +733,8 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -745,13 +744,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -778,8 +777,8 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c4\" VARBINARY(64) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -789,13 +788,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -821,7 +820,7 @@ public abstract class JdbcAdminTestBase {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1")
-            .addClusteringKey("c4")
+            .addClusteringKey("c5")
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -830,7 +829,7 @@ public abstract class JdbcAdminTestBase {
             .addColumn("c6", DataType.DOUBLE)
             .addColumn("c7", DataType.FLOAT)
             .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
             .build();
 
     List<Statement> mockedStatements = new ArrayList<>();
@@ -871,8 +870,8 @@ public abstract class JdbcAdminTestBase {
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)",
         "INSERT INTO `"
             + tableMetadataSchemaName
@@ -882,13 +881,13 @@ public abstract class JdbcAdminTestBase {
             + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
         "INSERT INTO `"
             + tableMetadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO `"
             + tableMetadataSchemaName
-            + "`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -926,9 +925,9 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -938,13 +937,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -982,9 +981,8 @@ public abstract class JdbcAdminTestBase {
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])",
         "INSERT INTO ["
             + tableMetadataSchemaName
@@ -994,13 +992,13 @@ public abstract class JdbcAdminTestBase {
             + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
         "INSERT INTO ["
             + tableMetadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',1,3)",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO ["
             + tableMetadataSchemaName
-            + "].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+            + "].[metadata] VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,0,5)",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
@@ -1031,10 +1029,10 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -1044,13 +1042,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',1,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',1,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,0,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
@@ -1087,8 +1085,8 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -1098,13 +1096,13 @@ public abstract class JdbcAdminTestBase {
             + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',TRUE,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',TRUE,3)",
+            + "$metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',TRUE,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,FALSE,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "$metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,FALSE,5)",
+            + "$metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,FALSE,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,FALSE,6)",
@@ -1142,9 +1140,9 @@ public abstract class JdbcAdminTestBase {
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
             + tableMetadataSchemaName
@@ -1154,13 +1152,13 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','DESC',true,2)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT','CLUSTERING','ASC',true,3)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
         "INSERT INTO \""
             + tableMetadataSchemaName
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+            + "\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB',NULL,NULL,false,5)",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
@@ -1191,7 +1189,7 @@ public abstract class JdbcAdminTestBase {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c4", Order.ASC)
+            .addClusteringKey("c5", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -1204,7 +1202,7 @@ public abstract class JdbcAdminTestBase {
             .addColumn("c10", DataType.TIMESTAMP)
             .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
             .build();
 
     List<Statement> mockedStatements = new ArrayList<>();
@@ -3726,6 +3724,74 @@ public abstract class JdbcAdminTestBase {
     verify(getTableMetadataNamespacesStatementMock)
         .executeQuery(getTableMetadataNamespacesStatement);
     assertThat(actual).containsOnly(tableMetadataSchemaName);
+  }
+
+  @Test
+  void createTableInternal_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    TableMetadata metadata1 =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.BLOB).build();
+    TableMetadata metadata2 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck", DataType.BLOB)
+            .build();
+    TableMetadata metadata3 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.BLOB)
+            .addSecondaryIndex("col")
+            .build();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable("ns", "tbl", metadata1, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTable("ns", "tbl", metadata2, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTable("ns", "tbl", metadata3, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
+  }
+
+  @Test
+  void createIndex_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String indexColumn = "index_col";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+
+    PreparedStatement checkStatement = prepareStatementForNamespaceCheck();
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+                new GetColumnsResultSetMocker.Row(
+                    "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    indexColumn, DataType.BLOB.toString(), null, null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.createIndex(namespace, table, indexColumn, Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
   }
 
   private PreparedStatement prepareStatementForNamespaceCheck() throws SQLException {

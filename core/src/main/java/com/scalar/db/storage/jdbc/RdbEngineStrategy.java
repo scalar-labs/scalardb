@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -283,4 +284,16 @@ public interface RdbEngineStrategy {
       throws SQLException {
     connection.setReadOnly(readOnly);
   }
+
+  /**
+   * Throws an exception if a cross-partition scan operation with ordering on a blob column is
+   * specified and is not supported in the underlying storage.
+   *
+   * @param scanAll the ScanAll operation
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if the ScanAll operation contains an ordering on a blob
+   *     column, and it is not supported in the underlying storage
+   */
+  default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {}
 }
