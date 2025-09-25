@@ -401,6 +401,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       // Retrieve user keyspace and filter out system ones. A downside is that this may include

@@ -271,6 +271,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    admin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public void importTable(
       String namespace,
       String table,
