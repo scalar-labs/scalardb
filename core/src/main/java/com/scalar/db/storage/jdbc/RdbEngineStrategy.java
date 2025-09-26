@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -121,6 +122,8 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
+  String renameTableSql(String namespace, String oldTableName, String newTableName);
+
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
@@ -139,11 +142,7 @@ public interface RdbEngineStrategy {
   String dropIndexSql(String schema, String table, String indexName);
 
   String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn);
+      String schema, String table, String column, String oldIndexName, String newIndexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -292,4 +291,16 @@ public interface RdbEngineStrategy {
       throws SQLException {
     connection.setReadOnly(readOnly);
   }
+
+  /**
+   * Throws an exception if a cross-partition scan operation with ordering on a blob column is
+   * specified and is not supported in the underlying storage.
+   *
+   * @param scanAll the ScanAll operation
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if the ScanAll operation contains an ordering on a blob
+   *     column, and it is not supported in the underlying storage
+   */
+  default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {}
 }

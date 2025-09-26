@@ -70,4 +70,20 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithCassandra
       admin.dropTable(namespace1, TABLE4, true);
     }
   }
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
 }

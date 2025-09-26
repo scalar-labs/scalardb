@@ -559,11 +559,17 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
       // Act
       admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
+      if (isCreateIndexOnTextColumnEnabled()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
+      }
       admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
       }
       admin.createIndex(namespace1, TABLE4, COL_NAME10, options);
       admin.createIndex(namespace1, TABLE4, COL_NAME11, options);
@@ -571,18 +577,20 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         admin.createIndex(namespace1, TABLE4, COL_NAME13, options);
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
-        admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
-      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
+      }
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
       }
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME9)).isTrue();
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isTrue();
@@ -590,10 +598,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME12)).isTrue();
       if (isTimestampTypeSupported()) {
         assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME13)).isTrue();
-      }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
       }
 
       Set<String> actualSecondaryIndexNames =
@@ -609,9 +613,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         assertThat(actualSecondaryIndexNames).contains(COL_NAME13);
         indexCount++;
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(actualSecondaryIndexNames).contains(COL_NAME3, COL_NAME8);
-        indexCount += 2;
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME3);
+        indexCount += 1;
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME8);
+        indexCount += 1;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
 
@@ -718,7 +726,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME4)
               .addSecondaryIndex(COL_NAME5)
               .addSecondaryIndex(COL_NAME6)
-              .addSecondaryIndex(COL_NAME8)
               .addSecondaryIndex(COL_NAME9)
               .addSecondaryIndex(COL_NAME9)
               .addSecondaryIndex(COL_NAME10)
@@ -726,6 +733,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME12);
       if (isIndexOnBooleanColumnSupported()) {
         metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME7);
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME8);
       }
       if (isTimestampTypeSupported()) {
         metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
@@ -767,7 +777,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       if (isIndexOnBooleanColumnSupported()) {
         admin.dropIndex(namespace1, TABLE4, COL_NAME7);
       }
-      admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      if (isIndexOnBlobColumnSupported()) {
+        admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      }
       admin.dropIndex(namespace1, TABLE4, COL_NAME10);
       admin.dropIndex(namespace1, TABLE4, COL_NAME11);
       admin.dropIndex(namespace1, TABLE4, COL_NAME12);
@@ -1161,6 +1173,104 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace1, TABLE4, tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, TABLE4, newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameTable(namespace1, TABLE4, "newTableName"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace1, TABLE4, tableMetadata, options);
+      admin.createTable(namespace1, newTableName, tableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.renameTable(namespace1, TABLE4, newTableName))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly()
+      throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addPartitionKey("c1")
+              .addSecondaryIndex("c2")
+              .addSecondaryIndex("c3")
+              .build();
+      admin.createTable(namespace1, TABLE4, tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, TABLE4, newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, TABLE4)).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+      assertThat(admin.indexExists(namespace1, newTableName, "c2")).isTrue();
+      assertThat(admin.indexExists(namespace1, newTableName, "c3")).isTrue();
+      assertThatCode(() -> admin.dropIndex(namespace1, newTableName, "c2"))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.dropIndex(namespace1, newTableName, "c3"))
+          .doesNotThrowAnyException();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
     // Arrange
@@ -1274,11 +1384,15 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     return true;
   }
 
+  protected boolean isIndexOnBlobColumnSupported() {
+    return true;
+  }
+
   protected boolean isTimestampTypeSupported() {
     return true;
   }
 
-  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
+  protected boolean isCreateIndexOnTextColumnEnabled() {
     return true;
   }
 }

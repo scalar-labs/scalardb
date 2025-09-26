@@ -118,6 +118,15 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "EXEC sp_rename '"
+        + encloseFullTableName(namespace, oldTableName)
+        + "', '"
+        + newTableName
+        + "'";
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "
@@ -140,11 +149,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn) {
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
     return new String[] {
       "EXEC sp_rename '"
           + encloseFullTableName(schema, table)

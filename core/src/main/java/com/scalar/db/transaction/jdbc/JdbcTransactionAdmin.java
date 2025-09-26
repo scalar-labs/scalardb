@@ -181,6 +181,12 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    jdbcAdmin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return jdbcAdmin.getNamespaceNames();
   }

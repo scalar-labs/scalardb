@@ -400,6 +400,33 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, oldTableName)));
+    }
+
+    if (tableExists(namespace, newTableName)) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, newTableName)));
+    }
+
+    try {
+      admin.renameTable(namespace, oldTableName, newTableName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.RENAMING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, oldTableName),
+              ScalarDbUtils.getFullTableName(namespace, newTableName)),
+          e);
+    }
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
       Set<String> namespaceNames = admin.getNamespaceNames();

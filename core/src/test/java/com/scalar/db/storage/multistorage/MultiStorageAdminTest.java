@@ -690,6 +690,66 @@ public class MultiStorageAdminTest {
   }
 
   @Test
+  public void renameTable_ForTable1InNamespace1_ShouldCallRenameTableOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTableName = TABLE1;
+    String newTableName = "new_" + TABLE1;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin1).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
+  public void renameTable_ForTable2InNamespace1_ShouldShouldCallRenameTableOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTableName = TABLE2;
+    String newTableName = "new_" + TABLE2;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin2).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
+  public void renameTable_ForTable3InNamespace1_ShouldCallRenameTableOfDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTableName = TABLE3;
+    String newTableName = "new_" + TABLE3;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin3).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
+  public void renameTable_ForTable1InNamespace2_ShouldCallRenameTableOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String oldTableName = TABLE1;
+    String newTableName = "new_" + TABLE1;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin2).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
   public void
       getNamespaceNames_WithExistingNamespacesNotInMapping_ShouldReturnExistingNamespacesInMappingAndFromDefaultAdmin()
           throws ExecutionException {

@@ -251,6 +251,14 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + encloseFullTableName(namespace, newTableName);
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     throw new AssertionError(
@@ -269,15 +277,10 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn) {
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
     // SQLite does not support renaming an index
     return new String[] {
-      dropIndexSql(schema, table, oldIndexName),
-      createIndexSql(schema, table, newIndexName, newIndexedColumn)
+      dropIndexSql(schema, table, oldIndexName), createIndexSql(schema, table, newIndexName, column)
     };
   }
 

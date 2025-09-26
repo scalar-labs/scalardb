@@ -300,6 +300,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    admin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return admin.getNamespaceNames().stream()
         .filter(namespace -> !namespace.equals(coordinatorNamespace))

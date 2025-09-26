@@ -736,40 +736,58 @@ public enum CoreError implements ScalarDbError {
       "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
       "",
       ""),
-  INVALID_COLUMN_TYPE_CONVERSION(
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
+  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
+      "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0229",
+      "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in Cassandra", "", ""),
+  COSMOS_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
+  DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
+  INVALID_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0233",
       "Invalid column type conversion from %s to %s. Column: %s",
       "",
       ""),
   CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0228",
+      "0234",
       "Cassandra does not support the altering column type feature",
       "",
       ""),
   COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0229",
+      "0235",
       "Cosmos DB does not support the altering column type feature",
       "",
       ""),
   DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0230",
+      "0236",
       "DynamoDB does not support the altering column type feature",
       "",
       ""),
   JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0231",
+      "0236",
       "SQLite does not support the altering column type feature",
-      "",
-      ""),
-  ALTER_IMPORTED_COLUMN_TYPE_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0232",
-      "Altering the data type of an imported column is not supported. Column: %s; Data type: %s; ",
       "",
       ""),
 
@@ -1066,9 +1084,15 @@ public enum CoreError implements ScalarDbError {
       "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
       "",
       ""),
-  ALTERING_COLUMN_TYPE_FAILED(
+  RENAMING_TABLE_FAILED(
       Category.INTERNAL_ERROR,
       "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
+      "",
+      ""),
+  ALTERING_COLUMN_TYPE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0062",
       "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
