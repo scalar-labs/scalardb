@@ -264,6 +264,20 @@ public class SingleCrudOperationTransactionAdminTest {
   }
 
   @Test
+  public void renameTable_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String oldTableName = "old_tbl";
+    String newTableName = "new_tbl";
+
+    // Act
+    admin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(distributedStorageAdmin).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
   public void importTable_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

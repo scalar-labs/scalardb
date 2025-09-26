@@ -84,4 +84,20 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
   @Override
   @Disabled("Cosmos DB does not support renaming columns")
   public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming tables")
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming tables")
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming tables")
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming tables")
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
 }

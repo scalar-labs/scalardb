@@ -153,4 +153,9 @@ public class CassandraAdminPermissionIntegrationTest
     assertThatCode(() -> adminForNormalUser.renameColumn(NAMESPACE, TABLE, COL_NAME1, NEW_COL_NAME))
         .doesNotThrowAnyException();
   }
+
+  @Test
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_WithSufficientPermission_ShouldSucceed() {}
 }

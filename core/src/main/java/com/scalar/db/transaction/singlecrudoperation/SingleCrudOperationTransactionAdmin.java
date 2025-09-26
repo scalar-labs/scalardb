@@ -123,6 +123,12 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
   }
 
   @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    distributedStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return distributedStorageAdmin.getNamespaceNames();
   }

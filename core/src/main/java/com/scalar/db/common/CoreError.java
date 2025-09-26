@@ -754,6 +754,12 @@ public enum CoreError implements ScalarDbError {
       "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
       "",
       ""),
+  CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in Cassandra", "", ""),
+  COSMOS_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
+  DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -1046,6 +1052,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0060",
       "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
+  RENAMING_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
       "",
       ""),
 

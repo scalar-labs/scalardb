@@ -1072,6 +1072,33 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, getTable4(), newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
   public void addNewColumnToTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
@@ -1283,6 +1310,79 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), "newTableName"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+      admin.createTable(namespace1, newTableName, tableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), newTableName))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly()
+      throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, getTable4(), newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
+      assertThat(admin.indexExists(namespace1, newTableName, getColumnName2())).isTrue();
+      assertThat(admin.indexExists(namespace1, newTableName, getColumnName3())).isTrue();
+      assertThatCode(() -> admin.dropIndex(namespace1, newTableName, getColumnName2()))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.dropIndex(namespace1, newTableName, getColumnName3()))
+          .doesNotThrowAnyException();
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
     }
   }
 

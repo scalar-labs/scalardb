@@ -729,6 +729,19 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String existingTableName = "tbl1";
+    String newTableName = "tbl2";
+
+    // Act
+    admin.renameTable(NAMESPACE, existingTableName, newTableName);
+
+    // Assert
+    verify(distributedStorageAdmin).renameTable(NAMESPACE, existingTableName, newTableName);
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
