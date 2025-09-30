@@ -39,6 +39,7 @@ subprojects {
         yugabyteDriverVersion = '42.7.3-yb-4'
         db2DriverVersion = '12.1.2.0'
         mariadDbDriverVersion = '3.5.6'
+        alloyDbJdbcConnectorVersion = '1.2.6'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.14.0'
         junitVersion = '5.13.4'
