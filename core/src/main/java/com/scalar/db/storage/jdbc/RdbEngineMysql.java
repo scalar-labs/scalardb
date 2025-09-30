@@ -115,6 +115,31 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " CHANGE COLUMN "
+        + enclose(oldColumnName)
+        + " "
+        + enclose(newColumnName)
+        + " "
+        + columnType;
+  }
+
+  @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + encloseFullTableName(namespace, newTableName);
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     return "ALTER TABLE "
@@ -133,6 +158,19 @@ class RdbEngineMysql extends AbstractRdbEngine {
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(schema, table)
+          + " RENAME INDEX "
+          + enclose(oldIndexName)
+          + " TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override

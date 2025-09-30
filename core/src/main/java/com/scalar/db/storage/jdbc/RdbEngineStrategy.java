@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -98,6 +99,31 @@ public interface RdbEngineStrategy {
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
+  default String[] dropColumnSql(String namespace, String table, String columnName) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " DROP COLUMN "
+          + enclose(columnName)
+    };
+  }
+
+  default String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " RENAME COLUMN "
+        + enclose(oldColumnName)
+        + " TO "
+        + enclose(newColumnName);
+  }
+
+  String renameTableSql(String namespace, String oldTableName, String newTableName);
+
   String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
@@ -114,6 +140,9 @@ public interface RdbEngineStrategy {
   }
 
   String dropIndexSql(String schema, String table, String indexName);
+
+  String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -242,8 +271,29 @@ public interface RdbEngineStrategy {
     // Do nothing
   }
 
+  /**
+   * Throws an exception if renaming the column is not supported in the underlying database.
+   *
+   * @param columnName the current name of the column to rename
+   * @param tableMetadata the current table metadata
+   * @throws UnsupportedOperationException if renaming the column is not supported
+   */
+  default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
+
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {
     connection.setReadOnly(readOnly);
   }
+
+  /**
+   * Throws an exception if a cross-partition scan operation with ordering on a blob column is
+   * specified and is not supported in the underlying storage.
+   *
+   * @param scanAll the ScanAll operation
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if the ScanAll operation contains an ordering on a blob
+   *     column, and it is not supported in the underlying storage
+   */
+  default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {}
 }

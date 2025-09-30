@@ -59,7 +59,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String COL_NAME14 = "c14";
   private static final String COL_NAME15 = "c15";
   private StorageFactory storageFactory;
-  private DistributedStorageAdmin admin;
+  protected DistributedStorageAdmin admin;
   private String namespace1;
   private String namespace2;
   private String namespace3;
@@ -655,11 +655,17 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
 
       // Act
       admin.createIndex(namespace1, getTable4(), getColumnName2(), options);
+      if (isCreateIndexOnTextColumnEnabled()) {
+        admin.createIndex(namespace1, getTable4(), getColumnName3(), options);
+      }
       admin.createIndex(namespace1, getTable4(), getColumnName4(), options);
       admin.createIndex(namespace1, getTable4(), getColumnName5(), options);
       admin.createIndex(namespace1, getTable4(), getColumnName6(), options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, getTable4(), getColumnName7(), options);
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        admin.createIndex(namespace1, getTable4(), getColumnName8(), options);
       }
       admin.createIndex(namespace1, getTable4(), getColumnName10(), options);
       admin.createIndex(namespace1, getTable4(), getColumnName11(), options);
@@ -667,18 +673,20 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         admin.createIndex(namespace1, getTable4(), getColumnName13(), options);
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        admin.createIndex(namespace1, getTable4(), getColumnName3(), options);
-        admin.createIndex(namespace1, getTable4(), getColumnName8(), options);
-      }
 
       // Assert
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isTrue();
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isTrue();
+      }
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName6())).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, getTable4(), getColumnName7())).isTrue();
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName8())).isTrue();
       }
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName9())).isTrue();
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName10())).isTrue();
@@ -686,10 +694,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName12())).isTrue();
       if (isTimestampTypeSupported()) {
         assertThat(admin.indexExists(namespace1, getTable4(), getColumnName13())).isTrue();
-      }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isTrue();
-        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName8())).isTrue();
       }
 
       Set<String> actualSecondaryIndexNames =
@@ -712,9 +716,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         assertThat(actualSecondaryIndexNames).contains(getColumnName13());
         indexCount++;
       }
-      if (isCreateIndexOnTextAndBlobColumnsEnabled()) {
-        assertThat(actualSecondaryIndexNames).contains(getColumnName3(), getColumnName8());
-        indexCount += 2;
+      if (isCreateIndexOnTextColumnEnabled()) {
+        assertThat(actualSecondaryIndexNames).contains(getColumnName3());
+        indexCount++;
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(getColumnName8());
+        indexCount++;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
 
@@ -829,7 +837,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addSecondaryIndex(getColumnName4())
               .addSecondaryIndex(getColumnName5())
               .addSecondaryIndex(getColumnName6())
-              .addSecondaryIndex(getColumnName8())
               .addSecondaryIndex(getColumnName9())
               .addSecondaryIndex(getColumnName10())
               .addSecondaryIndex(getColumnName11())
@@ -840,6 +847,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isTimestampTypeSupported()) {
         metadataBuilder.addColumn(getColumnName13(), DataType.TIMESTAMP);
         metadataBuilder.addSecondaryIndex(getColumnName13());
+      }
+      if (isIndexOnBlobColumnSupported()) {
+        metadataBuilder.addSecondaryIndex(getColumnName8());
       }
       admin.createTable(namespace1, getTable4(), metadataBuilder.build(), options);
       storage = storageFactory.getStorage();
@@ -878,7 +888,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       if (isIndexOnBooleanColumnSupported()) {
         admin.dropIndex(namespace1, getTable4(), getColumnName7());
       }
-      admin.dropIndex(namespace1, getTable4(), getColumnName8());
+      if (isIndexOnBlobColumnSupported()) {
+        admin.dropIndex(namespace1, getTable4(), getColumnName8());
+      }
       admin.dropIndex(namespace1, getTable4(), getColumnName10());
       admin.dropIndex(namespace1, getTable4(), getColumnName11());
       admin.dropIndex(namespace1, getTable4(), getColumnName12());
@@ -978,6 +990,127 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TIMESTAMP)
+            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName3());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName4());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName5());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName6());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName7());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName8());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName9());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName10());
+      if (isTimestampTypeSupported()) {
+        admin.dropColumnFromTable(namespace1, getTable4(), getColumnName11());
+        admin.dropColumnFromTable(namespace1, getTable4(), getColumnName12());
+      }
+
+      // Assert
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .removeColumn(getColumnName3())
+              .removeColumn(getColumnName4())
+              .removeColumn(getColumnName5())
+              .removeColumn(getColumnName6())
+              .removeColumn(getColumnName7())
+              .removeColumn(getColumnName8())
+              .removeColumn(getColumnName9())
+              .removeColumn(getColumnName10());
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .removeColumn(getColumnName11())
+            .removeColumn(getColumnName12());
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameColumn_ShouldRenameColumnCorrectly() throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, getTable4(), getColumnName2(), getColumnName3());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, getTable4(), newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
     // Arrange
 
@@ -1024,6 +1157,259 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable4(), getColumnName2()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.dropColumnFromTable(namespace1, getTable1(), "nonExistingColumn"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName1()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> admin.dropColumnFromTable(namespace1, getTable1(), getColumnName3()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName2());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void dropColumnFromTable_IfExists_ForNonExistingColumn_ShouldNotThrowAnyException() {
+    // Arrange
+
+    // Act Assert
+    assertThatCode(
+            () -> admin.dropColumnFromTable(namespace1, getTable1(), "nonExistingColumn", true))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.renameColumn(namespace1, getTable4(), getColumnName2(), getColumnName3()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.renameColumn(namespace1, getTable1(), "nonExistingColumn", getColumnName3()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.INT)
+              .addColumn(getColumnName5(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addPartitionKey(getColumnName2())
+              .addClusteringKey(getColumnName3())
+              .addClusteringKey(getColumnName4())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, getTable4(), getColumnName1(), getColumnName6());
+      admin.renameColumn(namespace1, getTable4(), getColumnName3(), getColumnName7());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName6(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.INT)
+              .addColumn(getColumnName5(), DataType.INT)
+              .addPartitionKey(getColumnName6())
+              .addPartitionKey(getColumnName2())
+              .addClusteringKey(getColumnName7())
+              .addClusteringKey(getColumnName4())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
+              .addSecondaryIndex(getColumnName1())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act
+      admin.renameColumn(namespace1, getTable4(), getColumnName1(), getColumnName5());
+      admin.renameColumn(namespace1, getTable4(), getColumnName3(), getColumnName4());
+
+      // Assert
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName5(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addPartitionKey(getColumnName5())
+              .addClusteringKey(getColumnName2())
+              .addSecondaryIndex(getColumnName4())
+              .addSecondaryIndex(getColumnName5())
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName1())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), "newTableName"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+      admin.createTable(namespace1, newTableName, tableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.renameTable(namespace1, getTable4(), newTableName))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly()
+      throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(getColumnName2())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(namespace1, getTable4(), tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace1, getTable4(), newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace1, getTable4())).isFalse();
+      assertThat(admin.tableExists(namespace1, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace1, newTableName)).isEqualTo(tableMetadata);
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isFalse();
+      assertThat(admin.indexExists(namespace1, newTableName, getColumnName2())).isTrue();
+      assertThat(admin.indexExists(namespace1, newTableName, getColumnName3())).isTrue();
+      assertThatCode(() -> admin.dropIndex(namespace1, newTableName, getColumnName2()))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.dropIndex(namespace1, newTableName, getColumnName3()))
+          .doesNotThrowAnyException();
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
           throws Exception {
@@ -1047,11 +1433,15 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     return true;
   }
 
+  protected boolean isIndexOnBlobColumnSupported() {
+    return true;
+  }
+
   protected boolean isTimestampTypeSupported() {
     return true;
   }
 
-  protected boolean isCreateIndexOnTextAndBlobColumnsEnabled() {
+  protected boolean isCreateIndexOnTextColumnEnabled() {
     return true;
   }
 }

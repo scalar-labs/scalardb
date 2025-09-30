@@ -60,4 +60,8 @@ public final class JdbcEnv {
   public static boolean isSqlite() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlite:");
   }
+
+  public static boolean isDb2() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:db2:");
+  }
 }

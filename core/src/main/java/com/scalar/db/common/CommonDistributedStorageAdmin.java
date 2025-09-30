@@ -13,13 +13,13 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
-public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
+public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
 
   private final DistributedStorageAdmin admin;
   private final String systemNamespaceName;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CheckedDistributedStorageAdmin(DistributedStorageAdmin admin, DatabaseConfig config) {
+  public CommonDistributedStorageAdmin(DistributedStorageAdmin admin, DatabaseConfig config) {
     this.admin = admin;
     systemNamespaceName = config.getSystemNamespaceName();
   }
@@ -291,6 +291,101 @@ public class CheckedDistributedStorageAdmin implements DistributedStorageAdmin {
       throw new ExecutionException(
           CoreError.ADDING_NEW_COLUMN_TO_TABLE_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table), columnName, columnType),
+          e);
+    }
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    if (!tableMetadata.getColumnNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
+    if (tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      dropIndex(namespace, table, columnName);
+    }
+
+    try {
+      admin.dropColumnFromTable(namespace, table, columnName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.DROPPING_COLUMN_FROM_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName),
+          e);
+    }
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    if (!tableMetadata.getColumnNames().contains(oldColumnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_NOT_FOUND2.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), oldColumnName));
+    }
+
+    if (tableMetadata.getColumnNames().contains(newColumnName)) {
+      throw new IllegalArgumentException(
+          CoreError.COLUMN_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), newColumnName));
+    }
+
+    try {
+      admin.renameColumn(namespace, table, oldColumnName, newColumnName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.RENAMING_COLUMN_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), oldColumnName, newColumnName),
+          e);
+    }
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, oldTableName)));
+    }
+
+    if (tableExists(namespace, newTableName)) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, newTableName)));
+    }
+
+    try {
+      admin.renameTable(namespace, oldTableName, newTableName);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.RENAMING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, oldTableName),
+              ScalarDbUtils.getFullTableName(namespace, newTableName)),
           e);
     }
   }

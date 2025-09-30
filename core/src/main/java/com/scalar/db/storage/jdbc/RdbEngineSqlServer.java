@@ -102,6 +102,31 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "EXEC sp_rename '"
+        + encloseFullTableName(namespace, table)
+        + "."
+        + enclose(oldColumnName)
+        + "', '"
+        + newColumnName
+        + "', 'COLUMN'";
+  }
+
+  @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "EXEC sp_rename '"
+        + encloseFullTableName(namespace, oldTableName)
+        + "', '"
+        + newTableName
+        + "'";
+  }
+
+  @Override
   public String alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     // SQLServer does not require changes in column data types when making indices.
@@ -116,6 +141,20 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "EXEC sp_rename '"
+          + encloseFullTableName(schema, table)
+          + "."
+          + enclose(oldIndexName)
+          + "', '"
+          + newIndexName
+          + "', 'INDEX'"
+    };
   }
 
   @Override

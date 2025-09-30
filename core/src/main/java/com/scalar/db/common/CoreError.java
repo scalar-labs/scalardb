@@ -678,6 +678,88 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
+  DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0216",
+      "Primary key columns cannot be dropped. Table: %s; Column: %s",
+      "",
+      ""),
+  COSMOS_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "Cosmos DB does not support the dropping column feature",
+      "",
+      ""),
+  DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
+  COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0219",
+      "Cosmos DB does not support the renaming column feature",
+      "",
+      ""),
+  DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0220", "DynamoDB does not support the renaming column feature", "", ""),
+  CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0221",
+      "Cassandra does not support renaming non-primary key columns",
+      "",
+      ""),
+  JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0222",
+      "Db2 does not support renaming primary key or index key columns",
+      "",
+      ""),
+  DYNAMO_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0223",
+      "Import-related functionality is not supported in DynamoDB",
+      "",
+      ""),
+  DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0224",
+      "The BLOB type is supported only for the last column in the partition key in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0225",
+      "The BLOB type is not supported for clustering keys in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0226",
+      "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
+      "",
+      ""),
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
+  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
+      "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0229",
+      "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in Cassandra", "", ""),
+  COSMOS_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
+  DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
 
   //
   // Errors for the concurrency error category
@@ -960,6 +1042,24 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
+  DROPPING_COLUMN_FROM_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0059",
+      "Dropping a column from the table failed. Table: %s; Column: %s",
+      "",
+      ""),
+  RENAMING_COLUMN_FAILED(
+      Category.INTERNAL_ERROR,
+      "0060",
+      "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
+  RENAMING_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category

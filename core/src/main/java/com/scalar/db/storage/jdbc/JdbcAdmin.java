@@ -862,6 +862,102 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+      String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
+      try (Connection connection = dataSource.getConnection()) {
+        for (String dropColumnStatement : dropColumnStatements) {
+          execute(connection, dropColumnStatement);
+        }
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Dropping the %s column from the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      assert currentTableMetadata != null;
+      rdbEngine.throwIfRenameColumnNotSupported(oldColumnName, currentTableMetadata);
+      TableMetadata.Builder tableMetadataBuilder =
+          TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
+      if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
+        tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
+      }
+      if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+        tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
+      }
+      if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
+      }
+      TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
+      String renameColumnStatement =
+          rdbEngine.renameColumnSql(
+              namespace,
+              table,
+              oldColumnName,
+              newColumnName,
+              getVendorDbColumnType(updatedTableMetadata, newColumnName));
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameColumnStatement);
+        if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+          String oldIndexName = getIndexName(namespace, table, oldColumnName);
+          String newIndexName = getIndexName(namespace, table, newColumnName);
+          renameIndexInternal(
+              connection, namespace, table, newColumnName, oldIndexName, newIndexName);
+        }
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s column to %s in the %s table failed",
+              oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    try {
+      TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+      assert tableMetadata != null;
+      String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameTableStatement);
+        deleteTableMetadata(connection, namespace, oldTableName);
+        for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
+          String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
+          String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
+          renameIndexInternal(
+              connection, namespace, newTableName, indexedColumnName, oldIndexName, newIndexName);
+        }
+        addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s table to %s failed",
+              getFullTableName(namespace, oldTableName), getFullTableName(namespace, newTableName)),
+          e);
+    }
+  }
+
+  @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
@@ -916,6 +1012,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
     execute(connection, sql);
+  }
+
+  private void renameIndexInternal(
+      Connection connection,
+      String schema,
+      String table,
+      String column,
+      String oldIndexName,
+      String newIndexName)
+      throws SQLException {
+    String[] sqls = rdbEngine.renameIndexSqls(schema, table, column, oldIndexName, newIndexName);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   private String getIndexName(String schema, String table, String indexedColumn) {

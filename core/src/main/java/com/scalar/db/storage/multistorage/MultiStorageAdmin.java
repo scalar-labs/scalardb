@@ -206,6 +206,25 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    getAdmin(namespace, table).dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    getAdmin(namespace, table).renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    getAdmin(namespace, oldTableName).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {

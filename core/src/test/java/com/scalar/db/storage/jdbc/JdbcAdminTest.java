@@ -522,8 +522,8 @@ public class JdbcAdminTest {
   public void createTableInternal_ForMysql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
 
@@ -534,8 +534,8 @@ public class JdbcAdminTest {
     when(config.getMysqlVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineMysql(config),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
 
@@ -543,9 +543,9 @@ public class JdbcAdminTest {
   public void createTableInternal_ForPostgresql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -553,8 +553,8 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlServer_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
 
@@ -562,10 +562,10 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -576,10 +576,10 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -587,8 +587,8 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlite_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
 
@@ -597,9 +597,9 @@ public class JdbcAdminTest {
     when(config.getDb2VariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineDb2(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c4\" VARBINARY(64) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -609,9 +609,9 @@ public class JdbcAdminTest {
           throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.DB2,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -630,7 +630,7 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c4", Order.ASC)
+            .addClusteringKey("c5", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -643,7 +643,7 @@ public class JdbcAdminTest {
             .addColumn("c10", DataType.TIMESTAMP)
             .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
             .build();
 
     List<Statement> mockedStatements = new ArrayList<>();
@@ -672,8 +672,8 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c4` VARBINARY(128),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
-        "CREATE INDEX `index_my_ns_foo_table_c4` ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
 
@@ -682,9 +682,9 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -693,8 +693,8 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
-        "CREATE INDEX [index_my_ns_foo_table_c4] ON [my_ns].[foo_table] ([c4])",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
 
@@ -703,10 +703,10 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -715,8 +715,8 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQLITE,
-        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c4\" BLOB,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c4\" ON \"my_ns$foo_table\" (\"c4\")",
+        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
 
@@ -725,9 +725,9 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.DB2,
-        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
-        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
 
@@ -747,7 +747,7 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c4", Order.ASC)
+            .addClusteringKey("c5", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -760,7 +760,7 @@ public class JdbcAdminTest {
             .addColumn("c10", DataType.TIMESTAMP)
             .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
             .build();
 
     List<Statement> mockedStatements = new ArrayList<>();
@@ -1416,7 +1416,7 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c4", Order.ASC)
+            .addClusteringKey("c5", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -1429,7 +1429,7 @@ public class JdbcAdminTest {
             .addColumn("c10", DataType.TIMESTAMP)
             .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
             .build();
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
@@ -1455,7 +1455,7 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c4", Order.ASC)
+            .addClusteringKey("c5", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -1468,7 +1468,7 @@ public class JdbcAdminTest {
             .addColumn("c10", DataType.TIMESTAMP)
             .addColumn("c11", DataType.TIMESTAMPTZ)
             .addSecondaryIndex("c1")
-            .addSecondaryIndex("c4")
+            .addSecondaryIndex("c5")
             .build();
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
@@ -1497,7 +1497,7 @@ public class JdbcAdminTest {
             .addColumn("c1", DataType.INT)
             .addColumn("c2", DataType.TEXT)
             .addColumn("c3", DataType.BOOLEAN)
-            .addColumn("c4", DataType.BLOB)
+            .addColumn("c4", DataType.DATE)
             .addSecondaryIndex("c3")
             .addSecondaryIndex("c4")
             .build();
@@ -2940,6 +2940,467 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ForMysql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + METADATA_SCHEMA
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` DROP COLUMN `c2`",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForOracle_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForPostgresql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + METADATA_SCHEMA
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "ALTER TABLE [ns].[table] DROP COLUMN [c2]",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForSqlite_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns$table\" DROP COLUMN \"c2\"",
+        "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,FALSE,1)");
+  }
+
+  @Test
+  public void dropColumnFromTable_ForDb2_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    dropColumnFromTable_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" DROP COLUMN \"c2\"",
+        "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"ns\".\"table\"')",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)");
+  }
+
+  private void dropColumnFromTable_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String column1 = "c1";
+    String column2 = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                column1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                column2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.dropColumnFromTable(namespace, table, column2);
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void renameColumn_ForMysql_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + METADATA_SCHEMA
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` CHANGE COLUMN `c2` `c3` INT",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c3','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void renameColumn_ForOracle_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void renameColumn_ForPostgresql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void renameColumn_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + METADATA_SCHEMA
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "EXEC sp_rename '[ns].[table].[c2]', 'c3', 'COLUMN'",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c3','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void renameColumn_ForSqlite_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns$table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,FALSE,2)");
+  }
+
+  @Test
+  public void renameColumn_ForDb2_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameColumn_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME COLUMN \"c2\" TO \"c3\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c3','INT',NULL,NULL,false,2)");
+  }
+
+  private void renameColumn_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+    String columnName3 = "c3";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.renameColumn(namespace, table, columnName2, columnName3);
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void renameTable_ForMysql_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameTable_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + METADATA_SCHEMA
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` RENAME TO `ns`.`table_new`",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table_new','c2','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void renameTable_ForOracle_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameTable_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME TO \"table_new\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table_new','c2','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void renameTable_ForPostgresql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    renameTable_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" RENAME TO \"table_new\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table_new','c2','INT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void renameTable_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    renameTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + METADATA_SCHEMA
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "EXEC sp_rename '[ns].[table]', 'table_new'",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table_new','c2','INT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void renameTable_ForSqlite_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameTable_ForX_ShouldWorkProperly(
+        RdbEngine.SQLITE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns$table\" RENAME TO \"ns$table_new\"",
+        "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,FALSE,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "$metadata\" VALUES ('ns.table_new','c2','INT',NULL,NULL,FALSE,2)");
+  }
+
+  @Test
+  public void renameTable_ForDb2_ShouldWorkProperly() throws SQLException, ExecutionException {
+    renameTable_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "RENAME \"ns\".\"table\" TO \"table_new\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table_new','c2','INT',NULL,NULL,false,2)");
+  }
+
+  private void renameTable_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet1 =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet1);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (String expectedSqlStatement : expectedSqlStatements) {
+      Statement mock = mock(Statement.class);
+      expectedStatements.add(mock);
+      if (expectedSqlStatement.startsWith("SELECT DISTINCT ")) {
+        ResultSet resultSet2 = mock(ResultSet.class);
+        when(resultSet2.next()).thenReturn(true);
+        when(mock.executeQuery(any())).thenReturn(resultSet2);
+      }
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.renameTable(namespace, table, "table_new");
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      if (expectedSqlStatements[i].startsWith("SELECT DISTINCT ")) {
+        verify(expectedStatements.get(i)).executeQuery(expectedSqlStatements[i]);
+      } else {
+        verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+      }
+    }
+  }
+
+  @Test
   public void getNamespaceNames_forMysql_ShouldReturnNamespaceNames() throws Exception {
     getNamespaceNames_forX_ShouldReturnNamespaceNames(
         RdbEngine.MYSQL, "SELECT * FROM `" + METADATA_SCHEMA + "`.`namespaces`");
@@ -4075,6 +4536,69 @@ public class JdbcAdminTest {
     // Assert
     assertThat(hasDifferentClusteringOrders(metadata1)).isTrue();
     assertThat(hasDifferentClusteringOrders(metadata2)).isTrue();
+  }
+
+  @Test
+  void createTableInternal_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    TableMetadata metadata1 =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.BLOB).build();
+    TableMetadata metadata2 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck", DataType.BLOB)
+            .build();
+    TableMetadata metadata3 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.BLOB)
+            .addSecondaryIndex("col")
+            .build();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTableInternal(connection, "ns", "tbl", metadata1, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTableInternal(connection, "ns", "tbl", metadata2, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTableInternal(connection, "ns", "tbl", metadata3, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
+  }
+
+  @Test
+  void createIndex_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String indexColumn = "index_col";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                indexColumn, DataType.BLOB.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.createIndex(namespace, table, indexColumn, Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

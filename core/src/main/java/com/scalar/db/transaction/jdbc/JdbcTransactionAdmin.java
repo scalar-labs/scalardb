@@ -5,7 +5,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CheckedDistributedStorageAdmin;
+import com.scalar.db.common.CommonDistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -21,7 +21,7 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
 
   @Inject
   public JdbcTransactionAdmin(DatabaseConfig databaseConfig) {
-    jdbcAdmin = new CheckedDistributedStorageAdmin(new JdbcAdmin(databaseConfig), databaseConfig);
+    jdbcAdmin = new CommonDistributedStorageAdmin(new JdbcAdmin(databaseConfig), databaseConfig);
   }
 
   @VisibleForTesting
@@ -158,6 +158,25 @@ public class JdbcTransactionAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     jdbcAdmin.addNewColumnToTable(namespace, table, columnName, columnType);
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    jdbcAdmin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    jdbcAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    jdbcAdmin.renameTable(namespace, oldTableName, newTableName);
   }
 
   @Override
