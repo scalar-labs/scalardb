@@ -1160,7 +1160,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         put.timestampTZValue(getColumnName12(), Instant.now());
       }
       storage.put(put.build());
-      storage.close();
 
       // Act
       admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.TEXT);
