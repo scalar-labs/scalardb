@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.DistributedStorage;
@@ -76,6 +75,11 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     return JdbcTestUtils.isDb2(rdbEngine)
         || JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isWideningColumnTypeConversionNotFullySupported() {
+    return JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isSqlite(rdbEngine);
   }
 
   @Test
@@ -194,49 +198,53 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       storage.close();
 
       // Act Assert
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName3(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName4(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName5(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName6(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      admin.alterColumnType(getNamespace1(), getTable4(), getColumnName7(), DataType.TEXT);
-      assertThatThrownBy(
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName7(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName8(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName9(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
       if (isTimestampTypeSupported()) {
-        assertThatThrownBy(
+        assertThatCode(
                 () ->
                     admin.alterColumnType(
                         getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
             .isInstanceOf(UnsupportedOperationException.class);
-        assertThatThrownBy(
+        assertThatCode(
                 () ->
                     admin.alterColumnType(
                         getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
@@ -248,8 +256,139 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @Test
+  @EnabledIf("isDb2")
+  public void
+      alterColumnType_Db2_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
+          throws ExecutionException {
+    try (DistributedStorage storage = storageFactory.getStorage()) {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TIMESTAMP)
+            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(getNamespace1())
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName2(), 2))
+              .intValue(getColumnName3(), 1)
+              .bigIntValue(getColumnName4(), 2L)
+              .floatValue(getColumnName5(), 3.0f)
+              .doubleValue(getColumnName6(), 4.0d)
+              .textValue(getColumnName7(), "5")
+              .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")));
+      if (isTimestampTypeSupported()) {
+        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
+        put.timestampTZValue(getColumnName12(), Instant.now());
+      }
+      storage.put(put.build());
+      storage.close();
+
+      // Act Assert
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName3(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName4(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName5(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName6(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName7(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName8(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName9(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      if (isTimestampTypeSupported()) {
+        assertThatCode(
+                () ->
+                    admin.alterColumnType(
+                        getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
+            .isInstanceOf(UnsupportedOperationException.class);
+        assertThatCode(
+                () ->
+                    admin.alterColumnType(
+                        getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
+            .isInstanceOf(UnsupportedOperationException.class);
+      }
+
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.TEXT)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TIMESTAMP)
+            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
+          .isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+    }
+  }
+
+  @Test
   @Override
-  @DisabledIf("isOracle")
+  @DisabledIf("isWideningColumnTypeConversionNotFullySupported")
   public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
       throws ExecutionException, IOException {
     super.alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly();
@@ -345,7 +484,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
 
       // Act Assert
-      assertThatThrownBy(
+      assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName3(), DataType.TEXT))

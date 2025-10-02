@@ -68,6 +68,15 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithDynamo
   public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 
   @Override
+  @Disabled("DynamoDB does not support altering column types")
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("DynamoDB does not support altering column types")
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
   @Disabled("DynamoDB does not support renaming tables")
   public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
 
