@@ -124,7 +124,7 @@ public interface RdbEngineStrategy {
 
   String renameTableSql(String namespace, String oldTableName, String newTableName);
 
-  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
 
@@ -303,4 +303,16 @@ public interface RdbEngineStrategy {
    */
   default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
       ScanAll scanAll, TableMetadata metadata) {}
+
+  /**
+   * Returns whether type conversion is supported between the two data types in the underlying
+   * storage.
+   *
+   * @param from the source data type
+   * @param to the target data type
+   * @return true if type conversion is supported, false otherwise
+   */
+  default boolean isTypeConversionSupportedInternal(DataType from, DataType to) {
+    return true;
+  }
 }

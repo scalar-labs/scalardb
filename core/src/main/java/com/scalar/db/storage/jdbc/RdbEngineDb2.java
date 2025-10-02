@@ -269,14 +269,17 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN "
-        + enclose(columnName)
-        + " SET DATA TYPE "
-        + columnType;
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " SET DATA TYPE "
+          + columnType,
+      "CALL SYSPROC.ADMIN_CMD('REORG TABLE " + encloseFullTableName(namespace, table) + "')"
+    };
   }
 
   @Override
@@ -570,5 +573,25 @@ class RdbEngineDb2 extends AbstractRdbEngine {
           CoreError.JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED
               .buildMessage(orderingOnBlobColumn.get()));
     }
+  }
+
+  @Override
+  public boolean isTypeConversionSupportedInternal(DataType from, DataType to) {
+    if (from == DataType.BLOB && to == DataType.TEXT) {
+      return false;
+    }
+    if (from == DataType.FLOAT && to == DataType.TEXT) {
+      return false;
+    }
+    if (from == DataType.DATE && to == DataType.TEXT) {
+      return false;
+    }
+    if (from == DataType.TIME && to == DataType.TEXT) {
+      return false;
+    }
+    if (from == DataType.TIMESTAMP && to == DataType.TEXT) {
+      return false;
+    }
+    return !(from == DataType.TIMESTAMPTZ && to == DataType.TEXT);
   }
 }

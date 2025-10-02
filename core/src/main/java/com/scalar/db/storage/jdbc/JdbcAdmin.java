@@ -748,8 +748,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
-    execute(connection, sql);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -764,8 +766,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String columnType = rdbEngine.getDataTypeForEngine(indexType);
-    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
-    execute(connection, sql);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   @Override
@@ -938,6 +942,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       rdbEngine.throwIfAlterColumnTypeNotSupported();
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       assert currentTableMetadata != null;
+      DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
+      if (!rdbEngine.isTypeConversionSupportedInternal(currentColumnType, newColumnType)) {
+        throw new UnsupportedOperationException(
+            CoreError.JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+                currentColumnType, newColumnType, columnName));
+      }
 
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata)
@@ -945,11 +955,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               .addColumn(columnName, newColumnType)
               .build();
       String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
-      String alterColumnTypeStatement =
+      String[] alterColumnTypeStatements =
           rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
 
       try (Connection connection = dataSource.getConnection()) {
-        execute(connection, alterColumnTypeStatement);
+        for (String alterColumnTypeStatement : alterColumnTypeStatements) {
+          execute(connection, alterColumnTypeStatement);
+        }
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
     } catch (SQLException e) {

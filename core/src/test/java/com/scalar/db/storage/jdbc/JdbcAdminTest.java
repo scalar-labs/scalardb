@@ -2448,7 +2448,7 @@ public class JdbcAdminTest {
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
-        "ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128)",
+        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128)"},
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
             + METADATA_SCHEMA
@@ -2464,7 +2464,9 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760)",
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760)"
+        },
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + METADATA_SCHEMA
@@ -2480,7 +2482,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(128) )",
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(128) )"},
         "CREATE INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + METADATA_SCHEMA
@@ -2502,7 +2504,10 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(128)",
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(128)",
+          "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"my_ns\".\"my_tbl\"')"
+        },
         "CREATE INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + METADATA_SCHEMA
@@ -2513,7 +2518,7 @@ public class JdbcAdminTest {
       createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
           RdbEngine rdbEngine,
           String expectedGetTableMetadataStatement,
-          String expectedAlterColumnTypeStatement,
+          String[] expectedAlterColumnTypeStatements,
           String expectedCreateIndexStatement,
           String expectedUpdateTableMetadataStatement)
           throws SQLException, ExecutionException {
@@ -2545,12 +2550,17 @@ public class JdbcAdminTest {
     verify(connection).prepareStatement(expectedGetTableMetadataStatement);
     verify(selectStatement).setString(1, getFullTableName(namespace, table));
 
-    verify(connection, times(3)).createStatement();
+    verify(connection, times(2 + expectedAlterColumnTypeStatements.length)).createStatement();
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(statement, times(3)).execute(captor.capture());
-    assertThat(captor.getAllValues().get(0)).isEqualTo(expectedAlterColumnTypeStatement);
-    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedCreateIndexStatement);
-    assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
+    verify(statement, times(2 + expectedAlterColumnTypeStatements.length))
+        .execute(captor.capture());
+    for (int i = 0; i < expectedAlterColumnTypeStatements.length; i++) {
+      assertThat(captor.getAllValues().get(i)).isEqualTo(expectedAlterColumnTypeStatements[i]);
+    }
+    assertThat(captor.getAllValues().get(expectedAlterColumnTypeStatements.length))
+        .isEqualTo(expectedCreateIndexStatement);
+    assertThat(captor.getAllValues().get(expectedAlterColumnTypeStatements.length + 1))
+        .isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
   @Test
@@ -2687,7 +2697,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
-        "ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT",
+        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT"},
         "UPDATE `"
             + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
@@ -2702,7 +2712,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT",
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT"},
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2717,7 +2727,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )",
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )"},
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2737,7 +2747,10 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(32672)",
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(32672)",
+          "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"my_ns\".\"my_tbl\"')"
+        },
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2747,7 +2760,7 @@ public class JdbcAdminTest {
       RdbEngine rdbEngine,
       String expectedGetTableMetadataStatement,
       String expectedDropIndexStatement,
-      String expectedAlterColumnStatement,
+      String[] expectedAlterColumnStatements,
       String expectedUpdateTableMetadataStatement)
       throws SQLException, ExecutionException {
     // Arrange
@@ -2777,12 +2790,15 @@ public class JdbcAdminTest {
     verify(connection).prepareStatement(expectedGetTableMetadataStatement);
     verify(selectStatement).setString(1, getFullTableName(namespace, table));
 
-    verify(connection, times(3)).createStatement();
+    verify(connection, times(2 + expectedAlterColumnStatements.length)).createStatement();
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(statement, times(3)).execute(captor.capture());
+    verify(statement, times(2 + expectedAlterColumnStatements.length)).execute(captor.capture());
     assertThat(captor.getAllValues().get(0)).isEqualTo(expectedDropIndexStatement);
-    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedAlterColumnStatement);
-    assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
+    for (int i = 0; i < expectedAlterColumnStatements.length; i++) {
+      assertThat(captor.getAllValues().get(i + 1)).isEqualTo(expectedAlterColumnStatements[i]);
+    }
+    assertThat(captor.getAllValues().get(expectedAlterColumnStatements.length + 1))
+        .isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
   @Test
@@ -3326,6 +3342,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" SET DATA TYPE BIGINT",
+        "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"ns\".\"table\"')",
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",

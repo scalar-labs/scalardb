@@ -383,7 +383,7 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
     if (currentColumnType == newColumnType) {
       return;
     }
-    if (!ScalarDbUtils.isTypeConversionSupported(currentColumnType, newColumnType)) {
+    if (!isTypeConversionSupported(currentColumnType, newColumnType)) {
       throw new IllegalArgumentException(
           CoreError.INVALID_COLUMN_TYPE_CONVERSION.buildMessage(
               currentColumnType, newColumnType, columnName));
@@ -521,5 +521,30 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void close() {
     admin.close();
+  }
+
+  private boolean isTypeConversionSupported(DataType from, DataType to) {
+    if (from == to) {
+      return true;
+    }
+    switch (from) {
+      case BOOLEAN:
+      case BIGINT:
+      case DOUBLE:
+      case BLOB:
+      case DATE:
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        return to == DataType.TEXT;
+      case INT:
+        return to == DataType.BIGINT || to == DataType.TEXT;
+      case FLOAT:
+        return to == DataType.DOUBLE || to == DataType.TEXT;
+      case TEXT:
+        return false;
+      default:
+        throw new AssertionError("Unknown data type: " + from);
+    }
   }
 }

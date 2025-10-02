@@ -51,6 +51,10 @@ public final class JdbcEnv {
     return properties;
   }
 
+  public static boolean isOracle() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:oracle:");
+  }
+
   public static boolean isSqlite() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlite:");
   }

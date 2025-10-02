@@ -790,6 +790,12 @@ public enum CoreError implements ScalarDbError {
       "SQLite does not support the altering column type feature",
       "",
       ""),
+  JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0237",
+      "The storage does not support column type conversion from %s to %s. Column: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
