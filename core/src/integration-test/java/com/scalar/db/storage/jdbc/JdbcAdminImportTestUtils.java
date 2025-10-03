@@ -766,7 +766,7 @@ public class JdbcAdminImportTestUtils {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
     } catch (SQLException e) {
-      throw new RuntimeException("Get database product version failed");
+      throw new RuntimeException("Get database product version failed", e);
     }
   }
 
@@ -775,7 +775,7 @@ public class JdbcAdminImportTestUtils {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("TiDB");
     } catch (SQLException e) {
-      throw new RuntimeException("Get database product version failed");
+      throw new RuntimeException("Get database product version failed", e);
     }
   }
 
