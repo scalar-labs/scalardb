@@ -1591,6 +1591,38 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(
+              () -> admin.alterColumnType(namespace1, getTable4(), getColumnName1(), DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+              () -> admin.alterColumnType(namespace1, getTable4(), getColumnName2(), DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+              () -> admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces()
           throws Exception {

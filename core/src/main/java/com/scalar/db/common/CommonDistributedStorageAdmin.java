@@ -379,6 +379,14 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)
+        || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      throw new IllegalArgumentException(
+          CoreError.ALTER_PRIMARY_OR_INDEX_KEY_COLUMN_TYPE_NOT_SUPPORTED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table), columnName));
+    }
+
     DataType currentColumnType = tableMetadata.getColumnDataType(columnName);
     if (currentColumnType == newColumnType) {
       return;

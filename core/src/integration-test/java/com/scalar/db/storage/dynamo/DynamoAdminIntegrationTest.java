@@ -82,6 +82,10 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly() {}
 
   @Override
+  @Disabled("DynamoDB does not support altering column types")
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
   @Disabled("DynamoDB does not support renaming tables")
   public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
 

@@ -760,39 +760,45 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
   DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
       Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
-  INVALID_COLUMN_TYPE_CONVERSION(
+  ALTER_PRIMARY_OR_INDEX_KEY_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0233",
+      "Altering primary key or index key column types is not supported. Table: %s; Column: %s",
+      "",
+      ""),
+  INVALID_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0234",
       "Invalid column type conversion from %s to %s. Column: %s",
       "",
       ""),
   CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0234",
+      "0235",
       "Cassandra does not support the altering column type feature",
       "",
       ""),
   COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0235",
+      "0236",
       "Cosmos DB does not support the altering column type feature",
       "",
       ""),
   DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0236",
+      "0237",
       "DynamoDB does not support the altering column type feature",
       "",
       ""),
   JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0237",
+      "0238",
       "SQLite does not support the altering column type feature",
       "",
       ""),
   JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
       Category.USER_ERROR,
-      "0238",
+      "0239",
       "The storage does not support column type conversion from %s to %s. Column: %s",
       "",
       ""),

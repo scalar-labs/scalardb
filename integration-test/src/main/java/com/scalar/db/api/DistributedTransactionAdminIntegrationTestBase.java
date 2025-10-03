@@ -36,9 +36,6 @@ import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DistributedTransactionAdminIntegrationTestBase {
-  private static final Logger logger =
-      LoggerFactory.getLogger(DistributedTransactionAdminIntegrationTestBase.class);
-
   protected static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE1 = "test_table1";
   protected static final String TABLE2 = "test_table2";
@@ -55,11 +52,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected static final String COL_NAME9 = "c9";
   protected static final String COL_NAME10 = "c10";
   protected static final String COL_NAME11 = "c11";
+  private static final Logger logger =
+      LoggerFactory.getLogger(DistributedTransactionAdminIntegrationTestBase.class);
   private static final String COL_NAME12 = "c12";
   private static final String COL_NAME13 = "c13";
   private static final String COL_NAME14 = "c14";
-  private static final String COL_NAME15 = "c15";
-
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
@@ -83,6 +80,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           .addSecondaryIndex(COL_NAME5)
           .addSecondaryIndex(COL_NAME6)
           .build();
+  private static final String COL_NAME15 = "c15";
   protected TransactionFactory transactionFactory;
   protected DistributedTransactionAdmin admin;
   protected String namespace1;
@@ -1324,6 +1322,35 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
       assertThat(result.getDouble("c4")).isEqualTo(expectedColumn4Value);
       transactionManager.close();
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2")
+              .addSecondaryIndex("c3")
+              .build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.alterColumnType(namespace1, TABLE4, "c1", DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> admin.alterColumnType(namespace1, TABLE4, "c2", DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
