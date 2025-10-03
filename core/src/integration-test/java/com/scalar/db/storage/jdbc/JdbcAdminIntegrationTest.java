@@ -411,20 +411,20 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
-      DistributedStorage storage = storageFactory.getStorage();
+
       int expectedColumn3Value = 1;
       float expectedColumn4Value = 4.0f;
-
-      PutBuilder.Buildable put =
-          Put.newBuilder()
-              .namespace(getNamespace1())
-              .table(getTable4())
-              .partitionKey(Key.ofInt(getColumnName1(), 1))
-              .clusteringKey(Key.ofInt(getColumnName2(), 2))
-              .intValue(getColumnName3(), expectedColumn3Value)
-              .floatValue(getColumnName4(), expectedColumn4Value);
-      storage.put(put.build());
-      storage.close();
+      try (DistributedStorage storage = storageFactory.getStorage()) {
+        PutBuilder.Buildable put =
+            Put.newBuilder()
+                .namespace(getNamespace1())
+                .table(getTable4())
+                .partitionKey(Key.ofInt(getColumnName1(), 1))
+                .clusteringKey(Key.ofInt(getColumnName2(), 2))
+                .intValue(getColumnName3(), expectedColumn3Value)
+                .floatValue(getColumnName4(), expectedColumn4Value);
+        storage.put(put.build());
+      }
 
       // Act
       admin.alterColumnType(getNamespace1(), getTable4(), getColumnName3(), DataType.BIGINT);
@@ -447,20 +447,21 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
           .isEqualTo(expectedTableMetadata);
-      storage = storageFactory.getStorage();
-      Scan scan =
-          Scan.newBuilder()
-              .namespace(getNamespace1())
-              .table(getTable4())
-              .partitionKey(Key.ofInt(getColumnName1(), 1))
-              .build();
-      try (Scanner scanner = storage.scan(scan)) {
-        List<Result> results = scanner.all();
-        assertThat(results).hasSize(1);
-        Result result = results.get(0);
-        assertThat(result.getBigInt(getColumnName3())).isEqualTo(expectedColumn3Value);
+
+      try (DistributedStorage storage = storageFactory.getStorage()) {
+        Scan scan =
+            Scan.newBuilder()
+                .namespace(getNamespace1())
+                .table(getTable4())
+                .partitionKey(Key.ofInt(getColumnName1(), 1))
+                .build();
+        try (Scanner scanner = storage.scan(scan)) {
+          List<Result> results = scanner.all();
+          assertThat(results).hasSize(1);
+          Result result = results.get(0);
+          assertThat(result.getBigInt(getColumnName3())).isEqualTo(expectedColumn3Value);
+        }
       }
-      storage.close();
     } finally {
       admin.dropTable(getNamespace1(), getTable4(), true);
     }

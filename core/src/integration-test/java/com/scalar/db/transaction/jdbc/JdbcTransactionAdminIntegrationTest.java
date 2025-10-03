@@ -415,19 +415,20 @@ public class JdbcTransactionAdminIntegrationTest
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
-      DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
+
       int expectedColumn3Value = 1;
       float expectedColumn4Value = 4.0f;
-      InsertBuilder.Buildable insert =
-          Insert.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE4)
-              .partitionKey(Key.ofInt("c1", 1))
-              .clusteringKey(Key.ofInt("c2", 2))
-              .intValue("c3", expectedColumn3Value)
-              .floatValue("c4", expectedColumn4Value);
-      transactionalInsert(transactionManager, insert.build());
-      transactionManager.close();
+      try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+        InsertBuilder.Buildable insert =
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE4)
+                .partitionKey(Key.ofInt("c1", 1))
+                .clusteringKey(Key.ofInt("c2", 2))
+                .intValue("c3", expectedColumn3Value)
+                .floatValue("c4", expectedColumn4Value);
+        transactionalInsert(manager, insert.build());
+      }
 
       // Act
       admin.alterColumnType(namespace1, TABLE4, "c3", DataType.BIGINT);
@@ -446,18 +447,19 @@ public class JdbcTransactionAdminIntegrationTest
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
-      transactionManager = transactionFactory.getTransactionManager();
-      Scan scan =
-          Scan.newBuilder()
-              .namespace(namespace1)
-              .table(TABLE4)
-              .partitionKey(Key.ofInt("c1", 1))
-              .build();
-      List<Result> results = transactionalScan(transactionManager, scan);
-      assertThat(results).hasSize(1);
-      Result result = results.get(0);
-      assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
-      transactionManager.close();
+
+      try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+        Scan scan =
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE4)
+                .partitionKey(Key.ofInt("c1", 1))
+                .build();
+        List<Result> results = transactionalScan(manager, scan);
+        assertThat(results).hasSize(1);
+        Result result = results.get(0);
+        assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
+      }
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
