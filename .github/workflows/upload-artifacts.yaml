@@ -51,7 +51,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Prepare artifacts in staging-deploy directories
         run: ./gradlew publish
