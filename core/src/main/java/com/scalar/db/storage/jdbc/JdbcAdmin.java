@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_TABLE = "metadata";
-
+  public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
   @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
   @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
@@ -57,7 +57,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
-  public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final String INDEX_NAME_PREFIX = "index";
@@ -85,6 +84,64 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
+  }
+
+  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
+    return metadata.getClusteringKeyNames().stream()
+        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+  }
+
+  @VisibleForTesting
+  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
+  }
+
+  static void execute(Connection connection, String sql) throws SQLException {
+    execute(connection, sql, null);
+  }
+
+  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
+      throws SQLException {
+    if (Strings.isNullOrEmpty(sql)) {
+      return;
+    }
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(sql);
+      throwSqlWarningIfNeeded(handler, stmt);
+    }
+  }
+
+  private static void throwSqlWarningIfNeeded(SqlWarningHandler handler, Statement stmt)
+      throws SQLException {
+    if (handler == null) {
+      return;
+    }
+    SQLWarning warning = stmt.getWarnings();
+    while (warning != null) {
+      handler.throwSqlWarningIfNeeded(warning);
+      warning = warning.getNextWarning();
+    }
+  }
+
+  static void execute(Connection connection, String[] sqls) throws SQLException {
+    execute(connection, sqls, null);
+  }
+
+  static void execute(
+      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
+      throws SQLException {
+    for (String sql : sqls) {
+      execute(connection, sql, warningHandler);
+    }
   }
 
   @Override
@@ -702,25 +759,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
-    return metadata.getClusteringKeyNames().stream()
-        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
-  }
-
-  @VisibleForTesting
-  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
-    boolean hasAscOrder = false;
-    boolean hasDescOrder = false;
-    for (Order order : metadata.getClusteringOrders().values()) {
-      if (order == Order.ASC) {
-        hasAscOrder = true;
-      } else {
-        hasDescOrder = true;
-      }
-    }
-    return hasAscOrder && hasDescOrder;
-  }
-
   @Override
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
@@ -943,7 +981,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       assert currentTableMetadata != null;
       DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
-      if (!rdbEngine.isTypeConversionSupportedInternal(currentColumnType, newColumnType)) {
+      if (!rdbEngine.isTypeConversionSupported(currentColumnType, newColumnType)) {
         throw new UnsupportedOperationException(
             CoreError.JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
                 currentColumnType, newColumnType, columnName));
@@ -1095,45 +1133,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + columnName
             + "'";
     execute(connection, updateStatement);
-  }
-
-  static void execute(Connection connection, String sql) throws SQLException {
-    execute(connection, sql, null);
-  }
-
-  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
-      throws SQLException {
-    if (Strings.isNullOrEmpty(sql)) {
-      return;
-    }
-    try (Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
-      throwSqlWarningIfNeeded(handler, stmt);
-    }
-  }
-
-  private static void throwSqlWarningIfNeeded(SqlWarningHandler handler, Statement stmt)
-      throws SQLException {
-    if (handler == null) {
-      return;
-    }
-    SQLWarning warning = stmt.getWarnings();
-    while (warning != null) {
-      handler.throwSqlWarningIfNeeded(warning);
-      warning = warning.getNextWarning();
-    }
-  }
-
-  static void execute(Connection connection, String[] sqls) throws SQLException {
-    execute(connection, sqls, null);
-  }
-
-  static void execute(
-      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
-      throws SQLException {
-    for (String sql : sqls) {
-      execute(connection, sql, warningHandler);
-    }
   }
 
   private String enclose(String name) {

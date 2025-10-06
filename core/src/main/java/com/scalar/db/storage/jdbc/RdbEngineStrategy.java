@@ -312,7 +312,7 @@ public interface RdbEngineStrategy {
    * @param to the target data type
    * @return true if type conversion is supported, false otherwise
    */
-  default boolean isTypeConversionSupportedInternal(DataType from, DataType to) {
+  default boolean isTypeConversionSupported(DataType from, DataType to) {
     return true;
   }
 }

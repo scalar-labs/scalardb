@@ -444,7 +444,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isTypeConversionSupportedInternal(DataType from, DataType to) {
+  public boolean isTypeConversionSupported(DataType from, DataType to) {
     return from == DataType.INT && to == DataType.BIGINT;
   }
 }

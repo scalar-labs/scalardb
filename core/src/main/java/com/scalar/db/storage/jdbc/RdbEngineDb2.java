@@ -576,7 +576,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isTypeConversionSupportedInternal(DataType from, DataType to) {
+  public boolean isTypeConversionSupported(DataType from, DataType to) {
     if (from == DataType.BLOB && to == DataType.TEXT) {
       return false;
     }
