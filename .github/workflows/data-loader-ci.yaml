@@ -19,7 +19,7 @@ jobs:
           java-version: 8
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Gradle Data Loader CLI build
         run: ./gradlew :data-loader:cli:build --no-daemon --stacktrace
