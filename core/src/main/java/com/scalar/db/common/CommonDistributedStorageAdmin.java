@@ -391,7 +391,7 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
     if (currentColumnType == newColumnType) {
       return;
     }
-    if (!isTypeConversionSupported(currentColumnType, newColumnType)) {
+    if (!isTypeConversionValid(currentColumnType, newColumnType)) {
       throw new IllegalArgumentException(
           CoreError.INVALID_COLUMN_TYPE_CONVERSION.buildMessage(
               currentColumnType, newColumnType, columnName));
@@ -531,7 +531,7 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
     admin.close();
   }
 
-  private boolean isTypeConversionSupported(DataType from, DataType to) {
+  private boolean isTypeConversionValid(DataType from, DataType to) {
     if (from == to) {
       return true;
     }
