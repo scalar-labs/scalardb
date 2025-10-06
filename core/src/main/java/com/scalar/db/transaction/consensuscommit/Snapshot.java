@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -121,16 +120,6 @@ public class Snapshot {
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
     this.scannerSet = scannerSet;
-  }
-
-  @Nonnull
-  public String getId() {
-    return id;
-  }
-
-  @Nonnull
-  public Isolation getIsolation() {
-    return isolation;
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
@@ -526,7 +515,7 @@ public class Snapshot {
   @VisibleForTesting
   void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (!isSerializable()) {
+    if (isolation != Isolation.SERIALIZABLE) {
       return;
     }
 
@@ -561,7 +550,7 @@ public class Snapshot {
       }
     }
 
-    parallelExecutor.validateRecords(tasks, getId());
+    parallelExecutor.validateRecords(tasks, id);
   }
 
   /**
@@ -713,7 +702,7 @@ public class Snapshot {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
         }
       }
     }
@@ -786,18 +775,6 @@ public class Snapshot {
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
     throw new ValidationConflictException(
         CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
-  }
-
-  private boolean isSerializable() {
-    return isolation == Isolation.SERIALIZABLE;
-  }
-
-  public boolean isSnapshotReadRequired() {
-    return isolation != Isolation.READ_COMMITTED;
-  }
-
-  public boolean isValidationRequired() {
-    return isSerializable();
   }
 
   @Immutable
