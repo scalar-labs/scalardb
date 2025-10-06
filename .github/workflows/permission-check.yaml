@@ -25,7 +25,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Start Cassandra with authentication enabled
         run: |
@@ -64,7 +64,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Start Cassandra with authentication enabled
         run: |
@@ -103,7 +103,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
         run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator_used=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
@@ -132,7 +132,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -161,7 +161,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -190,7 +190,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -225,7 +225,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -260,7 +260,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -295,7 +295,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -330,7 +330,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -365,7 +365,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -400,7 +400,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
@@ -442,7 +442,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
@@ -497,7 +497,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
@@ -534,7 +534,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" "-Dfile.encoding=UTF-8"
@@ -571,7 +571,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer19"
@@ -608,7 +608,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer22"
@@ -638,7 +638,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -668,7 +668,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -698,7 +698,7 @@ jobs:
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/yugabyte?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
