@@ -577,21 +577,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public boolean isTypeConversionSupported(DataType from, DataType to) {
-    if (from == DataType.BLOB && to == DataType.TEXT) {
-      return false;
-    }
-    if (from == DataType.FLOAT && to == DataType.TEXT) {
-      return false;
-    }
-    if (from == DataType.DATE && to == DataType.TEXT) {
-      return false;
-    }
-    if (from == DataType.TIME && to == DataType.TEXT) {
-      return false;
-    }
-    if (from == DataType.TIMESTAMP && to == DataType.TEXT) {
-      return false;
-    }
-    return !(from == DataType.TIMESTAMPTZ && to == DataType.TEXT);
+    return from != DataType.BLOB || to != DataType.TEXT;
   }
 }

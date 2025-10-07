@@ -321,7 +321,7 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName5(), DataType.TEXT))
-          .isInstanceOf(UnsupportedOperationException.class);
+          .doesNotThrowAnyException();
       assertThatCode(
               () ->
                   admin.alterColumnType(
@@ -341,23 +341,23 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName9(), DataType.TEXT))
-          .isInstanceOf(UnsupportedOperationException.class);
+          .doesNotThrowAnyException();
       assertThatCode(
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
-          .isInstanceOf(UnsupportedOperationException.class);
+          .doesNotThrowAnyException();
       if (isTimestampTypeSupported()) {
         assertThatCode(
                 () ->
                     admin.alterColumnType(
                         getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
+            .doesNotThrowAnyException();
         assertThatCode(
                 () ->
                     admin.alterColumnType(
                         getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
+            .doesNotThrowAnyException();
       }
 
       TableMetadata.Builder expectedTableMetadataBuilder =
@@ -366,18 +366,18 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               .addColumn(getColumnName2(), DataType.INT)
               .addColumn(getColumnName3(), DataType.TEXT)
               .addColumn(getColumnName4(), DataType.TEXT)
-              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName5(), DataType.TEXT)
               .addColumn(getColumnName6(), DataType.TEXT)
               .addColumn(getColumnName7(), DataType.TEXT)
               .addColumn(getColumnName8(), DataType.BLOB)
-              .addColumn(getColumnName9(), DataType.DATE)
-              .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName9(), DataType.TEXT)
+              .addColumn(getColumnName10(), DataType.TEXT)
               .addPartitionKey(getColumnName1())
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
         expectedTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TIMESTAMP)
-            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+            .addColumn(getColumnName11(), DataType.TEXT)
+            .addColumn(getColumnName12(), DataType.TEXT);
       }
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))

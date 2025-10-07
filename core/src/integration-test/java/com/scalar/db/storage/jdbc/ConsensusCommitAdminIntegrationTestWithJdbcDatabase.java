@@ -274,7 +274,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c4", DataType.TEXT))
           .doesNotThrowAnyException();
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c5", DataType.TEXT))
-          .isInstanceOf(UnsupportedOperationException.class);
+          .doesNotThrowAnyException();
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c6", DataType.TEXT))
           .doesNotThrowAnyException();
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c7", DataType.TEXT))
@@ -282,14 +282,14 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c8", DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c9", DataType.TEXT))
-          .isInstanceOf(UnsupportedOperationException.class);
+          .doesNotThrowAnyException();
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c10", DataType.TEXT))
-          .isInstanceOf(UnsupportedOperationException.class);
+          .doesNotThrowAnyException();
       if (isTimestampTypeSupported()) {
         assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
+            .doesNotThrowAnyException();
         assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
+            .doesNotThrowAnyException();
       }
 
       TableMetadata.Builder expectedTableMetadataBuilder =
@@ -298,18 +298,18 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .addColumn("c2", DataType.INT)
               .addColumn("c3", DataType.TEXT)
               .addColumn("c4", DataType.TEXT)
-              .addColumn("c5", DataType.FLOAT)
+              .addColumn("c5", DataType.TEXT)
               .addColumn("c6", DataType.TEXT)
               .addColumn("c7", DataType.TEXT)
               .addColumn("c8", DataType.BLOB)
-              .addColumn("c9", DataType.DATE)
-              .addColumn("c10", DataType.TIME)
+              .addColumn("c9", DataType.TEXT)
+              .addColumn("c10", DataType.TEXT)
               .addPartitionKey("c1")
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
         expectedTableMetadataBuilder
-            .addColumn("c11", DataType.TIMESTAMP)
-            .addColumn("c12", DataType.TIMESTAMPTZ);
+            .addColumn("c11", DataType.TEXT)
+            .addColumn("c12", DataType.TEXT);
       }
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
