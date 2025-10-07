@@ -447,7 +447,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
     if (!(from == DataType.INT && to == DataType.BIGINT)) {
       throw new UnsupportedOperationException(
-          CoreError.JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+          CoreError.JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
               from.toString(), to.toString()));
     }
   }

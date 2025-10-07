@@ -553,7 +553,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
     if (from == DataType.BLOB && to == DataType.TEXT) {
       throw new UnsupportedOperationException(
-          CoreError.JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+          CoreError.JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
               from.toString(), to.toString()));
     }
   }
