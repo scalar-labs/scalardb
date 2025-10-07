@@ -283,9 +283,11 @@ public interface RdbEngineStrategy {
   /**
    * Throws an exception if altering the column type is not supported in the underlying database.
    *
+   * @param from the source data type
+   * @param to the target data type
    * @throws UnsupportedOperationException if altering the column type is not supported
    */
-  default void throwIfAlterColumnTypeNotSupported() {}
+  default void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {}
 
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {
@@ -303,16 +305,4 @@ public interface RdbEngineStrategy {
    */
   default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
       ScanAll scanAll, TableMetadata metadata) {}
-
-  /**
-   * Returns whether type conversion is supported between the two data types in the underlying
-   * storage.
-   *
-   * @param from the source data type
-   * @param to the target data type
-   * @return true if type conversion is supported, false otherwise
-   */
-  default boolean isTypeConversionSupported(DataType from, DataType to) {
-    return true;
-  }
 }

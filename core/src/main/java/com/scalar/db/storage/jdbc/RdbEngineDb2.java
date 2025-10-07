@@ -549,6 +549,15 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     }
   }
 
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (from == DataType.BLOB && to == DataType.TEXT) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
+    }
+  }
+
   private String getProjection(String columnName, DataType dataType) {
     if (dataType == DataType.DATE) {
       // Selecting a DATE column requires special handling. We need to cast the DATE column values
@@ -573,10 +582,5 @@ class RdbEngineDb2 extends AbstractRdbEngine {
           CoreError.JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED
               .buildMessage(orderingOnBlobColumn.get()));
     }
-  }
-
-  @Override
-  public boolean isTypeConversionSupported(DataType from, DataType to) {
-    return from != DataType.BLOB || to != DataType.TEXT;
   }
 }

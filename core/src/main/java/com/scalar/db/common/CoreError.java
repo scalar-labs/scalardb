@@ -799,7 +799,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
       Category.USER_ERROR,
       "0239",
-      "The storage does not support column type conversion from %s to %s. Column: %s",
+      "The storage does not support column type conversion from %s to %s",
       "",
       ""),
 

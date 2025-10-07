@@ -977,15 +977,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, String columnName, DataType newColumnType)
       throws ExecutionException {
     try {
-      rdbEngine.throwIfAlterColumnTypeNotSupported();
       TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
       assert currentTableMetadata != null;
       DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
-      if (!rdbEngine.isTypeConversionSupported(currentColumnType, newColumnType)) {
-        throw new UnsupportedOperationException(
-            CoreError.JDBC_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
-                currentColumnType, newColumnType, columnName));
-      }
+      rdbEngine.throwIfAlterColumnTypeNotSupported(currentColumnType, newColumnType);
 
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata)

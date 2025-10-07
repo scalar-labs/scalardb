@@ -358,13 +358,14 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
-    // Do nothing. SQLite does not support read-only mode.
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage(
+            from.toString(), to.toString()));
   }
 
   @Override
-  public void throwIfAlterColumnTypeNotSupported() {
-    throw new UnsupportedOperationException(
-        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
+    // Do nothing. SQLite does not support read-only mode.
   }
 }
