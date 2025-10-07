@@ -3327,9 +3327,28 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void alterColumnType_ForSqlite_ShouldThrowUnsupportedOperationException() {
+  public void alterColumnType_ForSqlite_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
-    assertThatThrownBy(() -> admin.alterColumnType("ns", "table", "column", DataType.BIGINT))
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.alterColumnType(namespace, table, columnName1, DataType.BIGINT))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessage(CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
   }
