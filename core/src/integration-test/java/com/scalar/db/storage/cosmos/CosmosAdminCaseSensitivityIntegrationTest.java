@@ -71,6 +71,19 @@ public class CosmosAdminCaseSensitivityIntegrationTest
   public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
 
   @Override
+  @Disabled("Cosmos DB does not support altering column types")
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support altering column types")
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support altering column types")
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
   @Disabled("Cosmos DB does not support renaming tables")
   public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
 

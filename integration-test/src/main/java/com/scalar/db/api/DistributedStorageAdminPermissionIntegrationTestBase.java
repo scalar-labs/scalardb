@@ -332,6 +332,18 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
+  public void alterColumnType_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
+    // Arrange
+    createNamespaceByRoot();
+    createTableByRoot();
+
+    // Act Assert
+    assertThatCode(
+            () -> adminForNormalUser.alterColumnType(NAMESPACE, TABLE, COL_NAME3, DataType.BIGINT))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void renameTable_WithSufficientPermission_ShouldSucceed() throws ExecutionException {
     // Arrange
     createNamespaceByRoot();

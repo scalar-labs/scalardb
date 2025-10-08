@@ -1,8 +1,14 @@
 package com.scalar.db.transaction.singlecrudoperation;
 
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.TransactionException;
+import java.util.List;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -78,5 +84,17 @@ public abstract class SingleCrudOperationTransactionAdminIntegrationTestBase
   public void dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException()
       throws ExecutionException {
     super.dropCoordinatorTables_IfExist_CoordinatorTablesDoNotExist_ShouldNotThrowAnyException();
+  }
+
+  @Override
+  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
+      throws TransactionException {
+    manager.insert(insert);
+  }
+
+  @Override
+  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
+      throws TransactionException {
+    return manager.scan(scan);
   }
 }
