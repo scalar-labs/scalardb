@@ -24,7 +24,7 @@ public class TransactionContext {
   public final boolean oneOperation;
 
   // A list of scanners opened in the transaction
-  public final List<CrudHandler.ConsensusCommitScanner> scanners = new ArrayList<>();
+  public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
   // A list of recovery results performed in the transaction
   public final List<RecoveryExecutor.Result> recoveryResults = new ArrayList<>();
@@ -51,11 +51,11 @@ public class TransactionContext {
   }
 
   public boolean areAllScannersClosed() {
-    return scanners.stream().allMatch(CrudHandler.ConsensusCommitScanner::isClosed);
+    return scanners.stream().allMatch(ConsensusCommitScanner::isClosed);
   }
 
   public void closeScanners() throws CrudException {
-    for (CrudHandler.ConsensusCommitScanner scanner : scanners) {
+    for (ConsensusCommitScanner scanner : scanners) {
       if (!scanner.isClosed()) {
         scanner.close();
       }

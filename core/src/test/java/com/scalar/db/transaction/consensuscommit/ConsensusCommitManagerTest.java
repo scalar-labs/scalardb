@@ -188,6 +188,22 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
+    // Arrange
+
+    // Act
+    ConsensusCommit transaction1 = (ConsensusCommit) manager.begin();
+    ConsensusCommit transaction2 = (ConsensusCommit) manager.begin();
+
+    // Assert
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
+  }
+
+  @Test
   public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
@@ -283,6 +299,23 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> manager.start((com.scalar.db.api.Isolation) null))
         .isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void start_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
+      throws TransactionException {
+    // Arrange
+
+    // Act
+    ConsensusCommit transaction1 = (ConsensusCommit) manager.start();
+    ConsensusCommit transaction2 = (ConsensusCommit) manager.start();
+
+    // Assert
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test

@@ -736,10 +736,6 @@ public class CrudHandler {
     return metadata.getTableMetadata();
   }
 
-  public interface ConsensusCommitScanner extends TransactionCrudOperable.Scanner {
-    boolean isClosed();
-  }
-
   @NotThreadSafe
   private class ConsensusCommitStorageScanner extends AbstractTransactionCrudOperableScanner
       implements ConsensusCommitScanner {

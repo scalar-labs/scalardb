@@ -119,6 +119,22 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
+    // Arrange
+
+    // Act
+    TwoPhaseConsensusCommit transaction1 = (TwoPhaseConsensusCommit) manager.begin();
+    TwoPhaseConsensusCommit transaction2 = (TwoPhaseConsensusCommit) manager.begin();
+
+    // Assert
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
+  }
+
+  @Test
   public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
@@ -178,6 +194,23 @@ public class TwoPhaseConsensusCommitManagerTest {
     assertThat(transaction.getTransactionContext().readOnly).isFalse();
     assertThat(transaction.getCrudHandler()).isEqualTo(crud);
     assertThat(transaction.getCommitHandler()).isEqualTo(commit);
+  }
+
+  @Test
+  public void start_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
+      throws TransactionException {
+    // Arrange
+
+    // Act
+    TwoPhaseConsensusCommit transaction1 = (TwoPhaseConsensusCommit) manager.start();
+    TwoPhaseConsensusCommit transaction2 = (TwoPhaseConsensusCommit) manager.start();
+
+    // Assert
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
