@@ -359,8 +359,7 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
     throw new UnsupportedOperationException(
-        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage(
-            from.toString(), to.toString()));
+        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
