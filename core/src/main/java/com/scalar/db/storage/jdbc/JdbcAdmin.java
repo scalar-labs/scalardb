@@ -885,7 +885,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         for (String alterColumnTypeStatement : alterColumnTypeStatements) {
           execute(connection, alterColumnTypeStatement);
         }
-        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+        execute(connection, getDeleteTableMetadataStatement(namespace, table));
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false);
       }
     } catch (SQLException e) {
       throw new ExecutionException(

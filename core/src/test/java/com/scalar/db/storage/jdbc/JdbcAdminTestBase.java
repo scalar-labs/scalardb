@@ -3118,15 +3118,17 @@ public abstract class JdbcAdminTestBase {
     alterColumnType_ForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `ns`.`table` MODIFY `c2` BIGINT",
-        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "DELETE FROM `"
+            + tableMetadataSchemaName
+            + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
         "INSERT INTO `"
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO `"
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "`.`metadata` VALUES ('ns.table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -3136,17 +3138,17 @@ public abstract class JdbcAdminTestBase {
     alterColumnType_ForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" MODIFY ( \"c2\" NUMBER(16) )",
         "DELETE FROM \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "INSERT INTO \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table','c2','BIGINT',NULL,NULL,0,2)");
   }
 
@@ -3156,17 +3158,17 @@ public abstract class JdbcAdminTestBase {
     alterColumnType_ForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE BIGINT",
         "DELETE FROM \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "INSERT INTO \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -3176,15 +3178,17 @@ public abstract class JdbcAdminTestBase {
     alterColumnType_ForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
         "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "ALTER TABLE [ns].[table] ALTER COLUMN [c2] BIGINT",
-        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "DELETE FROM ["
+            + tableMetadataSchemaName
+            + "].[metadata] WHERE [full_table_name] = 'ns.table'",
         "INSERT INTO ["
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
         "INSERT INTO ["
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "].[metadata] VALUES ('ns.table','c2','BIGINT',NULL,NULL,0,2)");
   }
 
@@ -3197,15 +3201,16 @@ public abstract class JdbcAdminTestBase {
     String columnName1 = "c1";
     String columnName2 = "c2";
 
+    PreparedStatement checkStatement = prepareStatementForNamespaceCheck();
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                columnName2, DataType.INT.toString(), null, null, false));
+            Arrays.asList(
+                new Row(columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+                new Row(columnName2, DataType.INT.toString(), null, null, false)));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
 
@@ -3220,18 +3225,18 @@ public abstract class JdbcAdminTestBase {
     alterColumnType_ForX_ShouldWorkProperly(
         RdbEngine.DB2,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" SET DATA TYPE BIGINT",
         "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"ns\".\"table\"')",
         "DELETE FROM \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "INSERT INTO \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
         "INSERT INTO \""
-            + METADATA_SCHEMA
+            + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table','c2','BIGINT',NULL,NULL,false,2)");
   }
 
@@ -3244,16 +3249,16 @@ public abstract class JdbcAdminTestBase {
     String columnName1 = "c1";
     String columnName2 = "c2";
 
+    PreparedStatement checkStatement = prepareStatementForNamespaceCheck();
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
-            new SelectAllFromMetadataTableResultSetMocker.Row(
-                columnName2, DataType.INT.toString(), null, null, false));
+            Arrays.asList(
+                new Row(columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+                new Row(columnName2, DataType.INT.toString(), null, null, false)));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       Statement expectedStatement = mock(Statement.class);
