@@ -136,15 +136,17 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " MODIFY ( "
-        + enclose(columnName)
-        + " "
-        + columnType
-        + " )";
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " MODIFY ( "
+          + enclose(columnName)
+          + " "
+          + columnType
+          + " )"
+    };
   }
 
   @Override
@@ -439,5 +441,14 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public RdbEngineTimeTypeStrategy<LocalDate, LocalDateTime, LocalDateTime, OffsetDateTime>
       getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (!(from == DataType.INT && to == DataType.BIGINT)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
+    }
   }
 }

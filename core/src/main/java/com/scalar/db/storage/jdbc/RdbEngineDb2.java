@@ -269,14 +269,17 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN "
-        + enclose(columnName)
-        + " SET DATA TYPE "
-        + columnType;
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " SET DATA TYPE "
+          + columnType,
+      "CALL SYSPROC.ADMIN_CMD('REORG TABLE " + encloseFullTableName(namespace, table) + "')"
+    };
   }
 
   @Override
@@ -543,6 +546,15 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
       throw new UnsupportedOperationException(
           CoreError.JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+    }
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (from == DataType.BLOB && to == DataType.TEXT) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
     }
   }
 

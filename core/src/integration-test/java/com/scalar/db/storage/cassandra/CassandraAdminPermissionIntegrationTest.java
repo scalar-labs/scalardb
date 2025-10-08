@@ -156,6 +156,11 @@ public class CassandraAdminPermissionIntegrationTest
 
   @Test
   @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void alterColumnType_WithSufficientPermission_ShouldSucceed() {}
+
+  @Test
+  @Override
   @Disabled("Cassandra does not support renaming tables")
   public void renameTable_WithSufficientPermission_ShouldSucceed() {}
 }

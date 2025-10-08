@@ -1,6 +1,13 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.exception.transaction.TransactionException;
+import java.util.List;
 import java.util.Properties;
 
 public abstract class ConsensusCommitAdminIntegrationTestBase
@@ -23,4 +30,21 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
   }
 
   protected abstract Properties getProps(String testName);
+
+  @Override
+  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
+      throws TransactionException {
+    DistributedTransaction transaction = manager.start();
+    transaction.insert(insert);
+    transaction.commit();
+  }
+
+  @Override
+  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
+      throws TransactionException {
+    DistributedTransaction transaction = manager.start();
+    List<Result> results = transaction.scan(scan);
+    transaction.commit();
+    return results;
+  }
 }
