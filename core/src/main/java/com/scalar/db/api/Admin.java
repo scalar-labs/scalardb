@@ -521,6 +521,20 @@ public interface Admin {
       throws ExecutionException;
 
   /**
+   * Alters the data type of existing column of an existing table.
+   *
+   * @param namespace the table namespace
+   * @param table the table name
+   * @param columnName the name of the column to alter
+   * @param newColumnType the new data type of the column
+   * @throws IllegalArgumentException if the table or the column does not exist, if the column is a
+   *     primary key column or the index key column, or if the data type conversion is not supported
+   * @throws ExecutionException if the operation fails
+   */
+  void alterColumnType(String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException;
+
+  /**
    * Renames an existing table.
    *
    * @param namespace the table namespace

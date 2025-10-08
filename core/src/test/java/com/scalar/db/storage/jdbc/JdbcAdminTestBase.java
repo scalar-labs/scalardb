@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcAdminTestBase.GetColumnsResultSetMocker.Row;
@@ -1953,7 +1954,7 @@ public abstract class JdbcAdminTestBase {
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
             + tableMetadataSchemaName
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
-        "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` VARCHAR(128)",
+        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128)"},
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
             + tableMetadataSchemaName
@@ -1969,7 +1970,9 @@ public abstract class JdbcAdminTestBase {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE VARCHAR(10485760)",
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760)"
+        },
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + tableMetadataSchemaName
@@ -1985,7 +1988,7 @@ public abstract class JdbcAdminTestBase {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(128) )",
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(128) )"},
         "CREATE INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + tableMetadataSchemaName
@@ -2007,7 +2010,10 @@ public abstract class JdbcAdminTestBase {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(128)",
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(128)",
+          "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"my_ns\".\"my_tbl\"')"
+        },
         "CREATE INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
             + tableMetadataSchemaName
@@ -2018,7 +2024,7 @@ public abstract class JdbcAdminTestBase {
       createIndex_forColumnTypeWithRequiredAlterationForX_ShouldAlterColumnAndCreateIndexProperly(
           RdbEngine rdbEngine,
           String expectedGetTableMetadataStatement,
-          String expectedAlterColumnTypeStatement,
+          String[] expectedAlterColumnTypeStatements,
           String expectedCreateIndexStatement,
           String expectedUpdateTableMetadataStatement)
           throws SQLException, ExecutionException {
@@ -2052,12 +2058,17 @@ public abstract class JdbcAdminTestBase {
     verify(connection).prepareStatement(expectedGetTableMetadataStatement);
     verify(selectStatement).setString(1, getFullTableName(namespace, table));
 
-    verify(connection, times(3)).createStatement();
+    verify(connection, times(2 + expectedAlterColumnTypeStatements.length)).createStatement();
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(statement, times(3)).execute(captor.capture());
-    assertThat(captor.getAllValues().get(0)).isEqualTo(expectedAlterColumnTypeStatement);
-    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedCreateIndexStatement);
-    assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
+    verify(statement, times(2 + expectedAlterColumnTypeStatements.length))
+        .execute(captor.capture());
+    for (int i = 0; i < expectedAlterColumnTypeStatements.length; i++) {
+      assertThat(captor.getAllValues().get(i)).isEqualTo(expectedAlterColumnTypeStatements[i]);
+    }
+    assertThat(captor.getAllValues().get(expectedAlterColumnTypeStatements.length))
+        .isEqualTo(expectedCreateIndexStatement);
+    assertThat(captor.getAllValues().get(expectedAlterColumnTypeStatements.length + 1))
+        .isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
   @Test
@@ -2196,7 +2207,7 @@ public abstract class JdbcAdminTestBase {
             + tableMetadataSchemaName
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
-        "ALTER TABLE `my_ns`.`my_tbl` MODIFY`my_column` LONGTEXT",
+        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT"},
         "UPDATE `"
             + tableMetadataSchemaName
             + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
@@ -2211,7 +2222,7 @@ public abstract class JdbcAdminTestBase {
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN\"my_column\" TYPE TEXT",
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT"},
         "UPDATE \""
             + tableMetadataSchemaName
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2226,7 +2237,7 @@ public abstract class JdbcAdminTestBase {
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )",
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" MODIFY ( \"my_column\" VARCHAR2(4000) )"},
         "UPDATE \""
             + tableMetadataSchemaName
             + "\".\"metadata\" SET \"indexed\"=0 WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2246,7 +2257,10 @@ public abstract class JdbcAdminTestBase {
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(32672)",
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" SET DATA TYPE VARCHAR(32672)",
+          "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"my_ns\".\"my_tbl\"')"
+        },
         "UPDATE \""
             + tableMetadataSchemaName
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -2256,7 +2270,7 @@ public abstract class JdbcAdminTestBase {
       RdbEngine rdbEngine,
       String expectedGetTableMetadataStatement,
       String expectedDropIndexStatement,
-      String expectedAlterColumnStatement,
+      String[] expectedAlterColumnStatements,
       String expectedUpdateTableMetadataStatement)
       throws SQLException, ExecutionException {
     // Arrange
@@ -2288,12 +2302,15 @@ public abstract class JdbcAdminTestBase {
     verify(connection).prepareStatement(expectedGetTableMetadataStatement);
     verify(selectStatement).setString(1, getFullTableName(namespace, table));
 
-    verify(connection, times(3)).createStatement();
+    verify(connection, times(2 + expectedAlterColumnStatements.length)).createStatement();
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(statement, times(3)).execute(captor.capture());
+    verify(statement, times(2 + expectedAlterColumnStatements.length)).execute(captor.capture());
     assertThat(captor.getAllValues().get(0)).isEqualTo(expectedDropIndexStatement);
-    assertThat(captor.getAllValues().get(1)).isEqualTo(expectedAlterColumnStatement);
-    assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
+    for (int i = 0; i < expectedAlterColumnStatements.length; i++) {
+      assertThat(captor.getAllValues().get(i + 1)).isEqualTo(expectedAlterColumnStatements[i]);
+    }
+    assertThat(captor.getAllValues().get(expectedAlterColumnStatements.length + 1))
+        .isEqualTo(expectedUpdateTableMetadataStatement);
   }
 
   @Test
@@ -3086,6 +3103,172 @@ public abstract class JdbcAdminTestBase {
 
     // Act
     admin.renameColumn(namespace, table, column2, column3);
+
+    // Assert
+    verify(selectStatement).setString(1, getFullTableName(namespace, table));
+    verify(connection).prepareStatement(expectedGetMetadataStatement);
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void alterColumnType_ForMysql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    alterColumnType_ForX_ShouldWorkProperly(
+        RdbEngine.MYSQL,
+        "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
+            + METADATA_SCHEMA
+            + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
+        "ALTER TABLE `ns`.`table` MODIFY `c2` BIGINT",
+        "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO `"
+            + METADATA_SCHEMA
+            + "`.`metadata` VALUES ('ns.table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void alterColumnType_ForOracle_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    alterColumnType_ForX_ShouldWorkProperly(
+        RdbEngine.ORACLE,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" MODIFY ( \"c2\" NUMBER(16) )",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c2','BIGINT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void alterColumnType_ForPostgresql_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    alterColumnType_ForX_ShouldWorkProperly(
+        RdbEngine.POSTGRESQL,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE BIGINT",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  @Test
+  public void alterColumnType_ForSqlServer_ShouldWorkProperly()
+      throws SQLException, ExecutionException {
+    alterColumnType_ForX_ShouldWorkProperly(
+        RdbEngine.SQL_SERVER,
+        "SELECT [column_name],[data_type],[key_type],[clustering_order],[indexed] FROM ["
+            + METADATA_SCHEMA
+            + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
+        "ALTER TABLE [ns].[table] ALTER COLUMN [c2] BIGINT",
+        "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c1','TEXT','PARTITION',NULL,0,1)",
+        "INSERT INTO ["
+            + METADATA_SCHEMA
+            + "].[metadata] VALUES ('ns.table','c2','BIGINT',NULL,NULL,0,2)");
+  }
+
+  @Test
+  public void alterColumnType_ForSqlite_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.alterColumnType(namespace, table, columnName1, DataType.BIGINT))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessage(CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Test
+  public void alterColumnType_ForDb2_ShouldWorkProperly() throws SQLException, ExecutionException {
+    alterColumnType_ForX_ShouldWorkProperly(
+        RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
+        "ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" SET DATA TYPE BIGINT",
+        "CALL SYSPROC.ADMIN_CMD('REORG TABLE \"ns\".\"table\"')",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c1','TEXT','PARTITION',NULL,false,1)",
+        "INSERT INTO \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" VALUES ('ns.table','c2','BIGINT',NULL,NULL,false,2)");
+  }
+
+  private void alterColumnType_ForX_ShouldWorkProperly(
+      RdbEngine rdbEngine, String expectedGetMetadataStatement, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String columnName1 = "c1";
+    String columnName2 = "c2";
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName1, DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                columnName2, DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    List<Statement> expectedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      Statement expectedStatement = mock(Statement.class);
+      expectedStatements.add(expectedStatement);
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            expectedStatements.get(0),
+            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.alterColumnType(namespace, table, columnName2, DataType.BIGINT);
 
     // Assert
     verify(selectStatement).setString(1, getFullTableName(namespace, table));

@@ -1268,6 +1268,8 @@ public abstract class DynamoAdminTestBase {
     Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(NAMESPACE, TABLE, "c1"));
     Throwable thrown5 = catchThrowable(() -> admin.renameColumn(NAMESPACE, TABLE, "c1", "c2"));
     Throwable thrown6 = catchThrowable(() -> admin.renameTable(NAMESPACE, TABLE, "new_table"));
+    Throwable thrown7 =
+        catchThrowable(() -> admin.alterColumnType(NAMESPACE, TABLE, "c1", DataType.INT));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
@@ -1276,6 +1278,7 @@ public abstract class DynamoAdminTestBase {
     assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown6).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown7).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

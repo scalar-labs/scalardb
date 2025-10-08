@@ -145,14 +145,16 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " MODIFY"
-        + enclose(columnName)
-        + " "
-        + columnType;
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " MODIFY "
+          + enclose(columnName)
+          + " "
+          + columnType
+    };
   }
 
   @Override
