@@ -32,7 +32,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.Snapshot.ReadWriteSets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -64,8 +63,8 @@ public class CommitHandlerTest {
   @Mock protected TransactionTableMetadataManager tableMetadataManager;
   @Mock protected StorageInfoProvider storageInfoProvider;
   @Mock protected ConsensusCommitConfig config;
-  @Mock protected BeforePreparationSnapshotHook beforePreparationSnapshotHook;
-  @Mock protected Future<Void> beforePreparationSnapshotHookFuture;
+  @Mock protected BeforePreparationHook beforePreparationHook;
+  @Mock protected Future<Void> beforePreparationHookFuture;
 
   private CommitHandler handler;
   protected ParallelExecutor parallelExecutor;
@@ -235,27 +234,24 @@ public class CommitHandlerTest {
         anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
   }
 
-  private void setBeforePreparationSnapshotHookIfNeeded(boolean withSnapshotHook) {
-    if (withSnapshotHook) {
-      doReturn(beforePreparationSnapshotHookFuture)
-          .when(beforePreparationSnapshotHook)
-          .handle(any(), any());
-      handler.setBeforePreparationSnapshotHook(beforePreparationSnapshotHook);
+  private void setBeforePreparationHookIfNeeded(boolean withBeforePreparationHook) {
+    if (withBeforePreparationHook) {
+      doReturn(beforePreparationHookFuture).when(beforePreparationHook).handle(any(), any());
+      handler.setBeforePreparationHook(beforePreparationHook);
     }
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
-      boolean withSnapshotHook)
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -266,21 +262,21 @@ public class CommitHandlerTest {
     verify(storage, times(4)).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(boolean withSnapshotHook)
+  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -291,20 +287,19 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-      boolean withSnapshotHook)
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
@@ -315,7 +310,7 @@ public class CommitHandlerTest {
     verify(storage, never()).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verify(coordinator, never()).putState(any());
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
@@ -323,13 +318,12 @@ public class CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   public void
       commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -340,7 +334,7 @@ public class CommitHandlerTest {
     verify(storage, never()).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verify(coordinator, never()).putState(any());
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
@@ -348,14 +342,13 @@ public class CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   public void
       commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException, ValidationConflictException {
     // Arrange
     handler = spy(createCommitHandler(false));
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -366,7 +359,7 @@ public class CommitHandlerTest {
     verify(storage, never()).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
@@ -374,12 +367,11 @@ public class CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   public void
       commit_NoWritesAndDeletesInSnapshot_ValidationFailed_ShouldNotPrepareRecordsAndAbortStateAndRollbackRecords(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws ExecutionException, CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
@@ -391,7 +383,7 @@ public class CommitHandlerTest {
     verify(storage, never()).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verify(coordinator, never()).putState(any());
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler).onFailureBeforeCommit(any());
   }
 
@@ -399,13 +391,12 @@ public class CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   public void
       commit_NoWritesAndDeletesInSnapshot_ValidationFailed_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndRollbackRecordsButShouldAbortState(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws ExecutionException, CoordinatorException, ValidationConflictException {
     // Arrange
     handler = spy(createCommitHandler(false));
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
@@ -417,21 +408,20 @@ public class CommitHandlerTest {
     verify(storage, never()).mutate(anyList());
     verify(snapshot).toSerializable(storage);
     verify(coordinator).putState(any());
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler).onFailureBeforeCommit(any());
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withSnapshotHook)
+  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithoutReads());
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
-    setBeforePreparationSnapshotHookIfNeeded(withSnapshotHook);
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -442,7 +432,7 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
-    verifySnapshotHook(withSnapshotHook, readWriteSets);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
@@ -942,26 +932,26 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commit_SnapshotHookGiven_ShouldWaitSnapshotHookFinishesBeforeCommitState()
-      throws ExecutionException, CoordinatorException {
+  public void
+      commit_BeforePreparationHookGiven_ShouldWaitBeforePreparationHookFinishesBeforeCommitState()
+          throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
     doNothing().when(storage).mutate(anyList());
     doThrowExceptionWhenCoordinatorPutState(TransactionState.COMMITTED, CoordinatorException.class);
     // Lambda can't be spied...
-    BeforePreparationSnapshotHook delayedBeforePreparationSnapshotHook =
+    BeforePreparationHook delayedBeforePreparationHook =
         spy(
-            new BeforePreparationSnapshotHook() {
+            new BeforePreparationHook() {
               @Override
               public Future<Void> handle(
                   TransactionTableMetadataManager tableMetadataManager,
-                  Snapshot.ReadWriteSets readWriteSets) {
+                  TransactionContext context) {
                 Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(2));
-                return beforePreparationSnapshotHookFuture;
+                return beforePreparationHookFuture;
               }
             });
-    handler.setBeforePreparationSnapshotHook(delayedBeforePreparationSnapshotHook);
+    handler.setBeforePreparationHook(delayedBeforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -975,7 +965,7 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verify(handler, never()).rollbackRecords(context);
-    verify(delayedBeforePreparationSnapshotHook).handle(tableMetadataManager, readWriteSets);
+    verify(delayedBeforePreparationHook).handle(tableMetadataManager, context);
     // This means `commit()` waited until the callback was completed before throwing
     // an exception from `commitState()`.
     assertThat(Duration.between(start, end)).isGreaterThanOrEqualTo(Duration.ofSeconds(2));
@@ -983,14 +973,14 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commit_FailingSnapshotHookGiven_ShouldThrowCommitException()
+  public void commit_FailingBeforePreparationHookGiven_ShouldThrowCommitException()
       throws ExecutionException, CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(new RuntimeException("Something is wrong"))
-        .when(beforePreparationSnapshotHook)
+        .when(beforePreparationHook)
         .handle(any(), any());
-    handler.setBeforePreparationSnapshotHook(beforePreparationSnapshotHook);
+    handler.setBeforePreparationHook(beforePreparationHook);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -1007,16 +997,14 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commit_FailingSnapshotHookFutureGiven_ShouldThrowCommitException()
+  public void commit_FailingBeforePreparationHookFutureGiven_ShouldThrowCommitException()
       throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
           InterruptedException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
-    doThrow(new RuntimeException("Something is wrong"))
-        .when(beforePreparationSnapshotHookFuture)
-        .get();
-    setBeforePreparationSnapshotHookIfNeeded(true);
+    doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
+    setBeforePreparationHookIfNeeded(true);
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -1298,11 +1286,12 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(anyId(), expectedTransactionState));
   }
 
-  private void verifySnapshotHook(boolean withSnapshotHook, Snapshot.ReadWriteSets readWriteSets) {
-    if (withSnapshotHook) {
-      verify(beforePreparationSnapshotHook).handle(eq(tableMetadataManager), eq(readWriteSets));
+  private void verifyBeforePreparationHook(
+      boolean withBeforePreparationHook, TransactionContext context) {
+    if (withBeforePreparationHook) {
+      verify(beforePreparationHook).handle(eq(tableMetadataManager), eq(context));
     } else {
-      verify(beforePreparationSnapshotHook, never()).handle(any(), any());
+      verify(beforePreparationHook, never()).handle(any(), any());
     }
   }
 }

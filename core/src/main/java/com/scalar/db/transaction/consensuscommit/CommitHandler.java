@@ -23,7 +23,9 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
@@ -44,7 +46,7 @@ public class CommitHandler {
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
 
-  @LazyInit @Nullable private BeforePreparationSnapshotHook beforePreparationSnapshotHook;
+  @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
@@ -79,43 +81,41 @@ public class CommitHandler {
     }
   }
 
-  private Optional<Future<Void>> invokeBeforePreparationSnapshotHook(TransactionContext context)
+  private Optional<Future<Void>> invokeBeforePreparationHook(TransactionContext context)
       throws UnknownTransactionStatusException, CommitException {
-    if (beforePreparationSnapshotHook == null) {
+    if (beforePreparationHook == null) {
       return Optional.empty();
     }
 
     try {
-      return Optional.of(
-          beforePreparationSnapshotHook.handle(
-              tableMetadataManager, context.snapshot.getReadWriteSets()));
+      return Optional.of(beforePreparationHook.handle(tableMetadataManager, context));
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
       abortState(context.transactionId);
       rollbackRecords(context);
       throw new CommitException(
-          CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(
+          CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
               e.getMessage()),
           e,
           context.transactionId);
     }
   }
 
-  private void waitBeforePreparationSnapshotHookFuture(
-      TransactionContext context, @Nullable Future<Void> snapshotHookFuture)
+  private void waitBeforePreparationHookFuture(
+      TransactionContext context, @Nullable Future<Void> beforePreparationHookFuture)
       throws UnknownTransactionStatusException, CommitException {
-    if (snapshotHookFuture == null) {
+    if (beforePreparationHookFuture == null) {
       return;
     }
 
     try {
-      snapshotHookFuture.get();
+      beforePreparationHookFuture.get();
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
       abortState(context.transactionId);
       rollbackRecords(context);
       throw new CommitException(
-          CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED.buildMessage(
+          CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
               e.getMessage()),
           e,
           context.transactionId);
@@ -127,7 +127,7 @@ public class CommitHandler {
     boolean hasWritesOrDeletesInSnapshot =
         !context.readOnly && context.snapshot.hasWritesOrDeletes();
 
-    Optional<Future<Void>> snapshotHookFuture = invokeBeforePreparationSnapshotHook(context);
+    Optional<Future<Void>> beforePreparationHookFuture = invokeBeforePreparationHook(context);
 
     if (canOnePhaseCommit(context)) {
       try {
@@ -181,7 +181,7 @@ public class CommitHandler {
       }
     }
 
-    waitBeforePreparationSnapshotHookFuture(context, snapshotHookFuture.orElse(null));
+    waitBeforePreparationHookFuture(context, beforePreparationHookFuture.orElse(null));
 
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
       commitState(context);
@@ -208,12 +208,13 @@ public class CommitHandler {
       return false;
     }
 
-    List<Delete> deletesInDeleteSet = context.snapshot.getDeletesInDeleteSet();
+    Collection<Map.Entry<Snapshot.Key, Delete>> deleteSetEntries = context.snapshot.getDeleteSet();
 
     // If a record corresponding to a delete in the delete set does not exist in the storage,　we
     // cannot one-phase commit the transaction. This is because the storage does not support
     // delete-if-not-exists semantics, so we cannot detect conflicts with other transactions.
-    for (Delete delete : deletesInDeleteSet) {
+    for (Map.Entry<Snapshot.Key, Delete> entry : deleteSetEntries) {
+      Delete delete = entry.getValue();
       Optional<TransactionResult> result =
           context.snapshot.getFromReadSet(new Snapshot.Key(delete));
 
@@ -230,7 +231,9 @@ public class CommitHandler {
       // If the mutations can be grouped altogether, the mutations can be done in a single mutate
       // API call, so we can one-phase commit the transaction
       return mutationsGrouper.canBeGroupedAltogether(
-          Stream.concat(context.snapshot.getPutsInWriteSet().stream(), deletesInDeleteSet.stream())
+          Stream.concat(
+                  context.snapshot.getWriteSet().stream().map(Map.Entry::getValue),
+                  deleteSetEntries.stream().map(Map.Entry::getValue))
               .collect(Collectors.toList()));
     } catch (ExecutionException e) {
       throw new CommitException(
@@ -432,14 +435,13 @@ public class CommitHandler {
   }
 
   /**
-   * Sets the {@link BeforePreparationSnapshotHook}. This method must be called immediately after
-   * the constructor is invoked.
+   * Sets the {@link BeforePreparationHook}. This method must be called immediately after the
+   * constructor is invoked.
    *
-   * @param beforePreparationSnapshotHook The snapshot hook to set.
+   * @param beforePreparationHook The before-preparation hook to set.
    * @throws NullPointerException If the argument is null.
    */
-  public void setBeforePreparationSnapshotHook(
-      BeforePreparationSnapshotHook beforePreparationSnapshotHook) {
-    this.beforePreparationSnapshotHook = checkNotNull(beforePreparationSnapshotHook);
+  public void setBeforePreparationHook(BeforePreparationHook beforePreparationHook) {
+    this.beforePreparationHook = checkNotNull(beforePreparationHook);
   }
 }

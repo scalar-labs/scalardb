@@ -425,9 +425,10 @@ public class CrudHandler {
 
     // For each put in the write set, if implicit pre-read is enabled and the record is not read
     // yet, read the record
-    for (Put put : context.snapshot.getPutsInWriteSet()) {
+    for (Map.Entry<Snapshot.Key, Put> entry : context.snapshot.getWriteSet()) {
+      Put put = entry.getValue();
       if (isImplicitPreReadEnabled(put)) {
-        Snapshot.Key key = new Snapshot.Key(put);
+        Snapshot.Key key = entry.getKey();
         if (!context.snapshot.containsKeyInReadSet(key)) {
           tasks.add(() -> read(key, createGet(key), context));
         }
@@ -435,8 +436,8 @@ public class CrudHandler {
     }
 
     // For each delete in the write set, if the record is not read yet, read the record
-    for (Delete delete : context.snapshot.getDeletesInDeleteSet()) {
-      Snapshot.Key key = new Snapshot.Key(delete);
+    for (Map.Entry<Snapshot.Key, Delete> entry : context.snapshot.getDeleteSet()) {
+      Snapshot.Key key = entry.getKey();
       if (!context.snapshot.containsKeyInReadSet(key)) {
         tasks.add(() -> read(key, createGet(key), context));
       }

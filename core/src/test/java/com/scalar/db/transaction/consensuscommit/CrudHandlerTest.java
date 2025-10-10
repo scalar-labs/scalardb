@@ -2628,7 +2628,12 @@ public class CrudHandlerTest {
     when(put3.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(put3.getPartitionKey()).thenReturn(partitionKey3);
 
-    when(snapshot.getPutsInWriteSet()).thenReturn(Arrays.asList(put1, put2, put3));
+    Map<Snapshot.Key, Put> writeSet =
+        ImmutableMap.of(
+            new Snapshot.Key(put1), put1,
+            new Snapshot.Key(put2), put2,
+            new Snapshot.Key(put3), put3);
+    when(snapshot.getWriteSet()).thenReturn(writeSet.entrySet());
 
     Delete delete1 = mock(Delete.class);
     when(delete1.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
@@ -2640,7 +2645,11 @@ public class CrudHandlerTest {
     when(delete2.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
     when(delete2.getPartitionKey()).thenReturn(partitionKey5);
 
-    when(snapshot.getDeletesInDeleteSet()).thenReturn(Arrays.asList(delete1, delete2));
+    Map<Snapshot.Key, Delete> deleteSet =
+        ImmutableMap.of(
+            new Snapshot.Key(delete1), delete1,
+            new Snapshot.Key(delete2), delete2);
+    when(snapshot.getDeleteSet()).thenReturn(deleteSet.entrySet());
 
     Get get1 =
         toGetForStorageFrom(

@@ -188,16 +188,24 @@ public class Snapshot {
     scannerSet.add(new ScannerInfo(scan, results));
   }
 
-  public List<Put> getPutsInWriteSet() {
-    return new ArrayList<>(writeSet.values());
+  public Collection<Map.Entry<Key, Put>> getWriteSet() {
+    return new ArrayList<>(writeSet.entrySet());
   }
 
-  public List<Delete> getDeletesInDeleteSet() {
-    return new ArrayList<>(deleteSet.values());
+  public Collection<Map.Entry<Key, Delete>> getDeleteSet() {
+    return new ArrayList<>(deleteSet.entrySet());
   }
 
-  public ReadWriteSets getReadWriteSets() {
-    return new ReadWriteSets(id, readSet, writeSet.entrySet(), deleteSet.entrySet());
+  public Collection<Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>>> getScanSet() {
+    return new ArrayList<>(scanSet.entrySet());
+  }
+
+  public Collection<ScannerInfo> getScannerSet() {
+    return new ArrayList<>(scannerSet);
+  }
+
+  public Collection<Map.Entry<Get, Optional<TransactionResult>>> getGetSet() {
+    return new ArrayList<>(getSet.entrySet());
   }
 
   public boolean containsKeyInReadSet(Key key) {
@@ -239,7 +247,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan) {
+  public Optional<LinkedHashMap<Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -874,40 +882,6 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
-    }
-  }
-
-  public static class ReadWriteSets {
-    public final String transactionId;
-    public final Map<Key, Optional<TransactionResult>> readSetMap;
-    public final List<Entry<Key, Put>> writeSet;
-    public final List<Entry<Key, Delete>> deleteSet;
-
-    public ReadWriteSets(
-        String transactionId,
-        Map<Key, Optional<TransactionResult>> readSetMap,
-        Collection<Entry<Key, Put>> writeSet,
-        Collection<Entry<Key, Delete>> deleteSet) {
-      this.transactionId = transactionId;
-      this.readSetMap = new HashMap<>(readSetMap);
-      this.writeSet = new ArrayList<>(writeSet);
-      this.deleteSet = new ArrayList<>(deleteSet);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof ReadWriteSets)) return false;
-      ReadWriteSets that = (ReadWriteSets) o;
-      return Objects.equals(transactionId, that.transactionId)
-          && Objects.equals(readSetMap, that.readSetMap)
-          && Objects.equals(writeSet, that.writeSet)
-          && Objects.equals(deleteSet, that.deleteSet);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
     }
   }
 
