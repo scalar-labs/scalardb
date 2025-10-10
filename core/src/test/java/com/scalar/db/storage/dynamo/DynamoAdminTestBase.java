@@ -1303,6 +1303,75 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void repairTable_WhenTableAlreadyExistsWithoutIndex_ShouldCreateIndex()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.INT)
+            .addColumn("c3", DataType.INT)
+            .addSecondaryIndex("c3")
+            .build();
+    // The table to repair exists
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    // The metadata table exists
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    // Continuous backup check
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+    // Table metadata to return in createIndex
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(getItemResponse);
+    when(getItemResponse.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(getFullTableName()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("int").build())
+                                .put("c3", AttributeValue.builder().s("int").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
+                    AttributeValue.builder().ss("c3").build())
+                .build());
+    // For waitForTableCreation in createIndex
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    GlobalSecondaryIndexDescription globalSecondaryIndexDescription =
+        mock(GlobalSecondaryIndexDescription.class);
+    when(tableDescription.globalSecondaryIndexes())
+        .thenReturn(Collections.emptyList())
+        .thenReturn(Collections.singletonList(globalSecondaryIndexDescription));
+    String indexName = getFullTableName() + ".global_index.c3";
+    when(globalSecondaryIndexDescription.indexName()).thenReturn(indexName);
+    when(globalSecondaryIndexDescription.indexStatus()).thenReturn(IndexStatus.ACTIVE);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    verify(client, times(1)).updateTable(any(UpdateTableRequest.class));
+  }
+
+  @Test
   public void addNewColumnToTable_ShouldWorkProperly() throws ExecutionException {
     // Arrange
     String currentColumn = "c1";
@@ -1648,11 +1717,20 @@ public abstract class DynamoAdminTestBase {
             () ->
                 admin.importTable(
                     NAMESPACE, TABLE, Collections.emptyMap(), Collections.emptyMap()));
+    Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(NAMESPACE, TABLE, "c1"));
+    Throwable thrown5 = catchThrowable(() -> admin.renameColumn(NAMESPACE, TABLE, "c1", "c2"));
+    Throwable thrown6 = catchThrowable(() -> admin.renameTable(NAMESPACE, TABLE, "new_table"));
+    Throwable thrown7 =
+        catchThrowable(() -> admin.alterColumnType(NAMESPACE, TABLE, "c1", DataType.INT));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown6).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown7).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

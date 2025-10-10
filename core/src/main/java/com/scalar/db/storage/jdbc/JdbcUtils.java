@@ -130,10 +130,6 @@ public final class JdbcUtils {
     return dataSource;
   }
 
-  public static boolean isSqlite(JdbcConfig config) {
-    return config.getJdbcUrl().startsWith("jdbc:sqlite:");
-  }
-
   /**
    * Get {@code JDBCType} of the specified {@code sqlType}.
    *

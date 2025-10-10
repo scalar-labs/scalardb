@@ -7,10 +7,14 @@ public final class JdbcEnv {
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
+  private static final String PROP_JDBC_NORMAL_USERNAME = "scalardb.jdbc.normal_username";
+  private static final String PROP_JDBC_NORMAL_PASSWORD = "scalardb.jdbc.normal_password";
 
-  private static final String DEFAULT_JDBC_URL = "jdbc:mysql://localhost:3306/";
-  private static final String DEFAULT_JDBC_USERNAME = "root";
-  private static final String DEFAULT_JDBC_PASSWORD = "mysql";
+  private static final String DEFAULT_JDBC_URL = "jdbc:postgresql://localhost:5432/";
+  private static final String DEFAULT_JDBC_USERNAME = "postgres";
+  private static final String DEFAULT_JDBC_PASSWORD = "postgres";
+  private static final String DEFAULT_JDBC_NORMAL_USERNAME = "test";
+  private static final String DEFAULT_JDBC_NORMAL_PASSWORD = "test";
 
   private JdbcEnv() {}
 
@@ -36,11 +40,26 @@ public final class JdbcEnv {
     return properties;
   }
 
+  public static Properties getPropertiesForNormalUser(String testName) {
+    String username = System.getProperty(PROP_JDBC_NORMAL_USERNAME, DEFAULT_JDBC_NORMAL_USERNAME);
+    String password = System.getProperty(PROP_JDBC_NORMAL_PASSWORD, DEFAULT_JDBC_NORMAL_PASSWORD);
+
+    Properties properties = getProperties(testName);
+    properties.setProperty(DatabaseConfig.USERNAME, username);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+
+    return properties;
+  }
+
+  public static boolean isOracle() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:oracle:");
+  }
+
   public static boolean isSqlite() {
-    Properties properties = new Properties();
-    properties.setProperty(
-        DatabaseConfig.CONTACT_POINTS, System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
-    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(properties)));
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlite:");
+  }
+
+  public static boolean isDb2() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:db2:");
   }
 }

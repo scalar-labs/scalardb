@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -22,7 +23,6 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
 import java.util.UUID;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -72,6 +72,20 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
         false,
+        groupCommitter);
+  }
+
+  @Override
+  protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
+    createGroupCommitterIfNotExists();
+    return new CommitHandlerWithGroupCommit(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        mutationsGrouper,
+        true,
+        true,
         groupCommitter);
   }
 
@@ -199,70 +213,121 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     verify(groupCommitter, never()).remove(anyId());
   }
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
   @Test
-  public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() {}
+  @Override
+  public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
+    super.onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations();
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
-  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() {}
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
   @Test
-  public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() {}
-
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
   @Override
-  @Test
-  public void canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse() {}
-
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
-  public void canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue() {}
-
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
-  public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() {}
-
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
-  public void canOnePhaseCommit_WhenMutationsGrouperThrowsException_ShouldThrowCommitException() {}
-
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
-  public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations() {}
-
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
   public void
-      onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException() {}
+      onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    super.onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException();
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
   @Test
+  @Override
   public void
-      onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException() {}
+      onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    super
+        .onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException();
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
-  @Test
-  public void onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowCommitException() {}
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
   @Test
-  public void commit_OnePhaseCommitted_ShouldNotThrowAnyException() {}
+  @Override
+  public void
+      onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws ExecutionException {
+    super
+        .onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException();
 
-  @Disabled("Enabling both one-phase commit and group commit is not supported")
-  @Override
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
   @Test
-  public void commit_OnePhaseCommitted_CommitExceptionThrown_ShouldThrowCommitException() {}
+  @Override
+  public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse()
+      throws Exception {
+    super.canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue() throws Exception {
+    super.canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException()
+          throws ExecutionException {
+    super
+        .canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException();
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
+      throws CommitException, UnknownTransactionStatusException {
+    super.commit_OnePhaseCommitted_ShouldNotThrowAnyException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws CommitException, UnknownTransactionStatusException {
+    super
+        .commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException();
+    groupCommitter.remove(anyId());
+  }
 }

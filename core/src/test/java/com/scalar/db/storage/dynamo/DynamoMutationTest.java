@@ -3,13 +3,10 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,7 +30,6 @@ public class DynamoMutationTest {
   private static final int ANY_INT_1 = 1;
   private static final int ANY_INT_2 = 2;
   private static final int ANY_INT_3 = 3;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
   @Mock private TableMetadata metadata;
 
@@ -46,13 +42,16 @@ public class DynamoMutationTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1)
-        .withValue(ANY_NAME_4, ANY_INT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .intValue(ANY_NAME_4, ANY_INT_2)
+        .build();
   }
 
   @Test
@@ -97,10 +96,10 @@ public class DynamoMutationTest {
   public void getCondition_PutGiven_ShouldReturnCondition() {
     // Arrange
     PutIf conditions =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
-    Put put = preparePut().withCondition(conditions);
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
+            .build();
+    Put put = Put.newBuilder(preparePut()).condition(conditions).build();
 
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
 
@@ -124,10 +123,10 @@ public class DynamoMutationTest {
   public void getConditionColumnMap_PutGiven_ShouldReturnCondition() {
     // Arrange
     PutIf conditions =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
-    Put put = preparePut().withCondition(conditions);
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
+            .build();
+    Put put = Put.newBuilder(preparePut()).condition(conditions).build();
 
     Map<String, String> expected = new HashMap<>();
     expected.put(DynamoOperation.CONDITION_COLUMN_NAME_ALIAS + "0", ANY_NAME_3);
@@ -145,7 +144,7 @@ public class DynamoMutationTest {
   @Test
   public void getUpdateExpression_PutWithIfExistsGiven_ShouldReturnExpression() {
     // Arrange
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
 
     // Act
@@ -169,10 +168,10 @@ public class DynamoMutationTest {
   public void getConditionBindMap_PutWithPutIfGiven_ShouldReturnBindMap() {
     // Arrange
     PutIf conditions =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
-    Put put = preparePut().withCondition(conditions);
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_3))
+            .build();
+    Put put = Put.newBuilder(preparePut()).condition(conditions).build();
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(
         DynamoOperation.CONDITION_VALUE_ALIAS + "0",
@@ -193,7 +192,7 @@ public class DynamoMutationTest {
   @Test
   public void getValueBindMap_PutWithPutIfExistsGiven_ShouldReturnBindMap() {
     // Arrange
-    Put put = preparePut().withCondition(new PutIfExists());
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(
         DynamoOperation.VALUE_ALIAS + "0",
@@ -214,7 +213,7 @@ public class DynamoMutationTest {
   @Test
   public void getValueBindMap_PutWithNullValueGiven_ShouldReturnBindMap() {
     // Arrange
-    Put put = preparePut().withIntValue(ANY_NAME_3, null);
+    Put put = Put.newBuilder(preparePut()).intValue(ANY_NAME_3, null).build();
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().nul(true).build());
     expected.put(

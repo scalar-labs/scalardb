@@ -90,6 +90,11 @@ public class CommitHandlerTest {
         false);
   }
 
+  protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
+    return new CommitHandler(
+        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
+  }
+
   @BeforeEach
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
@@ -115,35 +120,44 @@ public class CommitHandlerTest {
   }
 
   private Put preparePut1() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_1)
+        .build();
   }
 
   private Put preparePut2() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_3);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_3);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_4);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_2)
+        .build();
   }
 
   private Put preparePut3() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_INT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .intValue(ANY_NAME_3, ANY_INT_2)
+        .build();
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     return Get.newBuilder()
         .namespace(ANY_NAMESPACE_NAME)
         .table(ANY_TABLE_NAME)
@@ -1068,8 +1082,9 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void canOnePhaseCommit_WhenMutationsGrouperThrowsException_ShouldThrowCommitException()
-      throws ExecutionException {
+  public void
+      canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException()
+          throws ExecutionException {
     // Arrange
     CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
     Snapshot snapshot = prepareSnapshot();
@@ -1089,7 +1104,7 @@ public class CommitHandlerTest {
 
   @Test
   public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
-      throws CommitException, ExecutionException {
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -1131,15 +1146,16 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowCommitException()
-      throws ExecutionException {
+  public void
+      onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws ExecutionException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
 
     // Act Assert
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(snapshot))
-        .isInstanceOf(CommitException.class)
+        .isInstanceOf(UnknownTransactionStatusException.class)
         .hasCauseInstanceOf(ExecutionException.class);
   }
 
@@ -1162,24 +1178,21 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commit_OnePhaseCommitted_CommitExceptionThrown_ShouldThrowCommitException()
-      throws CommitException {
+  public void
+      commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws CommitException, UnknownTransactionStatusException {
     // Arrange
     CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
 
     doReturn(true).when(handler).canOnePhaseCommit(snapshot);
-    doThrow(CommitException.class).when(handler).onePhaseCommitRecords(snapshot);
+    doThrow(UnknownTransactionStatusException.class).when(handler).onePhaseCommitRecords(snapshot);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commit(snapshot, true)).isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> handler.commit(snapshot, true))
+        .isInstanceOf(UnknownTransactionStatusException.class);
 
     verify(handler).onFailureBeforeCommit(snapshot);
-  }
-
-  private CommitHandler createCommitHandlerWithOnePhaseCommit() {
-    return new CommitHandler(
-        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
   }
 
   protected void doThrowExceptionWhenCoordinatorPutState(

@@ -8,7 +8,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
@@ -128,15 +128,25 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
     return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " MODIFY ( "
-        + enclose(columnName)
-        + " "
-        + columnType
-        + " )";
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + enclose(newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " MODIFY ( "
+          + enclose(columnName)
+          + " "
+          + columnType
+          + " )"
+    };
   }
 
   @Override
@@ -145,8 +155,35 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(schema)
+        + "."
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
+  @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return "DROP INDEX " + enclose(indexName);
+    return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "ALTER INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " RENAME TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override
@@ -155,13 +192,13 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithFetchFirstNRowsOnly(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return MergeIntoQuery.createForOracle(builder);
+    return new MergeQuery(builder, "DUAL");
   }
 
   @Override
@@ -404,5 +441,14 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public RdbEngineTimeTypeStrategy<LocalDate, LocalDateTime, LocalDateTime, OffsetDateTime>
       getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (!(from == DataType.INT && to == DataType.BIGINT)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
+    }
   }
 }

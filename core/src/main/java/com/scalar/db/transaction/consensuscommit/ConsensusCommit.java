@@ -150,7 +150,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
         throw new UnsatisfiedConditionException(
             ConsensusCommitUtils.convertUnsatisfiedConditionExceptionMessageForUpdate(
                 e, update.getCondition().get()),
-            crud.getSnapshot().getId());
+            getId());
       }
 
       // If the condition is not specified, it means that the record does not exist. In this case,
@@ -188,12 +188,16 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       crud.readIfImplicitPreReadEnabled();
     } catch (CrudConflictException e) {
       throw new CommitConflictException(
-          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(
+              e.getMessage()),
           e,
           getId());
     } catch (CrudException e) {
       throw new CommitException(
-          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
+          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(
+              e.getMessage()),
+          e,
+          getId());
     }
 
     try {
@@ -212,11 +216,11 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     try {
       crud.closeScanners();
     } catch (CrudException e) {
-      logger.warn("Failed to close the scanner", e);
+      logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
     }
 
     if (groupCommitter != null && !crud.isReadOnly()) {
-      groupCommitter.remove(crud.getSnapshot().getId());
+      groupCommitter.remove(getId());
     }
   }
 

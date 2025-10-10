@@ -157,7 +157,8 @@ public class CrudHandler {
       if (key == null) {
         // Only for a Get with index, the argument `key` is null. In that case, create a key from
         // the result
-        key = new Snapshot.Key(get, result.get());
+        TableMetadata tableMetadata = getTableMetadata(get);
+        key = new Snapshot.Key(get, result.get(), tableMetadata);
       }
 
       result = executeRecovery(key, get, result.get());
@@ -186,7 +187,8 @@ public class CrudHandler {
         if (result.isPresent()) {
           // Only when we can get the record with the Get with index, we can put it into the read
           // set
-          key = new Snapshot.Key(get, result.get());
+          TableMetadata tableMetadata = getTableMetadata(get);
+          key = new Snapshot.Key(get, result.get(), tableMetadata);
           putIntoReadSetInSnapshot(key, result);
         }
       }
@@ -255,7 +257,8 @@ public class CrudHandler {
 
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
-        Snapshot.Key key = new Snapshot.Key(scan, r);
+        TableMetadata tableMetadata = getTableMetadata(scan);
+        Snapshot.Key key = new Snapshot.Key(scan, r, tableMetadata);
         Optional<TransactionResult> processedScanResult = processScanResult(key, scan, result);
         processedScanResult.ifPresent(res -> results.put(key, res));
 
@@ -272,7 +275,8 @@ public class CrudHandler {
         exception = e;
       }
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+              exception.getMessage()),
           exception,
           snapshot.getId());
     } finally {
@@ -280,7 +284,7 @@ public class CrudHandler {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner", e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", snapshot.getId(), e);
         }
       }
     }
@@ -511,15 +515,14 @@ public class CrudHandler {
           recoveryResult.recoveryFuture.get();
         }
       } catch (java.util.concurrent.ExecutionException e) {
-        if (e.getCause() instanceof CrudConflictException) {
-          throw new CrudConflictException(
-              e.getCause().getMessage(), e.getCause(), snapshot.getId());
+        Throwable cause = e.getCause();
+        if (cause instanceof CrudException) {
+          throw (CrudException) cause;
         }
 
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(
-                e.getCause().getMessage()),
-            e.getCause(),
+            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
+            cause,
             snapshot.getId());
       } catch (Exception e) {
         throw new CrudException(
@@ -536,15 +539,14 @@ public class CrudHandler {
       try {
         recoveryResult.recoveryFuture.get();
       } catch (java.util.concurrent.ExecutionException e) {
-        if (e.getCause() instanceof CrudConflictException) {
-          throw new CrudConflictException(
-              e.getCause().getMessage(), e.getCause(), snapshot.getId());
+        Throwable cause = e.getCause();
+        if (cause instanceof CrudException) {
+          throw (CrudException) cause;
         }
 
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(
-                e.getCause().getMessage()),
-            e.getCause(),
+            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
+            cause,
             snapshot.getId());
       } catch (Exception e) {
         throw new CrudException(
@@ -572,7 +574,8 @@ public class CrudHandler {
       }
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     }
@@ -592,7 +595,8 @@ public class CrudHandler {
       }
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+              e.getMessage()),
           e,
           snapshot.getId());
     }
@@ -712,18 +716,32 @@ public class CrudHandler {
   }
 
   private Selection prepareStorageSelection(Selection selection) {
-    selection.clearProjections();
-    selection.withConsistency(Consistency.LINEARIZABLE);
-    return selection;
+    if (selection instanceof Get) {
+      return Get.newBuilder((Get) selection)
+          .clearProjections()
+          .consistency(Consistency.LINEARIZABLE)
+          .build();
+    } else {
+      assert selection instanceof Scan;
+
+      return Scan.newBuilder((Scan) selection)
+          .clearProjections()
+          .consistency(Consistency.LINEARIZABLE)
+          .build();
+    }
   }
 
   private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
       throws CrudException {
+    assert operation.forFullTableName().isPresent();
+
     try {
       return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(), e, snapshot.getId());
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(operation.forFullTableName().get()),
+          e,
+          snapshot.getId());
     }
   }
 
@@ -795,7 +813,8 @@ public class CrudHandler {
             return Optional.empty();
           }
 
-          Snapshot.Key key = new Snapshot.Key(scan, r.get());
+          TableMetadata tableMetadata = getTableMetadata(scan);
+          Snapshot.Key key = new Snapshot.Key(scan, r.get(), tableMetadata);
           TransactionResult result = new TransactionResult(r.get());
 
           Optional<TransactionResult> processedScanResult = processScanResult(key, scan, result);
@@ -824,7 +843,8 @@ public class CrudHandler {
       } catch (ExecutionException e) {
         closeScanner();
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+                e.getMessage()),
             e,
             snapshot.getId());
       } catch (CrudException e) {
@@ -878,7 +898,7 @@ public class CrudHandler {
       try {
         scanner.close();
       } catch (IOException e) {
-        logger.warn("Failed to close the scanner", e);
+        logger.warn("Failed to close the scanner. Transaction ID: {}", snapshot.getId(), e);
       }
     }
   }

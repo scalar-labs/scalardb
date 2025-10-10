@@ -500,6 +500,256 @@ public class MultiStorageAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ForTable1InNamespace1_ShouldCallDropColumnFromTableOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin1).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void
+      dropColumnFromTable_ForTable2InNamespace1_ShouldShouldCallDropColumnFromTableOfAdmin2()
+          throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin2).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void
+      dropColumnFromTable_ForTable3InNamespace1_ShouldCallDropColumnFromTableOfDefaultAdmin()
+          throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin3).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void dropColumnFromTable_ForTable1InNamespace2_ShouldCallDropColumnFromTableOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    String column = "c1";
+
+    // Act
+    multiStorageAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    verify(admin2).dropColumnFromTable(namespace, table, column);
+  }
+
+  @Test
+  public void renameColumn_ForTable1InNamespace1_ShouldCallRenameColumnOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    String column1 = "c1";
+    String column2 = "c2";
+
+    // Act
+    multiStorageAdmin.renameColumn(namespace, table, column1, column2);
+
+    // Assert
+    verify(admin1).renameColumn(namespace, table, column1, column2);
+  }
+
+  @Test
+  public void renameColumn_ForTable2InNamespace1_ShouldShouldCallRenameColumnOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    String column1 = "c1";
+    String column2 = "c2";
+
+    // Act
+    multiStorageAdmin.renameColumn(namespace, table, column1, column2);
+
+    // Assert
+    verify(admin2).renameColumn(namespace, table, column1, column2);
+  }
+
+  @Test
+  public void renameColumn_ForTable3InNamespace1_ShouldCallRenameColumnOfDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    String column1 = "c1";
+    String column2 = "c2";
+
+    // Act
+    multiStorageAdmin.renameColumn(namespace, table, column1, column2);
+
+    // Assert
+    verify(admin3).renameColumn(namespace, table, column1, column2);
+  }
+
+  @Test
+  public void renameColumn_ForTable1InNamespace2_ShouldCallRenameColumnOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    String column1 = "c1";
+    String column2 = "c2";
+
+    // Act
+    multiStorageAdmin.renameColumn(namespace, table, column1, column2);
+
+    // Assert
+    verify(admin2).renameColumn(namespace, table, column1, column2);
+  }
+
+  @Test
+  public void alterColumnType_ForTable1InNamespace1_ShouldCallAlterColumnTypeOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    String columnName = "column";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin1).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void alterColumnType_ForTable2InNamespace1_ShouldShouldCallAlterColumnTypeOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    String columnName = "column";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin2).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void alterColumnType_ForTable3InNamespace1_ShouldCallAlterColumnTypeOfDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    String columnName = "column";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin3).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void alterColumnType_ForTable1InNamespace2_ShouldCallAlterColumnTypeOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    String columnName = "col";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin2).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void renameTable_ForTable1InNamespace1_ShouldCallRenameTableOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTableName = TABLE1;
+    String newTableName = "new_" + TABLE1;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin1).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
+  public void renameTable_ForTable2InNamespace1_ShouldShouldCallRenameTableOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTableName = TABLE2;
+    String newTableName = "new_" + TABLE2;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin2).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
+  public void renameTable_ForTable3InNamespace1_ShouldCallRenameTableOfDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTableName = TABLE3;
+    String newTableName = "new_" + TABLE3;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin3).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
+  public void renameTable_ForTable1InNamespace2_ShouldCallRenameTableOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String oldTableName = TABLE1;
+    String newTableName = "new_" + TABLE1;
+
+    // Act
+    multiStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+
+    // Assert
+    verify(admin2).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Test
   public void
       getNamespaceNames_WithExistingNamespacesNotInMapping_ShouldReturnExistingNamespacesInMappingAndFromDefaultAdmin()
           throws ExecutionException {

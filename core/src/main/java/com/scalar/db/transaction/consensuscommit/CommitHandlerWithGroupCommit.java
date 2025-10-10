@@ -58,6 +58,23 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
+  boolean canOnePhaseCommit(Snapshot snapshot) throws CommitException {
+    try {
+      return super.canOnePhaseCommit(snapshot);
+    } catch (CommitException e) {
+      cancelGroupCommitIfNeeded(snapshot.getId());
+      throw e;
+    }
+  }
+
+  @Override
+  void onePhaseCommitRecords(Snapshot snapshot)
+      throws CommitConflictException, UnknownTransactionStatusException {
+    cancelGroupCommitIfNeeded(snapshot.getId());
+    super.onePhaseCommitRecords(snapshot);
+  }
+
+  @Override
   protected void onFailureBeforeCommit(Snapshot snapshot) {
     cancelGroupCommitIfNeeded(snapshot.getId());
   }
@@ -87,7 +104,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     } catch (Exception e) {
       // This is an unexpected exception, but clean up resources just in case.
       cancelGroupCommitIfNeeded(id);
-      throw new AssertionError("Group commit unexpectedly failed. TransactionID:" + id, e);
+      throw new AssertionError("Group commit unexpectedly failed. TransactionID: " + id, e);
     }
   }
 

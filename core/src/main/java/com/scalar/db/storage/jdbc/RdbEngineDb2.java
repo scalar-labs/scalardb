@@ -6,6 +6,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.ibm.db2.jcc.DB2BaseDataSource;
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -14,7 +16,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -65,7 +68,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case BIGINT:
         return "BIGINT";
       case BLOB:
-        return "VARBINARY(32672)";
+        return "BLOB(2G)";
       case BOOLEAN:
         return "BOOLEAN";
       case FLOAT:
@@ -247,14 +250,36 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String[] dropColumnSql(String namespace, String table, String columnName) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " DROP COLUMN "
+          + enclose(columnName),
+      "CALL SYSPROC.ADMIN_CMD('REORG TABLE " + encloseFullTableName(namespace, table) + "')"
+    };
+  }
+
+  @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "RENAME "
+        + encloseFullTableName(namespace, oldTableName)
+        + " TO "
+        + enclose(newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN "
-        + enclose(columnName)
-        + " SET DATA TYPE "
-        + columnType;
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " SET DATA TYPE "
+          + columnType,
+      "CALL SYSPROC.ADMIN_CMD('REORG TABLE " + encloseFullTableName(namespace, table) + "')"
+    };
   }
 
   @Override
@@ -263,8 +288,35 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(schema)
+        + "."
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
+  @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return "DROP INDEX " + enclose(indexName);
+    return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "RENAME INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override
@@ -297,13 +349,13 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return MergeIntoQuery.createForDb2(builder);
+    return new MergeQuery(builder, "SYSIBM.DUAL");
   }
 
   @Override
@@ -344,7 +396,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case TEXT:
         return "VARCHAR(" + keyColumnSize + ") NOT NULL";
       case BLOB:
-        return "VARBINARY(" + keyColumnSize + ") NOT NULL";
+        throw new UnsupportedOperationException(
+            CoreError.JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return getDataTypeForEngine(dataType) + " NOT NULL";
     }
@@ -357,7 +410,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case TEXT:
         return "VARCHAR(" + keyColumnSize + ")";
       case BLOB:
-        return "VARBINARY(" + keyColumnSize + ")";
+        throw new UnsupportedOperationException(
+            CoreError.JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return null;
     }
@@ -485,6 +539,25 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         .collect(Collectors.joining(","));
   }
 
+  @Override
+  public void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)
+        || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+    }
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (from == DataType.BLOB && to == DataType.TEXT) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
+    }
+  }
+
   private String getProjection(String columnName, DataType dataType) {
     if (dataType == DataType.DATE) {
       // Selecting a DATE column requires special handling. We need to cast the DATE column values
@@ -494,5 +567,20 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       return "CHAR(" + enclose(columnName) + ") AS " + enclose(columnName);
     }
     return enclose(columnName);
+  }
+
+  @Override
+  public void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {
+    Optional<Ordering> orderingOnBlobColumn =
+        scanAll.getOrderings().stream()
+            .filter(
+                ordering -> metadata.getColumnDataType(ordering.getColumnName()) == DataType.BLOB)
+            .findFirst();
+    if (orderingOnBlobColumn.isPresent()) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED
+              .buildMessage(orderingOnBlobColumn.get()));
+    }
   }
 }

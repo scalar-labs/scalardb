@@ -86,7 +86,7 @@ public class BatchHandler {
       boolean allReasonsAreTransactionConflicts = true;
       for (CancellationReason reason : e.cancellationReasons()) {
         if (reason.code().equals("ConditionalCheckFailed")) {
-          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
+          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), mutations, e);
         }
         if (!reason.code().equals("TransactionConflict") && !reason.code().equals("None")) {
           allReasonsAreTransactionConflicts = false;
