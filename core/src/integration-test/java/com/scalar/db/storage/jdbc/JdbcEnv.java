@@ -37,6 +37,9 @@ public final class JdbcEnv {
         JdbcConfig.TABLE_METADATA_SCHEMA,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
+    // Metadata cache expiration time
+    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return props;
   }
 
