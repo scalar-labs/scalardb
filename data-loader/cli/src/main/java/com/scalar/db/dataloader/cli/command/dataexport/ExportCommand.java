@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -115,31 +116,16 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
    * @throws CommandLine.ParameterException if both old and new options are specified
    */
   private void validateDeprecatedOptions() {
-    boolean hasDeprecatedStartExclusive =
-        spec.commandLine().getParseResult().hasMatchedOption(DEPRECATED_START_EXCLUSIVE_OPTION);
-    boolean hasNewStartInclusive =
-        spec.commandLine().getParseResult().hasMatchedOption(START_INCLUSIVE_OPTION)
-            || spec.commandLine().getParseResult().hasMatchedOption(START_INCLUSIVE_OPTION_SHORT);
-
-    if (hasDeprecatedStartExclusive && hasNewStartInclusive) {
-      throw new CommandLine.ParameterException(
-          spec.commandLine(),
-          DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
-              DEPRECATED_START_EXCLUSIVE_OPTION, START_INCLUSIVE_OPTION, START_INCLUSIVE_OPTION));
-    }
-
-    boolean hasDeprecatedEndExclusive =
-        spec.commandLine().getParseResult().hasMatchedOption(DEPRECATED_END_EXCLUSIVE_OPTION);
-    boolean hasNewEndInclusive =
-        spec.commandLine().getParseResult().hasMatchedOption(END_INCLUSIVE_OPTION)
-            || spec.commandLine().getParseResult().hasMatchedOption(END_INCLUSIVE_OPTION_SHORT);
-
-    if (hasDeprecatedEndExclusive && hasNewEndInclusive) {
-      throw new CommandLine.ParameterException(
-          spec.commandLine(),
-          DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
-              DEPRECATED_END_EXCLUSIVE_OPTION, END_INCLUSIVE_OPTION, END_INCLUSIVE_OPTION));
-    }
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_START_EXCLUSIVE_OPTION,
+        START_INCLUSIVE_OPTION,
+        START_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_END_EXCLUSIVE_OPTION,
+        END_INCLUSIVE_OPTION,
+        END_INCLUSIVE_OPTION_SHORT);
   }
 
   private String getScalarDbPropertiesFilePath() {

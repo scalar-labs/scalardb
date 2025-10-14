@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -280,21 +281,11 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @throws ParameterException if both old and new options are specified
    */
   private void validateDeprecatedOptions() {
-    // Using getParseResult allows us to check if the argument was specified or not, regardless of
-    // the default option
-    boolean hasDeprecatedThreads =
-        spec.commandLine().getParseResult().hasMatchedOption(DEPRECATED_THREADS_OPTION);
-    boolean hasNewMaxThreads =
-        spec.commandLine().getParseResult().hasMatchedOption(MAX_THREADS_OPTION)
-            || spec.commandLine().getParseResult().hasMatchedOption(MAX_THREADS_OPTION_SHORT);
-
-    // Throw exception if both are specified
-    if (hasDeprecatedThreads && hasNewMaxThreads) {
-      throw new ParameterException(
-          spec.commandLine(),
-          DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
-              DEPRECATED_THREADS_OPTION, MAX_THREADS_OPTION, MAX_THREADS_OPTION));
-    }
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
   }
 
   /**
