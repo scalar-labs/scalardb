@@ -73,39 +73,32 @@ class ExportCommandTest {
 
   @Test
   void call_withBothStartExclusiveAndStartInclusive_shouldThrowException() {
-    // Simulate command line parsing with both deprecated and new options
-    String[] args = {
-      "--config",
-      "scalardb.properties",
-      "--namespace",
-      "scalar",
-      "--table",
-      "asset",
-      "--format",
-      "JSON",
-      "--start-exclusive=false",
-      "--start-inclusive=false"
-    };
-    ExportCommand command = new ExportCommand();
-    CommandLine cmd = new CommandLine(command);
-    // Parse args - this will trigger our validation
-    cmd.parseArgs(args);
-
-    // Now call the command, which should throw the validation error
-    CommandLine.ParameterException thrown =
-        assertThrows(
-            CommandLine.ParameterException.class,
-            command::call,
-            "Expected to throw ParameterException when both deprecated and new options are specified");
-    assertTrue(
-        thrown
-            .getMessage()
-            .contains(
-                "Cannot specify both deprecated option '--start-exclusive' and new option '--start-inclusive'"));
+    assertBothDeprecatedAndNewOptionsThrowException(
+        "--start-exclusive=false",
+        "--start-inclusive=false",
+        "--start-exclusive",
+        "--start-inclusive");
   }
 
   @Test
   void call_withBothEndExclusiveAndEndInclusive_shouldThrowException() {
+    assertBothDeprecatedAndNewOptionsThrowException(
+        "--end-exclusive=false", "--end-inclusive=false", "--end-exclusive", "--end-inclusive");
+  }
+
+  /**
+   * Helper method to test that using both deprecated and new options together throws an exception.
+   *
+   * @param deprecatedOptionArg the deprecated option with value (e.g., "--start-exclusive=false")
+   * @param newOptionArg the new option with value (e.g., "--start-inclusive=false")
+   * @param deprecatedOptionName the deprecated option name for error message verification
+   * @param newOptionName the new option name for error message verification
+   */
+  private void assertBothDeprecatedAndNewOptionsThrowException(
+      String deprecatedOptionArg,
+      String newOptionArg,
+      String deprecatedOptionName,
+      String newOptionName) {
     // Simulate command line parsing with both deprecated and new options
     String[] args = {
       "--config",
@@ -116,12 +109,11 @@ class ExportCommandTest {
       "asset",
       "--format",
       "JSON",
-      "--end-exclusive=false",
-      "--end-inclusive=false"
+      deprecatedOptionArg,
+      newOptionArg
     };
     ExportCommand command = new ExportCommand();
     CommandLine cmd = new CommandLine(command);
-    // Parse args - this will trigger our validation
     cmd.parseArgs(args);
 
     // Now call the command, which should throw the validation error
@@ -134,7 +126,11 @@ class ExportCommandTest {
         thrown
             .getMessage()
             .contains(
-                "Cannot specify both deprecated option '--end-exclusive' and new option '--end-inclusive'"));
+                "Cannot specify both deprecated option '"
+                    + deprecatedOptionName
+                    + "' and new option '"
+                    + newOptionName
+                    + "'"));
   }
 
   @Test
