@@ -1765,6 +1765,138 @@ jobs:
           name: db2_12.1_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
+  integration-test-for-alloydb-15:
+    name: AlloyDB 15 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    services:
+      alloydb:
+        image: google/alloydbomni:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_INITDB_ARGS: "--icu-locale=en-US-u-va-posix"
+        ports:
+          - 5432:5432
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alloydb_15_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestJdbc
+
+  integration-test-for-alloydb-16:
+    name: AlloyDB 16 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    services:
+      alloydb:
+        image: google/alloydbomni:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_INITDB_ARGS: "--icu-locale=en-US-u-va-posix"
+        ports:
+          - 5432:5432
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v4
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Execute Gradle 'integrationTestJdbc' task
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alloydb_16_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestJdbc
+
   integration-test-for-multi-storage:
     name: Multi-storage integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
