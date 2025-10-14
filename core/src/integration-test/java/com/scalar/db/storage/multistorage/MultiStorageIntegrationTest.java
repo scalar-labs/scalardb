@@ -131,6 +131,9 @@ public class MultiStorageIntegrationTest {
     // The default storage is cassandra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
+    // Metadata cache expiration time
+    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     multiStorage = new MultiStorage(new DatabaseConfig(props));
   }
 

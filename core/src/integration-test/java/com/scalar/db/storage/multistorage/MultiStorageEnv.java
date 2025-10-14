@@ -43,6 +43,10 @@ public final class MultiStorageEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return properties;
   }
 
@@ -64,6 +68,9 @@ public final class MultiStorageEnv {
     properties.setProperty(
         JdbcConfig.TABLE_METADATA_SCHEMA,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
 
     return properties;
   }
