@@ -1,6 +1,8 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
@@ -107,10 +109,44 @@ public class ImportCommandTest {
             CommandLine.ParameterException.class,
             command::call,
             "Expected to throw ParameterException when both deprecated and new options are specified");
-    org.junit.jupiter.api.Assertions.assertTrue(
+    assertTrue(
         thrown
             .getMessage()
             .contains(
                 "Cannot specify both deprecated option '--threads' and new option '--max-threads'"));
+  }
+
+  @Test
+  void call_withOnlyDeprecatedThreads_shouldApplyValue() throws Exception {
+    Path configFile = tempDir.resolve("config.properties");
+    Files.createFile(configFile);
+    Path importFile = tempDir.resolve("import.json");
+    Files.createFile(importFile);
+
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      configFile.toString(),
+      "--file",
+      importFile.toString(),
+      "--namespace",
+      "sample",
+      "--table",
+      "table",
+      "--threads",
+      "12"
+    };
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(12, command.threadsDeprecated);
+
+    // Apply deprecated options (this is what the command does after validation)
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied to maxThreads
+    assertEquals(12, command.maxThreads);
   }
 }

@@ -1,13 +1,14 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import java.io.File;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
@@ -54,8 +55,7 @@ class ExportCommandTest {
             IllegalArgumentException.class,
             exportCommand::call,
             "Expected to throw FileNotFound exception as configuration path is invalid");
-    Assertions.assertEquals(
-        DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage(), thrown.getMessage());
+    assertEquals(DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage(), thrown.getMessage());
   }
 
   @Test
@@ -68,7 +68,7 @@ class ExportCommandTest {
     exportCommand.outputDirectory = "";
     exportCommand.outputFileName = "sample.json";
     exportCommand.outputFormat = FileFormat.JSON;
-    Assertions.assertEquals(1, exportCommand.call());
+    assertEquals(1, exportCommand.call());
   }
 
   @Test
@@ -97,7 +97,7 @@ class ExportCommandTest {
             CommandLine.ParameterException.class,
             command::call,
             "Expected to throw ParameterException when both deprecated and new options are specified");
-    Assertions.assertTrue(
+    assertTrue(
         thrown
             .getMessage()
             .contains(
@@ -130,10 +130,68 @@ class ExportCommandTest {
             CommandLine.ParameterException.class,
             command::call,
             "Expected to throw ParameterException when both deprecated and new options are specified");
-    Assertions.assertTrue(
+    assertTrue(
         thrown
             .getMessage()
             .contains(
                 "Cannot specify both deprecated option '--end-exclusive' and new option '--end-inclusive'"));
+  }
+
+  @Test
+  void call_withOnlyDeprecatedStartExclusive_shouldApplyInvertedValue() {
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--start-exclusive=true"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(true, command.startExclusiveDeprecated);
+
+    // Apply deprecated options (this is what the command does after validation)
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied with inverted logic
+    // start-exclusive=true should become start-inclusive=false
+    assertEquals(false, command.scanStartInclusive);
+  }
+
+  @Test
+  void call_withOnlyDeprecatedEndExclusive_shouldApplyInvertedValue() {
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--end-exclusive=false"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(false, command.endExclusiveDeprecated);
+
+    // Apply deprecated options (this is what the command does after validation)
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied with inverted logic
+    // end-exclusive=false should become end-inclusive=true
+    assertEquals(true, command.scanEndInclusive);
   }
 }
