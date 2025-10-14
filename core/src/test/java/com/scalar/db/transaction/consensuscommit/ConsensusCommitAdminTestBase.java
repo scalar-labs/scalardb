@@ -655,6 +655,30 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void alterColumnType_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String columnName = "col2";
+    DataType columnType = DataType.BIGINT;
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(columnName, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.alterColumnType(NAMESPACE, TABLE, columnName, columnType);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).alterColumnType(NAMESPACE, TABLE, columnName, columnType);
+    verify(distributedStorageAdmin)
+        .alterColumnType(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + columnName, columnType);
+  }
+
+  @Test
   public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     String existingTableName = "tbl1";

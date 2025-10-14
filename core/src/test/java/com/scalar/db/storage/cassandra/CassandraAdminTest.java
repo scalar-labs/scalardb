@@ -986,12 +986,16 @@ public class CassandraAdminTest {
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
     Throwable thrown4 =
         catchThrowable(() -> cassandraAdmin.renameTable(namespace, table, "new_table"));
+    Throwable thrown5 =
+        catchThrowable(
+            () -> cassandraAdmin.alterColumnType(namespace, table, column, DataType.INT));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
