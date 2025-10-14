@@ -210,6 +210,12 @@ public enum DataLoaderError implements ScalarDbError {
       Category.USER_ERROR, "0055", "Transaction size must be greater than 0", "", ""),
   INVALID_MAX_THREADS(
       Category.USER_ERROR, "0056", "Number of max threads must be greater than 0", "", ""),
+  DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED(
+      Category.USER_ERROR,
+      "0057",
+      "Cannot specify both deprecated option '%s' and new option '%s'. Please use '%s' instead",
+      "",
+      ""),
 
   //
   // Errors for the internal error category

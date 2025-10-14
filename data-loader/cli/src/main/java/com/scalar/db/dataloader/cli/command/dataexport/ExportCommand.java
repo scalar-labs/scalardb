@@ -51,6 +51,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    validateDeprecatedOptions();
+    applyDeprecatedOptions();
     String scalarDbPropertiesFilePath = getScalarDbPropertiesFilePath();
 
     try {
@@ -105,6 +107,39 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       return 1;
     }
     return 0;
+  }
+
+  /**
+   * Validates that deprecated and new options are not both specified.
+   *
+   * @throws CommandLine.ParameterException if both old and new options are specified
+   */
+  private void validateDeprecatedOptions() {
+    boolean hasDeprecatedStartExclusive =
+        spec.commandLine().getParseResult().hasMatchedOption(DEPRECATED_START_EXCLUSIVE_OPTION);
+    boolean hasNewStartInclusive =
+        spec.commandLine().getParseResult().hasMatchedOption(START_INCLUSIVE_OPTION)
+            || spec.commandLine().getParseResult().hasMatchedOption(START_INCLUSIVE_OPTION_SHORT);
+
+    if (hasDeprecatedStartExclusive && hasNewStartInclusive) {
+      throw new CommandLine.ParameterException(
+          spec.commandLine(),
+          DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
+              DEPRECATED_START_EXCLUSIVE_OPTION, START_INCLUSIVE_OPTION, START_INCLUSIVE_OPTION));
+    }
+
+    boolean hasDeprecatedEndExclusive =
+        spec.commandLine().getParseResult().hasMatchedOption(DEPRECATED_END_EXCLUSIVE_OPTION);
+    boolean hasNewEndInclusive =
+        spec.commandLine().getParseResult().hasMatchedOption(END_INCLUSIVE_OPTION)
+            || spec.commandLine().getParseResult().hasMatchedOption(END_INCLUSIVE_OPTION_SHORT);
+
+    if (hasDeprecatedEndExclusive && hasNewEndInclusive) {
+      throw new CommandLine.ParameterException(
+          spec.commandLine(),
+          DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
+              DEPRECATED_END_EXCLUSIVE_OPTION, END_INCLUSIVE_OPTION, END_INCLUSIVE_OPTION));
+    }
   }
 
   private String getScalarDbPropertiesFilePath() {
