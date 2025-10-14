@@ -34,8 +34,7 @@ public class ImportCommandOptions {
   @CommandLine.Option(
       names = {"--max-threads", "-mt"},
       paramLabel = "<MAX_THREADS>",
-      description =
-          "Maximum number of threads to use for parallel processing (default: number of available processors)",
+      description = "Maximum number of threads to use for parallel processing (default: 16)",
       defaultValue = "16")
   protected int maxThreads;
 
@@ -133,7 +132,8 @@ public class ImportCommandOptions {
   @CommandLine.Option(
       names = {"--data-chunk-size", "-dcs"},
       paramLabel = "<DATA_CHUNK_SIZE>",
-      description = "Maximum number of records to be included in a single data chunk",
+      description =
+          "Maximum number of records to be included in a single data chunk (default: 500)",
       defaultValue = "500")
   protected int dataChunkSize;
 
@@ -141,21 +141,22 @@ public class ImportCommandOptions {
       names = {"--transaction-size", "-ts"},
       paramLabel = "<TRANSACTION_SIZE>",
       description =
-          "Maximum number of put operations that are grouped together into one ScalarDB distributed transaction, only supported in ScalarDB transaction mode",
+          "Maximum number of put operations that are grouped together into one ScalarDB distributed transaction, only supported in ScalarDB transaction mode (default: 100)",
       defaultValue = "100")
   protected int transactionSize;
 
   @CommandLine.Option(
       names = {"--split-log-mode", "-slm"},
       paramLabel = "<SPLIT_LOG_MODE>",
-      description = "Split log file into multiple files based on data chunks",
+      description = "Split log file into multiple files based on data chunks (default: false)",
       defaultValue = "false")
   protected boolean splitLogMode;
 
   @CommandLine.Option(
       names = {"--data-chunk-queue-size", "-qs"},
       paramLabel = "<DATA_CHUNK_QUEUE_SIZE>",
-      description = "Maximum number of data chunks that can be kept at a time for processing",
+      description =
+          "Maximum number of data chunks that can be kept at a time for processing (default: 256)",
       defaultValue = "256")
   protected int dataChunkQueueSize;
 }
