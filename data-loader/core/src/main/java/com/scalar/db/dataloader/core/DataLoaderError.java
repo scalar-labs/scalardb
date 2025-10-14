@@ -213,7 +213,7 @@ public enum DataLoaderError implements ScalarDbError {
   DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED(
       Category.USER_ERROR,
       "0057",
-      "Cannot specify both deprecated option '%s' and new option '%s'. Please use '%s' instead",
+      "Cannot specify both deprecated option '%s' and new option '%s'. Please use only '%s'",
       "",
       ""),
 
