@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -1205,7 +1207,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   @Test
   public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
       throws ExecutionException, IOException {
-    try {
+    try (DistributedStorage storage = storageFactory.getStorage()) {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -1218,7 +1220,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
-      DistributedStorage storage = storageFactory.getStorage();
       int expectedColumn3Value = 1;
       float expectedColumn4Value = 4.0f;
 
@@ -1231,11 +1232,13 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .intValue(getColumnName3(), expectedColumn3Value)
               .floatValue(getColumnName4(), expectedColumn4Value);
       storage.put(put.build());
-      storage.close();
 
       // Act
       admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.BIGINT);
       admin.alterColumnType(namespace1, getTable4(), getColumnName4(), DataType.DOUBLE);
+
+      // Wait for cache expiry
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
       // Assert
       TableMetadata.Builder expectedTableMetadataBuilder =
@@ -1248,7 +1251,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
-      storage = storageFactory.getStorage();
       Scan scan =
           Scan.newBuilder()
               .namespace(namespace1)
@@ -1262,7 +1264,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         assertThat(result.getBigInt(getColumnName3())).isEqualTo(expectedColumn3Value);
         assertThat(result.getDouble(getColumnName4())).isEqualTo(expectedColumn4Value);
       }
-      storage.close();
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
     }

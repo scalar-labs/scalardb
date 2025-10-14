@@ -61,6 +61,9 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     // Add testName as a coordinator schema suffix
     ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return properties;
   }
 
