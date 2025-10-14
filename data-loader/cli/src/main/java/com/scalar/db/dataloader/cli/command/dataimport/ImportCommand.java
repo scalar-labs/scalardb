@@ -286,6 +286,11 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         DEPRECATED_THREADS_OPTION,
         MAX_THREADS_OPTION,
         MAX_THREADS_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_LOG_SUCCESS_RECORDS_OPTION,
+        ENABLE_LOG_SUCCESS_RECORDS_OPTION,
+        ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT);
   }
 
   /**
@@ -303,7 +308,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .controlFile(controlFile)
             .controlFileValidationLevel(controlFileValidation)
             .logRawRecord(logRawRecord)
-            .logSuccessRecords(logSuccessRecords)
+            .logSuccessRecords(enableLogSuccessRecords)
             .ignoreNullValues(ignoreNullValues)
             .namespace(namespace)
             .dataChunkSize(dataChunkSize)
