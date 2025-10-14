@@ -499,6 +499,9 @@ public class JdbcTransactionAdminIntegrationTest
   @Override
   protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
       throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
     DistributedTransaction transaction = manager.start();
     transaction.insert(insert);
     transaction.commit();
@@ -507,6 +510,9 @@ public class JdbcTransactionAdminIntegrationTest
   @Override
   protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
       throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
     DistributedTransaction transaction = manager.start();
     List<Result> results = transaction.scan(scan);
     transaction.commit();
