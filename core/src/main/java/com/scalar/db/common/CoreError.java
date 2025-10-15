@@ -1070,10 +1070,10 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
-  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED(
       Category.INTERNAL_ERROR,
       "0046",
-      "Handling the before-preparation snapshot hook failed. Details: %s",
+      "Handling the before-preparation hook failed. Details: %s",
       "",
       ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(

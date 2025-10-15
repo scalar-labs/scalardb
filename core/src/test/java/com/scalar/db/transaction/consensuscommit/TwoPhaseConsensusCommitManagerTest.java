@@ -63,6 +63,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
+  @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
 
   private TwoPhaseConsensusCommitManager manager;
@@ -83,6 +84,7 @@ public class TwoPhaseConsensusCommitManagerTest {
             coordinator,
             parallelExecutor,
             recoveryExecutor,
+            crud,
             commit);
   }
 
@@ -94,9 +96,11 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -107,13 +111,15 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.begin(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects() {
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
     // Arrange
 
     // Act
@@ -121,12 +127,11 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseConsensusCommit transaction2 = (TwoPhaseConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
@@ -168,9 +173,11 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -182,13 +189,15 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.start(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects()
+  public void start_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
       throws TransactionException {
     // Arrange
 
@@ -197,12 +206,11 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseConsensusCommit transaction2 = (TwoPhaseConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
@@ -248,9 +256,11 @@ public class TwoPhaseConsensusCommitManagerTest {
             ((DecoratedTwoPhaseCommitTransaction) manager.join(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
