@@ -626,6 +626,70 @@ public class MultiStorageAdminTest {
   }
 
   @Test
+  public void alterColumnType_ForTable1InNamespace1_ShouldCallAlterColumnTypeOfAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+    String columnName = "column";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin1).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void alterColumnType_ForTable2InNamespace1_ShouldShouldCallAlterColumnTypeOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE2;
+    String columnName = "column";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin2).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void alterColumnType_ForTable3InNamespace1_ShouldCallAlterColumnTypeOfDefaultAdmin()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE3;
+    String columnName = "column";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin3).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void alterColumnType_ForTable1InNamespace2_ShouldCallAlterColumnTypeOfAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
+    String columnName = "col";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    multiStorageAdmin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(admin2).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
   public void renameTable_ForTable1InNamespace1_ShouldCallRenameTableOfAdmin1()
       throws ExecutionException {
     // Arrange

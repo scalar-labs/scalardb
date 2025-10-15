@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -258,7 +259,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
     throw new AssertionError(
         "SQLite does not require changes in column data types when making indices");
@@ -354,6 +355,12 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

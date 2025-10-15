@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -12,17 +13,21 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -58,7 +63,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String COL_NAME13 = "c13";
   private static final String COL_NAME14 = "c14";
   private static final String COL_NAME15 = "c15";
-  private StorageFactory storageFactory;
+  protected StorageFactory storageFactory;
   protected DistributedStorageAdmin admin;
   private String namespace1;
   private String namespace2;
@@ -1111,6 +1116,160 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
+          throws ExecutionException, IOException {
+    try (DistributedStorage storage = storageFactory.getStorage()) {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TIMESTAMP)
+            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName2(), 2))
+              .intValue(getColumnName3(), 1)
+              .bigIntValue(getColumnName4(), 2L)
+              .floatValue(getColumnName5(), 3.0f)
+              .doubleValue(getColumnName6(), 4.0d)
+              .textValue(getColumnName7(), "5")
+              .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")));
+      if (isTimestampTypeSupported()) {
+        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
+        put.timestampTZValue(getColumnName12(), Instant.now());
+      }
+      storage.put(put.build());
+
+      // Act
+      admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName4(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName5(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName6(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName7(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName8(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName9(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName10(), DataType.TEXT);
+      if (isTimestampTypeSupported()) {
+        admin.alterColumnType(namespace1, getTable4(), getColumnName11(), DataType.TEXT);
+        admin.alterColumnType(namespace1, getTable4(), getColumnName12(), DataType.TEXT);
+      }
+
+      // Assert
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addColumn(getColumnName5(), DataType.TEXT)
+              .addColumn(getColumnName6(), DataType.TEXT)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.TEXT)
+              .addColumn(getColumnName9(), DataType.TEXT)
+              .addColumn(getColumnName10(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .addColumn(getColumnName11(), DataType.TEXT)
+            .addColumn(getColumnName12(), DataType.TEXT);
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
+      throws ExecutionException, IOException {
+    try (DistributedStorage storage = storageFactory.getStorage()) {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.FLOAT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+      int expectedColumn3Value = 1;
+      float expectedColumn4Value = 4.0f;
+
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(namespace1)
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName2(), 2))
+              .intValue(getColumnName3(), expectedColumn3Value)
+              .floatValue(getColumnName4(), expectedColumn4Value);
+      storage.put(put.build());
+
+      // Act
+      admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.BIGINT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName4(), DataType.DOUBLE);
+
+      // Wait for cache expiry
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+      // Assert
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.BIGINT)
+              .addColumn(getColumnName4(), DataType.DOUBLE)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      Scan scan =
+          Scan.newBuilder()
+              .namespace(namespace1)
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .build();
+      try (Scanner scanner = storage.scan(scan)) {
+        List<Result> results = scanner.all();
+        assertThat(results).hasSize(1);
+        Result result = results.get(0);
+        assertThat(result.getBigInt(getColumnName3())).isEqualTo(expectedColumn3Value);
+        assertThat(result.getDouble(getColumnName4())).isEqualTo(expectedColumn4Value);
+      }
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
+    }
+  }
+
+  @Test
   public void getNamespaceNames_ShouldReturnCreatedNamespaces() throws ExecutionException {
     // Arrange
 
@@ -1406,6 +1565,61 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
       admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void alterColumnType_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.alterColumnType(
+                    namespace1, "nonExistingTable", getColumnName2(), DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void alterColumnType_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.alterColumnType(namespace1, getTable1(), "nonExistingColumn", DataType.TEXT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+
+      // Act Assert
+      assertThatThrownBy(
+              () -> admin.alterColumnType(namespace1, getTable4(), getColumnName1(), DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+              () -> admin.alterColumnType(namespace1, getTable4(), getColumnName2(), DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(
+              () -> admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.TEXT))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      admin.dropTable(namespace1, getTable4(), true);
     }
   }
 
