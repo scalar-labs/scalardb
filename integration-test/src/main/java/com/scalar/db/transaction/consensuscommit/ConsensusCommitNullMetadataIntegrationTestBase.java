@@ -141,6 +141,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
+    CrudHandler crud =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            consensusCommitConfig.isIncludeMetadataEnabled(),
+            parallelExecutor);
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
         new ConsensusCommitManager(
@@ -150,9 +157,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             coordinator,
             parallelExecutor,
             recoveryExecutor,
+            crud,
             commit,
             consensusCommitConfig.getIsolation(),
-            false,
             groupCommitter);
   }
 
@@ -527,7 +534,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
@@ -576,7 +583,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
@@ -672,7 +679,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
@@ -721,7 +728,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
@@ -770,7 +777,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
@@ -866,7 +873,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Wait for the recovery to complete
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
@@ -1101,7 +1108,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     // Arrange
     populateRecordsWithNullMetadata(namespace1, TABLE_1);
     DistributedTransaction transaction = manager.begin();
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1).withLimit(1);
+    Scan scanAll = Scan.newBuilder(prepareScanAll(namespace1, TABLE_1)).limit(1).build();
 
     // Act
     List<Result> results = transaction.scan(scanAll);

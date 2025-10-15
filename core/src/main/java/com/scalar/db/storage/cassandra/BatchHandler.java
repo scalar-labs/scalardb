@@ -57,7 +57,7 @@ public class BatchHandler {
       ResultSet results = execute(mutations);
       // it's for conditional update. non-conditional update always return true
       if (!results.wasApplied()) {
-        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), mutations);
       }
     } catch (WriteTimeoutException e) {
       logger.warn("Write timeout happened during batch mutate operation", e);

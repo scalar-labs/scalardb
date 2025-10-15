@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,10 +57,12 @@ public class TwoPhaseConsensusCommitTest {
   private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_TX_ID = "any_id";
 
+  private TransactionContext context;
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
   @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
+
   private TwoPhaseConsensusCommit transaction;
 
   @BeforeEach
@@ -67,39 +70,51 @@ public class TwoPhaseConsensusCommitTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    transaction = new TwoPhaseConsensusCommit(crud, commit, mutationOperationChecker);
-
-    when(crud.areAllScannersClosed()).thenReturn(true);
+    context = spy(new TransactionContext(ANY_TX_ID, snapshot, Isolation.SNAPSHOT, false, false));
+    transaction = new TwoPhaseConsensusCommit(context, crud, commit, mutationOperationChecker);
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withValue(ANY_NAME_3, ANY_TEXT_3)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .textValue(ANY_NAME_3, ANY_TEXT_3)
+        .build();
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -107,15 +122,14 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     Get get = prepareGet();
     TransactionResult result = mock(TransactionResult.class);
-    when(crud.get(get)).thenReturn(Optional.of(result));
-    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(crud.get(get, context)).thenReturn(Optional.of(result));
 
     // Act
     Optional<Result> actual = transaction.get(get);
 
     // Assert
     assertThat(actual).isPresent();
-    verify(crud).get(get);
+    verify(crud).get(get, context);
   }
 
   @Test
@@ -124,15 +138,14 @@ public class TwoPhaseConsensusCommitTest {
     Scan scan = prepareScan();
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
-    when(crud.scan(scan)).thenReturn(results);
-    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(crud.scan(scan, context)).thenReturn(results);
 
     // Act
     List<Result> actual = transaction.scan(scan);
 
     // Assert
     assertThat(actual.size()).isEqualTo(1);
-    verify(crud).scan(scan);
+    verify(crud).scan(scan, context);
   }
 
   @Test
@@ -143,7 +156,7 @@ public class TwoPhaseConsensusCommitTest {
     TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
     Result result = mock(Result.class);
     when(scanner.one()).thenReturn(Optional.of(result));
-    when(crud.getScanner(scan)).thenReturn(scanner);
+    when(crud.getScanner(scan, context)).thenReturn(scanner);
 
     // Act
     TransactionCrudOperable.Scanner actualScanner = transaction.getScanner(scan);
@@ -151,7 +164,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actualResult).hasValue(result);
-    verify(crud).getScanner(scan);
+    verify(crud).getScanner(scan, context);
     verify(scanner).one();
   }
 
@@ -164,7 +177,7 @@ public class TwoPhaseConsensusCommitTest {
     Result result1 = mock(Result.class);
     Result result2 = mock(Result.class);
     when(scanner.all()).thenReturn(Arrays.asList(result1, result2));
-    when(crud.getScanner(scan)).thenReturn(scanner);
+    when(crud.getScanner(scan, context)).thenReturn(scanner);
 
     // Act
     TransactionCrudOperable.Scanner actualScanner = transaction.getScanner(scan);
@@ -172,7 +185,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actualResults).containsExactly(result1, result2);
-    verify(crud).getScanner(scan);
+    verify(crud).getScanner(scan, context);
     verify(scanner).all();
   }
 
@@ -180,13 +193,12 @@ public class TwoPhaseConsensusCommitTest {
   public void put_PutGiven_ShouldCallCrudHandlerPut() throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.put(put);
 
     // Assert
-    verify(crud).put(put);
+    verify(crud).put(put, context);
     verify(mutationOperationChecker).check(put);
   }
 
@@ -195,13 +207,12 @@ public class TwoPhaseConsensusCommitTest {
       throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.put(Arrays.asList(put, put));
 
     // Assert
-    verify(crud, times(2)).put(put);
+    verify(crud, times(2)).put(put, context);
     verify(mutationOperationChecker, times(2)).check(put);
   }
 
@@ -210,13 +221,12 @@ public class TwoPhaseConsensusCommitTest {
       throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.delete(delete);
 
     // Assert
-    verify(crud).delete(delete);
+    verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(delete);
   }
 
@@ -225,13 +235,12 @@ public class TwoPhaseConsensusCommitTest {
       throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.delete(Arrays.asList(delete, delete));
 
     // Assert
-    verify(crud, times(2)).delete(delete);
+    verify(crud, times(2)).delete(delete, context);
     verify(mutationOperationChecker, times(2)).check(delete);
   }
 
@@ -261,7 +270,7 @@ public class TwoPhaseConsensusCommitTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableInsertMode()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -291,7 +300,7 @@ public class TwoPhaseConsensusCommitTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -322,7 +331,7 @@ public class TwoPhaseConsensusCommitTest {
             .condition(ConditionBuilder.putIfExists())
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -360,7 +369,7 @@ public class TwoPhaseConsensusCommitTest {
                     .build())
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -388,10 +397,7 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
-    doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
+    doThrow(UnsatisfiedConditionException.class).when(crud).put(put, context);
 
     // Act Assert
     assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
@@ -428,13 +434,10 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
     UnsatisfiedConditionException unsatisfiedConditionException =
         mock(UnsatisfiedConditionException.class);
     when(unsatisfiedConditionException.getMessage()).thenReturn("PutIf");
-    doThrow(unsatisfiedConditionException).when(crud).put(put);
+    doThrow(unsatisfiedConditionException).when(crud).put(put, context);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
@@ -468,13 +471,10 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
     UnsatisfiedConditionException unsatisfiedConditionException =
         mock(UnsatisfiedConditionException.class);
     when(unsatisfiedConditionException.getMessage()).thenReturn("PutIfExists");
-    doThrow(unsatisfiedConditionException).when(crud).put(put);
+    doThrow(unsatisfiedConditionException).when(crud).put(put, context);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
@@ -489,14 +489,13 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     Put put = preparePut();
     Delete delete = prepareDelete();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.mutate(Arrays.asList(put, delete));
 
     // Assert
-    verify(crud).put(put);
-    verify(crud).delete(delete);
+    verify(crud).put(put, context);
+    verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(put);
     verify(mutationOperationChecker).check(delete);
   }
@@ -505,16 +504,15 @@ public class TwoPhaseConsensusCommitTest {
   public void prepare_ProcessedCrudGiven_ShouldPrepareRecordsWithSnapshot()
       throws PreparationException, CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.prepare();
 
     // Assert
-    verify(crud).areAllScannersClosed();
-    verify(crud).readIfImplicitPreReadEnabled();
-    verify(crud).waitForRecoveryCompletionIfNecessary();
-    verify(commit).prepareRecords(snapshot);
+    verify(context).areAllScannersClosed();
+    verify(crud).readIfImplicitPreReadEnabled(context);
+    verify(crud).waitForRecoveryCompletionIfNecessary(context);
+    verify(commit).prepareRecords(context);
   }
 
   @Test
@@ -522,8 +520,7 @@ public class TwoPhaseConsensusCommitTest {
       prepare_ProcessedCrudGiven_CrudConflictExceptionThrownWhileImplicitPreRead_ShouldThrowPreparationConflictException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled();
+    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled(context);
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
@@ -534,8 +531,7 @@ public class TwoPhaseConsensusCommitTest {
       prepare_ProcessedCrudGiven_CrudExceptionThrownWhileImplicitPreRead_ShouldThrowPreparationException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled();
+    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled(context);
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
@@ -544,7 +540,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void prepare_ScannerNotClosed_ShouldThrowIllegalStateException() {
     // Arrange
-    when(crud.areAllScannersClosed()).thenReturn(false);
+    when(context.areAllScannersClosed()).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(IllegalStateException.class);
@@ -555,8 +551,9 @@ public class TwoPhaseConsensusCommitTest {
       prepare_CrudConflictExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowPreparationConflictException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class).when(crud).waitForRecoveryCompletionIfNecessary();
+    CrudConflictException crudConflictException = mock(CrudConflictException.class);
+    when(crudConflictException.getMessage()).thenReturn("error");
+    doThrow(crudConflictException).when(crud).waitForRecoveryCompletionIfNecessary(context);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.prepare())
@@ -568,8 +565,9 @@ public class TwoPhaseConsensusCommitTest {
       prepare_CrudExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowPreparationException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).waitForRecoveryCompletionIfNecessary();
+    CrudException crudException = mock(CrudException.class);
+    when(crudException.getMessage()).thenReturn("error");
+    doThrow(crudException).when(crud).waitForRecoveryCompletionIfNecessary(context);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(PreparationException.class);
@@ -580,13 +578,12 @@ public class TwoPhaseConsensusCommitTest {
       throws ValidationException, PreparationException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.validate();
 
     // Assert
-    verify(commit).validateRecords(snapshot);
+    verify(commit).validateRecords(context);
   }
 
   @Test
@@ -594,14 +591,13 @@ public class TwoPhaseConsensusCommitTest {
       throws CommitException, UnknownTransactionStatusException, PreparationException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(snapshot);
-    verify(commit).commitRecords(snapshot);
+    verify(commit).commitState(context);
+    verify(commit).commitRecords(context);
   }
 
   @Test
@@ -611,16 +607,14 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     transaction.prepare();
     transaction.validate();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn(ANY_TX_ID);
-    when(snapshot.isValidationRequired()).thenReturn(true);
+    when(context.isValidationRequired()).thenReturn(true);
 
     // Act
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(snapshot);
-    verify(commit).commitRecords(snapshot);
+    verify(commit).commitState(context);
+    verify(commit).commitRecords(context);
   }
 
   @Test
@@ -628,9 +622,7 @@ public class TwoPhaseConsensusCommitTest {
       throws PreparationException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn(ANY_TX_ID);
-    when(snapshot.isValidationRequired()).thenReturn(true);
+    when(context.isValidationRequired()).thenReturn(true);
 
     // Act Assert
     assertThatThrownBy(transaction::commit).isInstanceOf(IllegalStateException.class);
@@ -640,32 +632,30 @@ public class TwoPhaseConsensusCommitTest {
   public void rollback_ShouldAbortStateAndRollbackRecords() throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.rollback();
 
     // Assert
-    verify(crud).closeScanners();
-    verify(commit).abortState(snapshot.getId());
-    verify(commit).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).rollbackRecords(context);
   }
 
   @Test
   public void rollback_CalledAfterPrepareFails_ShouldAbortStateAndRollbackRecords()
       throws TransactionException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(PreparationException.class).when(commit).prepareRecords(snapshot);
+    doThrow(PreparationException.class).when(commit).prepareRecords(context);
 
     // Act
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
     transaction.rollback();
 
     // Assert
-    verify(crud).closeScanners();
-    verify(commit).abortState(snapshot.getId());
-    verify(commit).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).rollbackRecords(context);
   }
 
   @Test
@@ -673,17 +663,16 @@ public class TwoPhaseConsensusCommitTest {
       throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CommitConflictException.class).when(commit).commitState(snapshot);
+    doThrow(CommitConflictException.class).when(commit).commitState(context);
 
     // Act
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
     transaction.rollback();
 
     // Assert
-    verify(crud).closeScanners();
-    verify(commit, never()).abortState(snapshot.getId());
-    verify(commit, never()).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit, never()).abortState(ANY_TX_ID);
+    verify(commit, never()).rollbackRecords(context);
   }
 
   @Test
@@ -692,14 +681,13 @@ public class TwoPhaseConsensusCommitTest {
           throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(commit.abortState(snapshot.getId())).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
 
-    verify(crud).closeScanners();
-    verify(commit, never()).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit, never()).rollbackRecords(context);
   }
 
   @Test
@@ -707,13 +695,12 @@ public class TwoPhaseConsensusCommitTest {
       throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(commit.abortState(snapshot.getId())).thenReturn(TransactionState.COMMITTED);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(TransactionState.COMMITTED);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
 
-    verify(crud).closeScanners();
-    verify(commit, never()).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit, never()).rollbackRecords(context);
   }
 }

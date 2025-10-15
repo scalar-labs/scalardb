@@ -16,16 +16,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Start Cassandra with authentication enabled
         run: |
@@ -55,16 +55,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Start Cassandra with authentication enabled
         run: |
@@ -94,16 +94,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
         run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator_used=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
@@ -123,16 +123,16 @@ jobs:
       - name: Run MySQL 5.7
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -152,16 +152,16 @@ jobs:
       - name: Run MySQL 8.0
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -181,16 +181,16 @@ jobs:
       - name: Run MySQL 8.4
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
@@ -216,16 +216,16 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -251,16 +251,16 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -286,16 +286,16 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -321,16 +321,16 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -356,16 +356,16 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
@@ -391,16 +391,16 @@ jobs:
           - 1521:1521
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
@@ -433,16 +433,16 @@ jobs:
           --health-retries 120
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
@@ -488,16 +488,16 @@ jobs:
           done
           echo "Container is ready"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
@@ -518,7 +518,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Sql Server 2017
         uses: rails-sqlserver/setup-mssql@v1
@@ -528,13 +528,13 @@ jobs:
           version: 2017
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" "-Dfile.encoding=UTF-8"
@@ -562,16 +562,16 @@ jobs:
         options: --name sqlserver19
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer19"
@@ -599,16 +599,16 @@ jobs:
         options: --name sqlserver22
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbcPermission' task
         run: ./gradlew integrationTestJdbcPermission "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer22"
@@ -618,4 +618,202 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sqlserver_2022_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-mariadb-10-11:
+    name: MariaDB 10.11 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MariaDB 10.11
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb_10.11_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-mariadb-11-4:
+    name: MariaDB 11.4 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run MariaDB 11.4
+        run: |
+          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:11.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb_11.4_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-yugabytedb-2:
+    name: YugabyteDB 2 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run YugabyteDB 2
+        run: |
+          docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
+
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/yugabyte?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yugabytedb_2_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-db2-11-5:
+    name: Db2 11.5 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    services:
+      db2:
+        image: icr.io/db2_community/db2:11.5.9.0
+        env:
+          DB2INSTANCE: db2inst1
+          DB2INST1_PASSWORD: db2inst1
+          DBNAME: test_db
+          LICENSE: accept
+        ports:
+          - 50000:50000
+        options: --privileged --name db2
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 10
+        run: |
+          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+          do
+            echo "Container is not yet ready"
+            sleep 5s
+          done
+          echo "Container is ready"
+
+      - name: Create OS user for Db2
+        run: |
+          docker exec db2 bash -c "useradd -m -s /bin/bash test"
+          docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+          docker exec db2 bash -c "usermod -aG db2iadm1 test"
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db2_11.5_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-jdbc-db2-12-1:
+    name: Db2 12.1 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    services:
+      db2:
+        image: icr.io/db2_community/db2:12.1.1.0
+        env:
+          DB2INSTANCE: db2inst1
+          DB2INST1_PASSWORD: db2inst1
+          DBNAME: test_db
+          LICENSE: accept
+        ports:
+          - 50000:50000
+        options: --privileged --name db2
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Wait for the container to be ready
+        timeout-minutes: 10
+        run: |
+          while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+          do
+            echo "Container is not yet ready"
+            sleep 5s
+          done
+          echo "Container is ready"
+
+      - name: Create OS user for Db2
+        run: |
+          docker exec db2 bash -c "useradd -m -s /bin/bash test"
+          docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+          docker exec db2 bash -c "usermod -aG db2iadm1 test"
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url="jdbc:db2://localhost:50000/test_db" -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db2_12.1_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission

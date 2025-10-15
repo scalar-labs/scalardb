@@ -112,14 +112,24 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
     return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN"
-        + enclose(columnName)
-        + " TYPE "
-        + columnType;
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + enclose(newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " TYPE "
+          + columnType
+    };
   }
 
   @Override
@@ -130,6 +140,19 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "ALTER INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " RENAME TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override
@@ -181,7 +204,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }
 

@@ -25,7 +25,6 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
@@ -90,23 +89,30 @@ public class SelectStatementHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
-  private ScanAll prepareScanAll() {
-    return new ScanAll().forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  private Scan prepareScanAll() {
+    return Scan.newBuilder().namespace(ANY_NAMESPACE_NAME).table(ANY_TABLE_NAME).all().build();
   }
 
   @Test
@@ -132,8 +138,13 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
-    Get get = new Get(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(indexKey)
+            .build();
     String query =
         "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
 
@@ -221,8 +232,13 @@ public class SelectStatementHandlerTest {
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
-    Scan scan = new Scan(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(indexKey)
+            .build();
     String query =
         "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
 
@@ -263,9 +279,10 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3))
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -309,9 +326,10 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4))
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -361,9 +379,10 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3), false)
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -403,10 +422,11 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
-            .withLimit(ANY_LIMIT);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .limit(ANY_LIMIT)
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -444,10 +464,11 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
-            .withLimit(ANY_LIMIT);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.desc(ANY_NAME_2))
+            .limit(ANY_LIMIT)
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -489,11 +510,12 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.DESC))
-            .withLimit(ANY_LIMIT);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .ordering(Scan.Ordering.desc(ANY_NAME_3))
+            .limit(ANY_LIMIT)
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -537,11 +559,12 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.ASC))
-            .withLimit(ANY_LIMIT);
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.desc(ANY_NAME_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_3))
+            .limit(ANY_LIMIT)
+            .build();
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -578,7 +601,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll = prepareScanAll().withLimit(ANY_LIMIT);
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).limit(ANY_LIMIT).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -600,7 +623,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll = prepareScanAll();
+    Scan scanAll = prepareScanAll();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -622,7 +645,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    Get get = prepareGet().withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
+    Get get = Get.newBuilder(prepareGet()).projections(ANY_NAME_3, ANY_NAME_4).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
@@ -658,7 +681,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    Get get = prepareGet().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+    Get get = Get.newBuilder(prepareGet()).projections(ANY_NAME_1, ANY_NAME_2).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
@@ -694,12 +717,14 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Get get =
-        new Get(indexKey)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(indexKey)
+            .projections(ANY_NAME_3, ANY_NAME_4)
+            .build();
     String query =
         "select r.id, "
             + "r.concatenatedPartitionKey, "
@@ -731,7 +756,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).projections(ANY_NAME_3, ANY_NAME_4).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -758,7 +783,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).projections(ANY_NAME_1, ANY_NAME_2).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -786,7 +811,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_4));
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).projections(ANY_NAME_1, ANY_NAME_4).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -814,7 +839,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_2, ANY_NAME_4));
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).projections(ANY_NAME_2, ANY_NAME_4).build();
 
     // Act Assert
     assertThatCode(() -> handler.handle(scanAll)).doesNotThrowAnyException();
@@ -842,12 +867,14 @@ public class SelectStatementHandlerTest {
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
-    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
+    Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Scan scan =
-        new Scan(indexKey)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(indexKey)
+            .projections(ANY_NAME_3, ANY_NAME_4)
+            .build();
     String query =
         "select r.id, "
             + "r.concatenatedPartitionKey, "
@@ -881,11 +908,12 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
 
     Scan scan =
-        prepareScan()
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
-            .withLimit(ANY_LIMIT)
-            .withProjections(Arrays.asList(ANY_NAME_3, ANY_NAME_4));
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .limit(ANY_LIMIT)
+            .projections(ANY_NAME_3, ANY_NAME_4)
+            .build();
 
     String query =
         "select r.id, "
@@ -933,10 +961,12 @@ public class SelectStatementHandlerTest {
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
     Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
     Scan scan =
-        new Scan(partitionKey)
-            .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .projections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
+            .build();
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1 + ":" + ANY_TEXT_2);
 
     String query =
@@ -977,11 +1007,13 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     when(responseIterable.iterableByPage(anyInt())).thenReturn(pagesIterable);
     when(pagesIterable.iterator()).thenReturn(pagesIterator);
-    ScanAll scanAll =
-        new ScanAll()
-            .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .projections(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4)
+            .build();
 
     String query =
         "select r.id, "
@@ -1020,10 +1052,13 @@ public class SelectStatementHandlerTest {
     Key partitionKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
     Key clusteringKey = Key.of(ANY_NAME_3, ANY_TEXT_3, ANY_NAME_4, ANY_TEXT_4);
     Get get =
-        new Get(partitionKey, clusteringKey)
-            .withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .projections(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4))
+            .build();
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1 + ":" + ANY_TEXT_2);
 
     String query =

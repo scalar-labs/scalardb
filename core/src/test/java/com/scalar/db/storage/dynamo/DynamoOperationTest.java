@@ -39,11 +39,14 @@ public class DynamoOperationTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -70,14 +73,14 @@ public class DynamoOperationTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    new KeyBytesEncoder().encode(new Key(ANY_NAME_1, ANY_TEXT_1))))
+                    new KeyBytesEncoder().encode(Key.ofText(ANY_NAME_1, ANY_TEXT_1))))
             .build());
     expected.put(
         DynamoOperation.CLUSTERING_KEY,
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    new KeyBytesEncoder().encode(new Key(ANY_NAME_2, ANY_TEXT_2))))
+                    new KeyBytesEncoder().encode(Key.ofText(ANY_NAME_2, ANY_TEXT_2))))
             .build());
 
     // Act

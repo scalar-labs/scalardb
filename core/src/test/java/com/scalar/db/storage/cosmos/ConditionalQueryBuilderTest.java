@@ -6,13 +6,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.io.IntValue;
 import org.jooq.Condition;
 import org.jooq.SQLDialect;
 import org.jooq.SelectConditionStep;
@@ -29,7 +26,6 @@ public class ConditionalQueryBuilderTest {
   private static final String ANY_NAME_3 = "name3";
   private static final String ANY_NAME_4 = "name4";
   private static final int ANY_INT = 1;
-  private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
 
   @Mock private SelectConditionStep<org.jooq.Record> select;
 
@@ -59,9 +55,8 @@ public class ConditionalQueryBuilderTest {
     SelectConditionStep<org.jooq.Record> testSelect =
         DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(ANY_ID));
     PutIf condition =
-        ConditionBuilder.putIf(
-                ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT_VALUE.getAsInt()))
-            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT_VALUE.getAsInt()))
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT))
             .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
             .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
             .build();
@@ -98,9 +93,9 @@ public class ConditionalQueryBuilderTest {
   public void visit_PutIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     PutIf condition =
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT))
+            .build();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -114,7 +109,7 @@ public class ConditionalQueryBuilderTest {
   @Test
   public void visit_PutIfExistsAcceptCalled_ShouldNotCallWhere() {
     // Arrange
-    PutIfExists condition = new PutIfExists();
+    PutIfExists condition = ConditionBuilder.putIfExists();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -127,7 +122,7 @@ public class ConditionalQueryBuilderTest {
   @Test
   public void visit_PutIfNotExistsAcceptCalled_ShouldNotCallWhere() {
     // Arrange
-    PutIfNotExists condition = new PutIfNotExists();
+    PutIfNotExists condition = ConditionBuilder.putIfNotExists();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act
@@ -141,9 +136,9 @@ public class ConditionalQueryBuilderTest {
   public void visit_DeleteIfAcceptCalled_ShouldCallWhere() {
     // Arrange
     DeleteIf condition =
-        new DeleteIf(
-            new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
-            new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
+        ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_NAME_1).isEqualToInt(ANY_INT))
+            .and(ConditionBuilder.column(ANY_NAME_2).isGreaterThanInt(ANY_INT))
+            .build();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
 
     // Act

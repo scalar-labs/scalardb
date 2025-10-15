@@ -866,6 +866,63 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn("c1");
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+    when(clusterManager.getSession()).thenReturn(cassandraSession);
+
+    // Act
+    cassandraAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table).dropColumn(column).getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
+  public void renameColumn_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String oldColumnName = "c1";
+    String newColumnName = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn(oldColumnName);
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+
+    // Act
+    cassandraAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+
+    // Assert
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table)
+            .renameColumn(oldColumnName)
+            .to(newColumnName)
+            .getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
   public void getNamespacesNames_WithNonExistingKeyspaces_ShouldReturnEmptySet()
       throws ExecutionException {
     // Arrange
@@ -927,11 +984,18 @@ public class CassandraAdminTest {
             () ->
                 cassandraAdmin.importTable(
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
+    Throwable thrown4 =
+        catchThrowable(() -> cassandraAdmin.renameTable(namespace, table, "new_table"));
+    Throwable thrown5 =
+        catchThrowable(
+            () -> cassandraAdmin.alterColumnType(namespace, table, column, DataType.INT));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

@@ -37,6 +37,9 @@ public final class JdbcEnv {
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return properties;
   }
 
@@ -51,11 +54,15 @@ public final class JdbcEnv {
     return properties;
   }
 
+  public static boolean isOracle() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:oracle:");
+  }
+
   public static boolean isSqlite() {
-    Properties properties = new Properties();
-    properties.setProperty(
-        DatabaseConfig.CONTACT_POINTS, System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
-    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    return JdbcUtils.isSqlite(new JdbcConfig(new DatabaseConfig(properties)));
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlite:");
+  }
+
+  public static boolean isDb2() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:db2:");
   }
 }

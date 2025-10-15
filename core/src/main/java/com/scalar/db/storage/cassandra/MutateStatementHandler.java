@@ -12,6 +12,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -39,7 +40,8 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
       Mutation mutation = (Mutation) operation;
       if (mutation.getCondition().isPresent() && !results.one().getBool(0)) {
-        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
+        throw new NoMutationException(
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(mutation));
       }
       return results;
     } catch (WriteTimeoutException e) {

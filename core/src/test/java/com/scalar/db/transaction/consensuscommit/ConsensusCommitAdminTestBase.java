@@ -603,6 +603,95 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String targetColumn = "col2";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(targetColumn, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.dropColumnFromTable(NAMESPACE, TABLE, targetColumn);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).dropColumnFromTable(NAMESPACE, TABLE, targetColumn);
+    verify(distributedStorageAdmin)
+        .dropColumnFromTable(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + targetColumn);
+  }
+
+  @Test
+  public void renameColumn_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String existingColumnName = "col2";
+    String newColumnName = "col3";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(existingColumnName, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.renameColumn(NAMESPACE, TABLE, existingColumnName, newColumnName);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin)
+        .renameColumn(NAMESPACE, TABLE, existingColumnName, newColumnName);
+    verify(distributedStorageAdmin)
+        .renameColumn(
+            NAMESPACE,
+            TABLE,
+            Attribute.BEFORE_PREFIX + existingColumnName,
+            Attribute.BEFORE_PREFIX + newColumnName);
+  }
+
+  @Test
+  public void alterColumnType_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String columnName = "col2";
+    DataType columnType = DataType.BIGINT;
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(columnName, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.alterColumnType(NAMESPACE, TABLE, columnName, columnType);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).alterColumnType(NAMESPACE, TABLE, columnName, columnType);
+    verify(distributedStorageAdmin)
+        .alterColumnType(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + columnName, columnType);
+  }
+
+  @Test
+  public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String existingTableName = "tbl1";
+    String newTableName = "tbl2";
+
+    // Act
+    admin.renameTable(NAMESPACE, existingTableName, newTableName);
+
+    // Assert
+    verify(distributedStorageAdmin).renameTable(NAMESPACE, existingTableName, newTableName);
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");

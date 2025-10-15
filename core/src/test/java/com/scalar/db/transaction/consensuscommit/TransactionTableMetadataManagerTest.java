@@ -74,7 +74,11 @@ public class TransactionTableMetadataManagerTest {
     // Act
     TransactionTableMetadata actual =
         tableMetadataManager.getTransactionTableMetadata(
-            new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl"));
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("c1", "aaa"))
+                .build());
 
     // Assert
     verify(admin).getTableMetadata(anyString(), anyString());
@@ -88,7 +92,8 @@ public class TransactionTableMetadataManagerTest {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
 
-    Get get = new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl");
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
 
     // Act
     tableMetadataManager.getTransactionTableMetadata(get);
@@ -107,7 +112,8 @@ public class TransactionTableMetadataManagerTest {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, 1); // one second
 
-    Get get = new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl");
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
 
     // Act
     tableMetadataManager.getTransactionTableMetadata(get);

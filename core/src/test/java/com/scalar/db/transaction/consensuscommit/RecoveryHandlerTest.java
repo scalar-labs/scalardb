@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
@@ -21,10 +22,11 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +37,8 @@ import org.mockito.MockitoAnnotations;
 
 public class RecoveryHandlerTest {
 
+  private static final String ANY_NAMESPACE_NAME = "tbl";
+  private static final String ANY_TABLE_NAME = "tbl";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_ID_1 = "id1";
@@ -49,7 +53,8 @@ public class RecoveryHandlerTest {
 
   @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
-  @Mock private TransactionTableMetadataManager tableMetadataManager;
+  @Mock private TransactionTableMetadataManager transactionTableMetadataManager;
+  @Mock private TransactionTableMetadata transactionTableMetadata;
   @Mock private Selection selection;
 
   private RecoveryHandler handler;
@@ -59,19 +64,25 @@ public class RecoveryHandlerTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    handler = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    handler = spy(new RecoveryHandler(storage, coordinator, transactionTableMetadataManager));
+
+    when(selection.forFullTableName())
+        .thenReturn(Optional.of(ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME));
+    when(selection.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE_NAME));
+    when(selection.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+    when(transactionTableMetadataManager.getTransactionTableMetadata(selection))
+        .thenReturn(transactionTableMetadata);
+    when(transactionTableMetadata.getTableMetadata()).thenReturn(TABLE_METADATA);
   }
 
   private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
-            .put(ANY_NAME_1, ScalarDbUtils.toColumn(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
-            .put(Attribute.ID, ScalarDbUtils.toColumn(Attribute.toIdValue(ANY_ID_1)))
-            .put(
-                Attribute.PREPARED_AT,
-                ScalarDbUtils.toColumn(Attribute.toPreparedAtValue(preparedAt)))
-            .put(Attribute.STATE, ScalarDbUtils.toColumn(Attribute.toStateValue(transactionState)))
-            .put(Attribute.VERSION, ScalarDbUtils.toColumn(Attribute.toVersionValue(1)))
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_1))
+            .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, preparedAt))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, transactionState.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 1))
             .build();
     return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
   }
