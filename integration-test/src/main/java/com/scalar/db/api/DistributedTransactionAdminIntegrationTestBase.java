@@ -430,14 +430,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     // executing DMLs
     String table = "table_for_truncate";
 
-    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       admin.createTable(namespace1, table, TABLE_METADATA, true, options);
       Key partitionKey = Key.of(COL_NAME2, "aaa", COL_NAME1, 1);
       Key clusteringKey = Key.of(COL_NAME4, 2, COL_NAME3, "bbb");
       transactionalInsert(
-          manager,
           Insert.newBuilder()
               .namespace(namespace1)
               .table(table)
@@ -458,7 +457,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       // Assert
       List<Result> results =
           transactionalScan(
-              manager,
               Scan.newBuilder()
                   .namespace(namespace1)
                   .table(table)
@@ -518,7 +516,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     // executing DMLs
     String table = "table_for_create_index";
 
-    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder metadataBuilder =
@@ -566,7 +564,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
             COL_NAME13,
             LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
       }
-      transactionalInsert(manager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act
       admin.createIndex(namespace1, table, COL_NAME2, options);
@@ -633,7 +631,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         indexCount += 1;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
-
     } finally {
       admin.dropTable(namespace1, table, true);
     }
@@ -712,9 +709,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       throws Exception {
     // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
     // executing DMLs
-    String table = "table_for_alter_1";
+    String table = "table_for_drop_index";
 
-    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder metadataBuilder =
@@ -753,6 +750,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         metadataBuilder.addSecondaryIndex(COL_NAME13);
       }
       admin.createTable(namespace1, table, metadataBuilder.build(), options);
+
       InsertBuilder.Buildable insert =
           Insert.newBuilder()
               .namespace(namespace1)
@@ -776,7 +774,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
             COL_NAME13,
             LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
       }
-      transactionalInsert(manager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act
       admin.dropIndex(namespace1, table, COL_NAME2);
@@ -1185,9 +1183,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
           throws ExecutionException, IOException, TransactionException {
     // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
     // executing DMLs
-    String table = "table_for_alter_2";
+    String table = "table_for_alter_1";
 
-    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -1229,7 +1227,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
         insert.timestampTZValue("c12", Instant.now());
       }
-      transactionalInsert(manager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act
       admin.alterColumnType(namespace1, table, "c3", DataType.TEXT);
@@ -1277,9 +1275,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       throws ExecutionException, IOException, TransactionException {
     // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
     // executing DMLs
-    String table = "table_for_alter_3";
+    String table = "table_for_alter_2";
 
-    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -1303,7 +1301,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .clusteringKey(Key.ofInt("c2", 2))
               .intValue("c3", expectedColumn3Value)
               .floatValue("c4", expectedColumn4Value);
-      transactionalInsert(manager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act
       admin.alterColumnType(namespace1, table, "c3", DataType.BIGINT);
@@ -1329,7 +1327,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .table(table)
               .partitionKey(Key.ofInt("c1", 1))
               .build();
-      List<Result> results = transactionalScan(manager, scan);
+      List<Result> results = transactionalScan(scan);
       assertThat(results).hasSize(1);
       Result result = results.get(0);
       assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
@@ -1592,9 +1590,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     return true;
   }
 
-  protected abstract void transactionalInsert(DistributedTransactionManager manager, Insert insert)
-      throws TransactionException;
+  protected abstract void transactionalInsert(Insert insert) throws TransactionException;
 
-  protected abstract List<Result> transactionalScan(
-      DistributedTransactionManager manager, Scan scan) throws TransactionException;
+  protected abstract List<Result> transactionalScan(Scan scan) throws TransactionException;
 }

@@ -101,20 +101,22 @@ public abstract class SingleCrudOperationTransactionAdminIntegrationTestBase
   }
 
   @Override
-  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
-      throws TransactionException {
+  protected void transactionalInsert(Insert insert) throws TransactionException {
     // Wait for cache expiry
     Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
-    manager.insert(insert);
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      manager.insert(insert);
+    }
   }
 
   @Override
-  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
-      throws TransactionException {
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
     // Wait for cache expiry
     Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
-    return manager.scan(scan);
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      return manager.scan(scan);
+    }
   }
 }

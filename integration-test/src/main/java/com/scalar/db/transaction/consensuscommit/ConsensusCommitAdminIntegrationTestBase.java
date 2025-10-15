@@ -34,25 +34,27 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
   protected abstract Properties getProps(String testName);
 
   @Override
-  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
-      throws TransactionException {
+  protected void transactionalInsert(Insert insert) throws TransactionException {
     // Wait for cache expiry
     Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
-    DistributedTransaction transaction = manager.start();
-    transaction.insert(insert);
-    transaction.commit();
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      transaction.insert(insert);
+      transaction.commit();
+    }
   }
 
   @Override
-  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
-      throws TransactionException {
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
     // Wait for cache expiry
     Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
-    DistributedTransaction transaction = manager.start();
-    List<Result> results = transaction.scan(scan);
-    transaction.commit();
-    return results;
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      List<Result> results = transaction.scan(scan);
+      transaction.commit();
+      return results;
+    }
   }
 }
