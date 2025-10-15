@@ -6,7 +6,7 @@ import com.scalar.db.util.groupcommit.GroupCommitter;
 import java.util.Optional;
 
 public class CoordinatorGroupCommitter
-    extends GroupCommitter<String, String, String, String, String, Snapshot> {
+    extends GroupCommitter<String, String, String, String, String, TransactionContext> {
   CoordinatorGroupCommitter(GroupCommitConfig config) {
     super("coordinator", config, new CoordinatorGroupCommitKeyManipulator());
   }
