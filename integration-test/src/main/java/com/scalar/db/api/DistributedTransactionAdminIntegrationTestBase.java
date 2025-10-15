@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -1268,7 +1270,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
       throws ExecutionException, IOException, TransactionException {
-    try {
+    try (DistributedTransactionManager transactionManager =
+        transactionFactory.getTransactionManager()) {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -1281,7 +1284,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
-      DistributedTransactionManager transactionManager = transactionFactory.getTransactionManager();
       int expectedColumn3Value = 1;
       float expectedColumn4Value = 4.0f;
 
@@ -1294,11 +1296,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .intValue("c3", expectedColumn3Value)
               .floatValue("c4", expectedColumn4Value);
       transactionalInsert(transactionManager, insert.build());
-      transactionManager.close();
 
       // Act
       admin.alterColumnType(namespace1, TABLE4, "c3", DataType.BIGINT);
       admin.alterColumnType(namespace1, TABLE4, "c4", DataType.DOUBLE);
+
+      // Wait for cache expiry
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
       // Assert
       TableMetadata.Builder expectedTableMetadataBuilder =
@@ -1317,13 +1321,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .table(TABLE4)
               .partitionKey(Key.ofInt("c1", 1))
               .build();
-      transactionManager = transactionFactory.getTransactionManager();
       List<Result> results = transactionalScan(transactionManager, scan);
       assertThat(results).hasSize(1);
       Result result = results.get(0);
       assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
       assertThat(result.getDouble("c4")).isEqualTo(expectedColumn4Value);
-      transactionManager.close();
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.api.Put;
@@ -28,6 +29,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -398,7 +400,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   @EnabledIf("isOracle")
   public void alterColumnType_Oracle_WideningConversion_ShouldAlterColumnTypesCorrectly()
       throws ExecutionException, IOException {
-    try {
+    try (DistributedStorage storage = storageFactory.getStorage()) {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -414,17 +416,15 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
 
       int expectedColumn3Value = 1;
       float expectedColumn4Value = 4.0f;
-      try (DistributedStorage storage = storageFactory.getStorage()) {
-        PutBuilder.Buildable put =
-            Put.newBuilder()
-                .namespace(getNamespace1())
-                .table(getTable4())
-                .partitionKey(Key.ofInt(getColumnName1(), 1))
-                .clusteringKey(Key.ofInt(getColumnName2(), 2))
-                .intValue(getColumnName3(), expectedColumn3Value)
-                .floatValue(getColumnName4(), expectedColumn4Value);
-        storage.put(put.build());
-      }
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(getNamespace1())
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName2(), 2))
+              .intValue(getColumnName3(), expectedColumn3Value)
+              .floatValue(getColumnName4(), expectedColumn4Value);
+      storage.put(put.build());
 
       // Act
       admin.alterColumnType(getNamespace1(), getTable4(), getColumnName3(), DataType.BIGINT);
@@ -433,6 +433,9 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               () ->
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName4(), DataType.DOUBLE));
+
+      // Wait for cache expiry
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
       // Assert
       assertThat(exception).isInstanceOf(UnsupportedOperationException.class);
@@ -448,19 +451,17 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
           .isEqualTo(expectedTableMetadata);
 
-      try (DistributedStorage storage = storageFactory.getStorage()) {
-        Scan scan =
-            Scan.newBuilder()
-                .namespace(getNamespace1())
-                .table(getTable4())
-                .partitionKey(Key.ofInt(getColumnName1(), 1))
-                .build();
-        try (Scanner scanner = storage.scan(scan)) {
-          List<Result> results = scanner.all();
-          assertThat(results).hasSize(1);
-          Result result = results.get(0);
-          assertThat(result.getBigInt(getColumnName3())).isEqualTo(expectedColumn3Value);
-        }
+      Scan scan =
+          Scan.newBuilder()
+              .namespace(getNamespace1())
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .build();
+      try (Scanner scanner = storage.scan(scan)) {
+        List<Result> results = scanner.all();
+        assertThat(results).hasSize(1);
+        Result result = results.get(0);
+        assertThat(result.getBigInt(getColumnName3())).isEqualTo(expectedColumn3Value);
       }
     } finally {
       admin.dropTable(getNamespace1(), getTable4(), true);
