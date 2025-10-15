@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.singlecrudoperation;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Insert;
@@ -10,6 +11,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -87,14 +89,22 @@ public abstract class SingleCrudOperationTransactionAdminIntegrationTestBase
   }
 
   @Override
-  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
-      throws TransactionException {
-    manager.insert(insert);
+  protected void transactionalInsert(Insert insert) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      manager.insert(insert);
+    }
   }
 
   @Override
-  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
-      throws TransactionException {
-    return manager.scan(scan);
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      return manager.scan(scan);
+    }
   }
 }

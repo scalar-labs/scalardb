@@ -285,8 +285,7 @@ public class JdbcTransactionAdminIntegrationTest
   public void
       alterColumnType_Oracle_AlterColumnTypeFromEachExistingDataTypeToText_ShouldThrowUnsupportedOperationException()
           throws ExecutionException, TransactionException {
-    try (DistributedTransactionManager transactionManager =
-        transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -328,7 +327,7 @@ public class JdbcTransactionAdminIntegrationTest
         insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
         insert.timestampTZValue("c12", Instant.now());
       }
-      transactionalInsert(transactionManager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act Assert
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
@@ -406,7 +405,7 @@ public class JdbcTransactionAdminIntegrationTest
         insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
         insert.timestampTZValue("c12", Instant.now());
       }
-      transactionalInsert(transactionManager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act Assert
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
@@ -470,7 +469,7 @@ public class JdbcTransactionAdminIntegrationTest
   @EnabledIf("isOracle")
   public void alterColumnType_Oracle_WideningConversion_ShouldAlterColumnTypesCorrectly()
       throws ExecutionException, TransactionException {
-    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -494,7 +493,7 @@ public class JdbcTransactionAdminIntegrationTest
               .clusteringKey(Key.ofInt("c2", 2))
               .intValue("c3", expectedColumn3Value)
               .floatValue("c4", expectedColumn4Value);
-      transactionalInsert(manager, insert.build());
+      transactionalInsert(insert.build());
 
       // Act
       admin.alterColumnType(namespace1, TABLE4, "c3", DataType.BIGINT);
@@ -523,7 +522,7 @@ public class JdbcTransactionAdminIntegrationTest
               .table(TABLE4)
               .partitionKey(Key.ofInt("c1", 1))
               .build();
-      List<Result> results = transactionalScan(manager, scan);
+      List<Result> results = transactionalScan(scan);
       assertThat(results).hasSize(1);
       Result result = results.get(0);
       assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
@@ -563,19 +562,27 @@ public class JdbcTransactionAdminIntegrationTest
   }
 
   @Override
-  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
-      throws TransactionException {
-    DistributedTransaction transaction = manager.start();
-    transaction.insert(insert);
-    transaction.commit();
+  protected void transactionalInsert(Insert insert) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      transaction.insert(insert);
+      transaction.commit();
+    }
   }
 
   @Override
-  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
-      throws TransactionException {
-    DistributedTransaction transaction = manager.start();
-    List<Result> results = transaction.scan(scan);
-    transaction.commit();
-    return results;
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      List<Result> results = transaction.scan(scan);
+      transaction.commit();
+      return results;
+    }
   }
 }
