@@ -127,6 +127,7 @@ jobs:
           - 9042:9042
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -191,6 +192,7 @@ jobs:
           - 9042:9042
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -251,6 +253,7 @@ jobs:
       SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -350,6 +353,7 @@ jobs:
           - 8000:8000
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -405,6 +409,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -464,6 +469,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -523,6 +529,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -591,6 +598,7 @@ jobs:
           - 5432:5432
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -655,6 +663,7 @@ jobs:
           - 5432:5432
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -719,6 +728,7 @@ jobs:
           - 5432:5432
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -783,6 +793,7 @@ jobs:
           - 5432:5432
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -847,6 +858,7 @@ jobs:
           - 5432:5432
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -911,6 +923,7 @@ jobs:
           - 1521:1521
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -982,6 +995,7 @@ jobs:
           --health-retries 120
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1037,6 +1051,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1130,6 +1145,7 @@ jobs:
       SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1217,6 +1233,7 @@ jobs:
         options: --name sqlserver19
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1287,6 +1304,7 @@ jobs:
         options: --name sqlserver22
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1346,6 +1364,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1404,6 +1423,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1463,6 +1483,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1522,6 +1543,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1598,6 +1620,7 @@ jobs:
           - 9042:9042
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
