@@ -161,7 +161,7 @@ public class JdbcAdminImportTableIntegrationTest
         for (String column : metadata.getColumnNames()) {
           if (!metadata.getPartitionKeyNames().contains(column)
               && !metadata.getClusteringKeyNames().contains(column)) {
-            if (metadata.getColumnDataType(column).equals(DataType.BLOB)) {
+            if (Objects.equals(column, "col16")) {
               continue;
             }
             assertThat(newMetadata.getColumnDataType(column)).isEqualTo(DataType.TEXT);
