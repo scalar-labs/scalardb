@@ -3033,7 +3033,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction1::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(commit).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(TransactionContext.class));
 
     DistributedTransaction another = manager.beginReadOnly();
     assertThat(another.get(gets1.get(from)).isPresent()).isFalse();
@@ -3108,7 +3108,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(commit).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(TransactionContext.class));
     DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
@@ -3179,7 +3179,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(commit).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(TransactionContext.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = prepareGets(namespace2, table2);
 
@@ -3371,7 +3371,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(commit).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(TransactionContext.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
@@ -8481,6 +8481,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
+    CrudHandler crud =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            consensusCommitConfig.isIncludeMetadataEnabled(),
+            parallelExecutor);
     commit = spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
     return new ConsensusCommitManager(
         storage,
@@ -8489,9 +8496,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         coordinator,
         parallelExecutor,
         recoveryExecutor,
+        crud,
         commit,
         isolation,
-        false,
         groupCommitter);
   }
 
@@ -8536,7 +8543,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
     assert transaction instanceof ConsensusCommit;
 
-    ((ConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
   }
 
   private boolean isGroupCommitEnabled() {
