@@ -58,4 +58,19 @@ public class ConsensusCommitAdminIntegrationTestWithServer
 
   @Override
   protected void extraCheckOnCoordinatorTable() {}
+
+  @Override
+  @Test
+  @Disabled("ScalarDB Server doesn't support the insert operation")
+  public void truncateTable_ShouldTruncateProperly() {}
+
+  @Override
+  @Test
+  @Disabled("ScalarDB Server doesn't support the insert operation")
+  public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly() {}
+
+  @Override
+  @Test
+  @Disabled("ScalarDB Server doesn't support the insert operation")
+  public void dropIndex_ForAllDataTypesWithExistingData_ShouldDropIndexCorrectly() {}
 }
