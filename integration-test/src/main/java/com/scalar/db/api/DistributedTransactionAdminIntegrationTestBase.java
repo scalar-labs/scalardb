@@ -425,35 +425,45 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void truncateTable_ShouldTruncateProperly()
       throws ExecutionException, TransactionException {
-    DistributedTransactionManager manager = null;
+    // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
+    // executing DMLs
+    String table = "table_for_truncate";
+
     try {
       // Arrange
-      Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
-      Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
-      manager = transactionFactory.getTransactionManager();
-      manager.put(
-          new Put(partitionKey, clusteringKey)
-              .withValue(COL_NAME5, 3)
-              .withValue(COL_NAME6, "ccc")
-              .withValue(COL_NAME7, 4L)
-              .withValue(COL_NAME8, 1.0f)
-              .withValue(COL_NAME9, 1.0d)
-              .withValue(COL_NAME10, true)
-              .withValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
-              .forNamespace(namespace1)
-              .forTable(TABLE1));
+      Map<String, String> options = getCreationOptions();
+      admin.createTable(namespace1, table, TABLE_METADATA, true, options);
+      Key partitionKey = Key.of(COL_NAME2, "aaa", COL_NAME1, 1);
+      Key clusteringKey = Key.of(COL_NAME4, 2, COL_NAME3, "bbb");
+      transactionalInsert(
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(table)
+              .partitionKey(partitionKey)
+              .clusteringKey(clusteringKey)
+              .intValue(COL_NAME5, 3)
+              .textValue(COL_NAME6, "ccc")
+              .bigIntValue(COL_NAME7, 4L)
+              .floatValue(COL_NAME8, 1.0f)
+              .doubleValue(COL_NAME9, 1.0d)
+              .booleanValue(COL_NAME10, true)
+              .blobValue(COL_NAME11, "ddd".getBytes(StandardCharsets.UTF_8))
+              .build());
 
       // Act
-      admin.truncateTable(namespace1, TABLE1);
+      admin.truncateTable(namespace1, table);
 
       // Assert
       List<Result> results =
-          manager.scan(new Scan(partitionKey).forNamespace(namespace1).forTable(TABLE1));
+          transactionalScan(
+              Scan.newBuilder()
+                  .namespace(namespace1)
+                  .table(table)
+                  .partitionKey(partitionKey)
+                  .build());
       assertThat(results).isEmpty();
     } finally {
-      if (manager != null) {
-        manager.close();
-      }
+      admin.dropTable(namespace1, table, true);
     }
   }
 
@@ -501,7 +511,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly()
       throws Exception {
-    DistributedTransactionManager transactionManager = null;
+    // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
+    // executing DMLs
+    String table = "table_for_create_index";
+
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
@@ -525,12 +538,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         metadataBuilder = metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
       }
       TableMetadata metadata = metadataBuilder.build();
-      admin.createTable(namespace1, TABLE4, metadata, options);
-      transactionManager = transactionFactory.getTransactionManager();
+      admin.createTable(namespace1, table, metadata, options);
       InsertBuilder.Buildable insert =
           Insert.newBuilder()
               .namespace(namespace1)
-              .table(TABLE4)
+              .table(table)
               .partitionKey(Key.ofInt(COL_NAME1, 1))
               .intValue(COL_NAME2, 2)
               .textValue(COL_NAME3, "3")
@@ -551,45 +563,45 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
             COL_NAME13,
             LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
       }
-      transactionManager.insert(insert.build());
+      transactionalInsert(insert.build());
 
       // Act
-      admin.createIndex(namespace1, TABLE4, COL_NAME2, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME3, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME4, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME5, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME6, options);
+      admin.createIndex(namespace1, table, COL_NAME2, options);
+      admin.createIndex(namespace1, table, COL_NAME3, options);
+      admin.createIndex(namespace1, table, COL_NAME4, options);
+      admin.createIndex(namespace1, table, COL_NAME5, options);
+      admin.createIndex(namespace1, table, COL_NAME6, options);
       if (isIndexOnBooleanColumnSupported()) {
-        admin.createIndex(namespace1, TABLE4, COL_NAME7, options);
+        admin.createIndex(namespace1, table, COL_NAME7, options);
       }
-      admin.createIndex(namespace1, TABLE4, COL_NAME8, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME10, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME11, options);
-      admin.createIndex(namespace1, TABLE4, COL_NAME12, options);
+      admin.createIndex(namespace1, table, COL_NAME8, options);
+      admin.createIndex(namespace1, table, COL_NAME10, options);
+      admin.createIndex(namespace1, table, COL_NAME11, options);
+      admin.createIndex(namespace1, table, COL_NAME12, options);
       if (isTimestampTypeSupported()) {
-        admin.createIndex(namespace1, TABLE4, COL_NAME13, options);
+        admin.createIndex(namespace1, table, COL_NAME13, options);
       }
 
       // Assert
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME2)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME3)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME4)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME5)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME6)).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isTrue();
+        assertThat(admin.indexExists(namespace1, table, COL_NAME7)).isTrue();
       }
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME9)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME10)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME11)).isTrue();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME12)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME8)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME9)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME10)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME11)).isTrue();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME12)).isTrue();
       if (isTimestampTypeSupported()) {
-        assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME13)).isTrue();
+        assertThat(admin.indexExists(namespace1, table, COL_NAME13)).isTrue();
       }
 
       Set<String> actualSecondaryIndexNames =
-          admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames();
+          admin.getTableMetadata(namespace1, table).getSecondaryIndexNames();
       assertThat(actualSecondaryIndexNames)
           .contains(
               COL_NAME2,
@@ -612,12 +624,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         indexCount++;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
-
     } finally {
-      admin.dropTable(namespace1, TABLE4, true);
-      if (transactionManager != null) {
-        transactionManager.close();
-      }
+      admin.dropTable(namespace1, table, true);
     }
   }
 
@@ -692,11 +700,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void dropIndex_ForAllDataTypesWithExistingData_ShouldDropIndexCorrectly()
       throws Exception {
-    DistributedTransactionManager transactionManager = null;
+    // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
+    // executing DMLs
+    String table = "table_for_drop_index";
+
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata metadata =
+      TableMetadata.Builder metadataBuilder =
           TableMetadata.newBuilder()
               .addColumn(COL_NAME1, DataType.INT)
               .addColumn(COL_NAME2, DataType.INT)
@@ -707,6 +718,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addColumn(COL_NAME7, DataType.BOOLEAN)
               .addColumn(COL_NAME8, DataType.BLOB)
               .addColumn(COL_NAME9, DataType.TEXT)
+              .addColumn(COL_NAME10, DataType.DATE)
+              .addColumn(COL_NAME11, DataType.TIME)
+              .addColumn(COL_NAME12, DataType.TIMESTAMPTZ)
               .addPartitionKey(COL_NAME1)
               .addSecondaryIndex(COL_NAME2)
               .addSecondaryIndex(COL_NAME3)
@@ -716,16 +730,22 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME8)
               .addSecondaryIndex(COL_NAME9)
               .addSecondaryIndex(COL_NAME9)
-              .build();
+              .addSecondaryIndex(COL_NAME10)
+              .addSecondaryIndex(COL_NAME11)
+              .addSecondaryIndex(COL_NAME12);
       if (isIndexOnBooleanColumnSupported()) {
-        metadata = TableMetadata.newBuilder(metadata).addSecondaryIndex(COL_NAME7).build();
+        metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME7);
       }
-      admin.createTable(namespace1, TABLE4, metadata, options);
-      transactionManager = transactionFactory.getTransactionManager();
-      transactionManager.put(
-          Put.newBuilder()
+      if (isTimestampTypeSupported()) {
+        metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
+        metadataBuilder.addSecondaryIndex(COL_NAME13);
+      }
+      admin.createTable(namespace1, table, metadataBuilder.build(), options);
+
+      InsertBuilder.Buildable insert =
+          Insert.newBuilder()
               .namespace(namespace1)
-              .table(TABLE4)
+              .table(table)
               .partitionKey(Key.ofInt(COL_NAME1, 1))
               .intValue(COL_NAME2, 2)
               .textValue(COL_NAME3, "3")
@@ -735,34 +755,53 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .booleanValue(COL_NAME7, true)
               .blobValue(COL_NAME8, "8".getBytes(StandardCharsets.UTF_8))
               .textValue(COL_NAME9, "9")
-              .build());
+              .timeValue(COL_NAME11, LocalTime.of(12, 2, 6, 123_456_000))
+              .timestampTZValue(
+                  COL_NAME12,
+                  LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000))
+                      .toInstant(ZoneOffset.UTC));
+      if (isTimestampTypeSupported()) {
+        insert.timestampValue(
+            COL_NAME13,
+            LocalDateTime.of(LocalDate.of(2020, 6, 2), LocalTime.of(12, 2, 6, 123_000_000)));
+      }
+      transactionalInsert(insert.build());
 
       // Act
-      admin.dropIndex(namespace1, TABLE4, COL_NAME2);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME3);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME4);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME5);
-      admin.dropIndex(namespace1, TABLE4, COL_NAME6);
+      admin.dropIndex(namespace1, table, COL_NAME2);
+      admin.dropIndex(namespace1, table, COL_NAME3);
+      admin.dropIndex(namespace1, table, COL_NAME4);
+      admin.dropIndex(namespace1, table, COL_NAME5);
+      admin.dropIndex(namespace1, table, COL_NAME6);
       if (isIndexOnBooleanColumnSupported()) {
-        admin.dropIndex(namespace1, TABLE4, COL_NAME7);
+        admin.dropIndex(namespace1, table, COL_NAME7);
       }
-      admin.dropIndex(namespace1, TABLE4, COL_NAME8);
+      admin.dropIndex(namespace1, table, COL_NAME8);
+      admin.dropIndex(namespace1, table, COL_NAME10);
+      admin.dropIndex(namespace1, table, COL_NAME11);
+      admin.dropIndex(namespace1, table, COL_NAME12);
+      if (isTimestampTypeSupported()) {
+        admin.dropIndex(namespace1, table, COL_NAME13);
+      }
 
       // Assert
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME2)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME3)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME4)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME5)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME6)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME7)).isFalse();
-      assertThat(admin.indexExists(namespace1, TABLE4, COL_NAME8)).isFalse();
-      assertThat(admin.getTableMetadata(namespace1, TABLE4).getSecondaryIndexNames())
+      assertThat(admin.indexExists(namespace1, table, COL_NAME2)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME3)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME4)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME5)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME6)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME7)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME8)).isFalse();
+      assertThat(admin.getTableMetadata(namespace1, table).getSecondaryIndexNames())
           .containsOnly(COL_NAME9);
-    } finally {
-      admin.dropTable(namespace1, TABLE4, true);
-      if (transactionManager != null) {
-        transactionManager.close();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME10)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME11)).isFalse();
+      assertThat(admin.indexExists(namespace1, table, COL_NAME12)).isFalse();
+      if (isTimestampTypeSupported()) {
+        assertThat(admin.indexExists(namespace1, table, COL_NAME13)).isFalse();
       }
+    } finally {
+      admin.dropTable(namespace1, table, true);
     }
   }
 
@@ -969,4 +1008,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected boolean isTimestampTypeSupported() {
     return true;
   }
+
+  protected abstract void transactionalInsert(Insert insert) throws TransactionException;
+
+  protected abstract List<Result> transactionalScan(Scan scan) throws TransactionException;
 }
