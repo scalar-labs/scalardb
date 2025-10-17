@@ -136,15 +136,25 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
     return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " MODIFY ( "
-        + enclose(columnName)
-        + " "
-        + columnType
-        + " )";
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + enclose(newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " MODIFY ( "
+          + enclose(columnName)
+          + " "
+          + columnType
+          + " )"
+    };
   }
 
   @Override
@@ -173,11 +183,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn) {
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
     return new String[] {
       "ALTER INDEX "
           + enclose(schema)
@@ -490,8 +496,17 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public void bindBlobColumnToPreparedStatement(PreparedStatement preparedStatement, int index, byte[] bytes)
-      throws SQLException {
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (!(from == DataType.INT && to == DataType.BIGINT)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
+    }
+  }
+
+  @Override
+  public void bindBlobColumnToPreparedStatement(
+      PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
     // When writing to the BLOB data type with a BLOB size greater than 32766 using a MERGE INTO
     // statement, an internal error ORA-03137 on the server side occurs so we needed to use a
     // workaround. Below is a detailed explanation of the workaround.

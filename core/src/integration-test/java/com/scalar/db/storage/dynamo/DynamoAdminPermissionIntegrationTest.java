@@ -69,4 +69,14 @@ public class DynamoAdminPermissionIntegrationTest
   @Override
   @Disabled("DynamoDB does not support renaming columns")
   public void renameColumn_WithSufficientPermission_ShouldSucceed() {}
+
+  @Test
+  @Override
+  @Disabled("DynamoDB does not support altering column types")
+  public void alterColumnType_WithSufficientPermission_ShouldSucceed() {}
+
+  @Test
+  @Override
+  @Disabled("DynamoDB does not support renaming tables")
+  public void renameTable_WithSufficientPermission_ShouldSucceed() {}
 }

@@ -77,7 +77,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     for (String column : metadata.getColumnNames()) {
       if (metadata.getColumnDataTypes().get(column).equals(DataType.TIMESTAMP)) {
         throw new UnsupportedOperationException(
-            "The TIMESTAMP data type is not supported in Cassandra. column: " + column);
+            CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(column));
       }
     }
     try {
@@ -394,7 +394,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     if (columnType == DataType.TIMESTAMP) {
       throw new UnsupportedOperationException(
-          "The TIMESTAMP data type is not supported in Cassandra. column: " + columnName);
+          CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(columnName));
     }
     try {
       String alterTableQuery =
@@ -469,6 +469,21 @@ public class CassandraAdmin implements DistributedStorageAdmin {
               oldColumnName, newColumnName, getFullTableName(namespace, table)),
           e);
     }
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

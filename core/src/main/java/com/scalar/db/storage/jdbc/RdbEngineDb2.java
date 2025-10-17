@@ -261,14 +261,25 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "RENAME "
+        + encloseFullTableName(namespace, oldTableName)
+        + " TO "
+        + enclose(newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN "
-        + enclose(columnName)
-        + " SET DATA TYPE "
-        + columnType;
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " SET DATA TYPE "
+          + columnType,
+      "CALL SYSPROC.ADMIN_CMD('REORG TABLE " + encloseFullTableName(namespace, table) + "')"
+    };
   }
 
   @Override
@@ -297,11 +308,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn) {
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
     return new String[] {
       "RENAME INDEX "
           + enclose(schema)
@@ -539,6 +546,15 @@ class RdbEngineDb2 extends AbstractRdbEngine {
         || tableMetadata.getSecondaryIndexNames().contains(columnName)) {
       throw new UnsupportedOperationException(
           CoreError.JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+    }
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (from == DataType.BLOB && to == DataType.TEXT) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
     }
   }
 

@@ -112,14 +112,24 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
     return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " ALTER COLUMN"
-        + enclose(columnName)
-        + " TYPE "
-        + columnType;
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + enclose(newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " TYPE "
+          + columnType
+    };
   }
 
   @Override
@@ -134,11 +144,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @Override
   public String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn) {
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
     return new String[] {
       "ALTER INDEX "
           + enclose(schema)

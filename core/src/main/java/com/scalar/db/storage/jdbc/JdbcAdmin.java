@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_TABLE = "metadata";
-
+  public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
   @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
   @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
@@ -57,7 +57,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
-  public static final String NAMESPACES_TABLE = "namespaces";
   @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final String INDEX_NAME_PREFIX = "index";
@@ -85,6 +84,64 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
+  }
+
+  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
+    return metadata.getClusteringKeyNames().stream()
+        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+  }
+
+  @VisibleForTesting
+  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
+  }
+
+  static void execute(Connection connection, String sql) throws SQLException {
+    execute(connection, sql, null);
+  }
+
+  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
+      throws SQLException {
+    if (Strings.isNullOrEmpty(sql)) {
+      return;
+    }
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(sql);
+      throwSqlWarningIfNeeded(handler, stmt);
+    }
+  }
+
+  private static void throwSqlWarningIfNeeded(SqlWarningHandler handler, Statement stmt)
+      throws SQLException {
+    if (handler == null) {
+      return;
+    }
+    SQLWarning warning = stmt.getWarnings();
+    while (warning != null) {
+      handler.throwSqlWarningIfNeeded(warning);
+      warning = warning.getNextWarning();
+    }
+  }
+
+  static void execute(Connection connection, String[] sqls) throws SQLException {
+    execute(connection, sqls, null);
+  }
+
+  static void execute(
+      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
+      throws SQLException {
+    for (String sql : sqls) {
+      execute(connection, sql, warningHandler);
+    }
   }
 
   @Override
@@ -702,25 +759,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
-    return metadata.getClusteringKeyNames().stream()
-        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
-  }
-
-  @VisibleForTesting
-  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
-    boolean hasAscOrder = false;
-    boolean hasDescOrder = false;
-    for (Order order : metadata.getClusteringOrders().values()) {
-      if (order == Order.ASC) {
-        hasAscOrder = true;
-      } else {
-        hasDescOrder = true;
-      }
-    }
-    return hasAscOrder && hasDescOrder;
-  }
-
   @Override
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
@@ -748,8 +786,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
-    execute(connection, sql);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -764,8 +804,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String columnType = rdbEngine.getDataTypeForEngine(indexType);
-    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
-    execute(connection, sql);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   @Override
@@ -914,7 +956,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameColumnStatement);
         if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-          renameIndex(connection, namespace, table, oldColumnName, newColumnName);
+          String oldIndexName = getIndexName(namespace, table, oldColumnName);
+          String newIndexName = getIndexName(namespace, table, newColumnName);
+          renameIndexInternal(
+              connection, namespace, table, newColumnName, oldIndexName, newIndexName);
         }
         addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
@@ -923,6 +968,67 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           String.format(
               "Renaming the %s column to %s in the %s table failed",
               oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      assert currentTableMetadata != null;
+      DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
+      rdbEngine.throwIfAlterColumnTypeNotSupported(currentColumnType, newColumnType);
+
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .removeColumn(columnName)
+              .addColumn(columnName, newColumnType)
+              .build();
+      String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
+      String[] alterColumnTypeStatements =
+          rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
+
+      try (Connection connection = dataSource.getConnection()) {
+        for (String alterColumnTypeStatement : alterColumnTypeStatements) {
+          execute(connection, alterColumnTypeStatement);
+        }
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Altering the %s column type to %s in the %s table failed",
+              columnName, newColumnType, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    try {
+      TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+      assert tableMetadata != null;
+      String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameTableStatement);
+        deleteTableMetadata(connection, namespace, oldTableName);
+        for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
+          String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
+          String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
+          renameIndexInternal(
+              connection, namespace, newTableName, indexedColumnName, oldIndexName, newIndexName);
+        }
+        addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s table to %s failed",
+              getFullTableName(namespace, oldTableName), getFullTableName(namespace, newTableName)),
           e);
     }
   }
@@ -984,17 +1090,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, sql);
   }
 
-  private void renameIndex(
+  private void renameIndexInternal(
       Connection connection,
       String schema,
       String table,
-      String oldIndexedColumn,
-      String newIndexedColumn)
+      String column,
+      String oldIndexName,
+      String newIndexName)
       throws SQLException {
-    String oldIndexName = getIndexName(schema, table, oldIndexedColumn);
-    String newIndexName = getIndexName(schema, table, newIndexedColumn);
-    String[] sqls =
-        rdbEngine.renameIndexSqls(schema, table, oldIndexName, newIndexName, newIndexedColumn);
+    String[] sqls = rdbEngine.renameIndexSqls(schema, table, column, oldIndexName, newIndexName);
     for (String sql : sqls) {
       execute(connection, sql);
     }
@@ -1024,45 +1128,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             + columnName
             + "'";
     execute(connection, updateStatement);
-  }
-
-  static void execute(Connection connection, String sql) throws SQLException {
-    execute(connection, sql, null);
-  }
-
-  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
-      throws SQLException {
-    if (Strings.isNullOrEmpty(sql)) {
-      return;
-    }
-    try (Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
-      throwSqlWarningIfNeeded(handler, stmt);
-    }
-  }
-
-  private static void throwSqlWarningIfNeeded(SqlWarningHandler handler, Statement stmt)
-      throws SQLException {
-    if (handler == null) {
-      return;
-    }
-    SQLWarning warning = stmt.getWarnings();
-    while (warning != null) {
-      handler.throwSqlWarningIfNeeded(warning);
-      warning = warning.getNextWarning();
-    }
-  }
-
-  static void execute(Connection connection, String[] sqls) throws SQLException {
-    execute(connection, sqls, null);
-  }
-
-  static void execute(
-      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
-      throws SQLException {
-    for (String sql : sqls) {
-      execute(connection, sql, warningHandler);
-    }
   }
 
   private String enclose(String name) {

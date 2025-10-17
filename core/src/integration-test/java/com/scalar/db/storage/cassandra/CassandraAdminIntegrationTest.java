@@ -75,4 +75,33 @@ public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegr
       admin.dropTable(getNamespace1(), getTable4(), true);
     }
   }
+
+  @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
 }

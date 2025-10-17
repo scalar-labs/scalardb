@@ -83,7 +83,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isOrderingOnBlobColumnSupported() {
-    return !( JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
   }
 
   @Override

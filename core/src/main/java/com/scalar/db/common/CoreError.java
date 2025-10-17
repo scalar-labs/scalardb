@@ -736,33 +736,93 @@ public enum CoreError implements ScalarDbError {
       "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
       "",
       ""),
-  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
+  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
       "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
       "",
       ""),
   JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0228",
+      "0229",
       "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in Cassandra", "", ""),
+  COSMOS_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
+  DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
+  ALTER_PRIMARY_OR_INDEX_KEY_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0233",
+      "Altering primary key or index key column types is not supported. Table: %s; Column: %s",
+      "",
+      ""),
+  INVALID_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0234",
+      "Invalid column type conversion from %s to %s. Column: %s",
+      "",
+      ""),
+  CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0235",
+      "Cassandra does not support the altering column type feature",
+      "",
+      ""),
+  COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0236",
+      "Cosmos DB does not support the altering column type feature",
+      "",
+      ""),
+  DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0237",
+      "DynamoDB does not support the altering column type feature",
+      "",
+      ""),
+  JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0238",
+      "SQLite does not support the altering column type feature",
+      "",
+      ""),
+  JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0239",
+      "Oracle does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0240",
+      "Db2 does not support column type conversion from %s to %s",
       "",
       ""),
   JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0229",
+      "0241",
       "With Oracle, using a BLOB column as partition key, clustering key or secondary index is not supported.",
       "",
       ""),
   JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0230",
+      "0242",
       "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
       "",
       ""),
   JDBC_ORACLE_CROSS_PARTITION_SCAN_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0231",
+      "0243",
       "With Oracle, setting a condition on a BLOB column when using a cross partition scan operation is not supported. Condition: %s",
       "",
       ""),
@@ -1028,10 +1088,10 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
-  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED(
       Category.INTERNAL_ERROR,
       "0046",
-      "Handling the before-preparation snapshot hook failed. Details: %s",
+      "Handling the before-preparation hook failed. Details: %s",
       "",
       ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
@@ -1058,6 +1118,18 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0060",
       "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
+  RENAMING_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
+      "",
+      ""),
+  ALTERING_COLUMN_TYPE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0062",
+      "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
 

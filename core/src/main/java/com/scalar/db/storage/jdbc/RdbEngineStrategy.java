@@ -123,7 +123,9 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
-  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  String renameTableSql(String namespace, String oldTableName, String newTableName);
+
+  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
 
@@ -141,11 +143,7 @@ public interface RdbEngineStrategy {
   String dropIndexSql(String schema, String table, String indexName);
 
   String[] renameIndexSqls(
-      String schema,
-      String table,
-      String oldIndexName,
-      String newIndexName,
-      String newIndexedColumn);
+      String schema, String table, String column, String oldIndexName, String newIndexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -222,8 +220,8 @@ public interface RdbEngineStrategy {
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
   }
 
-  default void bindBlobColumnToPreparedStatement(PreparedStatement preparedStatement, int index, byte[] bytes)
-      throws SQLException {
+  default void bindBlobColumnToPreparedStatement(
+      PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
     preparedStatement.setBytes(index, bytes);
   }
 
@@ -287,6 +285,15 @@ public interface RdbEngineStrategy {
    * @throws UnsupportedOperationException if renaming the column is not supported
    */
   default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
+
+  /**
+   * Throws an exception if altering the column type is not supported in the underlying database.
+   *
+   * @param from the source data type
+   * @param to the target data type
+   * @throws UnsupportedOperationException if altering the column type is not supported
+   */
+  default void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {}
 
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {

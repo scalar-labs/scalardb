@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -123,16 +122,6 @@ public class Snapshot {
     this.scannerSet = scannerSet;
   }
 
-  @Nonnull
-  public String getId() {
-    return id;
-  }
-
-  @Nonnull
-  public Isolation getIsolation() {
-    return isolation;
-  }
-
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
   // is a concurrent map
   public void putIntoReadSet(Key key, Optional<TransactionResult> result) {
@@ -199,16 +188,24 @@ public class Snapshot {
     scannerSet.add(new ScannerInfo(scan, results));
   }
 
-  public List<Put> getPutsInWriteSet() {
-    return new ArrayList<>(writeSet.values());
+  public Collection<Map.Entry<Key, Put>> getWriteSet() {
+    return new ArrayList<>(writeSet.entrySet());
   }
 
-  public List<Delete> getDeletesInDeleteSet() {
-    return new ArrayList<>(deleteSet.values());
+  public Collection<Map.Entry<Key, Delete>> getDeleteSet() {
+    return new ArrayList<>(deleteSet.entrySet());
   }
 
-  public ReadWriteSets getReadWriteSets() {
-    return new ReadWriteSets(id, readSet, writeSet.entrySet(), deleteSet.entrySet());
+  public Collection<Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>>> getScanSet() {
+    return new ArrayList<>(scanSet.entrySet());
+  }
+
+  public Collection<ScannerInfo> getScannerSet() {
+    return new ArrayList<>(scannerSet);
+  }
+
+  public Collection<Map.Entry<Get, Optional<TransactionResult>>> getGetSet() {
+    return new ArrayList<>(getSet.entrySet());
   }
 
   public boolean containsKeyInReadSet(Key key) {
@@ -250,7 +247,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan) {
+  public Optional<LinkedHashMap<Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -526,7 +523,7 @@ public class Snapshot {
   @VisibleForTesting
   void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (!isSerializable()) {
+    if (isolation != Isolation.SERIALIZABLE) {
       return;
     }
 
@@ -561,7 +558,7 @@ public class Snapshot {
       }
     }
 
-    parallelExecutor.validateRecords(tasks, getId());
+    parallelExecutor.validateRecords(tasks, id);
   }
 
   /**
@@ -713,7 +710,7 @@ public class Snapshot {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
         }
       }
     }
@@ -786,18 +783,6 @@ public class Snapshot {
   private void throwExceptionDueToAntiDependency() throws ValidationConflictException {
     throw new ValidationConflictException(
         CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
-  }
-
-  private boolean isSerializable() {
-    return isolation == Isolation.SERIALIZABLE;
-  }
-
-  public boolean isSnapshotReadRequired() {
-    return isolation != Isolation.READ_COMMITTED;
-  }
-
-  public boolean isValidationRequired() {
-    return isSerializable();
   }
 
   @Immutable
@@ -897,40 +882,6 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
-    }
-  }
-
-  public static class ReadWriteSets {
-    public final String transactionId;
-    public final Map<Key, Optional<TransactionResult>> readSetMap;
-    public final List<Entry<Key, Put>> writeSet;
-    public final List<Entry<Key, Delete>> deleteSet;
-
-    public ReadWriteSets(
-        String transactionId,
-        Map<Key, Optional<TransactionResult>> readSetMap,
-        Collection<Entry<Key, Put>> writeSet,
-        Collection<Entry<Key, Delete>> deleteSet) {
-      this.transactionId = transactionId;
-      this.readSetMap = new HashMap<>(readSetMap);
-      this.writeSet = new ArrayList<>(writeSet);
-      this.deleteSet = new ArrayList<>(deleteSet);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof ReadWriteSets)) return false;
-      ReadWriteSets that = (ReadWriteSets) o;
-      return Objects.equals(transactionId, that.transactionId)
-          && Objects.equals(readSetMap, that.readSetMap)
-          && Objects.equals(writeSet, that.writeSet)
-          && Objects.equals(deleteSet, that.deleteSet);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
     }
   }
 

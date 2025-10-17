@@ -1452,6 +1452,21 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType) {
     throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());

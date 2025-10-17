@@ -278,6 +278,36 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+    if (tableMetadata.getPartitionKeyNames().contains(columnName)
+        || tableMetadata.getClusteringKeyNames().contains(columnName)) {
+      admin.alterColumnType(namespace, table, columnName, newColumnType);
+    } else {
+      String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
+
+      admin.alterColumnType(namespace, table, columnName, newColumnType);
+      admin.alterColumnType(namespace, table, beforeColumnName, newColumnType);
+    }
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    checkNamespace(namespace);
+
+    admin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return admin.getNamespaceNames().stream()
         .filter(namespace -> !namespace.equals(coordinatorNamespace))

@@ -123,6 +123,19 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
   }
 
   @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    distributedStorageAdmin.alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    distributedStorageAdmin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     return distributedStorageAdmin.getNamespaceNames();
   }

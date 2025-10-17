@@ -258,6 +258,35 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
+  public void alterColumnType_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String columnName = "col";
+    DataType columnType = DataType.BIGINT;
+
+    // Act
+    admin.alterColumnType(namespace, table, columnName, columnType);
+
+    // Assert
+    verify(jdbcAdmin).alterColumnType(namespace, table, columnName, columnType);
+  }
+
+  @Test
+  public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String tableName1 = "tbl1";
+    String tableName2 = "tbl2";
+
+    // Act
+    admin.renameTable(namespace, tableName1, tableName2);
+
+    // Assert
+    verify(jdbcAdmin).renameTable(namespace, tableName1, tableName2);
+  }
+
+  @Test
   public void importTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
     // Arrange
     String namespace = "ns";

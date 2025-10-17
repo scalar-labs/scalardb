@@ -17,10 +17,8 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.ByteArrayInputStream;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -132,7 +130,8 @@ public class PreparedStatementBinder implements ColumnVisitor {
       if (column.hasNullValue()) {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
-        rdbEngine.bindBlobColumnToPreparedStatement(preparedStatement, index++, column.getBlobValueAsBytes());
+        rdbEngine.bindBlobColumnToPreparedStatement(
+            preparedStatement, index++, column.getBlobValueAsBytes());
       }
     } catch (SQLException e) {
       sqlException = e;

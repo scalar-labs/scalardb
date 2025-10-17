@@ -142,6 +142,9 @@ public class MultiStorageIntegrationTest {
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + TEST_NAME);
 
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     multiStorage = new MultiStorage(new DatabaseConfig(properties));
   }
 

@@ -1,20 +1,41 @@
 package com.scalar.db.transaction.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.InsertBuilder;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
 import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.AdminTestUtils;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -111,8 +132,30 @@ public class JdbcTransactionAdminIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isOracle() {
+    return JdbcEnv.isOracle();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isDb2() {
     return JdbcEnv.isDb2();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isSqlite() {
+    return JdbcEnv.isSqlite();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isColumnTypeConversionToTextNotFullySupported() {
+    return JdbcTestUtils.isDb2(rdbEngine)
+        || JdbcTestUtils.isOracle(rdbEngine)
+        || JdbcTestUtils.isSqlite(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isWideningColumnTypeConversionNotFullySupported() {
+    return JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isSqlite(rdbEngine);
   }
 
   @Test
@@ -161,8 +204,319 @@ public class JdbcTransactionAdminIntegrationTest
     }
   }
 
+  @Test
+  @Override
+  @DisabledIf("isColumnTypeConversionToTextNotFullySupported")
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
+          throws ExecutionException, IOException, TransactionException {
+    super
+        .alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly();
+  }
+
+  @Test
+  @EnabledIf("isOracle")
+  public void
+      alterColumnType_Oracle_AlterColumnTypeFromEachExistingDataTypeToText_ShouldThrowUnsupportedOperationException()
+          throws ExecutionException, TransactionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addColumn("c4", DataType.BIGINT)
+              .addColumn("c5", DataType.FLOAT)
+              .addColumn("c6", DataType.DOUBLE)
+              .addColumn("c7", DataType.TEXT)
+              .addColumn("c8", DataType.BLOB)
+              .addColumn("c9", DataType.DATE)
+              .addColumn("c10", DataType.TIME)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn("c11", DataType.TIMESTAMP)
+            .addColumn("c12", DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+      InsertBuilder.Buildable insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .clusteringKey(Key.ofInt("c2", 2))
+              .intValue("c3", 1)
+              .bigIntValue("c4", 2L)
+              .floatValue("c5", 3.0f)
+              .doubleValue("c6", 4.0d)
+              .textValue("c7", "5")
+              .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")));
+      if (isTimestampTypeSupported()) {
+        insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
+        insert.timestampTZValue("c12", Instant.now());
+      }
+      transactionalInsert(insert.build());
+
+      // Act Assert
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c4", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c5", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c6", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c7", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c8", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c9", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c10", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      if (isTimestampTypeSupported()) {
+        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
+            .isInstanceOf(UnsupportedOperationException.class);
+        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+            .isInstanceOf(UnsupportedOperationException.class);
+      }
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  @EnabledIf("isDb2")
+  public void
+      alterColumnType_Db2_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
+          throws ExecutionException, TransactionException {
+    try (DistributedTransactionManager transactionManager =
+        transactionFactory.getTransactionManager()) {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addColumn("c4", DataType.BIGINT)
+              .addColumn("c5", DataType.FLOAT)
+              .addColumn("c6", DataType.DOUBLE)
+              .addColumn("c7", DataType.TEXT)
+              .addColumn("c8", DataType.BLOB)
+              .addColumn("c9", DataType.DATE)
+              .addColumn("c10", DataType.TIME)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        currentTableMetadataBuilder
+            .addColumn("c11", DataType.TIMESTAMP)
+            .addColumn("c12", DataType.TIMESTAMPTZ);
+      }
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+      InsertBuilder.Buildable insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .clusteringKey(Key.ofInt("c2", 2))
+              .intValue("c3", 1)
+              .bigIntValue("c4", 2L)
+              .floatValue("c5", 3.0f)
+              .doubleValue("c6", 4.0d)
+              .textValue("c7", "5")
+              .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")));
+      if (isTimestampTypeSupported()) {
+        insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
+        insert.timestampTZValue("c12", Instant.now());
+      }
+      transactionalInsert(insert.build());
+
+      // Act Assert
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c4", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c5", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c6", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c7", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c8", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c9", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c10", DataType.TEXT))
+          .doesNotThrowAnyException();
+      if (isTimestampTypeSupported()) {
+        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
+            .doesNotThrowAnyException();
+        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+            .doesNotThrowAnyException();
+      }
+
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addColumn("c4", DataType.TEXT)
+              .addColumn("c5", DataType.TEXT)
+              .addColumn("c6", DataType.TEXT)
+              .addColumn("c7", DataType.TEXT)
+              .addColumn("c8", DataType.BLOB)
+              .addColumn("c9", DataType.TEXT)
+              .addColumn("c10", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      if (isTimestampTypeSupported()) {
+        expectedTableMetadataBuilder
+            .addColumn("c11", DataType.TEXT)
+            .addColumn("c12", DataType.TEXT);
+      }
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isWideningColumnTypeConversionNotFullySupported")
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
+      throws ExecutionException, IOException, TransactionException {
+    super.alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly();
+  }
+
+  @Test
+  @EnabledIf("isOracle")
+  public void alterColumnType_Oracle_WideningConversion_ShouldAlterColumnTypesCorrectly()
+      throws ExecutionException, TransactionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addColumn("c4", DataType.FLOAT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      int expectedColumn3Value = 1;
+      float expectedColumn4Value = 4.0f;
+      InsertBuilder.Buildable insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .clusteringKey(Key.ofInt("c2", 2))
+              .intValue("c3", expectedColumn3Value)
+              .floatValue("c4", expectedColumn4Value);
+      transactionalInsert(insert.build());
+
+      // Act
+      admin.alterColumnType(namespace1, TABLE4, "c3", DataType.BIGINT);
+      Throwable exception =
+          catchThrowable(() -> admin.alterColumnType(namespace1, TABLE4, "c4", DataType.DOUBLE));
+
+      // Wait for cache expiry
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+      // Assert
+      assertThat(exception).isInstanceOf(UnsupportedOperationException.class);
+      TableMetadata.Builder expectedTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.BIGINT)
+              .addColumn("c4", DataType.FLOAT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+
+      Scan scan =
+          Scan.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .build();
+      List<Result> results = transactionalScan(scan);
+      assertThat(results).hasSize(1);
+      Result result = results.get(0);
+      assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  @EnabledIf("isSqlite")
+  public void alterColumnType_Sqlite_AlterColumnType_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+
+      // Act Assert
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
     return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+  }
+
+  @Override
+  protected void transactionalInsert(Insert insert) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      transaction.insert(insert);
+      transaction.commit();
+    }
+  }
+
+  @Override
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      List<Result> results = transaction.scan(scan);
+      transaction.commit();
+      return results;
+    }
   }
 }
