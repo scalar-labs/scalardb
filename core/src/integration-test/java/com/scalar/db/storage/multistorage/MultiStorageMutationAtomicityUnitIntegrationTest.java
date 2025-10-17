@@ -49,6 +49,9 @@ public class MultiStorageMutationAtomicityUnitIntegrationTest
     // The default storage is jdbc
     properties.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "jdbc");
 
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return properties;
   }
 
