@@ -31,6 +31,10 @@ public final class CassandraEnv {
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     props.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+
+    // Metadata cache expiration time
+    props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return props;
   }
 
