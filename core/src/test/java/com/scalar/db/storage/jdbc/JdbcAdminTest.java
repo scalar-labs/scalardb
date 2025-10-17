@@ -3426,6 +3426,18 @@ public class JdbcAdminTest {
         "ALTER TABLE `ns`.`table` RENAME TO `ns`.`table_new`",
         "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
         "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
+        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`",
+        "CREATE TABLE IF NOT EXISTS `"
+            + METADATA_SCHEMA
+            + "`.`metadata`("
+            + "`full_table_name` VARCHAR(128),"
+            + "`column_name` VARCHAR(128),"
+            + "`data_type` VARCHAR(20) NOT NULL,"
+            + "`key_type` VARCHAR(20),"
+            + "`clustering_order` VARCHAR(10),"
+            + "`indexed` BOOLEAN NOT NULL,"
+            + "`ordinal_position` INTEGER NOT NULL,"
+            + "PRIMARY KEY (`full_table_name`, `column_name`))",
         "INSERT INTO `"
             + METADATA_SCHEMA
             + "`.`metadata` VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3446,6 +3458,11 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
+        "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
+        "CREATE TABLE \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3467,6 +3484,18 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\"("
+            + "\"full_table_name\" VARCHAR(128),"
+            + "\"column_name\" VARCHAR(128),"
+            + "\"data_type\" VARCHAR(20) NOT NULL,"
+            + "\"key_type\" VARCHAR(20),"
+            + "\"clustering_order\" VARCHAR(10),"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3486,6 +3515,18 @@ public class JdbcAdminTest {
         "EXEC sp_rename '[ns].[table]', 'table_new'",
         "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
         "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
+        "CREATE SCHEMA [" + METADATA_SCHEMA + "]",
+        "CREATE TABLE ["
+            + METADATA_SCHEMA
+            + "].[metadata]("
+            + "[full_table_name] VARCHAR(128),"
+            + "[column_name] VARCHAR(128),"
+            + "[data_type] VARCHAR(20) NOT NULL,"
+            + "[key_type] VARCHAR(20),"
+            + "[clustering_order] VARCHAR(10),"
+            + "[indexed] BIT NOT NULL,"
+            + "[ordinal_position] INTEGER NOT NULL,"
+            + "PRIMARY KEY ([full_table_name], [column_name]))",
         "INSERT INTO ["
             + METADATA_SCHEMA
             + "].[metadata] VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3504,6 +3545,17 @@ public class JdbcAdminTest {
         "ALTER TABLE \"ns$table\" RENAME TO \"ns$table_new\"",
         "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "$metadata\"("
+            + "\"full_table_name\" TEXT,"
+            + "\"column_name\" TEXT,"
+            + "\"data_type\" TEXT NOT NULL,"
+            + "\"key_type\" TEXT,"
+            + "\"clustering_order\" TEXT,"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "$metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,FALSE,1)",
@@ -3524,6 +3576,18 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "CREATE SCHEMA \"" + METADATA_SCHEMA + "\"",
+        "CREATE TABLE IF NOT EXISTS \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\"("
+            + "\"full_table_name\" VARCHAR(128) NOT NULL,"
+            + "\"column_name\" VARCHAR(128) NOT NULL,"
+            + "\"data_type\" VARCHAR(20) NOT NULL,"
+            + "\"key_type\" VARCHAR(20),"
+            + "\"clustering_order\" VARCHAR(10),"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",

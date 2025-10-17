@@ -1022,7 +1022,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           renameIndexInternal(
               connection, namespace, newTableName, indexedColumnName, oldIndexName, newIndexName);
         }
-        addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+        addTableMetadata(connection, namespace, newTableName, tableMetadata, true, false);
       }
     } catch (SQLException e) {
       throw new ExecutionException(
