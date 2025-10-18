@@ -13,6 +13,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -449,6 +450,13 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           return null;
         },
         false);
+  }
+
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations)
+      throws CrudException, UnknownTransactionStatusException {
+    boolean readOnly = operations.stream().allMatch(o -> o instanceof Get || o instanceof Scan);
+    return executeTransaction(t -> t.batch(operations), readOnly);
   }
 
   private <R> R executeTransaction(

@@ -162,25 +162,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
-    for (Mutation m : mutations) {
-      if (m instanceof Put) {
-        put((Put) m);
-      } else if (m instanceof Delete) {
-        delete((Delete) m);
-      } else if (m instanceof Insert) {
-        insert((Insert) m);
-      } else if (m instanceof Upsert) {
-        upsert((Upsert) m);
-      } else {
-        assert m instanceof Update;
-        update((Update) m);
-      }
-    }
-  }
-
-  @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
     if (!context.areAllScannersClosed()) {
       throw new IllegalStateException(CoreError.CONSENSUS_COMMIT_SCANNER_NOT_CLOSED.buildMessage());

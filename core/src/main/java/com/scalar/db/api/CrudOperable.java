@@ -156,6 +156,17 @@ public interface CrudOperable<E extends TransactionException> {
    */
   void mutate(List<? extends Mutation> mutations) throws E;
 
+  /**
+   * Executes multiple operations in a batch through a transaction with the specified list of {@link
+   * Operation} commands and returns a list of {@link BatchResult} that contains results of the
+   * operations. Note that the order of the results corresponds to the order of the operations.
+   *
+   * @param operations a list of {@code Operation} commands
+   * @return a list of {@code BatchResult} that contains results of the operations
+   * @throws E if any of the transaction CRUD operations fails
+   */
+  List<BatchResult> batch(List<? extends Operation> operations) throws E;
+
   /** A scanner abstraction for iterating results. */
   interface Scanner<E extends TransactionException> extends AutoCloseable, Iterable<Result> {
     /**
@@ -182,5 +193,42 @@ public interface CrudOperable<E extends TransactionException> {
      */
     @Override
     void close() throws E;
+  }
+
+  /**
+   * A batch operation result returned by {@link CrudOperable#batch(List)}. Represents the result of
+   * a get operation or a scan operation.
+   */
+  interface BatchResult {
+    /**
+     * Returns the type of the operation.
+     *
+     * @return the operation type
+     */
+    Type getType();
+
+    /**
+     * Returns a result of a get operation.
+     *
+     * @return an {@code Optional} with the returned result
+     */
+    Optional<Result> getGetResult();
+
+    /**
+     * Returns a list of results of a scan operation.
+     *
+     * @return a list of {@link Result}
+     */
+    List<Result> getScanResult();
+
+    enum Type {
+      GET,
+      SCAN,
+      PUT,
+      INSERT,
+      UPSERT,
+      UPDATE,
+      DELETE
+    }
   }
 }
