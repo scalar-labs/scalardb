@@ -1962,7 +1962,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password= -Dscalardb.jdbc.isolation_level=REPEATABLE_READ ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password= ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -2036,7 +2036,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password= -Dscalardb.jdbc.isolation_level=REPEATABLE_READ ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password= ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
@@ -2110,7 +2110,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password= -Dscalardb.jdbc.isolation_level=REPEATABLE_READ ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password= ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
