@@ -146,7 +146,7 @@ public class JdbcDatabaseColumnValueIntegrationTest
     if (isOracle()) {
       // As explained in
       // `com.scalar.db.storage.jdbc.RdbEngineOracle.bindBlobColumnToPreparedStatement()`,
-      // handing a BLOB size bigger than 32,767 bytes requires a workaround so we particularly test
+      // handing a BLOB size bigger than 32,766 bytes requires a workaround so we particularly test
       // values around it.
       args.add(Arguments.of(32_766, "32.766 KB"));
       args.add(Arguments.of(32_767, "32.767 KB"));
