@@ -78,6 +78,19 @@ public class CassandraAdminCaseSensitivityIntegrationTest
   }
 
   @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support altering column types")
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
   @Disabled("Cassandra does not support renaming tables")
   public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
 

@@ -124,7 +124,7 @@ public interface RdbEngineStrategy {
 
   String renameTableSql(String namespace, String oldTableName, String newTableName);
 
-  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
 
@@ -279,6 +279,15 @@ public interface RdbEngineStrategy {
    * @throws UnsupportedOperationException if renaming the column is not supported
    */
   default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
+
+  /**
+   * Throws an exception if altering the column type is not supported in the underlying database.
+   *
+   * @param from the source data type
+   * @param to the target data type
+   * @throws UnsupportedOperationException if altering the column type is not supported
+   */
+  default void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {}
 
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {
