@@ -521,7 +521,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
     //
     // When the driver selects the STREAM mode, the error
     // ORA-03137 occurs. So, we work around the issue by making sure to use the driver in a way so
-    // that it should never selects the STREAM mode.
+    // that it should never select the STREAM mode.
     // For more details about the modes, see the following documentation:
     // https://docs.oracle.com/en/database/oracle/oracle-database/23/jjdbc/LOBs-and-BFiles.html#GUID-8FD40D53-8D64-4187-9F6F-FF78242188AD
     if (bytes.length <= 32766) {
