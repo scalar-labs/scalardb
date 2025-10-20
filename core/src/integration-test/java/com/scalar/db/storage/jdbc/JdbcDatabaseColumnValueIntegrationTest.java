@@ -97,7 +97,12 @@ public class JdbcDatabaseColumnValueIntegrationTest
     }
     return super.getColumnWithMaxValue(columnName, dataType);
   }
-  // TODO Test this for all storages
+  // TODO: Expand this test to cover all supported storages, not just Oracle/DB2.
+  // This test verifies that large BLOB data can be inserted and retrieved correctly.
+  // Currently, it is limited to Oracle and DB2 due to known differences in BLOB handling,
+  // potential resource constraints, or lack of support for large BLOBs in other engines.
+  // Before enabling for other storages, investigate their BLOB size limits and behavior,
+  // and ensure the test does not cause failures or excessive resource usage.
   @EnabledIf("isDb2OrOracle")
   @ParameterizedTest()
   @MethodSource("provideBlobSizes")
