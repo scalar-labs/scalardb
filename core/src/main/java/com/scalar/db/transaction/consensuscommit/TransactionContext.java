@@ -29,7 +29,7 @@ public class TransactionContext {
   // A list of recovery results performed in the transaction
   public final List<RecoveryExecutor.Result> recoveryResults = new ArrayList<>();
 
-  TransactionContext(
+  public TransactionContext(
       String transactionId,
       Snapshot snapshot,
       Isolation isolation,
