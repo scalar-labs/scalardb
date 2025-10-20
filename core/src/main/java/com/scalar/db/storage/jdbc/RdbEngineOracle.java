@@ -511,7 +511,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
     // workaround. This has been confirmed to be a limitation by AWS support.
     // Below is a detailed explanation of the workaround.
     //
-    // Depending on the byte array size, the JDBC driver automatically choose one the following mode
+    // Depending on the byte array size, the JDBC driver automatically chooses one the following mode
     // to transfer the BLOB data to the server:
     // - DIRECT: the most efficient mode. It's used when the byte array length is less than 32767.
     // - STREAM: this mode is less efficient. It's used when the byte array length is greater than
