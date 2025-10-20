@@ -143,6 +143,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
       alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
           throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     testDataList.addAll(createExistingDatabaseWithAllDataTypes());
     for (TestData testData : testDataList) {
       if (testData.isImportableTable()) {
@@ -182,6 +183,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   public void alterColumnType_WideningConversion_ForImportedTable_ShouldAlterProperly()
       throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     testDataList.addAll(createExistingDatabaseWithAllDataTypes());
     for (TestData testData : testDataList) {
       if (testData.isImportableTable()) {

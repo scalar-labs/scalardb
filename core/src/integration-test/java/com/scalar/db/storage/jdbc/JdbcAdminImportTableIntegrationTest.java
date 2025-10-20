@@ -121,6 +121,7 @@ public class JdbcAdminImportTableIntegrationTest
       alterColumnType_SqlServer_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
           throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     testDataList.addAll(createExistingDatabaseWithAllDataTypes());
     for (TestData testData : testDataList) {
       if (testData.isImportableTable()) {
@@ -169,6 +170,7 @@ public class JdbcAdminImportTableIntegrationTest
       alterColumnType_Db2_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
           throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     testDataList.addAll(createExistingDatabaseWithAllDataTypes());
     for (TestData testData : testDataList) {
       if (testData.isImportableTable()) {
@@ -224,6 +226,7 @@ public class JdbcAdminImportTableIntegrationTest
   public void alterColumnType_Oracle_WideningConversion_ForImportedTable_ShouldAlterProperly()
       throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     testDataList.addAll(createExistingDatabaseWithAllDataTypes());
     for (TestData testData : testDataList) {
       if (testData.isImportableTable()) {
