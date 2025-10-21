@@ -33,7 +33,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_admin_import_table";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private final List<TestData> testDataList = new ArrayList<>();
+  protected final List<TestData> testDataList = new ArrayList<>();
   protected DistributedStorageAdmin admin;
   protected DistributedStorage storage;
 
@@ -87,12 +87,20 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
     } catch (Exception e) {
       logger.warn("Failed to close admin", e);
     }
+
+    testDataList.clear();
   }
 
   @AfterAll
   protected void afterAll() throws Exception {}
 
   protected abstract List<TestData> createExistingDatabaseWithAllDataTypes() throws SQLException;
+
+  protected abstract List<String> getIntCompatibleColumnNamesOnExistingDatabase(String table)
+      throws SQLException;
+
+  protected abstract List<String> getFloatCompatibleColumnNamesOnExistingDatabase(String table)
+      throws SQLException;
 
   protected abstract void dropNonImportableTable(String table) throws Exception;
 
@@ -128,6 +136,92 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
     assertThatThrownBy(
             () -> admin.importTable(getNamespace(), "unsupported_db", Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
+          throws Exception {
+    // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
+    testDataList.addAll(createExistingDatabaseWithAllDataTypes());
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        admin.importTable(
+            getNamespace(),
+            testData.getTableName(),
+            Collections.emptyMap(),
+            testData.getOverrideColumnsType());
+      }
+    }
+
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        // Act
+        TableMetadata metadata = testData.getTableMetadata();
+        for (String column : metadata.getColumnNames()) {
+          if (!metadata.getPartitionKeyNames().contains(column)
+              && !metadata.getClusteringKeyNames().contains(column)) {
+            admin.alterColumnType(getNamespace(), testData.getTableName(), column, DataType.TEXT);
+          }
+        }
+
+        // Assert
+        TableMetadata newMetadata = admin.getTableMetadata(getNamespace(), testData.getTableName());
+        assertThat(newMetadata).isNotNull();
+        for (String column : metadata.getColumnNames()) {
+          if (!metadata.getPartitionKeyNames().contains(column)
+              && !metadata.getClusteringKeyNames().contains(column)) {
+            assertThat(newMetadata.getColumnDataType(column)).isEqualTo(DataType.TEXT);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void alterColumnType_WideningConversion_ForImportedTable_ShouldAlterProperly()
+      throws Exception {
+    // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
+    testDataList.addAll(createExistingDatabaseWithAllDataTypes());
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        admin.importTable(
+            getNamespace(),
+            testData.getTableName(),
+            Collections.emptyMap(),
+            testData.getOverrideColumnsType());
+      }
+    }
+
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        // Act
+        for (String intCompatibleColumn :
+            getIntCompatibleColumnNamesOnExistingDatabase(testData.getTableName())) {
+          admin.alterColumnType(
+              getNamespace(), testData.getTableName(), intCompatibleColumn, DataType.BIGINT);
+        }
+        for (String floatCompatibleColumn :
+            getFloatCompatibleColumnNamesOnExistingDatabase(testData.getTableName())) {
+          admin.alterColumnType(
+              getNamespace(), testData.getTableName(), floatCompatibleColumn, DataType.DOUBLE);
+        }
+
+        // Assert
+        TableMetadata metadata = admin.getTableMetadata(getNamespace(), testData.getTableName());
+        assertThat(metadata).isNotNull();
+        for (String intCompatibleColumn :
+            getIntCompatibleColumnNamesOnExistingDatabase(testData.getTableName())) {
+          assertThat(metadata.getColumnDataType(intCompatibleColumn)).isEqualTo(DataType.BIGINT);
+        }
+        for (String floatCompatibleColumn :
+            getFloatCompatibleColumnNamesOnExistingDatabase(testData.getTableName())) {
+          assertThat(metadata.getColumnDataType(floatCompatibleColumn)).isEqualTo(DataType.DOUBLE);
+        }
+      }
+    }
   }
 
   private void importTable_ForImportableTable_ShouldImportProperly(
