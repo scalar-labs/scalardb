@@ -3294,7 +3294,6 @@ public abstract class JdbcAdminTestBase {
         "DELETE FROM `"
             + tableMetadataSchemaName
             + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
-        "SELECT DISTINCT `full_table_name` FROM `" + tableMetadataSchemaName + "`.`metadata`",
         "INSERT INTO `"
             + tableMetadataSchemaName
             + "`.`metadata` VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3314,7 +3313,6 @@ public abstract class JdbcAdminTestBase {
         "DELETE FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "\".\"metadata\"",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3335,7 +3333,6 @@ public abstract class JdbcAdminTestBase {
         "DELETE FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "\".\"metadata\"",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3356,7 +3353,6 @@ public abstract class JdbcAdminTestBase {
         "DELETE FROM ["
             + tableMetadataSchemaName
             + "].[metadata] WHERE [full_table_name] = 'ns.table'",
-        "SELECT DISTINCT [full_table_name] FROM [" + tableMetadataSchemaName + "].[metadata]",
         "INSERT INTO ["
             + tableMetadataSchemaName
             + "].[metadata] VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3376,7 +3372,6 @@ public abstract class JdbcAdminTestBase {
         "DELETE FROM \""
             + tableMetadataSchemaName
             + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "$metadata\"",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "$metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,FALSE,1)",
@@ -3396,7 +3391,6 @@ public abstract class JdbcAdminTestBase {
         "DELETE FROM \""
             + tableMetadataSchemaName
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + tableMetadataSchemaName + "\".\"metadata\"",
         "INSERT INTO \""
             + tableMetadataSchemaName
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",

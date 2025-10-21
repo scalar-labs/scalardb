@@ -309,7 +309,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       dropTableInternal(connection, namespace, table);
-      deleteTableMetadata(connection, namespace, table);
+      deleteTableMetadata(connection, namespace, table, true);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Dropping the table failed: " + getFullTableName(namespace, table), e);
@@ -322,11 +322,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, dropTableStatement);
   }
 
-  private void deleteTableMetadata(Connection connection, String namespace, String table)
+  private void deleteTableMetadata(
+      Connection connection, String namespace, String table, boolean deleteMetadataTableIfEmpty)
       throws SQLException {
     try {
       execute(connection, getDeleteTableMetadataStatement(namespace, table));
-      deleteMetadataSchemaAndTableIfEmpty(connection);
+      if (deleteMetadataTableIfEmpty) {
+        deleteMetadataSchemaAndTableIfEmpty(connection);
+      }
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;
@@ -906,7 +909,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
       try (Connection connection = dataSource.getConnection()) {
         execute(connection, renameTableStatement);
-        deleteTableMetadata(connection, namespace, oldTableName);
+        deleteTableMetadata(connection, namespace, oldTableName, false);
         for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
           String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
           String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);

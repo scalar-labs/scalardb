@@ -118,4 +118,8 @@ public class ConsensusCommitAdminIntegrationTestWithCassandra
   @Override
   @Disabled("Cassandra does not support renaming tables")
   public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
+
+  @Override
+  @Disabled("Cassandra does not support renaming tables")
+  public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
 }
