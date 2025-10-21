@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminIntegrationTestBase {
@@ -131,14 +133,12 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
     }
   }
 
-  @Test
+  @ParameterizedTest
   @Override
   @DisabledIf("isColumnTypeConversionToTextNotFullySupported")
-  public void
-      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
-          throws ExecutionException, IOException, TransactionException {
-    super
-        .alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly();
+  @EnumSource(DataType.class)
+  public void alterColumnType_changeType(DataType type) throws Exception {
+    super.alterColumnType_changeType(type);
   }
 
   @Test

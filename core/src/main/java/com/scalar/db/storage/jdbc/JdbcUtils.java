@@ -36,8 +36,6 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
-      // if transactional, the default isolation level is SERIALIZABLE
-      dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
 
     config

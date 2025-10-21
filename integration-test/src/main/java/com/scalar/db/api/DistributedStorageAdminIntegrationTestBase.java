@@ -7,17 +7,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,12 +26,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1115,92 +1118,47 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     }
   }
 
-  @Test
-  public void
-      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
-          throws ExecutionException, IOException {
+  @ParameterizedTest
+  @EnumSource(value = DataType.class)
+  public void alterColumnType_changeType(DataType type) throws Exception {
+    // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
+    // executing DMLs
+    String table = "table_for_alter_" + type;
+
     try (DistributedStorage storage = storageFactory.getStorage()) {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
           TableMetadata.newBuilder()
-              .addColumn(getColumnName1(), DataType.INT)
-              .addColumn(getColumnName2(), DataType.INT)
-              .addColumn(getColumnName3(), DataType.INT)
-              .addColumn(getColumnName4(), DataType.BIGINT)
-              .addColumn(getColumnName5(), DataType.FLOAT)
-              .addColumn(getColumnName6(), DataType.DOUBLE)
-              .addColumn(getColumnName7(), DataType.TEXT)
-              .addColumn(getColumnName8(), DataType.BLOB)
-              .addColumn(getColumnName9(), DataType.DATE)
-              .addColumn(getColumnName10(), DataType.TIME)
-              .addPartitionKey(getColumnName1())
-              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TIMESTAMP)
-            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
-      }
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", type)
+              .addPartitionKey("c1");
+
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
-      admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
+      admin.createTable(namespace1, table, currentTableMetadata, options);
+      Column col = TestUtils.getColumnWithRandomValue(new Random(), "c2", type);
       PutBuilder.Buildable put =
           Put.newBuilder()
               .namespace(namespace1)
-              .table(getTable4())
-              .partitionKey(Key.ofInt(getColumnName1(), 1))
-              .clusteringKey(Key.ofInt(getColumnName2(), 2))
-              .intValue(getColumnName3(), 1)
-              .bigIntValue(getColumnName4(), 2L)
-              .floatValue(getColumnName5(), 3.0f)
-              .doubleValue(getColumnName6(), 4.0d)
-              .textValue(getColumnName7(), "5")
-              .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
-              .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")));
-      if (isTimestampTypeSupported()) {
-        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
-        put.timestampTZValue(getColumnName12(), Instant.now());
-      }
+              .table(table)
+              .partitionKey(Key.ofInt("c1", 1))
+              .value(col);
       storage.put(put.build());
 
       // Act
-      admin.alterColumnType(namespace1, getTable4(), getColumnName3(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName4(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName5(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName6(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName7(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName8(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName9(), DataType.TEXT);
-      admin.alterColumnType(namespace1, getTable4(), getColumnName10(), DataType.TEXT);
-      if (isTimestampTypeSupported()) {
-        admin.alterColumnType(namespace1, getTable4(), getColumnName11(), DataType.TEXT);
-        admin.alterColumnType(namespace1, getTable4(), getColumnName12(), DataType.TEXT);
-      }
+      admin.alterColumnType(namespace1, table, "c2", DataType.TEXT);
 
       // Assert
       TableMetadata.Builder expectedTableMetadataBuilder =
           TableMetadata.newBuilder()
-              .addColumn(getColumnName1(), DataType.INT)
-              .addColumn(getColumnName2(), DataType.INT)
-              .addColumn(getColumnName3(), DataType.TEXT)
-              .addColumn(getColumnName4(), DataType.TEXT)
-              .addColumn(getColumnName5(), DataType.TEXT)
-              .addColumn(getColumnName6(), DataType.TEXT)
-              .addColumn(getColumnName7(), DataType.TEXT)
-              .addColumn(getColumnName8(), DataType.TEXT)
-              .addColumn(getColumnName9(), DataType.TEXT)
-              .addColumn(getColumnName10(), DataType.TEXT)
-              .addPartitionKey(getColumnName1())
-              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TEXT)
-            .addColumn(getColumnName12(), DataType.TEXT);
-      }
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.TEXT)
+              .addPartitionKey("c1");
+
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
-      assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
+      assertThat(admin.getTableMetadata(namespace1, table)).isEqualTo(expectedTableMetadata);
     } finally {
-      admin.dropTable(namespace1, getTable4(), true);
+      admin.dropTable(namespace1, table, true);
     }
   }
 

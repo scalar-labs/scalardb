@@ -31,6 +31,8 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 public class JdbcAdminCaseSensitivityIntegrationTest
     extends DistributedStorageAdminCaseSensitivityIntegrationTestBase {
@@ -138,14 +140,12 @@ public class JdbcAdminCaseSensitivityIntegrationTest
     }
   }
 
-  @Test
+  @ParameterizedTest
   @Override
   @DisabledIf("isColumnTypeConversionToTextNotFullySupported")
-  public void
-      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
-          throws ExecutionException, IOException {
-    super
-        .alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly();
+  @EnumSource(DataType.class)
+  public void alterColumnType_changeType(DataType type) throws Exception {
+    super.alterColumnType_changeType(type);
   }
 
   @Test

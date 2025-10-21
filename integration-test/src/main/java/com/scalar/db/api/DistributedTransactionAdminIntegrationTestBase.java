@@ -8,17 +8,17 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,12 +27,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1177,13 +1180,12 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     }
   }
 
-  @Test
-  public void
-      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly()
-          throws ExecutionException, IOException, TransactionException {
+  @ParameterizedTest
+  @EnumSource(value = DataType.class)
+  public void alterColumnType_changeType(DataType type) throws Exception {
     // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
     // executing DMLs
-    String table = "table_for_alter_1";
+    String table = "table_for_alter_" + type;
 
     try {
       // Arrange
@@ -1191,78 +1193,30 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       TableMetadata.Builder currentTableMetadataBuilder =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
-              .addColumn("c2", DataType.INT)
-              .addColumn("c3", DataType.INT)
-              .addColumn("c4", DataType.BIGINT)
-              .addColumn("c5", DataType.FLOAT)
-              .addColumn("c6", DataType.DOUBLE)
-              .addColumn("c7", DataType.TEXT)
-              .addColumn("c8", DataType.BLOB)
-              .addColumn("c9", DataType.DATE)
-              .addColumn("c10", DataType.TIME)
-              .addPartitionKey("c1")
-              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn("c11", DataType.TIMESTAMP)
-            .addColumn("c12", DataType.TIMESTAMPTZ);
-      }
+              .addColumn("c2", type)
+              .addPartitionKey("c1");
+
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, table, currentTableMetadata, options);
+      Column col = TestUtils.getColumnWithRandomValue(new Random(), "c2", type);
       InsertBuilder.Buildable insert =
           Insert.newBuilder()
               .namespace(namespace1)
               .table(table)
               .partitionKey(Key.ofInt("c1", 1))
-              .clusteringKey(Key.ofInt("c2", 2))
-              .intValue("c3", 1)
-              .bigIntValue("c4", 2L)
-              .floatValue("c5", 3.0f)
-              .doubleValue("c6", 4.0d)
-              .textValue("c7", "5")
-              .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
-              .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")));
-      if (isTimestampTypeSupported()) {
-        insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
-        insert.timestampTZValue("c12", Instant.now());
-      }
+              .value(col);
       transactionalInsert(insert.build());
 
       // Act
-      admin.alterColumnType(namespace1, table, "c3", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c4", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c5", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c6", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c7", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c8", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c9", DataType.TEXT);
-      admin.alterColumnType(namespace1, table, "c10", DataType.TEXT);
-      if (isTimestampTypeSupported()) {
-        admin.alterColumnType(namespace1, table, "c11", DataType.TEXT);
-        admin.alterColumnType(namespace1, table, "c12", DataType.TEXT);
-      }
+      admin.alterColumnType(namespace1, table, "c2", DataType.TEXT);
 
       // Assert
       TableMetadata.Builder expectedTableMetadataBuilder =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
-              .addColumn("c2", DataType.INT)
-              .addColumn("c3", DataType.TEXT)
-              .addColumn("c4", DataType.TEXT)
-              .addColumn("c5", DataType.TEXT)
-              .addColumn("c6", DataType.TEXT)
-              .addColumn("c7", DataType.TEXT)
-              .addColumn("c8", DataType.TEXT)
-              .addColumn("c9", DataType.TEXT)
-              .addColumn("c10", DataType.TEXT)
-              .addPartitionKey("c1")
-              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .addColumn("c11", DataType.TEXT)
-            .addColumn("c12", DataType.TEXT);
-      }
+              .addColumn("c2", DataType.TEXT)
+              .addPartitionKey("c1");
+
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, table)).isEqualTo(expectedTableMetadata);
     } finally {
