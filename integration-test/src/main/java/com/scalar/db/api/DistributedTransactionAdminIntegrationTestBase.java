@@ -1486,6 +1486,36 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly()
+      throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      admin.createNamespace(namespace3);
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace3, TABLE4, tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace3, TABLE4, newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace3, TABLE4)).isFalse();
+      assertThat(admin.tableExists(namespace3, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace3, newTableName)).isEqualTo(tableMetadata);
+    } finally {
+      admin.dropTable(namespace3, TABLE4, true);
+      admin.dropTable(namespace3, newTableName, true);
+      admin.dropNamespace(namespace3, true);
+    }
+  }
+
+  @Test
   public void createCoordinatorTables_ShouldCreateCoordinatorTablesCorrectly()
       throws ExecutionException {
     // Arrange

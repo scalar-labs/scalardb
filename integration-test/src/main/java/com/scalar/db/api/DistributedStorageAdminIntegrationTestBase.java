@@ -1546,6 +1546,36 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly()
+      throws ExecutionException {
+    String newTableName = "new" + getTable4();
+    try {
+      // Arrange
+      admin.createNamespace(namespace3);
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .build();
+      admin.createTable(namespace3, getTable4(), tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace3, getTable4(), newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace3, getTable4())).isFalse();
+      assertThat(admin.tableExists(namespace3, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace3, newTableName)).isEqualTo(tableMetadata);
+    } finally {
+      admin.dropTable(namespace3, getTable4(), true);
+      admin.dropTable(namespace3, newTableName, true);
+      admin.dropNamespace(namespace3, true);
+    }
+  }
+
+  @Test
   public void alterColumnType_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
