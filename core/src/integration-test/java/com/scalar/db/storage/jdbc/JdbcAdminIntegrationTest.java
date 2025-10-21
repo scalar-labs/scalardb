@@ -300,7 +300,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
               .timestampTZValue(getColumnName11(), Instant.now());
       if (isTimestampTypeSupported()) {
-        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
+        put.timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC));
       }
       storage.put(put.build());
       storage.close();
