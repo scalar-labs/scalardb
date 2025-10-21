@@ -183,7 +183,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
               .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c12", Instant.now());
+              .timestampTZValue("c11", Instant.now());
       if (isTimestampTypeSupported()) {
         insert.timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
       }
