@@ -1,4 +1,4 @@
-package com.scalar.db.storage.objectstorage;
+package com.scalar.db.storage.objectstorage.blob;
 
 import com.azure.core.http.HttpHeaderName;
 import com.azure.core.util.BinaryData;
@@ -12,7 +12,12 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
+import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,29 +39,38 @@ public class BlobWrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public ObjectStorageWrapperResponse get(String key) throws ObjectStorageWrapperException {
+  public Optional<ObjectStorageWrapperResponse> get(String key)
+      throws ObjectStorageWrapperException {
     try {
       BlobClient blobClient = client.getBlobClient(key);
       BlobDownloadContentResponse response =
           blobClient.downloadContentWithResponse(null, null, requestTimeoutInSeconds, null);
       String data = response.getValue().toString();
       String eTag = response.getHeaders().getValue(HttpHeaderName.ETAG);
-      return new ObjectStorageWrapperResponse(data, eTag);
+      return Optional.of(new ObjectStorageWrapperResponse(data, eTag));
     } catch (BlobStorageException e) {
       if (e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.NOT_FOUND, e);
+        return Optional.empty();
       }
-      throw e;
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to get the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to get the object with key '%s'", key), e);
     }
   }
 
   @Override
-  public Set<String> getKeys(String prefix) {
-    return client.listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
-        .stream()
-        .map(BlobItem::getName)
-        .collect(Collectors.toSet());
+  public Set<String> getKeys(String prefix) throws ObjectStorageWrapperException {
+    try {
+      return client.listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
+          .stream()
+          .map(BlobItem::getName)
+          .collect(Collectors.toSet());
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to get the object keys with prefix '%s'", prefix), e);
+    }
   }
 
   @Override
@@ -70,10 +84,16 @@ public class BlobWrapper implements ObjectStorageWrapper {
       blobClient.uploadWithResponse(options, requestTimeoutInSeconds, null);
     } catch (BlobStorageException e) {
       if (e.getErrorCode().equals(BlobErrorCode.BLOB_ALREADY_EXISTS)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.ALREADY_EXISTS, e);
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to insert the object with key '%s' due to precondition failure", key),
+            e);
       }
-      throw e;
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to insert the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to insert the object with key '%s'", key), e);
     }
   }
 
@@ -88,15 +108,19 @@ public class BlobWrapper implements ObjectStorageWrapper {
               .setParallelTransferOptions(parallelTransferOptions);
       blobClient.uploadWithResponse(options, requestTimeoutInSeconds, null);
     } catch (BlobStorageException e) {
-      if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.VERSION_MISMATCH, e);
+      if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)
+          || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
+        throw new PreconditionFailedException(
+            String.format(
+                String.format(
+                    "Failed to update the object with key '%s' due to precondition failure", key)),
+            e);
       }
-      if (e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.NOT_FOUND, e);
-      }
-      throw e;
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to update the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to update the object with key '%s'", key), e);
     }
   }
 
@@ -107,10 +131,16 @@ public class BlobWrapper implements ObjectStorageWrapper {
       blobClient.delete();
     } catch (BlobStorageException e) {
       if (e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.NOT_FOUND, e);
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to delete the object with key '%s' due to precondition failure", key),
+            e);
       }
-      throw e;
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
     }
   }
 
@@ -121,23 +151,31 @@ public class BlobWrapper implements ObjectStorageWrapper {
       blobClient.deleteWithResponse(
           null, new BlobRequestConditions().setIfMatch(version), requestTimeoutInSeconds, null);
     } catch (BlobStorageException e) {
-      if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.VERSION_MISMATCH, e);
+      if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)
+          || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to delete the object with key '%s' due to precondition failure", key),
+            e);
       }
-      if (e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
-        throw new ObjectStorageWrapperException(
-            ObjectStorageWrapperException.StatusCode.NOT_FOUND, e);
-      }
-      throw e;
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
     }
   }
 
   @Override
-  public void deleteByPrefix(String prefix) {
-    client
-        .listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
-        .forEach(blobItem -> client.getBlobClient(blobItem.getName()).delete());
+  public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
+    try {
+      client
+          .listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
+          .forEach(blobItem -> client.getBlobClient(blobItem.getName()).delete());
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the objects with prefix '%s'", prefix), e);
+    }
   }
 
   @Override

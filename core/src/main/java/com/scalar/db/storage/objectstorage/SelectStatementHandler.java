@@ -1,6 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
@@ -63,7 +64,7 @@ public class SelectStatementHandler extends StatementHandler {
             getNamespace(get),
             getTable(get),
             operation.getConcatenatedPartitionKey(),
-            operation.getConcatenatedKey());
+            operation.getRecordId());
     if (!record.isPresent()) {
       return new EmptyScanner();
     }
@@ -135,72 +136,64 @@ public class SelectStatementHandler extends StatementHandler {
         scan.getLimit());
   }
 
+  private Map<String, ObjectStorageRecord> getPartition(
+      String namespace, String table, String partition) throws ObjectStorageWrapperException {
+    Optional<ObjectStorageWrapperResponse> response =
+        wrapper.get(ObjectStorageUtils.getObjectKey(namespace, table, partition));
+    if (!response.isPresent()) {
+      return Collections.emptyMap();
+    }
+    return Serializer.deserialize(
+        response.get().getPayload(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
+  }
+
   private Optional<ObjectStorageRecord> getRecord(
-      String namespace, String table, String partition, String concatenatedKey)
-      throws ExecutionException {
+      String namespace, String table, String partition, String recordId) throws ExecutionException {
     try {
-      ObjectStorageWrapperResponse response =
-          wrapper.get(ObjectStorageUtils.getObjectKey(namespace, table, partition));
       Map<String, ObjectStorageRecord> recordsInPartition =
-          JsonConvertor.deserialize(
-              response.getPayload(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-      return Optional.ofNullable(recordsInPartition.get(concatenatedKey));
-    } catch (ObjectStorageWrapperException e) {
-      if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND) {
-        // the specified partition does not exist
-        return Optional.empty();
+          getPartition(namespace, table, partition);
+      if (recordsInPartition.containsKey(recordId)) {
+        return Optional.of(recordsInPartition.get(recordId));
       } else {
-        throw new ExecutionException(
-            CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(), e);
+        return Optional.empty();
       }
     } catch (Exception e) {
       throw new ExecutionException(
-          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(), e);
+          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
   }
 
   private Set<ObjectStorageRecord> getRecordsInPartition(
       String namespace, String table, String partition) throws ExecutionException {
     try {
-      ObjectStorageWrapperResponse response =
-          wrapper.get(ObjectStorageUtils.getObjectKey(namespace, table, partition));
       Map<String, ObjectStorageRecord> recordsInPartition =
-          JsonConvertor.deserialize(
-              response.getPayload(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
+          getPartition(namespace, table, partition);
       return new HashSet<>(recordsInPartition.values());
-    } catch (ObjectStorageWrapperException e) {
-      if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND) {
-        // the specified partition does not exist
-        return Collections.emptySet();
-      } else {
-        throw new ExecutionException(
-            CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(), e);
-      }
     } catch (Exception e) {
       throw new ExecutionException(
-          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(), e);
+          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
   }
 
   private Set<ObjectStorageRecord> getRecordsInTable(String namespace, String table)
       throws ExecutionException {
-    Set<String> partitionNames =
-        wrapper.getKeys(ObjectStorageUtils.getObjectKey(namespace, table, "")).stream()
-            .map(key -> key.substring(key.lastIndexOf(ObjectStorageUtils.OBJECT_KEY_DELIMITER) + 1))
-            .filter(partition -> !partition.isEmpty())
-            .collect(Collectors.toSet());
-    Set<ObjectStorageRecord> records = new HashSet<>();
-    for (String key : partitionNames) {
-      try {
+    try {
+      Set<String> partitionNames =
+          wrapper.getKeys(ObjectStorageUtils.getObjectKey(namespace, table, "")).stream()
+              .map(
+                  key ->
+                      key.substring(key.lastIndexOf(ObjectStorageUtils.OBJECT_KEY_DELIMITER) + 1))
+              .filter(partition -> !partition.isEmpty())
+              .collect(Collectors.toSet());
+      Set<ObjectStorageRecord> records = new HashSet<>();
+      for (String key : partitionNames) {
         records.addAll(getRecordsInPartition(namespace, table, key));
-      } catch (ExecutionException e) {
-        throw e;
-      } catch (Exception e) {
-        throw new ExecutionException(
-            CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(), e);
       }
+      return records;
+    } catch (Exception e) {
+      throw new ExecutionException(
+          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
-    return records;
   }
 
   private boolean isReverseOrder(Scan scan, TableMetadata metadata) {
@@ -212,7 +205,6 @@ public class SelectStatementHandler extends StatementHandler {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan));
       }
-
       boolean rightOrder =
           ordering.getOrder() != metadata.getClusteringOrder(ordering.getColumnName());
       if (reverse == null) {
@@ -260,8 +252,7 @@ public class SelectStatementHandler extends StatementHandler {
                           record.getClusteringKey().get(column.getName()),
                           column.getName(),
                           column.getDataType());
-                  int cmp =
-                      new ColumnComparator(column.getDataType()).compare(recordColumn, column);
+                  int cmp = Ordering.natural().compare(recordColumn, column);
                   cmp = order == Scan.Ordering.Order.ASC ? cmp : -cmp;
                   if (isStart) {
                     if (isInclusive) {
@@ -287,7 +278,7 @@ public class SelectStatementHandler extends StatementHandler {
                       record.getClusteringKey().get(column.getName()),
                       column.getName(),
                       column.getDataType());
-              int cmp = new ColumnComparator(column.getDataType()).compare(recordColumn, column);
+              int cmp = Ordering.natural().compare(recordColumn, column);
               if (cmp == 0) {
                 tmpRecords.add(record);
               }

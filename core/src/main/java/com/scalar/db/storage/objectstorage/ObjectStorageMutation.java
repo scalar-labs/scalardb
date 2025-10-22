@@ -27,7 +27,7 @@ public class ObjectStorageMutation extends ObjectStorageOperation {
     Put put = (Put) mutation;
 
     return new ObjectStorageRecord(
-        getConcatenatedKey(),
+        getRecordId(),
         toMap(put.getPartitionKey().getColumns()),
         put.getClusteringKey().map(k -> toMap(k.getColumns())).orElse(Collections.emptyMap()),
         toMapForPut(put));

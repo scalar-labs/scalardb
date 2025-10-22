@@ -268,7 +268,7 @@ task integrationTestJdbc(type: Test) {
 }
 
 task integrationTestObjectStorage(type: Test) {
-    description = 'Runs the integration tests for object storages.'
+    description = 'Runs the integration tests for Object Storages.'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTestObjectStorage.output.classesDirs
     classpath = sourceSets.integrationTestObjectStorage.runtimeClasspath

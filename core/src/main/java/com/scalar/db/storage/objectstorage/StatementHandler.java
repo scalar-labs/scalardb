@@ -1,12 +1,12 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.DataType;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -41,7 +41,6 @@ public class StatementHandler {
               record.getValues().get(expectedColumn.getName()),
               expectedColumn.getName(),
               metadata.getColumnDataType(expectedColumn.getName()));
-      DataType dataType = metadata.getColumnDataType(expectedColumn.getName());
       boolean validationFailed = false;
       switch (expression.getOperator()) {
         case EQ:
@@ -49,7 +48,7 @@ public class StatementHandler {
             validationFailed = true;
             break;
           }
-          if (new ColumnComparator(dataType).compare(actualColumn, expectedColumn) != 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) != 0) {
             validationFailed = true;
             break;
           }
@@ -59,7 +58,7 @@ public class StatementHandler {
             validationFailed = true;
             break;
           }
-          if (new ColumnComparator(dataType).compare(actualColumn, expectedColumn) == 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) == 0) {
             validationFailed = true;
             break;
           }
@@ -69,7 +68,7 @@ public class StatementHandler {
             validationFailed = true;
             break;
           }
-          if (new ColumnComparator(dataType).compare(actualColumn, expectedColumn) <= 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) <= 0) {
             validationFailed = true;
             break;
           }
@@ -79,7 +78,7 @@ public class StatementHandler {
             validationFailed = true;
             break;
           }
-          if (new ColumnComparator(dataType).compare(actualColumn, expectedColumn) < 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) < 0) {
             validationFailed = true;
             break;
           }
@@ -89,7 +88,7 @@ public class StatementHandler {
             validationFailed = true;
             break;
           }
-          if (new ColumnComparator(dataType).compare(actualColumn, expectedColumn) >= 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) >= 0) {
             validationFailed = true;
             break;
           }
@@ -99,7 +98,7 @@ public class StatementHandler {
             validationFailed = true;
             break;
           }
-          if (new ColumnComparator(dataType).compare(actualColumn, expectedColumn) > 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) > 0) {
             validationFailed = true;
             break;
           }

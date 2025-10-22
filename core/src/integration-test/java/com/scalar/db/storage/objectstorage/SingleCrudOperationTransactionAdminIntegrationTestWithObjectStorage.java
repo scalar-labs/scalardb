@@ -3,7 +3,6 @@ package com.scalar.db.storage.objectstorage;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
     extends SingleCrudOperationTransactionAdminIntegrationTestBase {
@@ -13,48 +12,112 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
     return ObjectStorageEnv.getProperties(testName);
   }
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForAlreadyExistingIndex_ShouldThrowIllegalArgumentException() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void createIndex_IfNotExists_ForAlreadyExistingIndex_ShouldNotThrowAnyException() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void dropIndex_ForAllDataTypesWithExistingData_ShouldDropIndexCorrectly() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void dropIndex_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void dropIndex_ForNonExistingIndex_ShouldThrowIllegalArgumentException() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void dropIndex_IfExists_ForNonExistingIndex_ShouldNotThrowAnyException() {}
+
+  @Override
+  @Disabled("Object Storage does not support dropping columns")
+  public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support dropping columns")
+  public void dropColumnFromTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support dropping columns")
+  public void dropColumnFromTable_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support dropping columns")
+  public void dropColumnFromTable_ForPrimaryKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support dropping columns")
+  public void dropColumnFromTable_ForIndexedColumn_ShouldDropColumnAndIndexCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming columns")
+  public void renameColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming columns")
+  public void renameColumn_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming columns")
+  public void renameColumn_ForNonExistingColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming columns")
+  public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming columns")
+  public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support altering column types")
+  public void
+      alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support altering column types")
+  public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support altering column types")
+  public void alterColumnType_ForPrimaryKeyOrIndexKeyColumn_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming tables")
+  public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming tables")
+  public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming tables")
+  public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming tables")
+  public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
+
+  @Override
+  @Disabled("Object Storage does not support renaming tables")
+  public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
 }

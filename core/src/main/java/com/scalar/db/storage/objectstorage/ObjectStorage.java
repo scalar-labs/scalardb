@@ -39,7 +39,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
     }
     ObjectStorageConfig objectStorageConfig =
         ObjectStorageUtils.getObjectStorageConfig(databaseConfig);
-    wrapper = ObjectStorageUtils.getObjectStorageWrapper(objectStorageConfig);
+    wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
     ObjectStorageAdmin admin = new ObjectStorageAdmin(wrapper, objectStorageConfig);
     TableMetadataManager metadataManager =
         new TableMetadataManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());

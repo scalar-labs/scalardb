@@ -1,4 +1,4 @@
-package com.scalar.db.storage.objectstorage;
+package com.scalar.db.storage.objectstorage.blob;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
@@ -6,13 +6,13 @@ import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BlobConfig implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "blob";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
-  public static final String BUCKET = PREFIX + "bucket";
 
   public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
       PREFIX + "parallel_upload_block_size_in_bytes";
@@ -25,6 +25,11 @@ public class BlobConfig implements ObjectStorageConfig {
   /** @deprecated As of 5.0, will be removed. */
   @Deprecated
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
+
+  public static final long DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = 4 * 1024 * 1024; // 4MB
+  public static final int DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM = 4;
+  public static final long DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES = 4 * 1024 * 1024; // 4MB
+  public static final int DEFAULT_REQUEST_TIMEOUT_IN_SECONDS = 15;
 
   private static final Logger logger = LoggerFactory.getLogger(BlobConfig.class);
   private final String endpoint;
@@ -47,13 +52,17 @@ public class BlobConfig implements ObjectStorageConfig {
     if (databaseConfig.getContactPoints().isEmpty()) {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
-    endpoint = databaseConfig.getContactPoints().get(0);
+    String fullEndpoint = databaseConfig.getContactPoints().get(0);
+    int lastSlashIndex = fullEndpoint.lastIndexOf('/');
+    if (lastSlashIndex != -1 && lastSlashIndex < fullEndpoint.length() - 1) {
+      endpoint = fullEndpoint.substring(0, lastSlashIndex);
+      bucket = fullEndpoint.substring(lastSlashIndex + 1);
+    } else {
+      throw new IllegalArgumentException(
+          "Invalid contact points format. Expected: BLOB_URI/BUCKET_NAME");
+    }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-    if (!databaseConfig.getProperties().containsKey(BUCKET)) {
-      throw new IllegalArgumentException("Bucket name is not specified.");
-    }
-    bucket = databaseConfig.getProperties().getProperty(BUCKET);
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_NAMESPACE)) {
       logger.warn(
@@ -69,16 +78,33 @@ public class BlobConfig implements ObjectStorageConfig {
       metadataNamespace = databaseConfig.getSystemNamespaceName();
     }
 
+    if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
+      logger.warn(
+          "The configuration property \""
+              + DatabaseConfig.SCAN_FETCH_SIZE
+              + "\" is not applicable to Blob storage and will be ignored.");
+    }
+
     parallelUploadBlockSizeInBytes =
         getLong(
-            databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, 50 * 1024 * 1024);
+            databaseConfig.getProperties(),
+            PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
+            DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
     parallelUploadMaxParallelism =
-        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_MAX_PARALLELISM, 4);
+        getInt(
+            databaseConfig.getProperties(),
+            PARALLEL_UPLOAD_MAX_PARALLELISM,
+            DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
     parallelUploadThresholdInBytes =
         getLong(
-            databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, 100 * 1024 * 1024);
+            databaseConfig.getProperties(),
+            PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
+            DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
     requestTimeoutInSeconds =
-        getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_IN_SECONDS, 15);
+        getInt(
+            databaseConfig.getProperties(),
+            REQUEST_TIMEOUT_IN_SECONDS,
+            DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
   }
 
   @Override

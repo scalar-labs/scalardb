@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -38,7 +39,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public ObjectStorageAdmin(DatabaseConfig databaseConfig) {
     ObjectStorageConfig objectStorageConfig =
         ObjectStorageUtils.getObjectStorageConfig(databaseConfig);
-    wrapper = ObjectStorageUtils.getObjectStorageWrapper(objectStorageConfig);
+    wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
     metadataNamespace = objectStorageConfig.getMetadataNamespace();
   }
 
@@ -443,16 +444,15 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable()
       throws ExecutionException {
     try {
-      ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE, null));
-      return JsonConvertor.deserialize(
-          response.getPayload(),
-          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    } catch (ObjectStorageWrapperException e) {
-      if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND) {
+      Optional<ObjectStorageWrapperResponse> response =
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
+      if (!response.isPresent()) {
         return Collections.emptyMap();
       }
+      return Serializer.deserialize(
+          response.get().getPayload(),
+          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+    } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
   }
@@ -460,17 +460,16 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable(
       Map<String, String> readVersionMap) throws ExecutionException {
     try {
-      ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE, null));
-      readVersionMap.put(NAMESPACE_METADATA_TABLE, response.getVersion());
-      return JsonConvertor.deserialize(
-          response.getPayload(),
-          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    } catch (ObjectStorageWrapperException e) {
-      if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND) {
+      Optional<ObjectStorageWrapperResponse> response =
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
+      if (!response.isPresent()) {
         return Collections.emptyMap();
       }
+      readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
+      return Serializer.deserialize(
+          response.get().getPayload(),
+          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+    } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
   }
@@ -478,15 +477,15 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   private Map<String, ObjectStorageTableMetadata> getTableMetadataTable()
       throws ExecutionException {
     try {
-      ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE, null));
-      return JsonConvertor.deserialize(
-          response.getPayload(), new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
-    } catch (ObjectStorageWrapperException e) {
-      if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND) {
+      Optional<ObjectStorageWrapperResponse> response =
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
+      if (!response.isPresent()) {
         return Collections.emptyMap();
       }
+      return Serializer.deserialize(
+          response.get().getPayload(),
+          new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+    } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
   }
@@ -494,16 +493,16 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   private Map<String, ObjectStorageTableMetadata> getTableMetadataTable(
       Map<String, String> readVersionMap) throws ExecutionException {
     try {
-      ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE, null));
-      readVersionMap.put(TABLE_METADATA_TABLE, response.getVersion());
-      return JsonConvertor.deserialize(
-          response.getPayload(), new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
-    } catch (ObjectStorageWrapperException e) {
-      if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND) {
+      Optional<ObjectStorageWrapperResponse> response =
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
+      if (!response.isPresent()) {
         return Collections.emptyMap();
       }
+      readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
+      return Serializer.deserialize(
+          response.get().getPayload(),
+          new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+    } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
   }
@@ -512,8 +511,8 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       wrapper.insert(
-          ObjectStorageUtils.getObjectKey(metadataNamespace, table, null),
-          JsonConvertor.serialize(metadataTable));
+          ObjectStorageUtils.getObjectKey(metadataNamespace, table),
+          Serializer.serialize(metadataTable));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to insert the metadata table.", e);
     }
@@ -523,8 +522,8 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String table, Map<String, T> metadataTable, String readVersion) throws ExecutionException {
     try {
       wrapper.update(
-          ObjectStorageUtils.getObjectKey(metadataNamespace, table, null),
-          JsonConvertor.serialize(metadataTable),
+          ObjectStorageUtils.getObjectKey(metadataNamespace, table),
+          Serializer.serialize(metadataTable),
           readVersion);
     } catch (Exception e) {
       throw new ExecutionException("Failed to update the metadata table.", e);
@@ -533,7 +532,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private void deleteMetadataTable(String table, String readVersion) throws ExecutionException {
     try {
-      wrapper.delete(ObjectStorageUtils.getObjectKey(metadataNamespace, table, null), readVersion);
+      wrapper.delete(ObjectStorageUtils.getObjectKey(metadataNamespace, table), readVersion);
     } catch (Exception e) {
       throw new ExecutionException("Failed to delete the metadata table.", e);
     }
@@ -541,7 +540,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private void deleteTableData(String namespace, String table) throws ExecutionException {
     try {
-      wrapper.deleteByPrefix(ObjectStorageUtils.getObjectKey(namespace, table, null));
+      wrapper.deleteByPrefix(ObjectStorageUtils.getObjectKey(namespace, table));
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(

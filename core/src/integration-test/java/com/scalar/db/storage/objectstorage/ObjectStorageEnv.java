@@ -1,28 +1,30 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.objectstorage.blob.BlobConfig;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 public class ObjectStorageEnv {
   private static final String PROP_OBJECT_STORAGE_ENDPOINT = "scalardb.object_storage.endpoint";
   private static final String PROP_OBJECT_STORAGE_USERNAME = "scalardb.object_storage.username";
   private static final String PROP_OBJECT_STORAGE_PASSWORD = "scalardb.object_storage.password";
-  private static final String PROP_OBJECT_STORAGE_BUCKET = "scalardb.object_storage.storage_type";
 
-  private static final String DEFAULT_BLOB_ENDPOINT = "http://localhost:10000/";
-  private static final String DEFAULT_BLOB_USERNAME = "devstoreaccount1";
-  private static final String DEFAULT_BLOB_PASSWORD =
-      "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-  private static final String DEFAULT_BLOB_CONTAINER = "fake-container";
+  private static final String DEFAULT_OBJECT_STORAGE_ENDPOINT =
+      "http://localhost:10000/test/test-container";
+  private static final String DEFAULT_OBJECT_STORAGE_USERNAME = "test";
+  private static final String DEFAULT_OBJECT_STORAGE_PASSWORD = "test";
 
   private ObjectStorageEnv() {}
 
   public static Properties getProperties(String testName) {
-    String accountName = System.getProperty(PROP_OBJECT_STORAGE_USERNAME, DEFAULT_BLOB_USERNAME);
-    String accountKey = System.getProperty(PROP_OBJECT_STORAGE_PASSWORD, DEFAULT_BLOB_PASSWORD);
+    String accountName =
+        System.getProperty(PROP_OBJECT_STORAGE_USERNAME, DEFAULT_OBJECT_STORAGE_USERNAME);
+    String accountKey =
+        System.getProperty(PROP_OBJECT_STORAGE_PASSWORD, DEFAULT_OBJECT_STORAGE_PASSWORD);
     String endpoint =
-        System.getProperty(PROP_OBJECT_STORAGE_ENDPOINT, DEFAULT_BLOB_ENDPOINT) + accountName;
-    String bucket = System.getProperty(PROP_OBJECT_STORAGE_BUCKET, DEFAULT_BLOB_CONTAINER);
+        System.getProperty(PROP_OBJECT_STORAGE_ENDPOINT, DEFAULT_OBJECT_STORAGE_ENDPOINT);
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, endpoint);
@@ -32,7 +34,6 @@ public class ObjectStorageEnv {
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
-    properties.setProperty(BlobConfig.BUCKET, bucket);
 
     // Add testName as a metadata namespace suffix
     properties.setProperty(
@@ -40,5 +41,9 @@ public class ObjectStorageEnv {
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
+  }
+
+  public static Map<String, String> getCreationOptions() {
+    return Collections.emptyMap();
   }
 }

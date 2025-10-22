@@ -852,6 +852,12 @@ public enum CoreError implements ScalarDbError {
       "Object Storage does not support the altering column type feature",
       "",
       ""),
+  OBJECT_STORAGE_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BOOLEAN_TYPE(
+      Category.USER_ERROR,
+      "0249",
+      "Object Storage supports only EQ, NE, IS_NULL, and IS_NOT_NULL operations for the BOOLEAN type in conditions. Mutation: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

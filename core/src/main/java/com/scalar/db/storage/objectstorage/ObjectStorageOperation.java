@@ -49,7 +49,7 @@ public class ObjectStorageOperation {
   }
 
   @Nonnull
-  public String getConcatenatedKey() {
+  public String getRecordId() {
     if (operation.getClusteringKey().isPresent()) {
       return String.join(
           String.valueOf(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER),

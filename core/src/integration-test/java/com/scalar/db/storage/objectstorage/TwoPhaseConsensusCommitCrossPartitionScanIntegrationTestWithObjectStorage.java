@@ -18,6 +18,6 @@ public class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestWithObjectS
 
   @Test
   @Override
-  @Disabled("Cross partition scan with ordering is not supported in object storages")
+  @Disabled("Cross partition scan with ordering is not supported in Object Storages")
   public void scan_ScanWithOrderingGivenForCommittedRecord_ShouldReturnRecords() {}
 }

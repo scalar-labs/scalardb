@@ -8,7 +8,7 @@ import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class ObjectStorageRecord {
-  private final String concatenatedKey;
+  private final String id;
   private final Map<String, Object> partitionKey;
   private final Map<String, Object> clusteringKey;
   private final Map<String, Object> values;
@@ -19,26 +19,22 @@ public class ObjectStorageRecord {
   }
 
   public ObjectStorageRecord(
-      @Nullable String concatenatedKey,
+      @Nullable String id,
       @Nullable Map<String, Object> partitionKey,
       @Nullable Map<String, Object> clusteringKey,
       @Nullable Map<String, Object> values) {
-    this.concatenatedKey = concatenatedKey != null ? concatenatedKey : "";
+    this.id = id != null ? id : "";
     this.partitionKey = partitionKey != null ? partitionKey : Collections.emptyMap();
     this.clusteringKey = clusteringKey != null ? clusteringKey : Collections.emptyMap();
     this.values = values != null ? values : Collections.emptyMap();
   }
 
   public ObjectStorageRecord(ObjectStorageRecord record) {
-    this(
-        record.getConcatenatedKey(),
-        record.getPartitionKey(),
-        record.getClusteringKey(),
-        record.getValues());
+    this(record.getId(), record.getPartitionKey(), record.getClusteringKey(), record.getValues());
   }
 
-  public String getConcatenatedKey() {
-    return concatenatedKey;
+  public String getId() {
+    return id;
   }
 
   public Map<String, Object> getPartitionKey() {
@@ -62,7 +58,7 @@ public class ObjectStorageRecord {
       return false;
     }
     ObjectStorageRecord other = (ObjectStorageRecord) o;
-    if (!other.getConcatenatedKey().equals(concatenatedKey)) {
+    if (!other.getId().equals(id)) {
       return false;
     }
     if (!other.getPartitionKey().equals(partitionKey)) {
@@ -76,41 +72,6 @@ public class ObjectStorageRecord {
 
   @Override
   public int hashCode() {
-    return Objects.hash(concatenatedKey, partitionKey, clusteringKey, values);
-  }
-
-  // Builder
-
-  public static class Builder {
-    private String concatenatedPartitionKey;
-    private Map<String, Object> partitionKey;
-    private Map<String, Object> clusteringKey;
-    private Map<String, Object> values;
-
-    public Builder() {}
-
-    public Builder concatenatedPartitionKey(String concatenatedPartitionKey) {
-      this.concatenatedPartitionKey = concatenatedPartitionKey;
-      return this;
-    }
-
-    public Builder partitionKey(Map<String, Object> partitionKey) {
-      this.partitionKey = partitionKey;
-      return this;
-    }
-
-    public Builder clusteringKey(Map<String, Object> clusteringKey) {
-      this.clusteringKey = clusteringKey;
-      return this;
-    }
-
-    public Builder values(Map<String, Object> values) {
-      this.values = values;
-      return this;
-    }
-
-    public ObjectStorageRecord build() {
-      return new ObjectStorageRecord(concatenatedPartitionKey, partitionKey, clusteringKey, values);
-    }
+    return Objects.hash(id, partitionKey, clusteringKey, values);
   }
 }
