@@ -26,12 +26,10 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.TextValue;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
-import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -69,14 +67,10 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     Result result = mock(Result.class);
-    when(result.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, ANY_ID_1)));
-    when(result.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
-    when(result.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
-    when(result.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -100,6 +94,65 @@ public class CoordinatorTest {
 
     // Act Assert
     assertThatThrownBy(() -> coordinator.getState(id)).isInstanceOf(CoordinatorException.class);
+  }
+
+  @Test
+  public void getStateByParentId_GroupCommitParentIdGiven_ShouldReturnStateUsingItParent()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childIdsStr =
+        String.join(
+            ",",
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString());
+
+    Result result = mock(Result.class);
+    when(result.getText(Attribute.ID)).thenReturn(parentId);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(childIdsStr);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Coordinator.State> state = coordinator.getStateByParentId(parentId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(parentId);
+    assertThat(state.get().getChildIds()).isEqualTo(Arrays.asList(childIdsStr.split(",")));
+    assertThat(state.get().getChildIdsAsString()).isEqualTo(childIdsStr);
+    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
+  }
+
+  @Test
+  public void getStateByFullId_GroupCommitFullIdGiven_ShouldReturnStateUsingItParent()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String fullId =
+        keyManipulator.fullKey(keyManipulator.generateParentKey(), UUID.randomUUID().toString());
+
+    Result result = mock(Result.class);
+    when(result.getText(Attribute.ID)).thenReturn(fullId);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Coordinator.State> state = coordinator.getStateByFullId(fullId);
+
+    // Assert
+    assertThat(state.get().getId()).isEqualTo(fullId);
+    assertThat(state.get().getChildIds()).isEmpty();
+    assertThat(state.get().getChildIdsAsString()).isEmpty();
+    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
   }
 
   @Test
@@ -129,11 +182,12 @@ public class CoordinatorTest {
     Put put = coordinator.createPutWith(state);
 
     // Assert
-    assertThat(put.getPartitionKey().get().get(0)).isEqualTo(new TextValue(Attribute.ID, ANY_ID_1));
+    assertThat(put.getPartitionKey().getColumnName(0)).isEqualTo(Attribute.ID);
+    assertThat(put.getPartitionKey().getTextValue(0)).isEqualTo(ANY_ID_1);
     assertThat(put.getColumns().get(Attribute.STATE))
-        .isEqualTo(ScalarDbUtils.toColumn(Attribute.toStateValue(TransactionState.COMMITTED)));
+        .isEqualTo(IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()));
     assertThat(put.getColumns().get(Attribute.CREATED_AT))
-        .isEqualTo(ScalarDbUtils.toColumn(Attribute.toCreatedAtValue(current)));
+        .isEqualTo(BigIntColumn.of(Attribute.CREATED_AT, current));
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
     assertThat(put.forNamespace().get()).isEqualTo(Coordinator.NAMESPACE);
@@ -165,14 +219,10 @@ public class CoordinatorTest {
     coordinator = new Coordinator(storage, config);
 
     Result result = mock(Result.class);
-    when(result.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, ANY_ID_1)));
-    when(result.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
-    when(result.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, TransactionState.COMMITTED.get())));
-    when(result.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -246,14 +296,11 @@ public class CoordinatorTest {
     List<String> childIds = Arrays.asList(childId1, childId2);
 
     Result resultForGroupCommitState = mock(Result.class);
-    when(resultForGroupCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
-    when(resultForGroupCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
+        .thenReturn(Joiner.on(',').join(childIds));
+    when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     // Assuming these states exist:
     //
@@ -305,25 +352,17 @@ public class CoordinatorTest {
     List<String> dummyChildIds = Arrays.asList(dummyChildId1, dummyChildId2);
 
     Result resultForGroupCommitState = mock(Result.class);
-    when(resultForGroupCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(
-            Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(dummyChildIds))));
-    when(resultForGroupCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
+        .thenReturn(Joiner.on(',').join(dummyChildIds));
+    when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     Result resultForSingleCommitState = mock(Result.class);
-    when(resultForSingleCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, fullId)));
-    when(resultForSingleCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
-    when(resultForSingleCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForSingleCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(fullId);
+    when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     // Assuming these states exist:
     //
@@ -370,14 +409,11 @@ public class CoordinatorTest {
         Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     Result resultForGroupCommitState = mock(Result.class);
-    when(resultForGroupCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
-    when(resultForGroupCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
+        .thenReturn(Joiner.on(',').join(childIds));
+    when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     // Look up with the same parent ID and a wrong child ID.
     String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
@@ -427,24 +463,17 @@ public class CoordinatorTest {
     String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
 
     Result resultForGroupCommitState = mock(Result.class);
-    when(resultForGroupCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
-    when(resultForGroupCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
+        .thenReturn(Joiner.on(',').join(childIds));
+    when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     Result resultForSingleCommitState = mock(Result.class);
-    when(resultForSingleCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, targetFullId)));
-    when(resultForSingleCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, EMPTY_CHILD_IDS)));
-    when(resultForSingleCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForSingleCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(targetFullId);
+    when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     // Assuming these states exist:
     //
@@ -492,14 +521,11 @@ public class CoordinatorTest {
         Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
     Result resultForGroupCommitState = mock(Result.class);
-    when(resultForGroupCommitState.getValue(Attribute.ID))
-        .thenReturn(Optional.of(new TextValue(Attribute.ID, parentId)));
-    when(resultForGroupCommitState.getValue(Attribute.CHILD_IDS))
-        .thenReturn(Optional.of(new TextValue(Attribute.CHILD_IDS, Joiner.on(',').join(childIds))));
-    when(resultForGroupCommitState.getValue(Attribute.STATE))
-        .thenReturn(Optional.of(new IntValue(Attribute.STATE, transactionState.get())));
-    when(resultForGroupCommitState.getValue(Attribute.CREATED_AT))
-        .thenReturn(Optional.of(new BigIntValue(Attribute.CREATED_AT, ANY_TIME_1)));
+    when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.getText(Attribute.CHILD_IDS))
+        .thenReturn(Joiner.on(',').join(childIds));
+    when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
+    when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
 
     // Look up with the same parent ID and a wrong child ID.
     // Also, the full ID doesn't match any single committed state.

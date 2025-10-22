@@ -6,7 +6,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class EmptyScanner implements Scanner {
 
   @Override
@@ -23,6 +26,7 @@ public class EmptyScanner implements Scanner {
   public void close() {}
 
   @Override
+  @Nonnull
   public Iterator<Result> iterator() {
     return Collections.emptyIterator();
   }

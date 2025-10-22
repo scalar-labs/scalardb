@@ -69,8 +69,7 @@ public class TableMetadataAlterationProcessorTest {
   }
 
   @Test
-  public void
-      computeAlteration_WithModifiedClusteringKeySortOrdering_ShouldThrowIllegalArgumentException() {
+  public void computeAlteration_WithModifiedClusteringOrder_ShouldThrowIllegalArgumentException() {
     // Arrange
     TableMetadata oldMetadata =
         TableMetadata.newBuilder()
@@ -91,7 +90,7 @@ public class TableMetadataAlterationProcessorTest {
     assertThatThrownBy(
             () -> processor.computeAlteration(NAMESPACE, TABLE, oldMetadata, newMetadata))
         .isInstanceOf(UnsupportedOperationException.class)
-        .hasMessageContaining("clustering ordering");
+        .hasMessageContaining("clustering order");
   }
 
   @Test

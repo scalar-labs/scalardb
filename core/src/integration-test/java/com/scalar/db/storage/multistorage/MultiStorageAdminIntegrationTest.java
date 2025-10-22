@@ -57,7 +57,7 @@ public class MultiStorageAdminIntegrationTest {
   private void initCassandraAdmin() throws ExecutionException {
     StorageFactory factory =
         StorageFactory.create(MultiStorageEnv.getPropertiesForCassandra(TEST_NAME));
-    cassandraAdmin = factory.getAdmin();
+    cassandraAdmin = factory.getStorageAdmin();
 
     // create tables
     cassandraAdmin.createNamespace(NAMESPACE1, true, getCreationOptions());
@@ -81,7 +81,7 @@ public class MultiStorageAdminIntegrationTest {
 
   private void initJdbcAdmin() throws ExecutionException {
     StorageFactory factory = StorageFactory.create(MultiStorageEnv.getPropertiesForJdbc(TEST_NAME));
-    jdbcAdmin = factory.getAdmin();
+    jdbcAdmin = factory.getStorageAdmin();
 
     // create tables
     jdbcAdmin.createNamespace(NAMESPACE1, true);
@@ -142,6 +142,9 @@ public class MultiStorageAdminIntegrationTest {
     properties.setProperty(
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + TEST_NAME);
+
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
 
     DatabaseConfig databaseConfig = new DatabaseConfig(properties);
     multiStorageAdmin = new MultiStorageAdmin(databaseConfig);

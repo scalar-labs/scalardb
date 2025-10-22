@@ -1,7 +1,9 @@
 package com.scalar.db.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
@@ -10,8 +12,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -25,12 +25,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ActiveTransactionManagedDistributedTransactionManager
-    extends TransactionDecorationDistributedTransactionManager
-    implements DistributedTransactionExpirationHandlerSettable {
+@ThreadSafe
+public class ActiveTransactionManagedDistributedTransactionManager
+    extends DecoratedDistributedTransactionManager {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
@@ -50,11 +51,13 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
                 }
               });
 
-  public ActiveTransactionManagedDistributedTransactionManager(DatabaseConfig config) {
-    super(config);
+  public ActiveTransactionManagedDistributedTransactionManager(
+      DistributedTransactionManager transactionManager,
+      long activeTransactionManagementExpirationTimeMillis) {
+    super(transactionManager);
     activeTransactions =
         new ActiveExpiringMap<>(
-            config.getActiveTransactionManagementExpirationTimeMillis(),
+            activeTransactionManagementExpirationTimeMillis,
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             (id, t) -> {
               logger.warn("The transaction is expired. Transaction ID: {}", id);
@@ -80,6 +83,17 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
   }
 
   @Override
+  protected DistributedTransaction decorateTransactionOnBeginOrStart(
+      DistributedTransaction transaction) throws TransactionException {
+    return new ActiveTransaction(transaction);
+  }
+
+  @Override
+  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
+    return resume(txId);
+  }
+
+  @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return activeTransactions
         .get(txId)
@@ -89,13 +103,8 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
                     CoreError.TRANSACTION_NOT_FOUND.buildMessage(), txId));
   }
 
-  @Override
-  protected DistributedTransaction decorate(DistributedTransaction transaction)
-      throws TransactionException {
-    return new ActiveTransaction(super.decorate(transaction));
-  }
-
-  private class ActiveTransaction extends DecoratedDistributedTransaction {
+  @VisibleForTesting
+  class ActiveTransaction extends DecoratedDistributedTransaction {
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     private ActiveTransaction(DistributedTransaction transaction) throws TransactionException {
@@ -111,6 +120,11 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
     @Override
     public synchronized List<Result> scan(Scan scan) throws CrudException {
       return super.scan(scan);
+    }
+
+    @Override
+    public synchronized Scanner getScanner(Scan scan) throws CrudException {
+      return super.getScanner(scan);
     }
 
     /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -175,7 +189,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
     }
 
     @Override
-    public void abort() throws AbortException {
+    public synchronized void abort() throws AbortException {
       try {
         super.abort();
       } finally {

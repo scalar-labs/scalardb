@@ -2,7 +2,6 @@ plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'maven-publish'
-    id 'signing'
     id 'base'
 }
 
@@ -22,6 +21,9 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -42,6 +44,9 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -53,6 +58,9 @@ sourceSets {
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -74,6 +82,49 @@ sourceSets {
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/JdbcTestUtils.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestCassandraPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraPermissionTestUtils.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraAdminTestUtils.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraEnv.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraPermissionIntegrationTest.java'
+            include '**/com/scalar/db/storage/cassandra/CassandraAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestDynamoPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoPermissionTestUtils.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoAdminTestUtils.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoEnv.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoPermissionIntegrationTest.java'
+            include '**/com/scalar/db/storage/dynamo/DynamoAdminPermissionIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestJdbcPermission {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/common/*.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcAdminTestUtils.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcTestUtils.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcEnv.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
+            include '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -101,6 +152,15 @@ configurations {
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
+    integrationTestCassandraPermissionImplementation.extendsFrom testImplementation
+    integrationTestCassandraPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestDynamoPermissionImplementation.extendsFrom testImplementation
+    integrationTestDynamoPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoPermissionCompileOnly.extendsFrom testCompileOnly
+    integrationTestJdbcPermissionImplementation.extendsFrom testImplementation
+    integrationTestJdbcPermissionRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcPermissionCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -114,6 +174,8 @@ dependencies {
     implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
     implementation 'software.amazon.awssdk:applicationautoscaling'
     implementation 'software.amazon.awssdk:dynamodb'
+    testImplementation 'software.amazon.awssdk:iam'
+    testImplementation 'software.amazon.awssdk:iam-policy-builder'
     implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
     implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
@@ -121,13 +183,16 @@ dependencies {
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteDriverVersion}"
     implementation "com.yugabyte:jdbc-yugabytedb:${yugabyteDriverVersion}"
+    implementation "com.ibm.db2:jcc:${db2DriverVersion}"
     implementation ("org.mariadb.jdbc:mariadb-java-client:${mariadDbDriverVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    // The Java connector library used to establish simply a secure connection to AlloyDB on GCP
+    implementation("com.google.cloud:alloydb-jdbc-connector:${alloyDbJdbcConnectorVersion}")
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
-    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
@@ -224,6 +289,39 @@ task integrationTestMultiStorage(type: Test) {
     }
 }
 
+task integrationTestCassandraPermission(type: Test) {
+    description = 'Runs the integration tests for Cassandra permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCassandraPermission.output.classesDirs
+    classpath = sourceSets.integrationTestCassandraPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
+task integrationTestDynamoPermission(type: Test) {
+    description = 'Runs the integration tests for DynamoDB permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestDynamoPermission.output.classesDirs
+    classpath = sourceSets.integrationTestDynamoPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
+task integrationTestJdbcPermission(type: Test) {
+    description = 'Runs the integration tests for JDBC permissions.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbcPermission.output.classesDirs
+    classpath = sourceSets.integrationTestJdbcPermission.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+}
+
 spotless {
     java {
         target 'src/*/java/**/*.java'
@@ -313,18 +411,7 @@ publishing {
     }
     repositories {
         maven {
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.properties['ossrhUsername'] ?: ""
-                password = project.properties['ossrhPassword'] ?: ""
-            }
+            url = layout.buildDirectory.dir('staging-deploy')
         }
     }
-}
-
-signing {
-    required { project.gradle.taskGraph.hasTask("publish") }
-    sign publishing.publications.mavenJava
 }

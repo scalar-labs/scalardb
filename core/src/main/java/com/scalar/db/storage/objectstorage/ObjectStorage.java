@@ -1,5 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
+import static com.scalar.db.util.ScalarDbUtils.copyAndPrepareForDynamicFiltering;
+
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
@@ -8,10 +10,11 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
@@ -37,11 +40,12 @@ public class ObjectStorage extends AbstractDistributedStorage {
     ObjectStorageConfig objectStorageConfig =
         ObjectStorageUtils.getObjectStorageConfig(databaseConfig);
     wrapper = ObjectStorageUtils.getObjectStorageWrapper(objectStorageConfig);
+    ObjectStorageAdmin admin = new ObjectStorageAdmin(wrapper, objectStorageConfig);
     TableMetadataManager metadataManager =
-        new TableMetadataManager(
-            new ObjectStorageAdmin(wrapper, objectStorageConfig),
-            databaseConfig.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new ObjectStorageOperationChecker(databaseConfig, metadataManager);
+        new TableMetadataManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    operationChecker =
+        new ObjectStorageOperationChecker(
+            databaseConfig, metadataManager, new StorageInfoProvider(admin));
     selectStatementHandler = new SelectStatementHandler(wrapper, metadataManager);
     mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
     logger.info("ObjectStorage object is created properly");

@@ -14,12 +14,14 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -56,7 +58,7 @@ public class Cassandra extends AbstractDistributedStorage {
 
     handlers =
         StatementHandlerManager.builder()
-            .select(new SelectStatementHandler(session))
+            .select(new SelectStatementHandler(session, config.getScanFetchSize()))
             .insert(new InsertStatementHandler(session))
             .update(new UpdateStatementHandler(session))
             .delete(new DeleteStatementHandler(session))
@@ -65,11 +67,11 @@ public class Cassandra extends AbstractDistributedStorage {
     batch = new BatchHandler(session, handlers);
     logger.info("Cassandra object is created properly");
 
+    CassandraAdmin cassandraAdmin = new CassandraAdmin(clusterManager, config);
     metadataManager =
-        new TableMetadataManager(
-            new CassandraAdmin(clusterManager, config),
-            config.getMetadataCacheExpirationTimeSecs());
-    operationChecker = new OperationChecker(config, metadataManager);
+        new TableMetadataManager(cassandraAdmin, config.getMetadataCacheExpirationTimeSecs());
+    operationChecker =
+        new OperationChecker(config, metadataManager, new StorageInfoProvider(cassandraAdmin));
   }
 
   @VisibleForTesting
@@ -99,7 +101,9 @@ public class Cassandra extends AbstractDistributedStorage {
       if (get.getConjunctions().isEmpty()) {
         scanner = getInternal(get);
       } else {
-        scanner = new FilterableScanner(get, getInternal(copyAndPrepareForDynamicFiltering(get)));
+        scanner =
+            new FilterableScanner(
+                get, getInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)));
       }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
@@ -133,7 +137,8 @@ public class Cassandra extends AbstractDistributedStorage {
     if (scan.getConjunctions().isEmpty()) {
       return scanInternal(scan);
     } else {
-      return new FilterableScanner(scan, scanInternal(copyAndPrepareForDynamicFiltering(scan)));
+      return new FilterableScanner(
+          scan, scanInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)));
     }
   }
 

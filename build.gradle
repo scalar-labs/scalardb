@@ -1,13 +1,15 @@
-buildscript {
-    repositories {
-        maven {
-            url 'https://plugins.gradle.org/m2/'
-        }
-    }
-    dependencies {
-        classpath 'com.diffplug.spotless:spotless-plugin-gradle:6.13.0'
-    }
+plugins {
+    id "com.diffplug.spotless" version "6.13.0"
+    id "org.jreleaser" version "1.20.0"
 }
+
+ext {
+    projectGroup = 'com.scalar-labs'
+    projectVersion = '4.0.0-SNAPSHOT'
+}
+
+group = projectGroup
+version = projectVersion
 
 subprojects {
     apply plugin: 'java'
@@ -18,7 +20,7 @@ subprojects {
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'com.scalar.db.jdk-configuration'
 
-    project.version = '4.0.0-SNAPSHOT'
+    project.version = projectVersion
 
     ext {
         guiceVersion = '5.1.0'
@@ -27,26 +29,29 @@ subprojects {
         cassandraDriverVersion = '3.11.5'
         azureCosmosVersion = '4.67.0'
         azureBlobVersion = '12.28.1'
+        azureCosmosVersion = '4.74.0'
         jooqVersion = '3.14.16'
-        awssdkVersion = '2.31.3'
+        awssdkVersion = '2.35.0'
         commonsDbcp2Version = '2.13.0'
         mysqlDriverVersion = '8.4.0'
-        postgresqlDriverVersion = '42.7.5'
-        oracleDriverVersion = '23.7.0.25.01'
-        sqlserverDriverVersion = '12.8.1.jre8'
-        sqliteDriverVersion = '3.49.1.0'
-        yugabyteDriverVersion = '42.7.3-yb-3'
-        mariadDbDriverVersion = '3.5.2'
-        picocliVersion = '4.7.6'
-        commonsTextVersion = '1.13.0'
-        junitVersion = '5.11.4'
-        commonsLangVersion = '3.17.0'
-        assertjVersion = '3.27.3'
+        postgresqlDriverVersion = '42.7.8'
+        oracleDriverVersion = '23.9.0.25.07'
+        sqlserverDriverVersion = '12.8.2.jre8'
+        sqliteDriverVersion = '3.50.3.0'
+        yugabyteDriverVersion = '42.7.3-yb-4'
+        db2DriverVersion = '12.1.2.0'
+        mariadDbDriverVersion = '3.5.6'
+        alloyDbJdbcConnectorVersion = '1.2.6'
+        picocliVersion = '4.7.7'
+        commonsTextVersion = '1.14.0'
+        junitVersion = '5.14.0'
+        commonsLangVersion = '3.19.0'
+        assertjVersion = '3.27.6'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
         errorproneVersion = '2.10.0'
         errorproneJavacVersion = '9+181-r4173-1'
-        gsonVersion = '2.12.1'
+        gsonVersion = '2.13.2'
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
         errorpronePluginVersion = '3.1.0'
@@ -66,7 +71,7 @@ subprojects {
         testLogging.showStandardStreams = true
     }
 
-    group = "com.scalar-labs"
+    group = projectGroup
 
     java {
         withJavadocJar()
@@ -92,3 +97,38 @@ subprojects {
     }
 }
 
+jreleaser {
+    gitRootSearch = true
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+    deploy {
+        maven {
+            def stagingRepositories = ['core/build/staging-deploy',
+                                       'integration-test/build/staging-deploy',
+                                       'schema-loader/build/staging-deploy',
+                                       'data-loader/core/build/staging-deploy']
+            mavenCentral {
+                sonatype {
+                    active = 'RELEASE'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepositories.each { stagingRepository(it) }
+                }
+            }
+            nexus2 {
+                'snapshot-deploy' {
+                    active = 'SNAPSHOT'
+                    snapshotUrl = 'https://central.sonatype.com/repository/maven-snapshots/'
+                    applyMavenCentralRules = true
+                    snapshotSupported = true
+                    closeRepository = true
+                    releaseRepository = true
+                    stagingRepositories.each { stagingRepository(it) }
+                }
+            }
+        }
+    }
+}

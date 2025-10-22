@@ -21,10 +21,8 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanAll;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -32,6 +30,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class SelectStatementHandlerTest {
+  private static final int FETCH_SIZE = 10;
   private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table_name";
   private static final String ANY_NAME_1 = "name1";
@@ -55,35 +54,51 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(session);
+    handler = new SelectStatementHandler(session, FETCH_SIZE);
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private Get prepareGetWithClusteringKey() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Get prepareGetWithReservedKeywords() {
-    Key partitionKey = new Key("from", ANY_TEXT_1);
-    Key clusteringKey = new Key("to", ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey).forNamespace("keyspace").forTable("table");
+    Key partitionKey = Key.ofText("from", ANY_TEXT_1);
+    Key clusteringKey = Key.ofText("to", ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace("keyspace")
+        .table("table")
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
-  private ScanAll prepareScanAll() {
-    return new ScanAll().forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
+  private Scan prepareScanAll() {
+    return Scan.newBuilder().namespace(ANY_NAMESPACE_NAME).table(ANY_TABLE_NAME).all().build();
   }
 
   private void configureBehavior(String expected) {
@@ -209,8 +224,7 @@ public class SelectStatementHandlerTest {
                   ANY_NAME_2 + "=?;",
                 });
     configureBehavior(expected);
-    get = prepareGetWithClusteringKey();
-    get.withProjection(ANY_NAME_1);
+    get = Get.newBuilder(prepareGetWithClusteringKey()).projection(ANY_NAME_1).build();
 
     // Act
     handler.prepare(get);
@@ -237,8 +251,11 @@ public class SelectStatementHandlerTest {
                   ANY_NAME_2 + "<=?;",
                 });
     configureBehavior(expected);
-    scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2)).withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
+    scan =
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3))
+            .build();
 
     // Act
     handler.prepare(scan);
@@ -267,9 +284,11 @@ public class SelectStatementHandlerTest {
                   ANY_NAME_3 + "<=?;",
                 });
     configureBehavior(expected);
-    scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
-        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
+    scan =
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4))
+            .build();
 
     // Act
     handler.prepare(scan);
@@ -296,9 +315,11 @@ public class SelectStatementHandlerTest {
                   ANY_NAME_2 + "<?;",
                 });
     configureBehavior(expected);
-    scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
-        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
+    scan =
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_3), false)
+            .build();
 
     // Act
     handler.prepare(scan);
@@ -328,10 +349,12 @@ public class SelectStatementHandlerTest {
                   ANY_LIMIT + ";",
                 });
     configureBehavior(expected);
-    scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-        .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-        .withLimit(ANY_LIMIT);
+    scan =
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .limit(ANY_LIMIT)
+            .build();
 
     // Act
     handler.prepare(scan);
@@ -362,11 +385,13 @@ public class SelectStatementHandlerTest {
                   ANY_LIMIT + ";",
                 });
     configureBehavior(expected);
-    scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-        .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-        .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
-        .withLimit(ANY_LIMIT);
+    scan =
+        Scan.newBuilder(prepareScan())
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .ordering(Scan.Ordering.asc(ANY_NAME_2))
+            .ordering(Scan.Ordering.desc(ANY_NAME_3))
+            .limit(ANY_LIMIT)
+            .build();
 
     // Act
     handler.prepare(scan);
@@ -393,9 +418,11 @@ public class SelectStatementHandlerTest {
   public void bind_ScanOperationWithMultipleClusteringKeysGiven_ShouldBindProperly() {
     // Arrange
     configureBehavior(null);
-    scan = prepareScan();
-    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
-        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
+    scan =
+        Scan.newBuilder(prepareScan())
+            .start(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+            .end(Key.of(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4))
+            .build();
 
     // Act
     handler.bind(prepared, scan);
@@ -411,8 +438,7 @@ public class SelectStatementHandlerTest {
   public void setConsistency_GetOperationWithStrongConsistencyGiven_ShouldPrepareWithQuorum() {
     // Arrange
     configureBehavior(null);
-    get = prepareGetWithClusteringKey();
-    get.withConsistency(Consistency.SEQUENTIAL);
+    get = Get.newBuilder(prepareGetWithClusteringKey()).consistency(Consistency.SEQUENTIAL).build();
 
     // Act
     handler.setConsistency(bound, get);
@@ -425,8 +451,7 @@ public class SelectStatementHandlerTest {
   public void setConsistency_GetOperationWithEventualConsistencyGiven_ShouldPrepareWithOne() {
     // Arrange
     configureBehavior(null);
-    get = prepareGetWithClusteringKey();
-    get.withConsistency(Consistency.EVENTUAL);
+    get = Get.newBuilder(prepareGetWithClusteringKey()).consistency(Consistency.EVENTUAL).build();
 
     // Act
     handler.setConsistency(bound, get);
@@ -440,8 +465,8 @@ public class SelectStatementHandlerTest {
       setConsistency_GetOperationWithLinearizableConsistencyGiven_ShouldPrepareWithSerial() {
     // Arrange
     configureBehavior(null);
-    get = prepareGetWithClusteringKey();
-    get.withConsistency(Consistency.LINEARIZABLE);
+    get =
+        Get.newBuilder(prepareGetWithClusteringKey()).consistency(Consistency.LINEARIZABLE).build();
 
     // Act
     handler.setConsistency(bound, get);
@@ -454,8 +479,7 @@ public class SelectStatementHandlerTest {
   public void setConsistency_ScanOperationWithStrongConsistencyGiven_ShouldPrepareWithQuorum() {
     // Arrange
     configureBehavior(null);
-    scan = prepareScan();
-    scan.withConsistency(Consistency.SEQUENTIAL);
+    scan = Scan.newBuilder(prepareScan()).consistency(Consistency.SEQUENTIAL).build();
 
     // Act
     handler.setConsistency(bound, scan);
@@ -468,8 +492,7 @@ public class SelectStatementHandlerTest {
   public void setConsistency_ScanOperationWithEventualConsistencyGiven_ShouldPrepareWithOne() {
     // Arrange
     configureBehavior(null);
-    scan = prepareScan();
-    scan.withConsistency(Consistency.EVENTUAL);
+    scan = Scan.newBuilder(prepareScan()).consistency(Consistency.EVENTUAL).build();
 
     // Act
     handler.setConsistency(bound, scan);
@@ -483,8 +506,7 @@ public class SelectStatementHandlerTest {
       setConsistency_ScanOperationWithLinearizableConsistencyGiven_ShouldPrepareWithSerial() {
     // Arrange
     configureBehavior(null);
-    scan = prepareScan();
-    scan.withConsistency(Consistency.LINEARIZABLE);
+    scan = Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
 
     // Act
     handler.setConsistency(bound, scan);
@@ -497,7 +519,7 @@ public class SelectStatementHandlerTest {
   public void handle_DriverExceptionThrown_ShouldThrowProperExecutionException() {
     // Arrange
     get = prepareGetWithClusteringKey();
-    SelectStatementHandler spy = Mockito.spy(new SelectStatementHandler(session));
+    SelectStatementHandler spy = Mockito.spy(new SelectStatementHandler(session, FETCH_SIZE));
     doReturn(prepared).when(spy).prepare(get);
     doReturn(bound).when(spy).bind(prepared, get);
 
@@ -525,7 +547,7 @@ public class SelectStatementHandlerTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new SelectStatementHandler(null))
+    assertThatThrownBy(() -> new SelectStatementHandler(null, FETCH_SIZE))
         .isInstanceOf(NullPointerException.class);
   }
 
@@ -543,8 +565,7 @@ public class SelectStatementHandlerTest {
                   ANY_LIMIT + ";",
                 });
     configureBehavior(expected);
-    ScanAll scanAll = prepareScanAll();
-    scanAll.withLimit(ANY_LIMIT);
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).limit(ANY_LIMIT).build();
 
     // Act
     handler.prepare(scanAll);
@@ -564,7 +585,7 @@ public class SelectStatementHandlerTest {
                   "SELECT * FROM", ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME + ";",
                 });
     configureBehavior(expected);
-    ScanAll scanAll = prepareScanAll();
+    Scan scanAll = prepareScanAll();
 
     // Act
     handler.prepare(scanAll);
@@ -587,12 +608,25 @@ public class SelectStatementHandlerTest {
                   ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME + ";",
                 });
     configureBehavior(expected);
-    ScanAll scanAll = prepareScanAll().withProjections(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+    Scan scanAll = Scan.newBuilder(prepareScanAll()).projections(ANY_NAME_1, ANY_NAME_2).build();
 
     // Act
     handler.prepare(scanAll);
 
     // Assert
     verify(session).prepare(expected);
+  }
+
+  @Test
+  public void execute_ShouldSetFetchSizeAndExecute() {
+    // Arrange
+    Get get = prepareGet();
+
+    // Act
+    handler.execute(bound, get);
+
+    // Assert
+    verify(bound).setFetchSize(FETCH_SIZE);
+    verify(session).execute(bound);
   }
 }

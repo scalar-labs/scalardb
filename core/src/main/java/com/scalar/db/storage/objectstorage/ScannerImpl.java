@@ -1,8 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.AbstractScanner;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,12 +12,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class ScannerImpl implements Scanner {
+public class ScannerImpl extends AbstractScanner {
   private final Iterator<ObjectStorageRecord> recordIterator;
   private final ResultInterpreter resultInterpreter;
   private final int recordCountLimit;
 
-  private ScannerIterator scannerIterator;
   private int recordCount;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -58,13 +56,4 @@ public class ScannerImpl implements Scanner {
 
   @Override
   public void close() throws IOException {}
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    if (scannerIterator == null) {
-      scannerIterator = new ScannerIterator(this);
-    }
-    return scannerIterator;
-  }
 }

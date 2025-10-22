@@ -14,8 +14,6 @@ on:
         type: boolean
         default: false
     secrets:
-      CR_PAT:
-        required: true
       SLACK_SECURITY_WEBHOOK_URL:
         required: false
 
@@ -25,8 +23,7 @@ jobs:
     with:
       target-ref: ${{ inputs.target-ref }}
       find-latest-release: ${{ inputs.find-latest-release }}
-      images: '[["ScalarDB Schema Loader", "scalardb-schema-loader"]]'
+      images: '[["ScalarDB Schema Loader", "scalardb-schema-loader"], ["ScalarDB Data Loader CLI", "scalardb-data-loader-cli"]]'
       version-command: "./gradlew :core:properties -q | grep version: | awk '{print $2}'"
     secrets:
-      CR_PAT: ${{ secrets.CR_PAT }}
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}

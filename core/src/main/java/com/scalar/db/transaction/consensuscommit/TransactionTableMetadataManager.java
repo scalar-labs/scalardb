@@ -6,13 +6,14 @@ import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -50,6 +51,7 @@ public class TransactionTableMetadataManager {
    * @return a table metadata. null if the table is not found.
    * @throws ExecutionException if the operation fails
    */
+  @Nullable
   public TransactionTableMetadata getTransactionTableMetadata(Operation operation)
       throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
@@ -67,6 +69,7 @@ public class TransactionTableMetadataManager {
    * @return a table metadata. null if the table is not found.
    * @throws ExecutionException if the operation fails
    */
+  @Nullable
   public TransactionTableMetadata getTransactionTableMetadata(String namespace, String table)
       throws ExecutionException {
     try {

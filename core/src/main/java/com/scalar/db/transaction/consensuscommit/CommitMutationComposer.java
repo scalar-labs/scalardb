@@ -1,26 +1,26 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
+import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.Get;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -65,9 +65,8 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private void add(Selection base, @Nullable TransactionResult result) throws ExecutionException {
     if (result == null) {
-      // for deleting non-existing record that was prepared with DELETED for Serializable with
-      // Extra-write
-      mutations.add(composeDelete(base, null));
+      throw new AssertionError(
+          "This path should not be reached since the EXTRA_WRITE strategy is deleted");
     } else if (result.getState().equals(TransactionState.PREPARED)) {
       // for rollforward in lazy recovery
       mutations.add(composePut(base, result));
@@ -75,6 +74,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       // for rollforward in lazy recovery
       mutations.add(composeDelete(base, result));
     } else {
+      assert result.getState().equals(TransactionState.COMMITTED);
       logger.debug(
           "The record was committed by the originated one "
               + "or rolled forward by another transaction: {}",
@@ -84,30 +84,51 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private Put composePut(Operation base, @Nullable TransactionResult result)
       throws ExecutionException {
-    return new Put(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(
-            new PutIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(
-                    STATE, toStateValue(TransactionState.PREPARED), Operator.EQ)))
-        .withValue(Attribute.toCommittedAtValue(current))
-        .withValue(Attribute.toStateValue(TransactionState.COMMITTED));
+    PutBuilder.Buildable putBuilder =
+        Put.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(getPartitionKey(base, result))
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(
+                        ConditionBuilder.column(STATE)
+                            .isEqualToInt(TransactionState.PREPARED.get()))
+                    .build())
+            .bigIntValue(COMMITTED_AT, current)
+            .intValue(STATE, TransactionState.COMMITTED.get())
+            .consistency(Consistency.LINEARIZABLE);
+    getClusteringKey(base, result).ifPresent(putBuilder::clusteringKey);
+
+    // Set before image columns to null
+    if (result != null) {
+      TransactionTableMetadata transactionTableMetadata =
+          getTransactionTableMetadata(tableMetadataManager, base);
+      LinkedHashSet<String> beforeImageColumnNames =
+          transactionTableMetadata.getBeforeImageColumnNames();
+      TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
+      setBeforeImageColumnsToNull(putBuilder, beforeImageColumnNames, tableMetadata);
+    }
+
+    return putBuilder.build();
   }
 
   private Delete composeDelete(Operation base, @Nullable TransactionResult result)
       throws ExecutionException {
-    return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(
-                    STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(getPartitionKey(base, result))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(
+                        ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                    .build());
+    getClusteringKey(base, result).ifPresent(deleteBuilder::clusteringKey);
+
+    return deleteBuilder.build();
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)
@@ -119,13 +140,12 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       assert base instanceof Selection;
       if (result != null) {
         // for rollforward in lazy recovery
-        TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-        return ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
+        TransactionTableMetadata transactionTableMetadata =
+            getTransactionTableMetadata(tableMetadataManager, base);
+        return ScalarDbUtils.getPartitionKey(result, transactionTableMetadata.getTableMetadata());
       } else {
-        // for deleting non-existing record that was prepared with DELETED for Serializable with
-        // Extra-write
-        assert base instanceof Get;
-        return base.getPartitionKey();
+        throw new AssertionError(
+            "This path should not be reached since the EXTRA_WRITE strategy is deleted");
       }
     }
   }
@@ -139,13 +159,12 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       assert base instanceof Selection;
       if (result != null) {
         // for rollforward in lazy recovery
-        TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-        return ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
+        TransactionTableMetadata transactionTableMetadata =
+            getTransactionTableMetadata(tableMetadataManager, base);
+        return ScalarDbUtils.getClusteringKey(result, transactionTableMetadata.getTableMetadata());
       } else {
-        // for deleting non-existing record that was prepared with DELETED for Serializable with
-        // Extra-write
-        assert base instanceof Get;
-        return base.getClusteringKey();
+        throw new AssertionError(
+            "This path should not be reached since the EXTRA_WRITE strategy is deleted");
       }
     }
   }

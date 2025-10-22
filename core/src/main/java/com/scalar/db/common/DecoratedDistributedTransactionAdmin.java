@@ -196,6 +196,52 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void addNewColumnToTable(
+      String namespace,
+      String table,
+      String columnName,
+      DataType columnType,
+      boolean encrypted,
+      boolean ifNotExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.addNewColumnToTable(
+        namespace, table, columnName, columnType, encrypted, ifNotExists);
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void dropColumnFromTable(
+      String namespace, String table, String columnName, boolean ifExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName, ifExists);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    distributedTransactionAdmin.alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    distributedTransactionAdmin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
     distributedTransactionAdmin.importTable(namespace, table, options);
@@ -556,6 +602,52 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   @Override
   public List<TablePolicy> getTablePolicies() throws ExecutionException {
     return distributedTransactionAdmin.getTablePolicies();
+  }
+
+  @Override
+  public void createReplicationTables(Map<String, String> options) throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables(options);
+  }
+
+  @Override
+  public void createReplicationTables(boolean ifNotExist, Map<String, String> options)
+      throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables(ifNotExist, options);
+  }
+
+  @Override
+  public void createReplicationTables(boolean ifNotExist) throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables(ifNotExist);
+  }
+
+  @Override
+  public void createReplicationTables() throws ExecutionException {
+    distributedTransactionAdmin.createReplicationTables();
+  }
+
+  @Override
+  public void dropReplicationTables() throws ExecutionException {
+    distributedTransactionAdmin.dropReplicationTables();
+  }
+
+  @Override
+  public void dropReplicationTables(boolean ifExist) throws ExecutionException {
+    distributedTransactionAdmin.dropReplicationTables(ifExist);
+  }
+
+  @Override
+  public void truncateReplicationTables() throws ExecutionException {
+    distributedTransactionAdmin.truncateReplicationTables();
+  }
+
+  @Override
+  public void repairReplicationTables(Map<String, String> options) throws ExecutionException {
+    distributedTransactionAdmin.repairReplicationTables(options);
+  }
+
+  @Override
+  public boolean replicationTablesExist() throws ExecutionException {
+    return distributedTransactionAdmin.replicationTablesExist();
   }
 
   @Override

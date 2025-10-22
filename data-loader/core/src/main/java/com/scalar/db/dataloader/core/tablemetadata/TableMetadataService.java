@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.tablemetadata;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Collection;
@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
  * Service for retrieving {@link TableMetadata} from ScalarDB. Provides methods to fetch metadata
  * for individual tables or a collection of tables.
  */
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public class TableMetadataService {
 
@@ -34,12 +35,12 @@ public class TableMetadataService {
       TableMetadata tableMetadata = storageAdmin.getTableMetadata(namespace, tableName);
       if (tableMetadata == null) {
         throw new TableMetadataException(
-            CoreError.DATA_LOADER_MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
+            DataLoaderError.MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
       }
       return tableMetadata;
     } catch (ExecutionException e) {
       throw new TableMetadataException(
-          CoreError.DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()), e);
+          DataLoaderError.TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 

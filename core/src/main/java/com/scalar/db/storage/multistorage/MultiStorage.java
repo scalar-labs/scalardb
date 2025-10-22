@@ -14,7 +14,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
@@ -36,7 +36,9 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorage extends AbstractDistributedStorage {
 
-  private final Map<String, DistributedStorage> tableStorageMap;
+  /** @deprecated Will be removed in 5.0.0. */
+  @Deprecated private final Map<String, DistributedStorage> tableStorageMap;
+
   private final Map<String, DistributedStorage> namespaceStorageMap;
   private final DistributedStorage defaultStorage;
   private final List<DistributedStorage> storages;
@@ -140,6 +142,8 @@ public class MultiStorage extends AbstractDistributedStorage {
   }
 
   private DistributedStorage getStorage(Operation operation) {
+    assert operation.forFullTableName().isPresent() && operation.forNamespace().isPresent();
+
     String fullTaleName = operation.forFullTableName().get();
     DistributedStorage storage = tableStorageMap.get(fullTaleName);
     if (storage != null) {

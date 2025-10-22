@@ -3,6 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -19,10 +21,14 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -38,6 +44,8 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +62,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Mock private DatabaseConfig databaseConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
-  @Mock private RecoveryHandler recovery;
+  @Mock private RecoveryExecutor recoveryExecutor;
+  @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
 
   private TwoPhaseConsensusCommitManager manager;
@@ -65,7 +74,6 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
-    when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
 
     manager =
         new TwoPhaseConsensusCommitManager(
@@ -75,72 +83,63 @@ public class TwoPhaseConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
+            crud,
             commit);
   }
 
   @Test
-  public void begin_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation()
-      throws TransactionException {
+  public void begin_NoArgumentGiven_ReturnWithSomeTxIdAndSnapshotIsolation() {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
-      throws TransactionException {
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.begin(ANY_TX_ID))
-                .getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.begin(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects()
-      throws TransactionException {
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction1 =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
-    TwoPhaseConsensusCommit transaction2 =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.begin()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction1 = (TwoPhaseConsensusCommit) manager.begin();
+    TwoPhaseConsensusCommit transaction2 = (TwoPhaseConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
   public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
 
     // Act Assert
     manager.begin(ANY_TX_ID);
@@ -171,14 +170,14 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -187,46 +186,39 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.start(ANY_TX_ID))
-                .getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction = (TwoPhaseConsensusCommit) manager.start(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedObjects()
+  public void start_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
       throws TransactionException {
     // Arrange
 
     // Act
-    TwoPhaseConsensusCommit transaction1 =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
-    TwoPhaseConsensusCommit transaction2 =
-        (TwoPhaseConsensusCommit)
-            ((DecoratedTwoPhaseCommitTransaction) manager.start()).getOriginalTransaction();
+    TwoPhaseConsensusCommit transaction1 = (TwoPhaseConsensusCommit) manager.start();
+    TwoPhaseConsensusCommit transaction2 = (TwoPhaseConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
   public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
 
     // Act Assert
     manager.start(ANY_TX_ID);
@@ -255,6 +247,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void join_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
 
     // Act
     TwoPhaseConsensusCommit transaction =
@@ -262,15 +256,20 @@ public class TwoPhaseConsensusCommitManagerTest {
             ((DecoratedTwoPhaseCommitTransaction) manager.join(ANY_TX_ID)).getOriginalTransaction();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
   public void join_CalledAfterJoinWithSameTxId_ReturnSameTransactionObject()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     TwoPhaseCommitTransaction transaction1 = manager.join(ANY_TX_ID);
 
     // Act
@@ -283,6 +282,9 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Test
   public void join_TxIdGiven_WithGroupCommitEnabled_ShouldThrowException() {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
 
     // Act Assert
@@ -292,6 +294,9 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
 
     // Act
@@ -304,6 +309,9 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Test
   public void resume_CalledWithJoin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     TwoPhaseCommitTransaction transaction1 = manager.join(ANY_TX_ID);
 
     // Act
@@ -316,6 +324,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Test
   public void resume_CalledWithoutBeginOrJoin_ThrowTransactionNotFoundException() {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
@@ -326,6 +336,9 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.prepare();
     transaction.commit();
@@ -339,6 +352,9 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     doThrow(CommitConflictException.class).when(commit).commitState(any());
 
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
@@ -360,6 +376,9 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.prepare();
     transaction.rollback();
@@ -374,6 +393,9 @@ public class TwoPhaseConsensusCommitManagerTest {
       resume_CalledWithBeginAndRollback_RollbackExceptionThrown_ThrowTransactionNotFoundException()
           throws TransactionException {
     // Arrange
+    TwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+
     doThrow(UnknownTransactionStatusException.class).when(commit).abortState(any());
 
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
@@ -513,7 +535,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -525,45 +549,12 @@ public class TwoPhaseConsensusCommitManagerTest {
     Optional<Result> actual = spied.get(get);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).prepare();
     verify(transaction).validate();
     verify(transaction).commit();
     assertThat(actual).isEqualTo(Optional.of(result));
-  }
-
-  @Test
-  public void
-      get_TransactionNotFoundExceptionThrownByTransactionBegin_ShouldThrowCrudConflictException()
-          throws TransactionException {
-    // Arrange
-    TwoPhaseConsensusCommitManager spied = spy(manager);
-    doThrow(TransactionNotFoundException.class).when(spied).beginInternal();
-
-    Get get =
-        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
-
-    // Act Assert
-    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
-
-    verify(spied).beginInternal();
-  }
-
-  @Test
-  public void get_TransactionExceptionThrownByTransactionBegin_ShouldThrowCrudException()
-      throws TransactionException {
-    // Arrange
-    TwoPhaseConsensusCommitManager spied = spy(manager);
-    doThrow(TransactionException.class).when(spied).beginInternal();
-
-    Get get =
-        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
-
-    // Act Assert
-    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
-
-    verify(spied).beginInternal();
   }
 
   @Test
@@ -573,7 +564,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -582,7 +575,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -595,7 +588,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -604,7 +599,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -617,7 +612,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -626,7 +623,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -639,7 +636,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -648,7 +647,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -661,7 +660,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -670,7 +671,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(UnknownTransactionStatusException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -682,7 +683,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -691,7 +694,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -702,7 +705,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Scan scan =
         Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -715,7 +720,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     List<Result> actual = spied.scan(scan);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).scan(scan);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -724,12 +729,436 @@ public class TwoPhaseConsensusCommitManagerTest {
   }
 
   @Test
+  public void getScannerAndScannerOne_ShouldReturnScannerAndReturnProperResult() throws Exception {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThat(actual.one()).hasValue(result1);
+    assertThat(actual.one()).hasValue(result2);
+    assertThat(actual.one()).hasValue(result3);
+    assertThat(actual.one()).isEmpty();
+    actual.close();
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldReturnScannerAndReturnProperResults() throws Exception {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.all())
+        .thenReturn(Arrays.asList(result1, result2, result3))
+        .thenReturn(Collections.emptyList());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    List<Result> results = actual.all();
+    assertThat(results).containsExactly(result1, result2, result3);
+    assertThat(actual.all()).isEmpty();
+    actual.close();
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerIterator_ShouldReturnScannerAndReturnProperResults()
+      throws Exception {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+
+    Iterator<Result> iterator = actual.iterator();
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result1);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result2);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result3);
+    assertThat(iterator.hasNext()).isFalse();
+    actual.close();
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      getScanner_CrudExceptionThrownByTransactionGetScanner_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    when(transaction.getScanner(scan)).thenThrow(CrudException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.getScanner(scan)).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_CrudExceptionThrownByScannerOne_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    when(scanner.one()).thenThrow(CrudException.class);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::one).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_CrudExceptionThrownByScannerAll_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    when(scanner.all()).thenThrow(CrudException.class);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::all).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CrudExceptionThrownByScannerClose_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    doThrow(CrudException.class).when(scanner).close();
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_PreparationConflictExceptionThrownByTransactionPrepare_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(PreparationConflictException.class).when(transaction).prepare();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_ValidationConflictExceptionThrownByTransactionValidate_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(ValidationConflictException.class).when(transaction).validate();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(CommitConflictException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_UnknownTransactionStatusExceptionByTransactionCommit_ShouldThrowUnknownTransactionStatusException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(UnknownTransactionStatusException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(UnknownTransactionStatusException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(CommitException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
   public void put_ShouldPut() throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Put put =
         Put.newBuilder()
@@ -743,7 +1172,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).put(put);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -756,7 +1185,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     List<Put> puts =
         Arrays.asList(
@@ -782,7 +1213,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.put(puts);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).put(puts);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -795,7 +1226,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Insert insert =
         Insert.newBuilder()
@@ -809,7 +1242,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.insert(insert);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).insert(insert);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -822,7 +1255,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Upsert upsert =
         Upsert.newBuilder()
@@ -836,7 +1271,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.upsert(upsert);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).upsert(upsert);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -849,7 +1284,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Update update =
         Update.newBuilder()
@@ -863,7 +1300,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.update(update);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).update(update);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -876,7 +1313,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Delete delete =
         Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -885,7 +1324,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).delete(delete);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -898,7 +1337,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     List<Delete> deletes =
         Arrays.asList(
@@ -921,7 +1362,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.delete(deletes);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).delete(deletes);
     verify(transaction).prepare();
     verify(transaction).validate();
@@ -934,7 +1375,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
 
     TwoPhaseConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     List<Mutation> mutations =
         Arrays.asList(
@@ -972,7 +1415,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     spied.mutate(mutations);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).mutate(mutations);
     verify(transaction).prepare();
     verify(transaction).validate();

@@ -4,7 +4,7 @@ import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

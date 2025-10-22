@@ -10,8 +10,8 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -92,16 +92,14 @@ public class MutateStatementHandler extends StatementHandler {
     } else if (put.getCondition().get() instanceof PutIfNotExists) {
       if (partition.containsKey(mutation.getConcatenatedKey())) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(
-                "The specified record already exists: key=" + mutation.getConcatenatedKey()));
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
       partition.put(mutation.getConcatenatedKey(), mutation.makeRecord());
     } else if (put.getCondition().get() instanceof PutIfExists) {
       ObjectStorageRecord existingRecord = partition.get(mutation.getConcatenatedKey());
       if (existingRecord == null) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(
-                "The specified record does not exist: key=" + mutation.getConcatenatedKey()));
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
       partition.put(mutation.getConcatenatedKey(), mutation.makeRecord(existingRecord));
     } else {
@@ -109,8 +107,7 @@ public class MutateStatementHandler extends StatementHandler {
       ObjectStorageRecord existingRecord = partition.get(mutation.getConcatenatedKey());
       if (existingRecord == null) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(
-                "The specified record does not exist: key=" + mutation.getConcatenatedKey()));
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
       try {
         validateConditions(
@@ -119,9 +116,7 @@ public class MutateStatementHandler extends StatementHandler {
             metadataManager.getTableMetadata(mutation.getOperation()));
       } catch (ExecutionException e) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(
-                "The specified conditions are not met: " + put.getCondition()),
-            e);
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put), e);
       }
       partition.put(mutation.getConcatenatedKey(), mutation.makeRecord(existingRecord));
     }
@@ -136,14 +131,14 @@ public class MutateStatementHandler extends StatementHandler {
     } else if (delete.getCondition().get() instanceof DeleteIfExists) {
       if (!partition.containsKey(mutation.getConcatenatedKey())) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage("Record not found"));
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
       partition.remove(mutation.getConcatenatedKey());
     } else {
       assert delete.getCondition().get() instanceof DeleteIf;
       if (!partition.containsKey(mutation.getConcatenatedKey())) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage("Record not found"));
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
       try {
         validateConditions(
@@ -152,9 +147,7 @@ public class MutateStatementHandler extends StatementHandler {
             metadataManager.getTableMetadata(mutation.getOperation()));
       } catch (ExecutionException e) {
         throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(
-                "The specified conditions are not met: " + delete.getCondition()),
-            e);
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete), e);
       }
       partition.remove(mutation.getConcatenatedKey());
     }
@@ -221,7 +214,7 @@ public class MutateStatementHandler extends StatementHandler {
     } catch (ObjectStorageWrapperException e) {
       if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.ALREADY_EXISTS) {
         throw new RetriableExecutionException(
-            CoreError.OBJECT_STORAGE_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
+            CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
                 String.format(
                     "Conflict occurred while inserting partition: namespace='%s', table='%s', partition='%s'",
                     namespaceName, tableName, partitionKey)),
@@ -252,7 +245,7 @@ public class MutateStatementHandler extends StatementHandler {
       if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND
           || e.getStatusCode() == ObjectStorageWrapperException.StatusCode.VERSION_MISMATCH) {
         throw new RetriableExecutionException(
-            CoreError.OBJECT_STORAGE_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
+            CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
                 String.format(
                     "Conflict occurred while updating partition: namespace='%s', table='%s', partition='%s'",
                     namespaceName, tableName, partitionKey)),
@@ -277,7 +270,7 @@ public class MutateStatementHandler extends StatementHandler {
       if (e.getStatusCode() == ObjectStorageWrapperException.StatusCode.NOT_FOUND
           || e.getStatusCode() == ObjectStorageWrapperException.StatusCode.VERSION_MISMATCH) {
         throw new RetriableExecutionException(
-            CoreError.OBJECT_STORAGE_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
+            CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
                 String.format(
                     "Conflict occurred while deleting partition: namespace='%s', table='%s', partition='%s'",
                     namespaceName, tableName, partitionKey)),

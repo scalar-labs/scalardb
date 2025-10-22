@@ -2,6 +2,7 @@ package com.scalar.db.service;
 
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -94,6 +95,32 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    admin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    admin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    admin.alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    admin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
@@ -131,6 +158,11 @@ public class AdminService implements DistributedStorageAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     admin.upgrade(options);
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
+    return admin.getStorageInfo(namespace);
   }
 
   @Override

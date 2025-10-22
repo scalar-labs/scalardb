@@ -4,8 +4,8 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -49,7 +49,7 @@ public class BatchHandler {
     try {
       executeStoredProcedure(mutations, tableMetadata);
     } catch (CosmosException e) {
-      throwException(e);
+      throwException(e, mutations);
     } catch (RuntimeException e) {
       throw new ExecutionException(
           CoreError.COSMOS_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
@@ -84,11 +84,13 @@ public class BatchHandler {
         .execute(args, cosmosMutation.getStoredProcedureOptions());
   }
 
-  private void throwException(CosmosException exception) throws ExecutionException {
+  private void throwException(CosmosException exception, List<? extends Mutation> mutations)
+      throws ExecutionException {
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
-      throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), exception);
+      throw new NoMutationException(
+          CoreError.NO_MUTATION_APPLIED.buildMessage(), mutations, exception);
     } else if (statusCode == CosmosErrorCode.RETRY_WITH.get()) {
       throw new RetriableExecutionException(
           CoreError.COSMOS_RETRY_WITH_ERROR_OCCURRED_IN_MUTATION.buildMessage(

@@ -5,21 +5,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.AbstractScanner;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public final class ScannerImpl implements Scanner {
+public final class ScannerImpl extends AbstractScanner {
   private final ResultSet resultSet;
   private final ResultInterpreter resultInterpreter;
-
-  private ScannerIterator scannerIterator;
 
   public ScannerImpl(ResultSet resultSet, ResultInterpreter resultInterpreter) {
     this.resultSet = checkNotNull(resultSet);
@@ -42,15 +38,6 @@ public final class ScannerImpl implements Scanner {
     List<Result> results = new ArrayList<>();
     resultSet.forEach(r -> results.add(resultInterpreter.interpret(r)));
     return results;
-  }
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    if (scannerIterator == null) {
-      scannerIterator = new ScannerIterator(this);
-    }
-    return scannerIterator;
   }
 
   @Override

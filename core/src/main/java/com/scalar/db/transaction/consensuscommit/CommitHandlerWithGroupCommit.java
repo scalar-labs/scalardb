@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.groupcommit.Emittable;
@@ -28,9 +29,18 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      MutationsGrouper mutationsGrouper,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean onePhaseCommitEnabled,
       CoordinatorGroupCommitter groupCommitter) {
-    super(storage, coordinator, tableMetadataManager, parallelExecutor);
-
+    super(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        mutationsGrouper,
+        coordinatorWriteOmissionOnReadOnlyEnabled,
+        onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
     groupCommitter.setEmitter(new Emitter(coordinator));
@@ -38,28 +48,57 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  protected void onFailureBeforeCommit(Snapshot snapshot) {
-    cancelGroupCommitIfNeeded(snapshot.getId());
+  public void commit(TransactionContext context)
+      throws CommitException, UnknownTransactionStatusException {
+    if (!context.readOnly
+        && !context.snapshot.hasWritesOrDeletes()
+        && coordinatorWriteOmissionOnReadOnlyEnabled) {
+      cancelGroupCommitIfNeeded(context.transactionId);
+    }
+
+    super.commit(context);
   }
 
-  private void commitStateViaGroupCommit(Snapshot snapshot)
+  @Override
+  boolean canOnePhaseCommit(TransactionContext context) throws CommitException {
+    try {
+      return super.canOnePhaseCommit(context);
+    } catch (CommitException e) {
+      cancelGroupCommitIfNeeded(context.transactionId);
+      throw e;
+    }
+  }
+
+  @Override
+  void onePhaseCommitRecords(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    String id = snapshot.getId();
+    cancelGroupCommitIfNeeded(context.transactionId);
+    super.onePhaseCommitRecords(context);
+  }
+
+  @Override
+  protected void onFailureBeforeCommit(TransactionContext context) {
+    cancelGroupCommitIfNeeded(context.transactionId);
+  }
+
+  private void commitStateViaGroupCommit(TransactionContext context)
+      throws CommitConflictException, UnknownTransactionStatusException {
+    String id = context.transactionId;
     try {
       // Group commit the state by internally calling `groupCommitState()` via the emitter.
-      groupCommitter.ready(id, snapshot);
+      groupCommitter.ready(id, context);
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (GroupCommitConflictException e) {
       cancelGroupCommitIfNeeded(id);
       // Throw a proper exception from this method if needed.
-      handleCommitConflict(snapshot, e);
+      handleCommitConflict(context, e);
     } catch (GroupCommitException e) {
       cancelGroupCommitIfNeeded(id);
       Throwable cause = e.getCause();
       if (cause instanceof CoordinatorConflictException) {
         // Throw a proper exception from this method if needed.
-        handleCommitConflict(snapshot, (CoordinatorConflictException) cause);
+        handleCommitConflict(context, (CoordinatorConflictException) cause);
       } else {
         // Failed to access the coordinator state. The state is unknown.
         throw new UnknownTransactionStatusException("Coordinator status is unknown", cause, id);
@@ -67,7 +106,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     } catch (Exception e) {
       // This is an unexpected exception, but clean up resources just in case.
       cancelGroupCommitIfNeeded(id);
-      throw new AssertionError("Group commit unexpectedly failed. TransactionID:" + id, e);
+      throw new AssertionError("Group commit unexpectedly failed. TransactionID: " + id, e);
     }
   }
 
@@ -81,9 +120,9 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  public void commitState(Snapshot snapshot)
+  public void commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateViaGroupCommit(snapshot);
+    commitStateViaGroupCommit(context);
   }
 
   @Override
@@ -92,7 +131,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     return super.abortState(id);
   }
 
-  private static class Emitter implements Emittable<String, String, Snapshot> {
+  private static class Emitter implements Emittable<String, String, TransactionContext> {
     private final Coordinator coordinator;
 
     public Emitter(Coordinator coordinator) {
@@ -100,9 +139,9 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     }
 
     @Override
-    public void emitNormalGroup(String parentId, List<Snapshot> snapshots)
+    public void emitNormalGroup(String parentId, List<TransactionContext> contexts)
         throws CoordinatorException {
-      if (snapshots.isEmpty()) {
+      if (contexts.isEmpty()) {
         // This means all buffered transactions were manually rolled back. Nothing to do.
         return;
       }
@@ -110,7 +149,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       // These transactions are contained in a normal group that has multiple transactions.
       // Therefore, the transaction states should be put together in Coordinator.State.
       List<String> transactionIds =
-          snapshots.stream().map(Snapshot::getId).collect(Collectors.toList());
+          contexts.stream().map(c -> c.transactionId).collect(Collectors.toList());
 
       coordinator.putStateForGroupCommit(
           parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
@@ -122,7 +161,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     }
 
     @Override
-    public void emitDelayedGroup(String fullId, Snapshot snapshot) throws CoordinatorException {
+    public void emitDelayedGroup(String fullId, TransactionContext context)
+        throws CoordinatorException {
       // This transaction is contained in a delayed group that has only a single transaction.
       // Therefore, the transaction state can be committed as if it's a normal commit (not a
       // group commit).

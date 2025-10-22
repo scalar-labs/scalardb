@@ -1,5 +1,6 @@
 package com.scalar.db.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -8,10 +9,9 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -27,17 +27,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
-    extends TransactionDecorationTwoPhaseCommitTransactionManager
-    implements TwoPhaseCommitTransactionExpirationHandlerSettable {
+@ThreadSafe
+public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
+    extends DecoratedTwoPhaseCommitTransactionManager {
 
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
   private static final Logger logger =
-      LoggerFactory.getLogger(AbstractTwoPhaseCommitTransactionManager.class);
+      LoggerFactory.getLogger(ActiveTransactionManagedTwoPhaseCommitTransactionManager.class);
 
   private final ActiveExpiringMap<String, ActiveTransaction> activeTransactions;
 
@@ -52,11 +53,13 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
                 }
               });
 
-  public ActiveTransactionManagedTwoPhaseCommitTransactionManager(DatabaseConfig config) {
-    super(config);
+  public ActiveTransactionManagedTwoPhaseCommitTransactionManager(
+      TwoPhaseCommitTransactionManager transactionManager,
+      long activeTransactionManagementExpirationTimeMillis) {
+    super(transactionManager);
     activeTransactions =
         new ActiveExpiringMap<>(
-            config.getActiveTransactionManagementExpirationTimeMillis(),
+            activeTransactionManagementExpirationTimeMillis,
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             (id, t) -> {
               logger.warn("The transaction is expired. Transaction ID: {}", id);
@@ -82,8 +85,18 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     activeTransactions.remove(transactionId);
   }
 
-  protected boolean isTransactionActive(String transactionId) {
-    return activeTransactions.containsKey(transactionId);
+  @Override
+  protected TwoPhaseCommitTransaction decorateTransactionOnBeginOrStart(
+      TwoPhaseCommitTransaction transaction) throws TransactionException {
+    return new ActiveTransaction(transaction);
+  }
+
+  @Override
+  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
+    if (activeTransactions.containsKey(txId)) {
+      return resume(txId);
+    }
+    return new ActiveTransaction(super.join(txId));
   }
 
   @Override
@@ -96,13 +109,8 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
                     CoreError.TRANSACTION_NOT_FOUND.buildMessage(), txId));
   }
 
-  @Override
-  protected TwoPhaseCommitTransaction decorate(TwoPhaseCommitTransaction transaction)
-      throws TransactionException {
-    return new ActiveTransaction(super.decorate(transaction));
-  }
-
-  private class ActiveTransaction extends DecoratedTwoPhaseCommitTransaction {
+  @VisibleForTesting
+  class ActiveTransaction extends DecoratedTwoPhaseCommitTransaction {
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     private ActiveTransaction(TwoPhaseCommitTransaction transaction) throws TransactionException {
@@ -118,6 +126,11 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     @Override
     public synchronized List<Result> scan(Scan scan) throws CrudException {
       return super.scan(scan);
+    }
+
+    @Override
+    public synchronized Scanner getScanner(Scan scan) throws CrudException {
+      return super.getScanner(scan);
     }
 
     /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -192,7 +205,7 @@ public abstract class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     }
 
     @Override
-    public void abort() throws AbortException {
+    public synchronized void abort() throws AbortException {
       try {
         super.abort();
       } finally {

@@ -82,6 +82,16 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    return manager.beginReadOnly();
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+    return manager.beginReadOnly(txId);
+  }
+
+  @Override
   public DistributedTransaction start() throws TransactionException {
     return manager.start();
   }
@@ -89,6 +99,16 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(String txId) throws TransactionException {
     return manager.start(txId);
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly() throws TransactionException {
+    return manager.startReadOnly();
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
+    return manager.startReadOnly(txId);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -168,10 +188,19 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    return manager.getScanner(scan);
+  }
+
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
+  @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     manager.put(put);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
     manager.put(puts);
@@ -197,6 +226,8 @@ public class TransactionService implements DistributedTransactionManager {
     manager.delete(delete);
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
     manager.delete(deletes);

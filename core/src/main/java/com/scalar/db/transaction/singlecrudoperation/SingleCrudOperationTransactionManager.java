@@ -20,7 +20,6 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
@@ -28,7 +27,8 @@ import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -71,6 +71,20 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
 
   @Override
   public DistributedTransaction begin(String txId) throws TransactionException {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+            .buildMessage());
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly() throws TransactionException {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+            .buildMessage());
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
             .buildMessage());
@@ -146,7 +160,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     get = copyAndSetTargetToIfNot(get);
 
     try {
-      return storage.get(get.withConsistency(Consistency.LINEARIZABLE));
+      return storage.get(Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build());
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, null);
     }
@@ -156,11 +170,53 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
   public List<Result> scan(Scan scan) throws CrudException {
     scan = copyAndSetTargetToIfNot(scan);
 
-    try (Scanner scanner = storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
+    try (com.scalar.db.api.Scanner scanner =
+        storage.scan(Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build())) {
       return scanner.all();
     } catch (ExecutionException | IOException e) {
       throw new CrudException(e.getMessage(), e, null);
     }
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    scan = copyAndSetTargetToIfNot(scan);
+
+    com.scalar.db.api.Scanner scanner;
+    try {
+      scanner = storage.scan(scan);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, null);
+    }
+
+    return new AbstractTransactionManagerCrudOperableScanner() {
+      @Override
+      public Optional<Result> one() throws CrudException {
+        try {
+          return scanner.one();
+        } catch (ExecutionException e) {
+          throw new CrudException(e.getMessage(), e, null);
+        }
+      }
+
+      @Override
+      public List<Result> all() throws CrudException {
+        try {
+          return scanner.all();
+        } catch (ExecutionException e) {
+          throw new CrudException(e.getMessage(), e, null);
+        }
+      }
+
+      @Override
+      public void close() throws CrudException {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          throw new CrudException(e.getMessage(), e, null);
+        }
+      }
+    };
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -170,7 +226,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     put = copyAndSetTargetToIfNot(put);
 
     try {
-      storage.put(put.withConsistency(Consistency.LINEARIZABLE));
+      storage.put(Put.newBuilder(put).consistency(Consistency.LINEARIZABLE).build());
     } catch (NoMutationException e) {
       throwUnsatisfiedConditionException(put);
     } catch (ExecutionException e) {
@@ -275,7 +331,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     delete = copyAndSetTargetToIfNot(delete);
 
     try {
-      storage.delete(delete.withConsistency(Consistency.LINEARIZABLE));
+      storage.delete(Delete.newBuilder(delete).consistency(Consistency.LINEARIZABLE).build());
     } catch (NoMutationException e) {
       throwUnsatisfiedConditionException(delete);
     } catch (ExecutionException e) {

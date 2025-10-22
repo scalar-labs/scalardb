@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -10,17 +11,21 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -39,7 +44,13 @@ public interface RdbEngineStrategy {
 
   String getDataTypeForEngine(DataType dataType);
 
+  @Nullable
   String getDataTypeForKey(DataType dataType);
+
+  @Nullable
+  default String getDataTypeForSecondaryIndex(DataType dataType) {
+    return getDataTypeForKey(dataType);
+  }
 
   DataType getDataTypeForScalarDb(
       JDBCType type,
@@ -51,7 +62,7 @@ public interface RdbEngineStrategy {
 
   int getSqlTypes(DataType dataType);
 
-  String getTextType(int charLength);
+  String getTextType(int charLength, boolean isKey);
 
   String computeBooleanValue(boolean value);
 
@@ -88,11 +99,50 @@ public interface RdbEngineStrategy {
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
-  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  default String[] dropColumnSql(String namespace, String table, String columnName) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " DROP COLUMN "
+          + enclose(columnName)
+    };
+  }
+
+  default String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " RENAME COLUMN "
+        + enclose(oldColumnName)
+        + " TO "
+        + enclose(newColumnName);
+  }
+
+  String renameTableSql(String namespace, String oldTableName, String newTableName);
+
+  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
 
+  default String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
   String dropIndexSql(String schema, String table, String indexName);
+
+  String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -106,7 +156,7 @@ public interface RdbEngineStrategy {
     return enclose(schema) + "." + enclose(table);
   }
 
-  SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
+  SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit);
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
@@ -195,11 +245,64 @@ public interface RdbEngineStrategy {
   /**
    * Return the connection properties for the underlying database.
    *
+   * @param config the JDBC configuration
    * @return a map where key=property_name and value=property_value
    */
-  default Map<String, String> getConnectionProperties() {
+  default Map<String, String> getConnectionProperties(JdbcConfig config) {
     return Collections.emptyMap();
   }
 
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
+
+  default String getProjectionsSqlForSelectQuery(TableMetadata metadata, List<String> projections) {
+    if (projections.isEmpty()) {
+      return "*";
+    }
+    return projections.stream().map(this::enclose).collect(Collectors.joining(","));
+  }
+
+  /**
+   * Throws an exception if the given SQLWarning is a duplicate index warning.
+   *
+   * @param warning the SQLWarning to check
+   * @throws SQLException if the warning is a duplicate index warning
+   */
+  default void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
+    // Do nothing
+  }
+
+  /**
+   * Throws an exception if renaming the column is not supported in the underlying database.
+   *
+   * @param columnName the current name of the column to rename
+   * @param tableMetadata the current table metadata
+   * @throws UnsupportedOperationException if renaming the column is not supported
+   */
+  default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
+
+  /**
+   * Throws an exception if altering the column type is not supported in the underlying database.
+   *
+   * @param from the source data type
+   * @param to the target data type
+   * @throws UnsupportedOperationException if altering the column type is not supported
+   */
+  default void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {}
+
+  default void setConnectionToReadOnly(Connection connection, boolean readOnly)
+      throws SQLException {
+    connection.setReadOnly(readOnly);
+  }
+
+  /**
+   * Throws an exception if a cross-partition scan operation with ordering on a blob column is
+   * specified and is not supported in the underlying storage.
+   *
+   * @param scanAll the ScanAll operation
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if the ScanAll operation contains an ordering on a blob
+   *     column, and it is not supported in the underlying storage
+   */
+  default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {}
 }

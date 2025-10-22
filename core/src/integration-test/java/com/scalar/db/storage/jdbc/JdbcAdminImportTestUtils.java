@@ -114,6 +114,8 @@ public class JdbcAdminImportTestUtils {
           "xml",
           "geometry",
           "geography");
+  static final List<String> UNSUPPORTED_DATA_TYPES_DB2 =
+      Arrays.asList("DECIMAL", "DECFLOAT", "XML");
 
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
@@ -137,8 +139,42 @@ public class JdbcAdminImportTestUtils {
       return createExistingOracleDatabaseWithAllDataTypes(namespace);
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       return createExistingSqlServerDatabaseWithAllDataTypes(namespace);
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return createExistingDb2DatabaseWithAllDataTypes(namespace);
     } else {
-      throw new RuntimeException();
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
+    }
+  }
+
+  public List<String> getIntCompatibleColumnNamesOnExistingDatabase(String table) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingMysqlDatabase(table);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingPostgresDatabase(table);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingOracleDatabase(table);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingSqlServerDatabase(table);
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingDb2Database(table);
+    } else {
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
+    }
+  }
+
+  public List<String> getFloatCompatibleColumnNamesOnExistingDatabase(String table) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingMysqlDatabase(table);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingPostgresDatabase(table);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingOracleDatabase(table);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingSqlServerDatabase(table);
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingDb2Database(table);
+    } else {
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
     }
   }
 
@@ -455,6 +491,89 @@ public class JdbcAdminImportTestUtils {
     return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
   }
 
+  private LinkedHashMap<String, String> prepareColumnsForDb2() {
+    LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+    columns.put("pk1", "INT NOT NULL");
+    columns.put("pk2", "INT NOT NULL");
+    columns.put("col01", "SMALLINT");
+    columns.put("col02", "INT");
+    columns.put("col03", "BIGINT");
+    columns.put("col04", "REAL");
+    columns.put("col05", "FLOAT(24)"); // Maps to REAL if precision <=24
+    columns.put("col06", "DOUBLE");
+    columns.put("col07", "FLOAT");
+    columns.put("col08", "FLOAT(25)"); // Maps to DOUBLE if precision => 25
+    columns.put("col09", "CHAR(3)");
+    columns.put("col10", "VARCHAR(512)");
+    columns.put("col11", "CLOB");
+    columns.put("col12", "GRAPHIC(3)");
+    columns.put("col13", "VARGRAPHIC(512)");
+    columns.put("col14", "DBCLOB(5)");
+    columns.put("col15", "NCHAR(3)");
+    columns.put("col16", "NVARCHAR(512)");
+    columns.put("col17", "NCLOB(512)");
+    columns.put("col18", "BINARY(5)");
+    columns.put("col19", "VARBINARY(512)");
+    columns.put("col20", "BLOB(1024)");
+    columns.put("col21", "CHAR(5) FOR BIT DATA");
+    columns.put("col22", "VARCHAR(512) FOR BIT DATA");
+    columns.put("col23", "DATE");
+    columns.put("col24", "TIME");
+    columns.put("col25", "TIMESTAMP(6)"); // override to TIME
+    columns.put("col26", "TIMESTAMP(3)");
+    columns.put("col27", "TIMESTAMP(3)"); // override to TIMESTAMPTZ
+    columns.put("col28", "BOOLEAN");
+
+    return columns;
+  }
+
+  private Map<String, DataType> prepareOverrideColumnsTypeForDb2() {
+    return ImmutableMap.of("col25", DataType.TIME, "col27", DataType.TIMESTAMPTZ);
+  }
+
+  private TableMetadata prepareTableMetadataForDb2() {
+    return TableMetadata.newBuilder()
+        .addColumn("pk1", DataType.INT)
+        .addColumn("pk2", DataType.INT)
+        .addColumn("col01", DataType.INT)
+        .addColumn("col02", DataType.INT)
+        .addColumn("col03", DataType.BIGINT)
+        .addColumn("col04", DataType.FLOAT)
+        .addColumn("col05", DataType.FLOAT)
+        .addColumn("col06", DataType.DOUBLE)
+        .addColumn("col07", DataType.DOUBLE)
+        .addColumn("col08", DataType.DOUBLE)
+        .addColumn("col09", DataType.TEXT)
+        .addColumn("col10", DataType.TEXT)
+        .addColumn("col11", DataType.TEXT)
+        .addColumn("col12", DataType.TEXT)
+        .addColumn("col13", DataType.TEXT)
+        .addColumn("col14", DataType.TEXT)
+        .addColumn("col15", DataType.TEXT)
+        .addColumn("col16", DataType.TEXT)
+        .addColumn("col17", DataType.TEXT)
+        .addColumn("col18", DataType.BLOB)
+        .addColumn("col19", DataType.BLOB)
+        .addColumn("col20", DataType.BLOB)
+        .addColumn("col21", DataType.BLOB)
+        .addColumn("col22", DataType.BLOB)
+        .addColumn("col23", DataType.DATE)
+        .addColumn("col24", DataType.TIME)
+        .addColumn("col25", DataType.TIME)
+        .addColumn("col26", DataType.TIMESTAMP)
+        .addColumn("col27", DataType.TIMESTAMPTZ)
+        .addColumn("col28", DataType.BOOLEAN)
+        .addPartitionKey("pk1")
+        .addPartitionKey("pk2")
+        .build();
+  }
+
+  private Map<String, Column<?>> prepareInsertColumnsForDb2(TableMetadata metadata) {
+    List<Column<?>> customColumns =
+        ImmutableList.of(TimeColumn.of("col24", LocalTime.of(11, 8, 35)));
+    return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
+  }
+
   private List<JdbcTestData> prepareCreateNonImportableTableSql(
       String namespace, List<String> types) {
     ImmutableList.Builder<JdbcTestData> data = new ImmutableList.Builder<>();
@@ -469,7 +588,7 @@ public class JdbcAdminImportTestUtils {
 
   private String prepareCreateNonImportableTableSql(String namespace, String table, String type) {
     LinkedHashMap<String, String> columns = new LinkedHashMap<>();
-    columns.put("pk", "CHAR(8)");
+    columns.put("pk", "CHAR(8) NOT NULL");
     columns.put("col", type);
     return prepareCreateTableSql(
         namespace, table, columns, new LinkedHashSet<>(Collections.singletonList("pk")));
@@ -525,6 +644,22 @@ public class JdbcAdminImportTestUtils {
     return ImmutableList.copyOf(data);
   }
 
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingMysqlDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col04", "col05", "col06");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingMysqlDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col08");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
   private List<TestData> createExistingPostgresDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
     List<JdbcTestData> data = new ArrayList<>();
@@ -557,6 +692,24 @@ public class JdbcAdminImportTestUtils {
     executeCreateTableSql(data);
 
     return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingPostgresDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col03");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingPostgresDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col05");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
   }
 
   private List<TestData> createExistingOracleDatabaseWithAllDataTypes(String namespace)
@@ -610,6 +763,27 @@ public class JdbcAdminImportTestUtils {
     return ImmutableList.copyOf(data);
   }
 
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingOracleDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of();
+    } else if (table.equals(SUPPORTED_TABLE_NAME + "_long_raw")) {
+      return ImmutableList.of();
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingOracleDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col04");
+    } else if (table.equals(SUPPORTED_TABLE_NAME + "_long_raw")) {
+      return ImmutableList.of();
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
   private List<TestData> createExistingSqlServerDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
     List<JdbcTestData> data = new ArrayList<>();
@@ -634,6 +808,66 @@ public class JdbcAdminImportTestUtils {
     executeCreateTableSql(data);
 
     return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingSqlServerDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col03", "col04");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingSqlServerDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col06");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private List<TestData> createExistingDb2DatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
+    List<JdbcTestData> data = new ArrayList<>();
+
+    TableMetadata tableMetadata = prepareTableMetadataForDb2();
+    String sql =
+        prepareCreateTableSql(
+            namespace,
+            SUPPORTED_TABLE_NAME,
+            prepareColumnsForDb2(),
+            tableMetadata.getPartitionKeyNames());
+    data.add(
+        JdbcTestData.createImportableTable(
+            SUPPORTED_TABLE_NAME,
+            sql,
+            tableMetadata,
+            prepareOverrideColumnsTypeForDb2(),
+            prepareInsertColumnsForDb2(tableMetadata)));
+
+    data.addAll(prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_DB2));
+
+    executeCreateTableSql(data);
+
+    return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingDb2Database(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col01", "col02");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingDb2Database(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col04", "col05");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
   }
 
   private void executeCreateTableSql(List<JdbcTestData> data) throws SQLException {

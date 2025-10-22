@@ -65,7 +65,7 @@ public class SimpleSelectQuery implements SelectQuery {
   public String sql() {
     StringBuilder builder =
         new StringBuilder("SELECT ")
-            .append(projectionSqlString())
+            .append(rdbEngine.getProjectionsSqlForSelectQuery(tableMetadata, projections))
             .append(" FROM ")
             .append(rdbEngine.encloseFullTableName(schema, table));
     if (isCrossPartitionQuery) {
@@ -82,13 +82,6 @@ public class SimpleSelectQuery implements SelectQuery {
     }
 
     return builder.toString();
-  }
-
-  private String projectionSqlString() {
-    if (projections.isEmpty()) {
-      return "*";
-    }
-    return projections.stream().map(rdbEngine::enclose).collect(Collectors.joining(","));
   }
 
   private String conditionSqlString() {
@@ -199,7 +192,10 @@ public class SimpleSelectQuery implements SelectQuery {
             order = Scan.Ordering.Order.ASC;
           }
         }
-        orderingList.add(new Scan.Ordering(clusteringKeyName, order));
+        orderingList.add(
+            order == Scan.Ordering.Order.ASC
+                ? Scan.Ordering.asc(clusteringKeyName)
+                : Scan.Ordering.desc(clusteringKeyName));
       }
     }
 

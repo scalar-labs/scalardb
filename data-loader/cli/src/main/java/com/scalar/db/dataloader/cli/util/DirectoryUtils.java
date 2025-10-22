@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.cli.util;
 
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,27 +16,45 @@ public final class DirectoryUtils {
   }
 
   /**
+   * Validates the current working directory. Ensures that it is writable.
+   *
+   * @throws DirectoryValidationException if the current working directory is not writable
+   */
+  public static void validateWorkingDirectory() throws DirectoryValidationException {
+    Path workingDirectoryPath = Paths.get(System.getProperty("user.dir"));
+
+    // Check if the current working directory is writable
+    if (!Files.isWritable(workingDirectoryPath)) {
+      throw new DirectoryValidationException(
+          DataLoaderError.DIRECTORY_WRITE_ACCESS.buildMessage(
+              workingDirectoryPath.toAbsolutePath()));
+    }
+  }
+
+  /**
    * Validates the provided directory path. Ensures that the directory exists and is writable. If
    * the directory doesn't exist, a creation attempt is made.
    *
    * @param directoryPath the directory path to validate
    * @throws DirectoryValidationException if the directory is not writable or cannot be created
    */
-  public static void validateTargetDirectory(String directoryPath)
+  public static void validateOrCreateTargetDirectory(String directoryPath)
       throws DirectoryValidationException {
     if (StringUtils.isBlank(directoryPath)) {
       throw new IllegalArgumentException(
-          CoreError.DATA_LOADER_MISSING_DIRECTORY_NOT_ALLOWED.buildMessage());
+          DataLoaderError.MISSING_DIRECTORY_NOT_ALLOWED.buildMessage());
     }
 
     Path path = Paths.get(directoryPath);
 
     if (Files.exists(path)) {
-      // Check if the provided directory is writable
+      if (!Files.isDirectory(path)) {
+        throw new DirectoryValidationException(
+            DataLoaderError.PATH_IS_NOT_A_DIRECTORY.buildMessage(path));
+      }
       if (!Files.isWritable(path)) {
         throw new DirectoryValidationException(
-            CoreError.DATA_LOADER_DIRECTORY_WRITE_ACCESS_NOT_ALLOWED.buildMessage(
-                path.toAbsolutePath()));
+            DataLoaderError.DIRECTORY_WRITE_ACCESS_NOT_ALLOWED.buildMessage(path.toAbsolutePath()));
       }
 
     } else {
@@ -45,7 +63,7 @@ public final class DirectoryUtils {
         Files.createDirectories(path);
       } catch (IOException e) {
         throw new DirectoryValidationException(
-            CoreError.DATA_LOADER_DIRECTORY_CREATE_FAILED.buildMessage(
+            DataLoaderError.DIRECTORY_CREATE_FAILED.buildMessage(
                 path.toAbsolutePath(), e.getMessage()));
       }
     }

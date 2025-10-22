@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Splitter;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -21,6 +23,13 @@ import javax.annotation.Nullable;
 public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public static final String NAMESPACE_METADATA_TABLE = "namespaces";
   public static final String TABLE_METADATA_TABLE = "metadata";
+
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "object_storage",
+          StorageInfo.MutationAtomicityUnit.PARTITION,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
 
   private final ObjectStorageWrapper wrapper;
   private final String metadataNamespace;
@@ -52,6 +61,11 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     throw new UnsupportedOperationException(
         CoreError.OBJECT_STORAGE_IMPORT_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
+    return STORAGE_INFO;
   }
 
   @Override
@@ -234,6 +248,36 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table)),
           e);
     }
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.OBJECT_STORAGE_DROP_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.OBJECT_STORAGE_RENAME_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.OBJECT_STORAGE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.OBJECT_STORAGE_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

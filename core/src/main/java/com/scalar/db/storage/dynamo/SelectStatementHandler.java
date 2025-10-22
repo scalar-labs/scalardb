@@ -12,9 +12,9 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.EmptyScanner;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -49,6 +49,7 @@ public class SelectStatementHandler {
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
   private final String namespacePrefix;
+  private final int fetchSize;
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
@@ -57,15 +58,18 @@ public class SelectStatementHandler {
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
    * @param namespacePrefix a namespace prefix
+   * @param fetchSize the number of items to fetch in each request
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public SelectStatementHandler(
       DynamoDbClient client,
       TableMetadataManager metadataManager,
-      Optional<String> namespacePrefix) {
+      Optional<String> namespacePrefix,
+      int fetchSize) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
     this.namespacePrefix = namespacePrefix.orElse("");
+    this.fetchSize = fetchSize;
   }
 
   @Nonnull
@@ -151,7 +155,10 @@ public class SelectStatementHandler {
     com.scalar.db.storage.dynamo.request.QueryRequest request =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        request, limit, new ResultInterpreter(selection.getProjections(), tableMetadata));
+        request,
+        fetchSize,
+        limit,
+        new ResultInterpreter(selection.getProjections(), tableMetadata));
   }
 
   private Scanner executeScan(Scan scan, TableMetadata tableMetadata) {
@@ -184,7 +191,10 @@ public class SelectStatementHandler {
     com.scalar.db.storage.dynamo.request.QueryRequest queryRequest =
         new com.scalar.db.storage.dynamo.request.QueryRequest(client, builder.build());
     return new QueryScanner(
-        queryRequest, scan.getLimit(), new ResultInterpreter(scan.getProjections(), tableMetadata));
+        queryRequest,
+        fetchSize,
+        scan.getLimit(),
+        new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
 
   private Scanner executeFullScan(ScanAll scan, TableMetadata tableMetadata) {
@@ -205,6 +215,7 @@ public class SelectStatementHandler {
         new com.scalar.db.storage.dynamo.request.ScanRequest(client, builder.build());
     return new QueryScanner(
         requestWrapper,
+        fetchSize,
         scan.getLimit(),
         new ResultInterpreter(scan.getProjections(), tableMetadata));
   }
@@ -315,8 +326,9 @@ public class SelectStatementHandler {
 
   private Key getKeyWithoutLastValue(Key originalKey) {
     Key.Builder keyBuilder = Key.newBuilder();
-    for (int i = 0; i < originalKey.getColumns().size() - 1; i++) {
-      keyBuilder.add(originalKey.getColumns().get(i));
+    List<Column<?>> columns = originalKey.getColumns();
+    for (int i = 0; i < columns.size() - 1; i++) {
+      keyBuilder.add(columns.get(i));
     }
     return keyBuilder.build();
   }

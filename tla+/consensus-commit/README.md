@@ -27,7 +27,7 @@ rCommit(r) == /\ rState[r] = "prepared"
               /\ rState' = [rState EXCEPT ![r] = "committed"]
               /\ cState' = cState
 ```
-says that if a resource `r` is in the "prepared" state and the coordinator is in the "committed" state, then `r` can move into a "commmitted" state while the coordinator state does not change. The last line is absolutely neccessary as each state transition must describe the state of the "world".
+says that if a resource `r` is in the "prepared" state and the coordinator is in the "committed" state, then `r` can move into a "committed" state while the coordinator state does not change. The last line is absolutely neccessary as each state transition must describe the state of the "world".
 
 If the protocol is correct, then the the formula `Consistent` should be true at every state. This formula consists of a conjunction of two conditions:
 1. If the coordinator is "committed" then no resource should be in the "initialized" or "aborted" state.

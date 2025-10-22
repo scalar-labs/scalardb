@@ -11,9 +11,11 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -31,10 +33,15 @@ public class OperationChecker {
 
   private final DatabaseConfig config;
   private final TableMetadataManager tableMetadataManager;
+  private final StorageInfoProvider storageInfoProvider;
 
-  public OperationChecker(DatabaseConfig config, TableMetadataManager tableMetadataManager) {
+  public OperationChecker(
+      DatabaseConfig config,
+      TableMetadataManager tableMetadataManager,
+      StorageInfoProvider storageInfoProvider) {
     this.config = config;
     this.tableMetadataManager = tableMetadataManager;
+    this.storageInfoProvider = storageInfoProvider;
   }
 
   public void check(Get get) throws ExecutionException {
@@ -152,7 +159,7 @@ public class OperationChecker {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
-    checkOrderings(scanAll, metadata);
+    checkOrderingsForScanAll(scanAll, metadata);
 
     if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
@@ -251,7 +258,7 @@ public class OperationChecker {
     }
   }
 
-  private void checkOrderings(ScanAll scanAll, TableMetadata metadata) {
+  protected void checkOrderingsForScanAll(ScanAll scanAll, TableMetadata metadata) {
     for (Scan.Ordering ordering : scanAll.getOrderings()) {
       if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
         throw new IllegalArgumentException(
@@ -334,16 +341,18 @@ public class OperationChecker {
     }
 
     Mutation first = mutations.get(0);
+    assert first.forNamespace().isPresent();
+    StorageInfo storageInfoForFirst =
+        storageInfoProvider.getStorageInfo(first.forNamespace().get());
+
     for (Mutation mutation : mutations) {
       // Check if each mutation is Put or Delete
       checkMutationType(mutation);
 
-      // Check if all mutations are for the same partition
-      if (!mutation.forNamespace().equals(first.forNamespace())
-          || !mutation.forTable().equals(first.forTable())
-          || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
+      // Check if the mutations are within the atomicity unit of the storage
+      if (isOutOfAtomicityUnit(first, storageInfoForFirst, mutation)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION.buildMessage(mutations));
+            getErrorMessageForOutOfAtomicityUnit(storageInfoForFirst, mutations));
       }
     }
 
@@ -354,6 +363,72 @@ public class OperationChecker {
         assert mutation instanceof Delete;
         check((Delete) mutation);
       }
+    }
+  }
+
+  private boolean isOutOfAtomicityUnit(
+      Mutation mutation1, StorageInfo storageInfo1, Mutation mutation2) throws ExecutionException {
+    assert mutation1.forNamespace().isPresent()
+        && mutation1.forTable().isPresent()
+        && mutation2.forNamespace().isPresent()
+        && mutation2.forTable().isPresent();
+
+    switch (storageInfo1.getMutationAtomicityUnit()) {
+      case RECORD:
+        if (!mutation1.getClusteringKey().equals(mutation2.getClusteringKey())) {
+          return true; // Different clustering keys
+        }
+        // Fall through
+      case PARTITION:
+        if (!mutation1.getPartitionKey().equals(mutation2.getPartitionKey())) {
+          return true; // Different partition keys
+        }
+        // Fall through
+      case TABLE:
+        if (!mutation1.forTable().equals(mutation2.forTable())) {
+          return true; // Different tables
+        }
+        // Fall through
+      case NAMESPACE:
+        if (!mutation1.forNamespace().equals(mutation2.forNamespace())) {
+          return true; // Different namespaces
+        }
+        break;
+      case STORAGE:
+        StorageInfo storageInfo2 =
+            storageInfoProvider.getStorageInfo(mutation2.forNamespace().get());
+        if (!storageInfo1.getStorageName().equals(storageInfo2.getStorageName())) {
+          return true; // Different storage names
+        }
+        break;
+      default:
+        throw new AssertionError(
+            "Unknown mutation atomicity unit: " + storageInfo1.getMutationAtomicityUnit());
+    }
+
+    return false;
+  }
+
+  private String getErrorMessageForOutOfAtomicityUnit(
+      StorageInfo storageInfo, List<? extends Mutation> mutations) {
+    switch (storageInfo.getMutationAtomicityUnit()) {
+      case RECORD:
+        return CoreError.OPERATION_CHECK_ERROR_MULTI_RECORD_MUTATION.buildMessage(
+            storageInfo.getStorageName(), mutations);
+      case PARTITION:
+        return CoreError.OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION.buildMessage(
+            storageInfo.getStorageName(), mutations);
+      case TABLE:
+        return CoreError.OPERATION_CHECK_ERROR_MULTI_TABLE_MUTATION.buildMessage(
+            storageInfo.getStorageName(), mutations);
+      case NAMESPACE:
+        return CoreError.OPERATION_CHECK_ERROR_MULTI_NAMESPACE_MUTATION.buildMessage(
+            storageInfo.getStorageName(), mutations);
+      case STORAGE:
+        return CoreError.OPERATION_CHECK_ERROR_MULTI_STORAGE_MUTATION.buildMessage(mutations);
+      default:
+        throw new AssertionError(
+            "Unknown mutation atomicity unit: " + storageInfo.getMutationAtomicityUnit());
     }
   }
 

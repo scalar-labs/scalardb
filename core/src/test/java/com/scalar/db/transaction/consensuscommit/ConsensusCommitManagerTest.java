@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,16 +17,21 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.DecoratedDistributedTransaction;
+import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -37,6 +44,8 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,10 +59,10 @@ public class ConsensusCommitManagerTest {
   @Mock private DistributedStorage storage;
   @Mock private DistributedStorageAdmin admin;
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
-  @Mock private RecoveryHandler recovery;
+  @Mock private RecoveryExecutor recoveryExecutor;
+  @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
 
   private ConsensusCommitManager manager;
@@ -66,55 +75,49 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
+            crud,
             commit,
+            Isolation.SNAPSHOT,
             null);
-
-    when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
-    when(consensusCommitConfig.getSerializableStrategy())
-        .thenReturn(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
-  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
-      throws TransactionException {
+  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation() {
     // Arrange
 
     // Act
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
-      throws TransactionException {
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
     // Arrange
 
     // Act
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin(ANY_TX_ID)).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
   public void
-      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation()
-          throws TransactionException {
+      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation() {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
@@ -126,62 +129,119 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
+            crud,
             commit,
+            Isolation.SNAPSHOT,
+            groupCommitter);
+
+    // Act
+    ConsensusCommit transaction = (ConsensusCommit) managerWithGroupCommit.begin(ANY_TX_ID);
+
+    // Assert
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(fullKey);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    verify(groupCommitter).reserve(ANY_TX_ID);
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommitManager managerWithGroupCommit =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recoveryExecutor,
+            crud,
+            commit,
+            Isolation.SNAPSHOT,
             groupCommitter);
 
     // Act
     ConsensusCommit transaction =
         (ConsensusCommit)
-            ((DecoratedDistributedTransaction) managerWithGroupCommit.begin(ANY_TX_ID))
+            ((DecoratedDistributedTransaction) managerWithGroupCommit.beginReadOnly(ANY_TX_ID))
                 .getOriginalTransaction();
 
     // Assert
-    assertThat(transaction.getId()).isEqualTo(fullKey);
-    Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
-    assertThat(snapshot.getId()).isEqualTo(fullKey);
-    assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
-    verify(groupCommitter).reserve(ANY_TX_ID);
-    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isTrue();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isFalse();
+    verify(groupCommitter, never()).reserve(ANY_TX_ID);
   }
 
   @Test
-  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery()
-      throws TransactionException {
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
     // Arrange
 
     // Act
-    ConsensusCommit transaction1 =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
-    ConsensusCommit transaction2 =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.begin()).getOriginalTransaction();
+    ConsensusCommit transaction1 = (ConsensusCommit) manager.begin();
+    ConsensusCommit transaction2 = (ConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
   public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     manager.begin(ANY_TX_ID);
     assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void
+      beginReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode() {
+    // Arrange
+    ConsensusCommitManager spied = spy(manager);
+
+    // Act
+    DistributedTransaction transaction = spied.beginReadOnly();
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(false));
+
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+  }
+
+  @Test
+  public void beginReadOnly_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolationInReadOnlyMode() {
+    // Arrange
+    ConsensusCommitManager spied = spy(manager);
+
+    // Act
+    DistributedTransaction transaction = spied.beginReadOnly(ANY_TX_ID);
+
+    // Assert
+    verify(spied).begin(eq(ANY_TX_ID), eq(Isolation.SNAPSHOT), eq(true), eq(false));
+
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
   }
 
   @Test
@@ -190,14 +250,14 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.start()).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -206,32 +266,30 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.start(ANY_TX_ID)).getOriginalTransaction();
+    ConsensusCommit transaction = (ConsensusCommit) manager.start(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
-  public void start_SerializableGiven_ReturnConsensusCommitWithSomeTxIdAndSerializable()
-      throws TransactionException {
+  public void start_SerializableGiven_ReturnConsensusCommitWithSomeTxIdAndSerializable() {
     // Arrange
 
     // Act
     ConsensusCommit transaction =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction)
-                    manager.start(com.scalar.db.api.Isolation.SERIALIZABLE))
-                .getOriginalTransaction();
+        (ConsensusCommit) manager.start(com.scalar.db.api.Isolation.SERIALIZABLE);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -244,34 +302,28 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery()
+  public void start_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
       throws TransactionException {
     // Arrange
 
     // Act
-    ConsensusCommit transaction1 =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.start()).getOriginalTransaction();
-    ConsensusCommit transaction2 =
-        (ConsensusCommit)
-            ((DecoratedDistributedTransaction) manager.start()).getOriginalTransaction();
+    ConsensusCommit transaction1 = (ConsensusCommit) manager.start();
+    ConsensusCommit transaction2 = (ConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
   public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     manager.start(ANY_TX_ID);
@@ -279,8 +331,42 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void
+      startReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode()
+          throws TransactionException {
+    // Arrange
+    ConsensusCommitManager spied = spy(manager);
+
+    // Act
+    DistributedTransaction transaction = spied.startReadOnly();
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(false));
+
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+  }
+
+  @Test
+  public void startReadOnly_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolationInReadOnlyMode()
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager spied = spy(manager);
+
+    // Act
+    DistributedTransaction transaction = spied.startReadOnly(ANY_TX_ID);
+
+    // Assert
+    verify(spied).begin(eq(ANY_TX_ID), eq(Isolation.SNAPSHOT), eq(true), eq(false));
+
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+  }
+
+  @Test
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
     // Act
@@ -293,6 +379,8 @@ public class ConsensusCommitManagerTest {
   @Test
   public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
@@ -303,6 +391,9 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
 
@@ -315,7 +406,10 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
       throws TransactionException {
     // Arrange
-    doThrow(CommitException.class).when(commit).commit(any());
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
+    doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
@@ -335,6 +429,9 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
 
@@ -346,6 +443,9 @@ public class ConsensusCommitManagerTest {
   @Test
   public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
     // Act
@@ -358,6 +458,8 @@ public class ConsensusCommitManagerTest {
   @Test
   public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.join(ANY_TX_ID))
@@ -368,6 +470,9 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
 
@@ -380,7 +485,10 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
       throws TransactionException {
     // Arrange
-    doThrow(CommitException.class).when(commit).commit(any());
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
+    doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
@@ -400,6 +508,9 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
       throws TransactionException {
     // Arrange
+    DistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
 
@@ -533,7 +644,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -545,43 +658,10 @@ public class ConsensusCommitManagerTest {
     Optional<Result> actual = spied.get(get);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(Optional.of(result));
-  }
-
-  @Test
-  public void
-      get_TransactionNotFoundExceptionThrownByTransactionBegin_ShouldThrowCrudConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager spied = spy(manager);
-    doThrow(TransactionNotFoundException.class).when(spied).beginInternal();
-
-    Get get =
-        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
-
-    // Act Assert
-    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
-
-    verify(spied).beginInternal();
-  }
-
-  @Test
-  public void get_TransactionExceptionThrownByTransactionBegin_ShouldThrowCrudException()
-      throws TransactionException {
-    // Arrange
-    ConsensusCommitManager spied = spy(manager);
-    doThrow(TransactionException.class).when(spied).beginInternal();
-
-    Get get =
-        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
-
-    // Act Assert
-    assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
-
-    verify(spied).beginInternal();
   }
 
   @Test
@@ -591,7 +671,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -600,7 +682,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -613,7 +695,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -622,7 +706,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudConflictException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).rollback();
   }
@@ -635,7 +719,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -644,7 +730,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(UnknownTransactionStatusException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -656,7 +742,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -665,7 +753,7 @@ public class ConsensusCommitManagerTest {
     // Act Assert
     assertThatThrownBy(() -> spied.get(get)).isInstanceOf(CrudException.class);
 
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
   }
@@ -676,7 +764,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
     Scan scan =
         Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -689,10 +779,362 @@ public class ConsensusCommitManagerTest {
     List<Result> actual = spied.scan(scan);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).scan(scan);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(results);
+  }
+
+  @Test
+  public void getScannerAndScannerOne_ShouldReturnScannerAndReturnProperResult() throws Exception {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThat(actual.one()).hasValue(result1);
+    assertThat(actual.one()).hasValue(result2);
+    assertThat(actual.one()).hasValue(result3);
+    assertThat(actual.one()).isEmpty();
+    actual.close();
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldReturnScannerAndReturnProperResults() throws Exception {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.all())
+        .thenReturn(Arrays.asList(result1, result2, result3))
+        .thenReturn(Collections.emptyList());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    List<Result> results = actual.all();
+    assertThat(results).containsExactly(result1, result2, result3);
+    assertThat(actual.all()).isEmpty();
+    actual.close();
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void getScannerAndScannerIterator_ShouldReturnScannerAndReturnProperResults()
+      throws Exception {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    when(scanner.one())
+        .thenReturn(Optional.of(result1))
+        .thenReturn(Optional.of(result2))
+        .thenReturn(Optional.of(result3))
+        .thenReturn(Optional.empty());
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+
+    Iterator<Result> iterator = actual.iterator();
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result1);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result2);
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.next()).isEqualTo(result3);
+    assertThat(iterator.hasNext()).isFalse();
+    actual.close();
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).commit();
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      getScanner_CrudExceptionThrownByTransactionGetScanner_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    when(transaction.getScanner(scan)).thenThrow(CrudException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> spied.getScanner(scan)).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_CrudExceptionThrownByScannerOne_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    when(scanner.one()).thenThrow(CrudException.class);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::one).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_CrudExceptionThrownByScannerAll_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    when(scanner.all()).thenThrow(CrudException.class);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::all).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CrudExceptionThrownByScannerClose_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    doThrow(CrudException.class).when(scanner).close();
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudConflictException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(CommitConflictException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudConflictException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_UnknownTransactionStatusExceptionByTransactionCommit_ShouldThrowUnknownTransactionStatusException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(UnknownTransactionStatusException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(UnknownTransactionStatusException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudException()
+          throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    doThrow(CommitException.class).when(transaction).commit();
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionManagerCrudOperable.Scanner actual = spied.getScanner(scan);
+    assertThatThrownBy(actual::close).isInstanceOf(CrudException.class);
+
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(scanner).close();
+    verify(transaction).rollback();
   }
 
   @Test
@@ -701,7 +1143,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Put put =
         Put.newBuilder()
@@ -715,7 +1159,7 @@ public class ConsensusCommitManagerTest {
     spied.put(put);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).put(put);
     verify(transaction).commit();
   }
@@ -726,7 +1170,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     List<Put> puts =
         Arrays.asList(
@@ -753,7 +1199,7 @@ public class ConsensusCommitManagerTest {
     spied.put(puts);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).put(puts);
     verify(transaction).commit();
   }
@@ -764,7 +1210,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Insert insert =
         Insert.newBuilder()
@@ -778,7 +1226,7 @@ public class ConsensusCommitManagerTest {
     spied.insert(insert);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).insert(insert);
     verify(transaction).commit();
   }
@@ -789,7 +1237,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Upsert upsert =
         Upsert.newBuilder()
@@ -803,7 +1253,7 @@ public class ConsensusCommitManagerTest {
     spied.upsert(upsert);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).upsert(upsert);
     verify(transaction).commit();
   }
@@ -814,7 +1264,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Update update =
         Update.newBuilder()
@@ -828,7 +1280,7 @@ public class ConsensusCommitManagerTest {
     spied.update(update);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).update(update);
     verify(transaction).commit();
   }
@@ -839,7 +1291,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     Delete delete =
         Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build();
@@ -848,7 +1302,7 @@ public class ConsensusCommitManagerTest {
     spied.delete(delete);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).delete(delete);
     verify(transaction).commit();
   }
@@ -859,7 +1313,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     List<Delete> deletes =
         Arrays.asList(
@@ -883,7 +1339,7 @@ public class ConsensusCommitManagerTest {
     spied.delete(deletes);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).delete(deletes);
     verify(transaction).commit();
   }
@@ -894,7 +1350,9 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = mock(DistributedTransaction.class);
 
     ConsensusCommitManager spied = spy(manager);
-    doReturn(transaction).when(spied).beginInternal();
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
 
     List<Mutation> mutations =
         Arrays.asList(
@@ -932,7 +1390,7 @@ public class ConsensusCommitManagerTest {
     spied.mutate(mutations);
 
     // Assert
-    verify(spied).beginInternal();
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
   }

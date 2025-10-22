@@ -6,10 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,6 +21,7 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -37,7 +38,6 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -51,53 +51,66 @@ public class ConsensusCommitTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
+  private static final String ANY_ID = "id";
 
+  private TransactionContext context;
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
-  @Mock private RecoveryHandler recovery;
-
-  @SuppressWarnings("unused")
-  @Mock
-  private ConsensusCommitManager manager;
-
   @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
 
-  @InjectMocks private ConsensusCommit consensus;
+  private ConsensusCommit consensus;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, false, false));
+    consensus = new ConsensusCommit(context, crud, commit, mutationOperationChecker, null);
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withValue(ANY_NAME_3, ANY_TEXT_3)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .textValue(ANY_NAME_3, ANY_TEXT_3)
+        .build();
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -105,31 +118,14 @@ public class ConsensusCommitTest {
     // Arrange
     Get get = prepareGet();
     TransactionResult result = mock(TransactionResult.class);
-    when(crud.get(get)).thenReturn(Optional.of(result));
+    when(crud.get(get, context)).thenReturn(Optional.of(result));
 
     // Act
     Optional<Result> actual = consensus.get(get);
 
     // Assert
     assertThat(actual).isPresent();
-    verify(recovery, never()).recover(get, result);
-    verify(crud).get(get);
-  }
-
-  @Test
-  public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    Get get = prepareGet();
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    when(crud.get(get)).thenThrow(toThrow);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.get(get)).isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
+    verify(crud).get(get, context);
   }
 
   @Test
@@ -138,43 +134,68 @@ public class ConsensusCommitTest {
     Scan scan = prepareScan();
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
-    when(crud.scan(scan)).thenReturn(results);
+    when(crud.scan(scan, context)).thenReturn(results);
 
     // Act
     List<Result> actual = consensus.scan(scan);
 
     // Assert
     assertThat(actual.size()).isEqualTo(1);
-    verify(crud).scan(scan);
+    verify(crud).scan(scan, context);
   }
 
   @Test
-  public void scan_ScanForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
+  public void getScannerAndScannerOne_ShouldCallCrudHandlerGetScannerAndScannerOne()
+      throws CrudException {
     // Arrange
     Scan scan = prepareScan();
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    when(crud.scan(scan)).thenThrow(toThrow);
-    when(toThrow.getSelection()).thenReturn(scan);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result = mock(Result.class);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(crud.getScanner(scan, context)).thenReturn(scanner);
 
-    // Act Assert
-    assertThatThrownBy(() -> consensus.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = consensus.getScanner(scan);
+    Optional<Result> actualResult = actualScanner.one();
 
-    verify(recovery).recover(scan, result);
+    // Assert
+    assertThat(actualResult).hasValue(result);
+    verify(crud).getScanner(scan, context);
+    verify(scanner).one();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldCallCrudHandlerGetScannerAndScannerAll()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    when(scanner.all()).thenReturn(Arrays.asList(result1, result2));
+    when(crud.getScanner(scan, context)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = consensus.getScanner(scan);
+    List<Result> actualResults = actualScanner.all();
+
+    // Assert
+    assertThat(actualResults).containsExactly(result1, result2);
+    verify(crud).getScanner(scan, context);
+    verify(scanner).all();
   }
 
   @Test
   public void put_PutGiven_ShouldCallCrudHandlerPut() throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    doNothing().when(crud).put(put);
+    doNothing().when(crud).put(put, context);
 
     // Act
     consensus.put(put);
 
     // Assert
-    verify(crud).put(put);
+    verify(crud).put(put, context);
     verify(mutationOperationChecker).check(put);
   }
 
@@ -183,33 +204,14 @@ public class ConsensusCommitTest {
       throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    doNothing().when(crud).put(put);
+    doNothing().when(crud).put(put, context);
 
     // Act
     consensus.put(Arrays.asList(put, put));
 
     // Assert
-    verify(crud, times(2)).put(put);
+    verify(crud, times(2)).put(put, context);
     verify(mutationOperationChecker, times(2)).check(put);
-  }
-
-  @Test
-  public void put_PutGivenAndUncommittedRecordExceptionThrown_ShouldRecoverRecord()
-      throws CrudException {
-    // Arrange
-    Put put = preparePut();
-    Get get = prepareGet();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).put(put);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.put(put)).isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -217,13 +219,13 @@ public class ConsensusCommitTest {
       throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    doNothing().when(crud).delete(delete);
+    doNothing().when(crud).delete(delete, context);
 
     // Act
     consensus.delete(delete);
 
     // Assert
-    verify(crud).delete(delete);
+    verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(delete);
   }
 
@@ -232,34 +234,14 @@ public class ConsensusCommitTest {
       throws ExecutionException, CrudException {
     // Arrange
     Delete delete = prepareDelete();
-    doNothing().when(crud).delete(delete);
+    doNothing().when(crud).delete(delete, context);
 
     // Act
     consensus.delete(Arrays.asList(delete, delete));
 
     // Assert
-    verify(crud, times(2)).delete(delete);
+    verify(crud, times(2)).delete(delete, context);
     verify(mutationOperationChecker, times(2)).check(delete);
-  }
-
-  @Test
-  public void delete_DeleteGivenAndUncommittedRecordExceptionThrown_ShouldRecoverRecord()
-      throws CrudException {
-    // Arrange
-    Delete delete = prepareDelete();
-    Get get = prepareGet();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).delete(delete);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.delete(delete))
-        .isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -288,7 +270,7 @@ public class ConsensusCommitTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableInsertMode()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -318,49 +300,8 @@ public class ConsensusCommitTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
-  }
-
-  @Test
-  public void upsert_UpsertForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    Upsert upsert =
-        Upsert.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .enableImplicitPreRead()
-            .build();
-    Get get =
-        Get.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .build();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).put(put);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.upsert(upsert))
-        .isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -390,7 +331,7 @@ public class ConsensusCommitTest {
             .condition(ConditionBuilder.putIfExists())
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -428,7 +369,7 @@ public class ConsensusCommitTest {
                     .build())
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -456,10 +397,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
-    doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
+    doThrow(UnsatisfiedConditionException.class).when(crud).put(put, context);
 
     // Act Assert
     assertThatCode(() -> consensus.update(update)).doesNotThrowAnyException();
@@ -496,13 +434,10 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
     UnsatisfiedConditionException unsatisfiedConditionException =
         mock(UnsatisfiedConditionException.class);
     when(unsatisfiedConditionException.getMessage()).thenReturn("PutIf");
-    doThrow(unsatisfiedConditionException).when(crud).put(put);
+    doThrow(unsatisfiedConditionException).when(crud).put(put, context);
 
     // Act Assert
     assertThatThrownBy(() -> consensus.update(update))
@@ -536,13 +471,10 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
     UnsatisfiedConditionException unsatisfiedConditionException =
         mock(UnsatisfiedConditionException.class);
     when(unsatisfiedConditionException.getMessage()).thenReturn("PutIfExists");
-    doThrow(unsatisfiedConditionException).when(crud).put(put);
+    doThrow(unsatisfiedConditionException).when(crud).put(put, context);
 
     // Act Assert
     assertThatThrownBy(() -> consensus.update(update))
@@ -552,62 +484,20 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void update_UpdateForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    Update update =
-        Update.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .condition(ConditionBuilder.putIfExists())
-            .enableImplicitPreRead()
-            .build();
-    Get get =
-        Get.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .build();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).put(put);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.update(update))
-        .isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
-  }
-
-  @Test
   public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete()
       throws CrudException, ExecutionException {
     // Arrange
     Put put = preparePut();
     Delete delete = prepareDelete();
-    doNothing().when(crud).put(put);
-    doNothing().when(crud).delete(delete);
+    doNothing().when(crud).put(put, context);
+    doNothing().when(crud).delete(delete, context);
 
     // Act Assert
     consensus.mutate(Arrays.asList(put, delete));
 
     // Assert
-    verify(crud).put(put);
-    verify(crud).delete(delete);
+    verify(crud).put(put, context);
+    verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(put);
     verify(mutationOperationChecker).check(delete);
   }
@@ -616,15 +506,34 @@ public class ConsensusCommitTest {
   public void commit_ProcessedCrudGiven_ShouldCommitWithSnapshot()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    doNothing().when(commit).commit(any(Snapshot.class));
-    when(crud.getSnapshot()).thenReturn(snapshot);
+    doNothing().when(commit).commit(any(TransactionContext.class));
 
     // Act
     consensus.commit();
 
     // Assert
-    verify(crud).readIfImplicitPreReadEnabled();
-    verify(commit).commit(snapshot);
+    verify(context).areAllScannersClosed();
+    verify(crud).readIfImplicitPreReadEnabled(context);
+    verify(crud).waitForRecoveryCompletionIfNecessary(context);
+    verify(commit).commit(context);
+  }
+
+  @Test
+  public void commit_ProcessedCrudGiven_InReadOnlyMode_ShouldCommitWithSnapshot()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    doNothing().when(commit).commit(any(TransactionContext.class));
+    context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, true, false));
+    consensus = new ConsensusCommit(context, crud, commit, mutationOperationChecker, null);
+
+    // Act
+    consensus.commit();
+
+    // Assert
+    verify(context).areAllScannersClosed();
+    verify(crud).readIfImplicitPreReadEnabled(context);
+    verify(crud).waitForRecoveryCompletionIfNecessary(context);
+    verify(commit).commit(context);
   }
 
   @Test
@@ -632,33 +541,10 @@ public class ConsensusCommitTest {
       commit_ProcessedCrudGiven_CrudConflictExceptionThrownWhileImplicitPreRead_ShouldThrowCommitConflictException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled();
+    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled(context);
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      commit_ProcessedCrudGiven_UncommittedRecordExceptionThrownWhileImplicitPreRead_ShouldPerformLazyRecoveryAndThrowCommitConflictException()
-          throws CrudException {
-    // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-
-    Get get = mock(Get.class);
-    TransactionResult result = mock(TransactionResult.class);
-
-    UncommittedRecordException uncommittedRecordException = mock(UncommittedRecordException.class);
-    when(uncommittedRecordException.getSelection()).thenReturn(get);
-    when(uncommittedRecordException.getResults()).thenReturn(Collections.singletonList(result));
-
-    doThrow(uncommittedRecordException).when(crud).readIfImplicitPreReadEnabled();
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -666,44 +552,94 @@ public class ConsensusCommitTest {
       commit_ProcessedCrudGiven_CrudExceptionThrownWhileImplicitPreRead_ShouldThrowCommitException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled();
+    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled(context);
 
     // Act Assert
     assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);
   }
 
   @Test
-  public void rollback_WithoutGroupCommitter_ShouldDoNothing()
-      throws UnknownTransactionStatusException {
+  public void commit_ScannerNotClosed_ShouldThrowIllegalStateException() {
+    // Arrange
+    when(context.areAllScannersClosed()).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void
+      commit_CrudConflictExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowCommitConflictException()
+          throws CrudException {
+    // Arrange
+    CrudConflictException crudConflictException = mock(CrudConflictException.class);
+    when(crudConflictException.getMessage()).thenReturn("error");
+    doThrow(crudConflictException).when(crud).waitForRecoveryCompletionIfNecessary(context);
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_CrudExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowCommitException()
+          throws CrudException {
+    // Arrange
+    CrudException crudException = mock(CrudException.class);
+    when(crudException.getMessage()).thenReturn("error");
+    doThrow(crudException).when(crud).waitForRecoveryCompletionIfNecessary(context);
+
+    // Act Assert
+    assertThatThrownBy(() -> consensus.commit()).isInstanceOf(CommitException.class);
+  }
+
+  @Test
+  public void rollback_ShouldDoNothing() throws CrudException, UnknownTransactionStatusException {
     // Arrange
 
     // Act
     consensus.rollback();
 
     // Assert
-    verify(commit, never()).rollbackRecords(any(Snapshot.class));
+    verify(context).closeScanners();
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
     verify(commit, never()).abortState(anyString());
   }
 
   @Test
   public void rollback_WithGroupCommitter_ShouldRemoveTxFromGroupCommitter()
-      throws UnknownTransactionStatusException {
+      throws CrudException, UnknownTransactionStatusException {
     // Arrange
-    String txId = "tx-id";
-    Snapshot snapshot = mock(Snapshot.class);
-    doReturn(txId).when(snapshot).getId();
-    doReturn(snapshot).when(crud).getSnapshot();
     CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
     ConsensusCommit consensusWithGroupCommit =
-        new ConsensusCommit(crud, commit, recovery, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(context, crud, commit, mutationOperationChecker, groupCommitter);
 
     // Act
     consensusWithGroupCommit.rollback();
 
     // Assert
-    verify(groupCommitter).remove(txId);
-    verify(commit, never()).rollbackRecords(any(Snapshot.class));
+    verify(context).closeScanners();
+    verify(groupCommitter).remove(ANY_ID);
+    verify(commit, never()).rollbackRecords(context);
+    verify(commit, never()).abortState(anyString());
+  }
+
+  @Test
+  public void rollback_WithGroupCommitter_InReadOnlyMode_ShouldNotRemoveTxFromGroupCommitter()
+      throws CrudException, UnknownTransactionStatusException {
+    // Arrange
+    context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, true, false));
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        new ConsensusCommit(context, crud, commit, mutationOperationChecker, groupCommitter);
+
+    // Act
+    consensusWithGroupCommit.rollback();
+
+    // Assert
+    verify(context).closeScanners();
+    verify(groupCommitter, never()).remove(anyString());
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
     verify(commit, never()).abortState(anyString());
   }
 }

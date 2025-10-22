@@ -4,7 +4,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -15,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -28,9 +31,11 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorageAdmin implements DistributedStorageAdmin {
 
-  private final Map<String, DistributedStorageAdmin> tableAdminMap;
-  private final Map<String, DistributedStorageAdmin> namespaceAdminMap;
-  private final DistributedStorageAdmin defaultAdmin;
+  /** @deprecated Will be removed in 5.0.0. */
+  @Deprecated private final Map<String, DistributedStorageAdmin> tableAdminMap;
+
+  private final Map<String, AdminHolder> namespaceAdminMap;
+  private final AdminHolder defaultAdmin;
   private final List<DistributedStorageAdmin> admins;
 
   @Inject
@@ -44,7 +49,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
         .forEach(
             (storageName, properties) -> {
               StorageFactory factory = StorageFactory.create(properties);
-              DistributedStorageAdmin admin = factory.getAdmin();
+              DistributedStorageAdmin admin = factory.getStorageAdmin();
               nameAdminMap.put(storageName, admin);
               admins.add(admin);
             });
@@ -59,23 +64,28 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
         .getNamespaceStorageMap()
         .forEach(
             (namespace, storageName) ->
-                namespaceAdminMap.put(namespace, nameAdminMap.get(storageName)));
+                namespaceAdminMap.put(
+                    namespace, new AdminHolder(storageName, nameAdminMap.get(storageName))));
 
-    defaultAdmin = nameAdminMap.get(config.getDefaultStorage());
+    defaultAdmin =
+        new AdminHolder(config.getDefaultStorage(), nameAdminMap.get(config.getDefaultStorage()));
   }
 
   @VisibleForTesting
   MultiStorageAdmin(
       Map<String, DistributedStorageAdmin> tableAdminMap,
-      Map<String, DistributedStorageAdmin> namespaceAdminMap,
-      DistributedStorageAdmin defaultAdmin) {
+      Map<String, AdminHolder> namespaceAdminMap,
+      AdminHolder defaultAdmin) {
     this.tableAdminMap = tableAdminMap;
     this.namespaceAdminMap = namespaceAdminMap;
     this.defaultAdmin = defaultAdmin;
     ImmutableSet.Builder<DistributedStorageAdmin> adminsSet = ImmutableSet.builder();
     adminsSet.addAll(tableAdminMap.values());
-    adminsSet.addAll(namespaceAdminMap.values());
-    adminsSet.add(defaultAdmin);
+    adminsSet.addAll(
+        namespaceAdminMap.values().stream()
+            .map(holder -> holder.admin)
+            .collect(Collectors.toSet()));
+    adminsSet.add(defaultAdmin.admin);
     this.admins = adminsSet.build().asList();
   }
 
@@ -196,6 +206,32 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    getAdmin(namespace, table).dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    getAdmin(namespace, table).renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    getAdmin(namespace, table).alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    getAdmin(namespace, oldTableName).renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
@@ -243,16 +279,18 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     //     => returned
     // - ns4 and ns5 are in the default storage (cosmos)
     //     => returned
-    Set<String> namespaceNames = new HashSet<>(defaultAdmin.getNamespaceNames());
+    Set<String> namespaceNames = new HashSet<>(defaultAdmin.admin.getNamespaceNames());
 
     Set<DistributedStorageAdmin> adminsWithoutDefaultAdmin =
-        new HashSet<>(namespaceAdminMap.values());
-    adminsWithoutDefaultAdmin.remove(defaultAdmin);
+        namespaceAdminMap.values().stream().map(holder -> holder.admin).collect(Collectors.toSet());
+    adminsWithoutDefaultAdmin.remove(defaultAdmin.admin);
+
     for (DistributedStorageAdmin admin : adminsWithoutDefaultAdmin) {
       Set<String> existingNamespaces = admin.getNamespaceNames();
       // Filter out namespace not in the mapping
       for (String existingNamespace : existingNamespaces) {
-        if (admin.equals(namespaceAdminMap.get(existingNamespace))) {
+        AdminHolder holder = namespaceAdminMap.get(existingNamespace);
+        if (holder != null && admin.equals(holder.admin)) {
           namespaceNames.add(existingNamespace);
         }
       }
@@ -263,14 +301,38 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    for (DistributedStorageAdmin admin : namespaceAdminMap.values()) {
-      admin.upgrade(options);
+    for (AdminHolder admin : namespaceAdminMap.values()) {
+      admin.admin.upgrade(options);
     }
   }
 
+  @Override
+  public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
+    try {
+      AdminHolder holder = getAdminHolder(namespace);
+      StorageInfo storageInfo = holder.admin.getStorageInfo(namespace);
+      return new StorageInfoImpl(
+          holder.storageName,
+          storageInfo.getMutationAtomicityUnit(),
+          storageInfo.getMaxAtomicMutationsCount());
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        throw (ExecutionException) e.getCause();
+      }
+      throw e;
+    }
+  }
+
+  private AdminHolder getAdminHolder(String namespace) {
+    AdminHolder adminHolder = namespaceAdminMap.get(namespace);
+    if (adminHolder != null) {
+      return adminHolder;
+    }
+    return defaultAdmin;
+  }
+
   private DistributedStorageAdmin getAdmin(String namespace) {
-    DistributedStorageAdmin admin = namespaceAdminMap.get(namespace);
-    return admin != null ? admin : defaultAdmin;
+    return getAdminHolder(namespace).admin;
   }
 
   private DistributedStorageAdmin getAdmin(String namespace, String table) {
@@ -286,6 +348,17 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   public void close() {
     for (DistributedStorageAdmin admin : admins) {
       admin.close();
+    }
+  }
+
+  @VisibleForTesting
+  static class AdminHolder {
+    private final String storageName;
+    private final DistributedStorageAdmin admin;
+
+    AdminHolder(String storageName, DistributedStorageAdmin admin) {
+      this.storageName = storageName;
+      this.admin = admin;
     }
   }
 }

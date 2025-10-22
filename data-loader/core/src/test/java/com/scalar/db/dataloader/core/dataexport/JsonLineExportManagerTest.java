@@ -9,8 +9,8 @@ import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDao;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDBDaoException;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
+import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
@@ -33,7 +33,7 @@ import org.mockito.Spy;
 public class JsonLineExportManagerTest {
   TableMetadata mockData;
   DistributedStorage storage;
-  @Spy ScalarDBDao dao;
+  @Spy ScalarDbDao dao;
   ProducerTaskFactory producerTaskFactory;
   ExportManager exportManager;
 
@@ -41,13 +41,13 @@ public class JsonLineExportManagerTest {
   void setup() {
     storage = Mockito.mock(DistributedStorage.class);
     mockData = UnitTestUtils.createTestTableMetadata();
-    dao = Mockito.mock(ScalarDBDao.class);
+    dao = Mockito.mock(ScalarDbDao.class);
     producerTaskFactory = new ProducerTaskFactory(null, false, true);
   }
 
   @Test
   void startExport_givenValidDataWithoutPartitionKey_shouldGenerateOutputFile()
-      throws IOException, ScalarDBDaoException {
+      throws IOException, ScalarDbDaoException {
     exportManager = new JsonLineExportManager(storage, dao, producerTaskFactory);
     Scanner scanner = Mockito.mock(Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.jsonl";
@@ -86,7 +86,7 @@ public class JsonLineExportManagerTest {
 
   @Test
   void startExport_givenPartitionKey_shouldGenerateOutputFile()
-      throws IOException, ScalarDBDaoException {
+      throws IOException, ScalarDbDaoException {
     exportManager = new JsonLineExportManager(storage, dao, producerTaskFactory);
     Scanner scanner = Mockito.mock(Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.jsonl";

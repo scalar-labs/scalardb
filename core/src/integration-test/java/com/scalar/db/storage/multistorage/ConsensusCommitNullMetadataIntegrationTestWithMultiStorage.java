@@ -1,9 +1,9 @@
 package com.scalar.db.storage.multistorage;
 
-import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Collections;
 import java.util.Map;
@@ -56,6 +56,9 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     properties.setProperty(
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
 
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }

@@ -5,10 +5,11 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.ColumnChecker;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -17,8 +18,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class DynamoOperationChecker extends OperationChecker {
   public DynamoOperationChecker(
-      DatabaseConfig databaseConfig, TableMetadataManager metadataManager) {
-    super(databaseConfig, metadataManager);
+      DatabaseConfig databaseConfig,
+      TableMetadataManager metadataManager,
+      StorageInfoProvider storageInfoProvider) {
+    super(databaseConfig, metadataManager, storageInfoProvider);
   }
 
   @Override

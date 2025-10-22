@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.RdbEngine.DB2;
 import static com.scalar.db.storage.jdbc.RdbEngine.MYSQL;
 import static com.scalar.db.storage.jdbc.RdbEngine.ORACLE;
 import static com.scalar.db.storage.jdbc.RdbEngine.POSTGRESQL;
@@ -97,6 +98,7 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BIT, "BIT", 1, 0), DataType.BOOLEAN);
     DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.BIT, "bool", 1, 0), DataType.BOOLEAN);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.BIT, "bit", 1, 0), DataType.BOOLEAN);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.BOOLEAN, "BOOLEAN"), DataType.BOOLEAN);
 
     // INT
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TINYINT, "TINYINT"), DataType.INT);
@@ -110,6 +112,9 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.INTEGER, "INT"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.SMALLINT, "smallint"), DataType.INT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.INTEGER, "int"), DataType.INT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.SMALLINT, "SMALLINT"), DataType.INT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.INTEGER, "INT"), DataType.INT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.BIGINT, "BIGINT"), DataType.BIGINT);
 
     // BIGINT
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BIGINT, "BIGINT"), DataType.BIGINT);
@@ -124,6 +129,8 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.REAL, "float4"), DataType.FLOAT);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.REAL, "BINARY_FLOAT"), DataType.FLOAT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.REAL, "real"), DataType.FLOAT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.REAL, "REAL", 24, 0), DataType.FLOAT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.REAL, "REAL", 10, 0), DataType.FLOAT);
 
     // DOUBLE
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.DOUBLE, "DOUBLE"), DataType.DOUBLE);
@@ -133,6 +140,7 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.FLOAT, "FLOAT", 53, 0), DataType.DOUBLE);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.FLOAT, "FLOAT", 54, 0), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DOUBLE, "real"), DataType.DOUBLE);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.DOUBLE, "DOUBLE", 53, 0), DataType.DOUBLE);
 
     // TEXT
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.CHAR, "CHAR"), DataType.TEXT);
@@ -159,6 +167,12 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGVARCHAR, "text"), DataType.TEXT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "ntext"), DataType.TEXT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "xml"), null);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "CHAR", 3, 0), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARCHAR", 512, 0), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "CLOB", 1048576, 0), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "GRAPHIC", 3, 0), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARGRAPHIC", 512, 0), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "DCLOB", 512, 10), DataType.TEXT);
 
     // BLOB
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BINARY, "BINARY"), DataType.BLOB);
@@ -171,6 +185,15 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.BINARY, "binary"), DataType.BLOB);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.BINARY, "timestamp"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.VARBINARY, "varbinary"), DataType.BLOB);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.BINARY, "BINARY", 5, 0), DataType.BLOB);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.BINARY, "VARBINARY", 512, 0), DataType.BLOB);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.BLOB, "BLOB", 1024, 0), DataType.BLOB);
+    DATA_TYPE_MAP
+        .get(DB2)
+        .put(new Column(JDBCType.BINARY, "CHAR () FOR BIT DATA", 5, 0), DataType.BLOB);
+    DATA_TYPE_MAP
+        .get(DB2)
+        .put(new Column(JDBCType.BINARY, "VARCHAR () FOR BIT DATA", 512, 0), DataType.BLOB);
 
     // NUMERIC/DECIMAL
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.NUMERIC, "NUMERIC"), null);
@@ -182,6 +205,7 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 16, 0), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NUMERIC, "numeric"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DECIMAL, "decimal"), null);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.DECIMAL, "DECIMAL"), null);
 
     // DATE/TIME/TIMESTAMP
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.DATE, "DATE"), DataType.DATE);
@@ -242,6 +266,17 @@ public class RdbEngineTest {
     DATA_TYPE_MAP
         .get(SQL_SERVER)
         .put(new Column(JDBCType.OTHER, "datetimeoffset"), DataType.TIMESTAMPTZ);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.DATE, "DATE"), DataType.DATE);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.TIME, "TIME"), DataType.TIME);
+    DATA_TYPE_MAP
+        .get(DB2)
+        .put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP", DataType.TIME), DataType.TIME);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.TIMESTAMP, "TIMESTAMP"), DataType.TIMESTAMP);
+    DATA_TYPE_MAP
+        .get(DB2)
+        .put(
+            new Column(JDBCType.TIMESTAMP, "TIMESTAMP", DataType.TIMESTAMPTZ),
+            DataType.TIMESTAMPTZ);
 
     // Other unsupported data types
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BIT, "BIT", 8, 0), null);
@@ -253,6 +288,8 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.ROWID, "ROWID"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.BIT, "BIT", 8, 0), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.OTHER, ""), null);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.OTHER, "DECFLOAT"), null);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.OTHER, "XML"), null);
   }
 
   @Immutable
@@ -262,18 +299,6 @@ public class RdbEngineTest {
     final int columnSize;
     final int digits;
     @Nullable final DataType overrideDataType;
-
-    Column(JDBCType type, String typeName) {
-      this(type, typeName, 0, 0, null);
-    }
-
-    Column(JDBCType type, String typeName, DataType overrideDataType) {
-      this(type, typeName, 0, 0, overrideDataType);
-    }
-
-    Column(JDBCType type, String typeName, int columnSize, int digits) {
-      this(type, typeName, columnSize, digits, null);
-    }
 
     Column(
         JDBCType type,
@@ -286,6 +311,18 @@ public class RdbEngineTest {
       this.columnSize = columnSize;
       this.digits = digits;
       this.overrideDataType = overrideDataType;
+    }
+
+    Column(JDBCType type, String typeName, @Nullable DataType overrideDataType) {
+      this(type, typeName, 0, 0, overrideDataType);
+    }
+
+    Column(JDBCType type, String typeName, int columnSize, int digits) {
+      this(type, typeName, columnSize, digits, null);
+    }
+
+    Column(JDBCType type, String typeName) {
+      this(type, typeName, 0, 0, null);
     }
 
     @Override

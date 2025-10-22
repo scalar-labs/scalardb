@@ -19,7 +19,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Set up JDK 8 and 11 (default 8)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: |
@@ -27,7 +27,7 @@ jobs:
             8
 
       - name: Checkout release note scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: scalar-labs/actions
           token: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
@@ -60,10 +60,10 @@ jobs:
           prerelease: false
 
       - name: Checkout the current repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Build scalardb-schema-loader jar
         run: ./gradlew :schema-loader:shadowJar
@@ -76,4 +76,17 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: schema-loader/build/libs/scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
           asset_name: scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
+          asset_content_type: application/java-archive
+
+      - name: Build scalardb-data-loader-cli jar
+        run: ./gradlew :data-loader:cli:shadowJar
+
+      - name: Upload scalardb-data-loader-cli jar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: data-loader/cli/build/libs/scalardb-data-loader-cli-${{ steps.version.outputs.version }}.jar
+          asset_name: scalardb-data-loader-cli-${{ steps.version.outputs.version }}.jar
           asset_content_type: application/java-archive

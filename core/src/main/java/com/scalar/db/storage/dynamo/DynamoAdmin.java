@@ -7,7 +7,10 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -95,6 +98,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
   private static final int DEFAULT_WAITING_DURATION_SECS = 3;
+  @VisibleForTesting static final int MAX_RETRY_COUNT = 10;
 
   @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
   @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
@@ -153,6 +157,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(SCALING_TYPE_INDEX_READ, MetricType.DYNAMO_DB_READ_CAPACITY_UTILIZATION)
           .put(SCALING_TYPE_INDEX_WRITE, MetricType.DYNAMO_DB_WRITE_CAPACITY_UTILIZATION)
           .build();
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "dynamo",
+          StorageInfo.MutationAtomicityUnit.STORAGE,
+          // DynamoDB has a limit of 100 items per transactional batch write operation
+          100);
 
   private final DynamoDbClient client;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
@@ -230,15 +240,26 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private void upsertIntoNamespacesTable(Namespace namespace) throws ExecutionException {
     Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(NAMESPACES_ATTR_NAME, AttributeValue.builder().s(namespace.prefixed()).build());
-    try {
-      client.putItem(
-          PutItemRequest.builder()
-              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
-              .item(itemValues)
-              .build());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          "Inserting the " + namespace + " namespace into the namespaces table failed", e);
+    int retryCount = 0;
+    while (true) {
+      try {
+        client.putItem(
+            PutItemRequest.builder()
+                .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, NAMESPACES_TABLE))
+                .item(itemValues)
+                .build());
+        return;
+      } catch (ResourceNotFoundException e) {
+        if (retryCount >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              "Inserting the " + namespace + " namespace into the namespaces table failed", e);
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        retryCount++;
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Inserting the " + namespace + " namespace into the namespaces table failed", e);
+      }
     }
   }
 
@@ -315,24 +336,23 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
       if (metadata.getColumnDataType(partitionKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "BLOB type is supported only for the last column in partition key in DynamoDB: "
-                + partitionKeyName);
+            CoreError.DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(partitionKeyName));
       }
     }
 
     for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
       if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "Currently, BLOB type is not supported for clustering keys in DynamoDB: "
-                + clusteringKeyName);
+            CoreError.DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(
+                clusteringKeyName));
       }
     }
 
     for (String secondaryIndexName : metadata.getSecondaryIndexNames()) {
       if (metadata.getColumnDataType(secondaryIndexName) == DataType.BOOLEAN) {
         throw new IllegalArgumentException(
-            "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
-                + secondaryIndexName);
+            CoreError.DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED.buildMessage(
+                secondaryIndexName));
       }
     }
   }
@@ -462,15 +482,28 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           METADATA_ATTR_SECONDARY_INDEX,
           AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
     }
-    try {
-      client.putItem(
-          PutItemRequest.builder()
-              .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
-              .item(itemValues)
-              .build());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed", e);
+    int retryCount = 0;
+    while (true) {
+      try {
+        client.putItem(
+            PutItemRequest.builder()
+                .tableName(ScalarDbUtils.getFullTableName(metadataNamespace, METADATA_TABLE))
+                .item(itemValues)
+                .build());
+        return;
+      } catch (ResourceNotFoundException e) {
+        if (retryCount >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
+              e);
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+        retryCount++;
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Adding the metadata for the " + getFullTableName(namespace, table) + " table failed",
+            e);
+      }
     }
   }
 
@@ -917,16 +950,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     TableMetadata metadata = getTableMetadata(nonPrefixedNamespace, table);
-
-    if (metadata == null) {
-      throw new IllegalArgumentException(
-          "The " + getFullTableName(namespace, table) + " table does not exist");
-    }
+    assert metadata != null;
 
     if (metadata.getColumnDataType(columnName) == DataType.BOOLEAN) {
       throw new IllegalArgumentException(
-          "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
-              + columnName);
+          CoreError.DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED.buildMessage(columnName));
     }
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
@@ -997,6 +1025,47 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         namespace,
         table,
         TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
+  }
+
+  private boolean rawIndexExists(String nonPrefixedNamespace, String table, String indexName)
+      throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    String globalIndexName =
+        String.join(
+            ".",
+            getFullTableName(namespace, table),
+            DynamoAdmin.GLOBAL_INDEX_NAME_PREFIX,
+            indexName);
+    int retryCount = 0;
+    try {
+      while (true) {
+        DescribeTableResponse response =
+            client.describeTable(
+                DescribeTableRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
+        GlobalSecondaryIndexDescription description =
+            response.table().globalSecondaryIndexes().stream()
+                .filter(d -> d.indexName().equals(globalIndexName))
+                .findFirst()
+                .orElse(null);
+        if (description == null) {
+          return false;
+        }
+        if (description.indexStatus() == IndexStatus.ACTIVE) {
+          return true;
+        }
+        if (retryCount++ >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              String.format(
+                  "Waiting for the secondary index %s on the %s table to be active failed",
+                  indexName, getFullTableName(namespace, table)));
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+      }
+    } catch (ResourceNotFoundException e) {
+      return false;
+    }
   }
 
   private void waitForIndexCreation(Namespace namespace, String table, String columnName)
@@ -1333,6 +1402,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createTableInternal(nonPrefixedNamespace, table, metadata, true, options);
+      for (String indexColumnName : metadata.getSecondaryIndexNames()) {
+        if (!rawIndexExists(nonPrefixedNamespace, table, indexColumnName)) {
+          createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+        }
+      }
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
@@ -1363,17 +1437,45 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropColumnFromTable(String nonPrefixedNamespace, String table, String columnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_DROP_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_RENAME_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.DYNAMO_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
   public TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+    throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void addRawColumnToTable(
       String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+    throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
@@ -1382,8 +1484,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       String table,
       Map<String, String> options,
       Map<String, DataType> overrideColumnsType) {
-    throw new UnsupportedOperationException(
-        "Import-related functionality is not supported in DynamoDB");
+    throw new UnsupportedOperationException(CoreError.DYNAMO_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
@@ -1501,6 +1602,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private String getFullTableName(Namespace namespace, String table) {
     return ScalarDbUtils.getFullTableName(namespace.prefixed(), table);
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 
   @Override

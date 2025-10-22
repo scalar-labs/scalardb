@@ -2,7 +2,7 @@ package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;

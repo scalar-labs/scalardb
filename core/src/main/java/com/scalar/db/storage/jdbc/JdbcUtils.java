@@ -36,8 +36,6 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
-      // if transactional, the default isolation level is SERIALIZABLE
-      dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
 
     config
@@ -63,12 +61,14 @@ public final class JdbcUtils {
               }
             });
 
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
-    for (Entry<String, String> entry : rdbEngine.getConnectionProperties().entrySet()) {
+    for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
       dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
     }
 
@@ -89,9 +89,16 @@ public final class JdbcUtils {
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getTableMetadataConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getTableMetadataConnectionPoolMaxTotal());
+    for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
+      dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
+    }
+
     return dataSource;
   }
 
@@ -109,14 +116,16 @@ public final class JdbcUtils {
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setDefaultReadOnly(false);
+
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getAdminConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
+    for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
+      dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
+    }
     return dataSource;
-  }
-
-  public static boolean isSqlite(JdbcConfig config) {
-    return config.getJdbcUrl().startsWith("jdbc:sqlite:");
   }
 
   /**

@@ -24,8 +24,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -64,6 +66,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @VisibleForTesting public static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
       "cosmosdb_stored_procedure/" + STORED_PROCEDURE_FILE_NAME;
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "cosmos",
+          StorageInfo.MutationAtomicityUnit.PARTITION,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
 
   private final CosmosClient client;
   private final String metadataDatabase;
@@ -580,6 +588,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createTableInternal(namespace, table, metadata, true);
+      updateIndexingPolicy(namespace, table, metadata);
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (Exception e) {
@@ -633,6 +642,36 @@ public class CosmosAdmin implements DistributedStorageAdmin {
               columnName, getFullTableName(namespace, table)),
           e);
     }
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.COSMOS_DROP_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.COSMOS_RENAME_COLUMN_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.COSMOS_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
@@ -740,5 +779,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throw e;
     }
     return true;
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
   }
 }

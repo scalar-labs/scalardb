@@ -21,8 +21,10 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -47,6 +49,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String NAMESPACES_NAME_COL = "name";
   private static final String DEFAULT_REPLICATION_FACTOR = "3";
   @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl(
+          "cassandra",
+          StorageInfo.MutationAtomicityUnit.PARTITION,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE);
+
   private final ClusterManager clusterManager;
   private final String metadataKeyspace;
 
@@ -68,7 +77,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     for (String column : metadata.getColumnNames()) {
       if (metadata.getColumnDataTypes().get(column).equals(DataType.TIMESTAMP)) {
         throw new UnsupportedOperationException(
-            "The TIMESTAMP data type is not supported in Cassandra. column: " + column);
+            CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(column));
       }
     }
     try {
@@ -130,7 +139,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String insertQuery =
         QueryBuilder.insertInto(
                 quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .value(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
+            .value(NAMESPACES_NAME_COL, keyspace)
             .toString();
     clusterManager.getSession().execute(insertQuery);
   }
@@ -171,7 +180,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     String deleteQuery =
         QueryBuilder.delete()
             .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .where(QueryBuilder.eq(NAMESPACES_NAME_COL, keyspace))
             .toString();
     clusterManager.getSession().execute(deleteQuery);
   }
@@ -270,7 +279,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
       builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
     }
-    metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
+    metadata
+        .getIndexes()
+        .forEach(i -> builder.addSecondaryIndex(unquoteIfNecessary(i.getTarget())));
     return builder.build();
   }
 
@@ -340,7 +351,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String query =
           QueryBuilder.select(NAMESPACES_NAME_COL)
               .from(quoteIfNecessary(metadataKeyspace), quoteIfNecessary(NAMESPACES_TABLE))
-              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, quoteIfNecessary(namespace)))
+              .where(QueryBuilder.eq(NAMESPACES_NAME_COL, namespace))
               .toString();
       ResultSet resultSet = clusterManager.getSession().execute(query);
 
@@ -383,12 +394,12 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     if (columnType == DataType.TIMESTAMP) {
       throw new UnsupportedOperationException(
-          "The TIMESTAMP data type is not supported in Cassandra. column: " + columnName);
+          CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(columnName));
     }
     try {
       String alterTableQuery =
-          SchemaBuilder.alterTable(namespace, table)
-              .addColumn(columnName)
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .addColumn(quoteIfNecessary(columnName))
               .type(toCassandraDataType(columnType))
               .getQueryString();
 
@@ -402,6 +413,77 @@ public class CassandraAdmin implements DistributedStorageAdmin {
               columnName, getFullTableName(namespace, table)),
           e);
     }
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    try {
+      String alterTableQuery =
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .dropColumn(quoteIfNecessary(columnName))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Dropping the %s column from the %s table failed",
+              columnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    try {
+      TableMetadata tableMetadata = getTableMetadata(namespace, table);
+      assert tableMetadata != null;
+      if (!tableMetadata.getPartitionKeyNames().contains(oldColumnName)
+          && !tableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+        throw new IllegalArgumentException(
+            CoreError.CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED.buildMessage());
+      }
+      String alterTableQuery =
+          SchemaBuilder.alterTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .renameColumn(quoteIfNecessary(oldColumnName))
+              .to(quoteIfNecessary(newColumnName))
+              .getQueryString();
+
+      clusterManager.getSession().execute(alterTableQuery);
+      if (tableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        // Cassandra does not support renaming indexes
+        dropIndex(namespace, table, oldColumnName);
+        createIndex(namespace, table, newColumnName, Collections.emptyMap());
+      }
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s column to %s in the %s table failed",
+              oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.CASSANDRA_RENAME_TABLE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
@@ -571,6 +653,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
+  }
+
+  @Override
   public void close() {
     clusterManager.close();
   }
@@ -671,5 +758,15 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     public String toString() {
       return strategyName;
     }
+  }
+
+  private String unquoteIfNecessary(String identifier) {
+    if (identifier == null) {
+      return null;
+    }
+    if (identifier.length() >= 2 && identifier.startsWith("\"") && identifier.endsWith("\"")) {
+      return identifier.substring(1, identifier.length() - 1).replace("\"\"", "\"");
+    }
+    return identifier;
   }
 }

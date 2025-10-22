@@ -22,7 +22,6 @@ import java.util.function.BiConsumer;
 
 public abstract class DecoratedTwoPhaseCommitTransactionManager
     implements TwoPhaseCommitTransactionManager,
-        TwoPhaseCommitTransactionDecoratorAddable,
         TwoPhaseCommitTransactionExpirationHandlerSettable {
 
   private final TwoPhaseCommitTransactionManager transactionManager;
@@ -69,22 +68,27 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
 
   @Override
   public TwoPhaseCommitTransaction begin() throws TransactionException {
-    return transactionManager.begin();
+    return decorateTransactionOnBeginOrStart(transactionManager.begin());
   }
 
   @Override
   public TwoPhaseCommitTransaction begin(String txId) throws TransactionException {
-    return transactionManager.begin(txId);
+    return decorateTransactionOnBeginOrStart(transactionManager.begin(txId));
   }
 
   @Override
   public TwoPhaseCommitTransaction start() throws TransactionException {
-    return transactionManager.start();
+    return decorateTransactionOnBeginOrStart(transactionManager.start());
   }
 
   @Override
   public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
-    return transactionManager.start(txId);
+    return decorateTransactionOnBeginOrStart(transactionManager.start(txId));
+  }
+
+  protected TwoPhaseCommitTransaction decorateTransactionOnBeginOrStart(
+      TwoPhaseCommitTransaction transaction) throws TransactionException {
+    return transaction;
   }
 
   @Override
@@ -105,6 +109,11 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
     return transactionManager.scan(scan);
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    return transactionManager.getScanner(scan);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -180,14 +189,6 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
           .getOriginalTransactionManager();
     }
     return transactionManager;
-  }
-
-  @Override
-  public void addTransactionDecorator(TwoPhaseCommitTransactionDecorator transactionDecorator) {
-    if (transactionManager instanceof TwoPhaseCommitTransactionDecoratorAddable) {
-      ((TwoPhaseCommitTransactionDecoratorAddable) transactionManager)
-          .addTransactionDecorator(transactionDecorator);
-    }
   }
 
   @Override

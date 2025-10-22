@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -133,7 +134,6 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
 
   @BeforeEach
   protected void setUp() throws Exception {
-
     createTable();
   }
 
@@ -211,6 +211,21 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     waitForDifferentSessionDdl();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
+  }
+
+  @Test
+  public void
+      repairTable_WhenTableAlreadyExistsWithoutIndexAndMetadataSpecifiesIndex_ShouldCreateIndex()
+          throws Exception {
+    // Arrange
+    admin.dropIndex(getNamespace(), getTable(), COL_NAME5);
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
+
+    // Assert
+    assertThatCode(() -> admin.dropIndex(getNamespace(), getTable(), COL_NAME5))
+        .doesNotThrowAnyException();
   }
 
   @Test

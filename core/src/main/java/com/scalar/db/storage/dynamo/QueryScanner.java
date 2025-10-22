@@ -1,8 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
-import com.scalar.db.common.ScannerIterator;
+import com.scalar.db.common.AbstractScanner;
 import com.scalar.db.storage.dynamo.request.PaginatedRequest;
 import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -17,27 +16,28 @@ import javax.annotation.concurrent.NotThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 @NotThreadSafe
-public class QueryScanner implements Scanner {
+public class QueryScanner extends AbstractScanner {
 
   private final PaginatedRequest request;
   private final ResultInterpreter resultInterpreter;
 
   private Iterator<Map<String, AttributeValue>> itemsIterator;
+  private final int fetchSize;
   @Nullable private Integer remainingLimit;
   @Nullable private Map<String, AttributeValue> lastEvaluatedKey;
 
-  private ScannerIterator scannerIterator;
-
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public QueryScanner(PaginatedRequest request, int limit, ResultInterpreter resultInterpreter) {
+  public QueryScanner(
+      PaginatedRequest request, int fetchSize, int limit, ResultInterpreter resultInterpreter) {
     this.request = request;
+    this.fetchSize = fetchSize;
 
     if (limit > 0) {
       remainingLimit = limit;
-      handleResponse(request.execute(limit));
+      handleResponse(request.execute(Math.min(fetchSize, limit)));
     } else {
       remainingLimit = null;
-      handleResponse(request.execute());
+      handleResponse(request.execute(fetchSize));
     }
 
     this.resultInterpreter = resultInterpreter;
@@ -57,15 +57,13 @@ public class QueryScanner implements Scanner {
     if (itemsIterator.hasNext()) {
       return true;
     }
-    if (lastEvaluatedKey != null) {
-      if (remainingLimit != null) {
-        handleResponse(request.execute(lastEvaluatedKey, remainingLimit));
-      } else {
-        handleResponse(request.execute(lastEvaluatedKey));
-      }
-      return itemsIterator.hasNext();
+    if (lastEvaluatedKey == null) {
+      return false;
     }
-    return false;
+
+    int nextFetchSize = remainingLimit != null ? Math.min(fetchSize, remainingLimit) : fetchSize;
+    handleResponse(request.execute(lastEvaluatedKey, nextFetchSize));
+    return itemsIterator.hasNext();
   }
 
   private void handleResponse(PaginatedRequestResponse response) {
@@ -74,34 +72,21 @@ public class QueryScanner implements Scanner {
       remainingLimit -= items.size();
     }
     itemsIterator = items.iterator();
-    if ((remainingLimit == null || remainingLimit > 0) && response.hasLastEvaluatedKey()) {
-      lastEvaluatedKey = response.lastEvaluatedKey();
-    } else {
-      lastEvaluatedKey = null;
-    }
+
+    boolean shouldContinue =
+        (remainingLimit == null || remainingLimit > 0) && response.hasLastEvaluatedKey();
+    lastEvaluatedKey = shouldContinue ? response.lastEvaluatedKey() : null;
   }
 
   @Override
   @Nonnull
   public List<Result> all() {
-    List<Result> ret = new ArrayList<>();
-    while (true) {
-      Optional<Result> one = one();
-      if (!one.isPresent()) {
-        break;
-      }
-      ret.add(one.get());
+    List<Result> results = new ArrayList<>();
+    Optional<Result> next;
+    while ((next = one()).isPresent()) {
+      results.add(next.get());
     }
-    return ret;
-  }
-
-  @Override
-  @Nonnull
-  public Iterator<Result> iterator() {
-    if (scannerIterator == null) {
-      scannerIterator = new ScannerIterator(this);
-    }
-    return scannerIterator;
+    return results;
   }
 
   @Override

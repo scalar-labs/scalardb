@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.AbstractResult;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.nio.ByteBuffer;

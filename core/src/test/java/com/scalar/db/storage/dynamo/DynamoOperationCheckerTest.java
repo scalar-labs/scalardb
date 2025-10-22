@@ -15,7 +15,10 @@ import static org.mockito.MockitoAnnotations.openMocks;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
@@ -35,8 +38,12 @@ public class DynamoOperationCheckerTest {
   private static final String COL2 = "v2";
   private static final String COL3 = "v3";
   private static final String COL4 = "v4";
+  private static final StorageInfo STORAGE_INFO =
+      new StorageInfoImpl("dynamo", StorageInfo.MutationAtomicityUnit.STORAGE, 100);
+
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
+  @Mock private StorageInfoProvider storageInfoProvider;
   private DynamoOperationChecker operationChecker;
 
   @BeforeEach
@@ -57,13 +64,21 @@ public class DynamoOperationCheckerTest {
             .addSecondaryIndex(COL4)
             .build();
     when(metadataManager.getTableMetadata(any())).thenReturn(tableMetadata);
-    operationChecker = new DynamoOperationChecker(databaseConfig, metadataManager);
+    when(storageInfoProvider.getStorageInfo(any())).thenReturn(STORAGE_INFO);
+    operationChecker =
+        new DynamoOperationChecker(databaseConfig, metadataManager, storageInfoProvider);
   }
 
   @Test
   public void check_ForPutWithNullIndex_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0)).withIntValue(COL1, null);
+    Put put =
+        Put.newBuilder()
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .intValue(COL1, null)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -73,7 +88,13 @@ public class DynamoOperationCheckerTest {
   @Test
   public void check_ForPutWithNonNullIndex_ShouldDoNothing() {
     // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0)).withIntValue(COL1, 1);
+    Put put =
+        Put.newBuilder()
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .intValue(COL1, 1)
+            .build();
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
@@ -82,7 +103,12 @@ public class DynamoOperationCheckerTest {
   @Test
   public void check_ForPutWithoutSettingIndex_ShouldDoNothing() {
     // Arrange
-    Put put = new Put(Key.ofInt(PKEY1, 0), Key.ofInt(CKEY1, 0));
+    Put put =
+        Put.newBuilder()
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .build();
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +18,7 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
@@ -28,6 +30,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -54,48 +57,64 @@ public class TwoPhaseConsensusCommitTest {
   private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_TX_ID = "any_id";
 
+  private TransactionContext context;
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
-  @Mock private RecoveryHandler recovery;
   @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
+
   private TwoPhaseConsensusCommit transaction;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    transaction = new TwoPhaseConsensusCommit(crud, commit, recovery, mutationOperationChecker);
+    // Arrange
+    context = spy(new TransactionContext(ANY_TX_ID, snapshot, Isolation.SNAPSHOT, false, false));
+    transaction = new TwoPhaseConsensusCommit(context, crud, commit, mutationOperationChecker);
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .build();
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Put(partitionKey, clusteringKey)
-        .withValue(ANY_NAME_3, ANY_TEXT_3)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .textValue(ANY_NAME_3, ANY_TEXT_3)
+        .build();
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_NAMESPACE)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   @Test
@@ -103,34 +122,14 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     Get get = prepareGet();
     TransactionResult result = mock(TransactionResult.class);
-    when(crud.get(get)).thenReturn(Optional.of(result));
-    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(crud.get(get, context)).thenReturn(Optional.of(result));
 
     // Act
     Optional<Result> actual = transaction.get(get);
 
     // Assert
     assertThat(actual).isPresent();
-    verify(recovery, never()).recover(get, result);
-    verify(crud).get(get);
-  }
-
-  @Test
-  public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    Get get = prepareGet();
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    when(crud.get(get)).thenThrow(toThrow);
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act
-    assertThatThrownBy(() -> transaction.get(get)).isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(get, result);
+    verify(crud).get(get, context);
   }
 
   @Test
@@ -139,44 +138,67 @@ public class TwoPhaseConsensusCommitTest {
     Scan scan = prepareScan();
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
-    when(crud.scan(scan)).thenReturn(results);
-    when(crud.getSnapshot()).thenReturn(snapshot);
+    when(crud.scan(scan, context)).thenReturn(results);
 
     // Act
     List<Result> actual = transaction.scan(scan);
 
     // Assert
     assertThat(actual.size()).isEqualTo(1);
-    verify(crud).scan(scan);
+    verify(crud).scan(scan, context);
   }
 
   @Test
-  public void scan_ScanForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
+  public void getScannerAndScannerOne_ShouldCallCrudHandlerGetScannerAndScannerOne()
+      throws CrudException {
     // Arrange
     Scan scan = prepareScan();
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    when(crud.scan(scan)).thenThrow(toThrow);
-    when(toThrow.getSelection()).thenReturn(scan);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result = mock(Result.class);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(crud.getScanner(scan, context)).thenReturn(scanner);
 
-    // Act Assert
-    assertThatThrownBy(() -> transaction.scan(scan)).isInstanceOf(UncommittedRecordException.class);
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = transaction.getScanner(scan);
+    Optional<Result> actualResult = actualScanner.one();
 
-    verify(recovery).recover(scan, result);
+    // Assert
+    assertThat(actualResult).hasValue(result);
+    verify(crud).getScanner(scan, context);
+    verify(scanner).one();
+  }
+
+  @Test
+  public void getScannerAndScannerAll_ShouldCallCrudHandlerGetScannerAndScannerAll()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    when(scanner.all()).thenReturn(Arrays.asList(result1, result2));
+    when(crud.getScanner(scan, context)).thenReturn(scanner);
+
+    // Act
+    TransactionCrudOperable.Scanner actualScanner = transaction.getScanner(scan);
+    List<Result> actualResults = actualScanner.all();
+
+    // Assert
+    assertThat(actualResults).containsExactly(result1, result2);
+    verify(crud).getScanner(scan, context);
+    verify(scanner).all();
   }
 
   @Test
   public void put_PutGiven_ShouldCallCrudHandlerPut() throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.put(put);
 
     // Assert
-    verify(crud).put(put);
+    verify(crud).put(put, context);
     verify(mutationOperationChecker).check(put);
   }
 
@@ -185,33 +207,13 @@ public class TwoPhaseConsensusCommitTest {
       throws ExecutionException, CrudException {
     // Arrange
     Put put = preparePut();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.put(Arrays.asList(put, put));
 
     // Assert
-    verify(crud, times(2)).put(put);
+    verify(crud, times(2)).put(put, context);
     verify(mutationOperationChecker, times(2)).check(put);
-  }
-
-  @Test
-  public void put_PutGivenAndUncommittedRecordExceptionThrown_ShouldRecoverRecord()
-      throws CrudException {
-    // Arrange
-    Put put = preparePut();
-    Get get = prepareGet();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).put(put);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.put(put)).isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -219,13 +221,12 @@ public class TwoPhaseConsensusCommitTest {
       throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.delete(delete);
 
     // Assert
-    verify(crud).delete(delete);
+    verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(delete);
   }
 
@@ -234,34 +235,13 @@ public class TwoPhaseConsensusCommitTest {
       throws CrudException, ExecutionException {
     // Arrange
     Delete delete = prepareDelete();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.delete(Arrays.asList(delete, delete));
 
     // Assert
-    verify(crud, times(2)).delete(delete);
+    verify(crud, times(2)).delete(delete, context);
     verify(mutationOperationChecker, times(2)).check(delete);
-  }
-
-  @Test
-  public void delete_DeleteGivenAndUncommittedRecordExceptionThrown_ShouldRecoverRecord()
-      throws CrudException {
-    // Arrange
-    Delete delete = prepareDelete();
-    Get get = prepareGet();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).delete(delete);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.delete(delete))
-        .isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -290,7 +270,7 @@ public class TwoPhaseConsensusCommitTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableInsertMode()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -320,49 +300,8 @@ public class TwoPhaseConsensusCommitTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
-  }
-
-  @Test
-  public void upsert_UpsertForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    Upsert upsert =
-        Upsert.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .enableImplicitPreRead()
-            .build();
-    Get get =
-        Get.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .build();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).put(put);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.upsert(upsert))
-        .isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -392,7 +331,7 @@ public class TwoPhaseConsensusCommitTest {
             .condition(ConditionBuilder.putIfExists())
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -430,7 +369,7 @@ public class TwoPhaseConsensusCommitTest {
                     .build())
             .enableImplicitPreRead()
             .build();
-    verify(crud).put(expectedPut);
+    verify(crud).put(expectedPut, context);
     verify(mutationOperationChecker).check(expectedPut);
   }
 
@@ -458,10 +397,7 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
-    doThrow(UnsatisfiedConditionException.class).when(crud).put(put);
+    doThrow(UnsatisfiedConditionException.class).when(crud).put(put, context);
 
     // Act Assert
     assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
@@ -498,13 +434,10 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
     UnsatisfiedConditionException unsatisfiedConditionException =
         mock(UnsatisfiedConditionException.class);
     when(unsatisfiedConditionException.getMessage()).thenReturn("PutIf");
-    doThrow(unsatisfiedConditionException).when(crud).put(put);
+    doThrow(unsatisfiedConditionException).when(crud).put(put, context);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
@@ -538,13 +471,10 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn("id");
-
     UnsatisfiedConditionException unsatisfiedConditionException =
         mock(UnsatisfiedConditionException.class);
     when(unsatisfiedConditionException.getMessage()).thenReturn("PutIfExists");
-    doThrow(unsatisfiedConditionException).when(crud).put(put);
+    doThrow(unsatisfiedConditionException).when(crud).put(put, context);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
@@ -554,77 +484,35 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void update_UpdateForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    Update update =
-        Update.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .build();
-    Put put =
-        Put.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .textValue(ANY_NAME_3, ANY_TEXT_3)
-            .condition(ConditionBuilder.putIfExists())
-            .enableImplicitPreRead()
-            .build();
-    Get get =
-        Get.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-            .build();
-
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    doThrow(toThrow).when(crud).put(put);
-    when(toThrow.getSelection()).thenReturn(get);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.update(update))
-        .isInstanceOf(UncommittedRecordException.class);
-
-    verify(recovery).recover(get, result);
-  }
-
-  @Test
   public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete()
       throws CrudException, ExecutionException {
     // Arrange
     Put put = preparePut();
     Delete delete = prepareDelete();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.mutate(Arrays.asList(put, delete));
 
     // Assert
-    verify(crud).put(put);
-    verify(crud).delete(delete);
+    verify(crud).put(put, context);
+    verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(put);
     verify(mutationOperationChecker).check(delete);
   }
 
   @Test
-  public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot()
+  public void prepare_ProcessedCrudGiven_ShouldPrepareRecordsWithSnapshot()
       throws PreparationException, CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.prepare();
 
     // Assert
-    verify(crud).readIfImplicitPreReadEnabled();
-    verify(commit).prepare(snapshot);
+    verify(context).areAllScannersClosed();
+    verify(crud).readIfImplicitPreReadEnabled(context);
+    verify(crud).waitForRecoveryCompletionIfNecessary(context);
+    verify(commit).prepareRecords(context);
   }
 
   @Test
@@ -632,33 +520,10 @@ public class TwoPhaseConsensusCommitTest {
       prepare_ProcessedCrudGiven_CrudConflictExceptionThrownWhileImplicitPreRead_ShouldThrowPreparationConflictException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled();
+    doThrow(CrudConflictException.class).when(crud).readIfImplicitPreReadEnabled(context);
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
-  }
-
-  @Test
-  public void
-      prepare_ProcessedCrudGiven_UncommittedRecordExceptionThrownWhileImplicitPreRead_ShouldPerformLazyRecoveryAndThrowPreparationConflictException()
-          throws CrudException {
-    // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-
-    Get get = mock(Get.class);
-    TransactionResult result = mock(TransactionResult.class);
-
-    UncommittedRecordException uncommittedRecordException = mock(UncommittedRecordException.class);
-    when(uncommittedRecordException.getSelection()).thenReturn(get);
-    when(uncommittedRecordException.getResults()).thenReturn(Collections.singletonList(result));
-
-    doThrow(uncommittedRecordException).when(crud).readIfImplicitPreReadEnabled();
-
-    // Act Assert
-    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationConflictException.class);
-
-    verify(recovery).recover(get, result);
   }
 
   @Test
@@ -666,25 +531,59 @@ public class TwoPhaseConsensusCommitTest {
       prepare_ProcessedCrudGiven_CrudExceptionThrownWhileImplicitPreRead_ShouldThrowPreparationException()
           throws CrudException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled();
+    doThrow(CrudException.class).when(crud).readIfImplicitPreReadEnabled(context);
 
     // Act Assert
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
   }
 
   @Test
-  public void validate_ProcessedCrudGiven_ShouldPerformValidationWithSnapshot()
+  public void prepare_ScannerNotClosed_ShouldThrowIllegalStateException() {
+    // Arrange
+    when(context.areAllScannersClosed()).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void
+      prepare_CrudConflictExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowPreparationConflictException()
+          throws CrudException {
+    // Arrange
+    CrudConflictException crudConflictException = mock(CrudConflictException.class);
+    when(crudConflictException.getMessage()).thenReturn("error");
+    doThrow(crudConflictException).when(crud).waitForRecoveryCompletionIfNecessary(context);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.prepare())
+        .isInstanceOf(PreparationConflictException.class);
+  }
+
+  @Test
+  public void
+      prepare_CrudExceptionThrownByCrudHandlerWaitForRecoveryCompletionIfNecessary_ShouldThrowPreparationException()
+          throws CrudException {
+    // Arrange
+    CrudException crudException = mock(CrudException.class);
+    when(crudException.getMessage()).thenReturn("error");
+    doThrow(crudException).when(crud).waitForRecoveryCompletionIfNecessary(context);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.prepare()).isInstanceOf(PreparationException.class);
+  }
+
+  @Test
+  public void validate_ProcessedCrudGiven_ShouldValidateRecordsWithSnapshot()
       throws ValidationException, PreparationException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.validate();
 
     // Assert
-    verify(commit).validate(snapshot);
+    verify(commit).validateRecords(context);
   }
 
   @Test
@@ -692,123 +591,116 @@ public class TwoPhaseConsensusCommitTest {
       throws CommitException, UnknownTransactionStatusException, PreparationException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(snapshot);
-    verify(commit).commitRecords(snapshot);
+    verify(commit).commitState(context);
+    verify(commit).commitRecords(context);
   }
 
   @Test
-  public void commit_ExtraReadUsedAndValidatedState_ShouldCommitProperly()
+  public void commit_SerializableUsedAndValidatedState_ShouldCommitProperly()
       throws CommitException, UnknownTransactionStatusException, PreparationException,
           ValidationException {
     // Arrange
     transaction.prepare();
     transaction.validate();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn(ANY_TX_ID);
-    when(snapshot.isValidationRequired()).thenReturn(true);
+    when(context.isValidationRequired()).thenReturn(true);
 
     // Act
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(snapshot);
-    verify(commit).commitRecords(snapshot);
+    verify(commit).commitState(context);
+    verify(commit).commitRecords(context);
   }
 
   @Test
-  public void commit_ExtraReadUsedAndPreparedState_ShouldThrowIllegalStateException()
+  public void commit_SerializableUsedAndPreparedState_ShouldThrowIllegalStateException()
       throws PreparationException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(snapshot.getId()).thenReturn(ANY_TX_ID);
-    when(snapshot.isValidationRequired()).thenReturn(true);
+    when(context.isValidationRequired()).thenReturn(true);
 
     // Act Assert
     assertThatThrownBy(transaction::commit).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void rollback_ShouldAbortStateAndRollbackRecords()
-      throws RollbackException, UnknownTransactionStatusException, PreparationException {
+  public void rollback_ShouldAbortStateAndRollbackRecords() throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
     transaction.rollback();
 
     // Assert
-    verify(commit).abortState(snapshot.getId());
-    verify(commit).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).rollbackRecords(context);
   }
 
   @Test
   public void rollback_CalledAfterPrepareFails_ShouldAbortStateAndRollbackRecords()
-      throws PreparationException, UnknownTransactionStatusException, RollbackException {
+      throws TransactionException {
     // Arrange
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(PreparationException.class).when(commit).prepare(snapshot);
+    doThrow(PreparationException.class).when(commit).prepareRecords(context);
 
     // Act
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
     transaction.rollback();
 
     // Assert
-    verify(commit).abortState(snapshot.getId());
-    verify(commit).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).rollbackRecords(context);
   }
 
   @Test
   public void rollback_CalledAfterCommitFails_ShouldNeverAbortStateAndRollbackRecords()
-      throws CommitException, UnknownTransactionStatusException, RollbackException,
-          PreparationException {
+      throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    doThrow(CommitConflictException.class).when(commit).commitState(snapshot);
+    doThrow(CommitConflictException.class).when(commit).commitState(context);
 
     // Act
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
     transaction.rollback();
 
     // Assert
-    verify(commit, never()).abortState(snapshot.getId());
-    verify(commit, never()).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit, never()).abortState(ANY_TX_ID);
+    verify(commit, never()).rollbackRecords(context);
   }
 
   @Test
   public void
       rollback_UnknownTransactionStatusExceptionThrownByAbortState_ShouldThrowRollbackException()
-          throws UnknownTransactionStatusException, PreparationException {
+          throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(commit.abortState(snapshot.getId())).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
 
-    verify(commit, never()).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit, never()).rollbackRecords(context);
   }
 
   @Test
   public void rollback_CommittedStateReturnedByAbortState_ShouldThrowRollbackException()
-      throws UnknownTransactionStatusException, PreparationException {
+      throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(commit.abortState(snapshot.getId())).thenReturn(TransactionState.COMMITTED);
+    when(commit.abortState(ANY_TX_ID)).thenReturn(TransactionState.COMMITTED);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
 
-    verify(commit, never()).rollbackRecords(snapshot);
+    verify(context).closeScanners();
+    verify(commit, never()).rollbackRecords(context);
   }
 }

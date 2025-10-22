@@ -1,13 +1,15 @@
 package com.scalar.db.dataloader.core.dataexport.producer;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 
+/** Responsible to create producer task based on the export file format */
+@SuppressWarnings("SameNameButDifferent")
 @RequiredArgsConstructor
 public class ProducerTaskFactory {
 
@@ -52,7 +54,7 @@ public class ProducerTaskFactory {
         break;
       default:
         throw new IllegalArgumentException(
-            CoreError.DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED.buildMessage(fileFormat.toString()));
+            DataLoaderError.FILE_FORMAT_NOT_SUPPORTED.buildMessage(fileFormat.toString()));
     }
     return producerTask;
   }

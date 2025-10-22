@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport.producer;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
@@ -16,21 +17,24 @@ import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+/**
+ * Producer that converts ScalarDB scan results to JSON content. The output is sent to a queue to be
+ * processed by a consumer
+ */
 public class JsonProducerTask extends ProducerTask {
 
   private final DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
   private final boolean prettyPrintJson;
-  private static final Logger logger = LoggerFactory.getLogger(JsonProducerTask.class);
 
   /**
    * Class constructor
    *
    * @param includeMetadata Include metadata in the exported data
+   * @param projectionColumns list of columns that is required in export data
    * @param tableMetadata Metadata for a single ScalarDB table
    * @param columnDataTypes Map of data types for the all columns in a ScalarDB table
+   * @param prettyPrintJson Json data should be formatted or not
    */
   public JsonProducerTask(
       boolean includeMetadata,
@@ -81,7 +85,8 @@ public class JsonProducerTask extends ProducerTask {
     // Loop through all the columns and to the json object
     for (String columnName : tableColumns) {
       // Skip the field if it can be ignored based on check
-      boolean columnNotProjected = !projectedColumnsSet.contains(columnName);
+      boolean columnNotProjected =
+          !projectedColumnsSet.isEmpty() && !projectedColumnsSet.contains(columnName);
       boolean isMetadataColumn =
           ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
       if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
@@ -105,6 +110,7 @@ public class JsonProducerTask extends ProducerTask {
       ObjectNode objectNode, Result result, String columnName, DataType dataType) {
 
     if (result.isNull(columnName)) {
+      objectNode.putIfAbsent(columnName, NullNode.getInstance());
       return;
     }
 
