@@ -1,6 +1,8 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 public class ObjectStorageEnv {
@@ -40,5 +42,9 @@ public class ObjectStorageEnv {
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
+  }
+
+  public static Map<String, String> getCreationOptions() {
+    return Collections.emptyMap();
   }
 }

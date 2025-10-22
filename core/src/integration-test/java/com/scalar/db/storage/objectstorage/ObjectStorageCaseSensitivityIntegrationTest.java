@@ -1,11 +1,13 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.scalar.db.api.DistributedStorageIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
-public class ObjectStorageIntegrationTest extends DistributedStorageIntegrationTestBase {
+public class ObjectStorageCaseSensitivityIntegrationTest
+    extends DistributedStorageCaseSensitivityIntegrationTestBase {
+
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);

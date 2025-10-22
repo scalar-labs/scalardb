@@ -1,11 +1,13 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
-public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
+public class ObjectStorageAdminCaseSensitivityIntegrationTest
+    extends DistributedStorageAdminCaseSensitivityIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {
@@ -13,8 +15,8 @@ public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIn
   }
 
   @Override
-  protected boolean isIndexOnBooleanColumnSupported() {
-    return false;
+  protected Map<String, String> getCreationOptions() {
+    return ObjectStorageEnv.getCreationOptions();
   }
 
   @Override

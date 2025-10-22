@@ -1,10 +1,8 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitIntegrationTestWithObjectStorage
     extends ConsensusCommitIntegrationTestBase {
@@ -18,19 +16,16 @@ public class ConsensusCommitIntegrationTestWithObjectStorage
     return false;
   }
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
-  public void get_GetGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {}
+  @Disabled("Object Storage does not support index-related operations")
+  public void get_GetGivenForIndexColumn_ShouldReturnRecords() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
-  public void scan_ScanGivenForIndexColumn_ShouldReturnRecords() throws TransactionException {}
+  @Disabled("Object Storage does not support index-related operations")
+  public void scanOrGetScanner_ScanGivenForIndexColumn_ShouldReturnRecords(ScanType scanType) {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
-  public void scan_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords()
-      throws TransactionException {}
+  @Disabled("Object Storage does not support index-related operations")
+  public void scanOrGetScanner_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords(
+      ScanType scanType) {}
 }

@@ -3,7 +3,6 @@ package com.scalar.db.storage.objectstorage;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 public class TwoPhaseConsensusCommitIntegrationTestWithObjectStorage
     extends TwoPhaseConsensusCommitIntegrationTestBase {
@@ -13,13 +12,11 @@ public class TwoPhaseConsensusCommitIntegrationTestWithObjectStorage
     return ConsensusCommitObjectStorageEnv.getProperties(testName);
   }
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
+  @Disabled("Object Storage does not support index-related operations")
   public void get_GetGivenForIndexColumn_ShouldReturnRecords() {}
 
-  @Test
   @Override
-  @Disabled("Index-related operations are not supported for object storages")
-  public void scan_ScanGivenForIndexColumn_ShouldReturnRecords() {}
+  @Disabled("Object Storage does not support index-related operations")
+  public void scanOrGetScanner_ScanGivenForIndexColumn_ShouldReturnRecords(ScanType scanType) {}
 }
