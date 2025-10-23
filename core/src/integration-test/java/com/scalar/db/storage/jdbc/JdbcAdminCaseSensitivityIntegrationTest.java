@@ -156,7 +156,7 @@ public class JdbcAdminCaseSensitivityIntegrationTest
     try (DistributedStorage storage = storageFactory.getStorage()) {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata.Builder currentTableMetadataBuilder =
+      TableMetadata currentTableMetadata =
           TableMetadata.newBuilder()
               .addColumn(getColumnName1(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
@@ -168,14 +168,11 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               .addColumn(getColumnName8(), DataType.BLOB)
               .addColumn(getColumnName9(), DataType.DATE)
               .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMPTZ)
+              .addColumn(getColumnName12(), DataType.TIMESTAMP)
               .addPartitionKey(getColumnName1())
-              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TIMESTAMP)
-            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
-      }
-      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .build();
       admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
       PutBuilder.Buildable put =
           Put.newBuilder()
@@ -190,11 +187,9 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")));
-      if (isTimestampTypeSupported()) {
-        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
-        put.timestampTZValue(getColumnName12(), Instant.now());
-      }
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue(getColumnName11(), Instant.now())
+              .timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC));
       storage.put(put.build());
       storage.close();
 
@@ -239,18 +234,16 @@ public class JdbcAdminCaseSensitivityIntegrationTest
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      if (isTimestampTypeSupported()) {
-        assertThatCode(
-                () ->
-                    admin.alterColumnType(
-                        getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
-        assertThatCode(
-                () ->
-                    admin.alterColumnType(
-                        getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
-      }
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
     } finally {
       admin.dropTable(getNamespace1(), getTable4(), true);
     }
@@ -264,7 +257,7 @@ public class JdbcAdminCaseSensitivityIntegrationTest
     try (DistributedStorage storage = storageFactory.getStorage()) {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata.Builder currentTableMetadataBuilder =
+      TableMetadata currentTableMetadata =
           TableMetadata.newBuilder()
               .addColumn(getColumnName1(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
@@ -276,16 +269,13 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               .addColumn(getColumnName8(), DataType.BLOB)
               .addColumn(getColumnName9(), DataType.DATE)
               .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMPTZ)
+              .addColumn(getColumnName12(), DataType.TIMESTAMP)
               .addPartitionKey(getColumnName1())
-              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TIMESTAMP)
-            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
-      }
-      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .build();
       admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
-      PutBuilder.Buildable put =
+      Put put =
           Put.newBuilder()
               .namespace(getNamespace1())
               .table(getTable4())
@@ -298,12 +288,11 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")));
-      if (isTimestampTypeSupported()) {
-        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
-        put.timestampTZValue(getColumnName12(), Instant.now());
-      }
-      storage.put(put.build());
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue(getColumnName11(), Instant.now())
+              .timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC))
+              .build();
+      storage.put(put);
       storage.close();
 
       // Act Assert
@@ -347,20 +336,18 @@ public class JdbcAdminCaseSensitivityIntegrationTest
                   admin.alterColumnType(
                       getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
           .doesNotThrowAnyException();
-      if (isTimestampTypeSupported()) {
-        assertThatCode(
-                () ->
-                    admin.alterColumnType(
-                        getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
-            .doesNotThrowAnyException();
-        assertThatCode(
-                () ->
-                    admin.alterColumnType(
-                        getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
-            .doesNotThrowAnyException();
-      }
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
+          .doesNotThrowAnyException();
 
-      TableMetadata.Builder expectedTableMetadataBuilder =
+      TableMetadata expectedTableMetadata =
           TableMetadata.newBuilder()
               .addColumn(getColumnName1(), DataType.INT)
               .addColumn(getColumnName2(), DataType.INT)
@@ -372,14 +359,11 @@ public class JdbcAdminCaseSensitivityIntegrationTest
               .addColumn(getColumnName8(), DataType.BLOB)
               .addColumn(getColumnName9(), DataType.TEXT)
               .addColumn(getColumnName10(), DataType.TEXT)
+              .addColumn(getColumnName11(), DataType.TEXT)
               .addPartitionKey(getColumnName1())
-              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TEXT)
-            .addColumn(getColumnName12(), DataType.TEXT);
-      }
-      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .addColumn(getColumnName12(), DataType.TEXT)
+              .build();
       assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
           .isEqualTo(expectedTableMetadata);
     } finally {

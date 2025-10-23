@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-import com.scalar.db.api.DistributedTransactionManager;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.InsertBuilder;
 import com.scalar.db.api.Result;
@@ -28,6 +28,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -145,11 +146,10 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   public void
       alterColumnType_Oracle_AlterColumnTypeFromEachExistingDataTypeToText_ShouldThrowUnsupportedOperationException()
           throws ExecutionException, TransactionException {
-    try (DistributedTransactionManager transactionManager =
-        transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata.Builder currentTableMetadataBuilder =
+      TableMetadata currentTableMetadata =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
@@ -161,16 +161,13 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .addColumn("c8", DataType.BLOB)
               .addColumn("c9", DataType.DATE)
               .addColumn("c10", DataType.TIME)
+              .addColumn("c11", DataType.TIMESTAMPTZ)
               .addPartitionKey("c1")
-              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn("c11", DataType.TIMESTAMP)
-            .addColumn("c12", DataType.TIMESTAMPTZ);
-      }
-      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC)
+              .addColumn("c12", DataType.TIMESTAMP)
+              .build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
-      InsertBuilder.Buildable insert =
+      Insert insert =
           Insert.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -183,12 +180,11 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")));
-      if (isTimestampTypeSupported()) {
-        insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
-        insert.timestampTZValue("c12", Instant.now());
-      }
-      transactionalInsert(transactionManager, insert.build());
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue("c11", Instant.now())
+              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC))
+              .build();
+      transactionalInsert(insert);
 
       // Act Assert
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
@@ -207,12 +203,10 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
           .isInstanceOf(UnsupportedOperationException.class);
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c10", DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      if (isTimestampTypeSupported()) {
-        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
-        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
-      }
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
@@ -223,8 +217,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   public void
       alterColumnType_Db2_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
           throws ExecutionException, TransactionException {
-    try (DistributedTransactionManager transactionManager =
-        transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -239,13 +232,10 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .addColumn("c8", DataType.BLOB)
               .addColumn("c9", DataType.DATE)
               .addColumn("c10", DataType.TIME)
+              .addColumn("c11", DataType.TIMESTAMPTZ)
+              .addColumn("c12", DataType.TIMESTAMP)
               .addPartitionKey("c1")
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn("c11", DataType.TIMESTAMP)
-            .addColumn("c12", DataType.TIMESTAMPTZ);
-      }
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
       InsertBuilder.Buildable insert =
@@ -261,12 +251,10 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")));
-      if (isTimestampTypeSupported()) {
-        insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
-        insert.timestampTZValue("c12", Instant.now());
-      }
-      transactionalInsert(transactionManager, insert.build());
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue("c11", Instant.now())
+              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
+      transactionalInsert(insert.build());
 
       // Act Assert
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
@@ -285,14 +273,12 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
           .doesNotThrowAnyException();
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c10", DataType.TEXT))
           .doesNotThrowAnyException();
-      if (isTimestampTypeSupported()) {
-        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
-            .doesNotThrowAnyException();
-        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
-            .doesNotThrowAnyException();
-      }
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+          .doesNotThrowAnyException();
 
-      TableMetadata.Builder expectedTableMetadataBuilder =
+      TableMetadata expectedTableMetadata =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
@@ -304,14 +290,11 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
               .addColumn("c8", DataType.BLOB)
               .addColumn("c9", DataType.TEXT)
               .addColumn("c10", DataType.TEXT)
+              .addColumn("c11", DataType.TEXT)
+              .addColumn("c12", DataType.TEXT)
               .addPartitionKey("c1")
-              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .addColumn("c11", DataType.TEXT)
-            .addColumn("c12", DataType.TEXT);
-      }
-      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC)
+              .build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
@@ -329,7 +312,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   @Test
   @EnabledIf("isOracle")
   public void alterColumnType_Oracle_WideningConversion_ShouldAlterColumnTypesCorrectly()
-      throws ExecutionException, IOException, TransactionException {
+      throws ExecutionException, TransactionException {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
@@ -346,22 +329,23 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
 
       int expectedColumn3Value = 1;
       float expectedColumn4Value = 4.0f;
-      try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
-        InsertBuilder.Buildable insert =
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE4)
-                .partitionKey(Key.ofInt("c1", 1))
-                .clusteringKey(Key.ofInt("c2", 2))
-                .intValue("c3", expectedColumn3Value)
-                .floatValue("c4", expectedColumn4Value);
-        transactionalInsert(manager, insert.build());
-      }
+      InsertBuilder.Buildable insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .clusteringKey(Key.ofInt("c2", 2))
+              .intValue("c3", expectedColumn3Value)
+              .floatValue("c4", expectedColumn4Value);
+      transactionalInsert(insert.build());
 
       // Act
       admin.alterColumnType(namespace1, TABLE4, "c3", DataType.BIGINT);
       Throwable exception =
           catchThrowable(() -> admin.alterColumnType(namespace1, TABLE4, "c4", DataType.DOUBLE));
+
+      // Wait for cache expiry
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
       // Assert
       assertThat(exception).isInstanceOf(UnsupportedOperationException.class);
@@ -376,18 +360,16 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
 
-      try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
-        Scan scan =
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE4)
-                .partitionKey(Key.ofInt("c1", 1))
-                .build();
-        List<Result> results = transactionalScan(manager, scan);
-        assertThat(results).hasSize(1);
-        Result result = results.get(0);
-        assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
-      }
+      Scan scan =
+          Scan.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .build();
+      List<Result> results = transactionalScan(scan);
+      assertThat(results).hasSize(1);
+      Result result = results.get(0);
+      assertThat(result.getBigInt("c3")).isEqualTo(expectedColumn3Value);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }

@@ -130,10 +130,11 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   @Override
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
-      boolean withSnapshotHook)
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(withSnapshotHook);
+    super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
+        withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -142,10 +143,11 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   @Override
-  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(boolean withSnapshotHook)
+  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withSnapshotHook);
+    super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -155,7 +157,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   @Override
   public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-      boolean withSnapshotHook)
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
@@ -163,7 +165,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     clearInvocations(groupCommitter);
 
     super.commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-        withSnapshotHook);
+        withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -174,12 +176,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException, ValidationConflictException {
 
     super.commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-        withSnapshotHook);
+        withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter).remove(anyId());
@@ -190,12 +192,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException, ValidationConflictException {
     super
         .commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-            withSnapshotHook);
+            withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -204,10 +206,10 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   @Override
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withSnapshotHook)
+  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withSnapshotHook);
+    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());

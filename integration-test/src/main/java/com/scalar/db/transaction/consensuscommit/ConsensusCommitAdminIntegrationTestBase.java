@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -9,6 +10,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public abstract class ConsensusCommitAdminIntegrationTestBase
     extends DistributedTransactionAdminIntegrationTestBase {
@@ -32,19 +34,27 @@ public abstract class ConsensusCommitAdminIntegrationTestBase
   protected abstract Properties getProps(String testName);
 
   @Override
-  protected void transactionalInsert(DistributedTransactionManager manager, Insert insert)
-      throws TransactionException {
-    DistributedTransaction transaction = manager.start();
-    transaction.insert(insert);
-    transaction.commit();
+  protected void transactionalInsert(Insert insert) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      transaction.insert(insert);
+      transaction.commit();
+    }
   }
 
   @Override
-  protected List<Result> transactionalScan(DistributedTransactionManager manager, Scan scan)
-      throws TransactionException {
-    DistributedTransaction transaction = manager.start();
-    List<Result> results = transaction.scan(scan);
-    transaction.commit();
-    return results;
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      List<Result> results = transaction.scan(scan);
+      transaction.commit();
+      return results;
+    }
   }
 }
