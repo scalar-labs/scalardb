@@ -1000,12 +1000,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName8(), DataType.BLOB)
               .addColumn(getColumnName9(), DataType.DATE)
               .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMPTZ)
               .addPartitionKey(getColumnName1())
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TIMESTAMP)
-            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+        currentTableMetadataBuilder.addColumn(getColumnName12(), DataType.TIMESTAMP);
       }
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
@@ -1019,8 +1018,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       admin.dropColumnFromTable(namespace1, getTable4(), getColumnName8());
       admin.dropColumnFromTable(namespace1, getTable4(), getColumnName9());
       admin.dropColumnFromTable(namespace1, getTable4(), getColumnName10());
+      admin.dropColumnFromTable(namespace1, getTable4(), getColumnName11());
       if (isTimestampTypeSupported()) {
-        admin.dropColumnFromTable(namespace1, getTable4(), getColumnName11());
         admin.dropColumnFromTable(namespace1, getTable4(), getColumnName12());
       }
 
@@ -1034,11 +1033,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .removeColumn(getColumnName7())
               .removeColumn(getColumnName8())
               .removeColumn(getColumnName9())
-              .removeColumn(getColumnName10());
+              .removeColumn(getColumnName10())
+              .removeColumn(getColumnName11());
       if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .removeColumn(getColumnName11())
-            .removeColumn(getColumnName12());
+        expectedTableMetadataBuilder.removeColumn(getColumnName12());
       }
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
@@ -1122,12 +1120,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName8(), DataType.BLOB)
               .addColumn(getColumnName9(), DataType.DATE)
               .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMPTZ)
               .addPartitionKey(getColumnName1())
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TIMESTAMP)
-            .addColumn(getColumnName12(), DataType.TIMESTAMPTZ);
+        currentTableMetadataBuilder.addColumn(getColumnName12(), DataType.TIMESTAMP);
       }
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, getTable4(), currentTableMetadata, options);
@@ -1144,10 +1141,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")));
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue(getColumnName11(), Instant.now());
       if (isTimestampTypeSupported()) {
-        put.timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC));
-        put.timestampTZValue(getColumnName12(), Instant.now());
+        put.timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC));
       }
       storage.put(put.build());
 
@@ -1160,8 +1157,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       admin.alterColumnType(namespace1, getTable4(), getColumnName8(), DataType.TEXT);
       admin.alterColumnType(namespace1, getTable4(), getColumnName9(), DataType.TEXT);
       admin.alterColumnType(namespace1, getTable4(), getColumnName10(), DataType.TEXT);
+      admin.alterColumnType(namespace1, getTable4(), getColumnName11(), DataType.TEXT);
       if (isTimestampTypeSupported()) {
-        admin.alterColumnType(namespace1, getTable4(), getColumnName11(), DataType.TEXT);
         admin.alterColumnType(namespace1, getTable4(), getColumnName12(), DataType.TEXT);
       }
 
@@ -1178,12 +1175,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addColumn(getColumnName8(), DataType.TEXT)
               .addColumn(getColumnName9(), DataType.TEXT)
               .addColumn(getColumnName10(), DataType.TEXT)
+              .addColumn(getColumnName11(), DataType.TEXT)
               .addPartitionKey(getColumnName1())
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .addColumn(getColumnName11(), DataType.TEXT)
-            .addColumn(getColumnName12(), DataType.TEXT);
+        expectedTableMetadataBuilder.addColumn(getColumnName12(), DataType.TEXT);
       }
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
