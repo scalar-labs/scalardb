@@ -42,7 +42,7 @@ public class ObjectStorageEnv {
     if (storageName.equals(BlobConfig.STORAGE_NAME)) {
       properties.setProperty(BlobConfig.BUCKET, bucket);
     } else {
-      throw new IllegalArgumentException("Unsupported object storage: " + storageName);
+      throw new IllegalArgumentException("Unsupported Object Storage: " + storageName);
     }
 
     // Add testName as a metadata namespace suffix

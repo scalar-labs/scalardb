@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class ObjectStorageUtils {
   public static final char OBJECT_KEY_DELIMITER = '/';
-  public static final char CONCATENATED_KEY_DELIMITER = ':';
+  public static final char CONCATENATED_KEY_DELIMITER = '!';
 
   public static String getObjectKey(String namespace, String table, String partition) {
     return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table, partition);
@@ -25,7 +25,7 @@ public class ObjectStorageUtils {
       return new BlobConfig(databaseConfig);
     } else {
       throw new IllegalArgumentException(
-          "Unsupported object storage: " + databaseConfig.getStorage());
+          "Unsupported Object Storage: " + databaseConfig.getStorage());
     }
   }
 
@@ -37,7 +37,7 @@ public class ObjectStorageUtils {
           buildBlobContainerClient(objectStorageConfig), (BlobConfig) objectStorageConfig);
     } else {
       throw new IllegalArgumentException(
-          "Unsupported object storage: " + objectStorageConfig.getStorageName());
+          "Unsupported Object Storage: " + objectStorageConfig.getStorageName());
     }
   }
 
