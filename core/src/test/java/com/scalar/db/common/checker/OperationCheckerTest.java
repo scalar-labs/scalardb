@@ -418,8 +418,9 @@ public class OperationCheckerTest {
   }
 
   @Test
-  public void whenCheckingScanAllOperationWithCrossPartitionScanEnabledWithOrdering_shouldNotThrow()
-      throws ExecutionException {
+  public void
+      whenCheckingScanAllOperationWithCrossPartitionScanEnabledWithConditionAndOrdering_shouldNotThrow()
+          throws ExecutionException {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -434,11 +435,13 @@ public class OperationCheckerTest {
             .namespace(NAMESPACE)
             .table(TABLE_NAME)
             .all()
+            .where(ConditionBuilder.column(COL1).isEqualToInt(10))
             .ordering(Scan.Ordering.asc(COL1))
             .ordering(Scan.Ordering.desc(COL2))
             .build();
     when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
     when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanFilteringEnabled()).thenReturn(true);
 
     operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
 

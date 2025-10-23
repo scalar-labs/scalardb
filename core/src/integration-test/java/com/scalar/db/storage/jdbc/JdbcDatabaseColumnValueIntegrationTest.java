@@ -1,12 +1,41 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.util.TestUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class JdbcDatabaseColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
@@ -67,5 +96,187 @@ public class JdbcDatabaseColumnValueIntegrationTest
       }
     }
     return super.getColumnWithMaxValue(columnName, dataType);
+  }
+  // TODO: Expand this test to cover all supported storages, not just Oracle/DB2.
+  // This test verifies that large BLOB data can be inserted and retrieved correctly.
+  // Currently, it is limited to Oracle and DB2 due to known differences in BLOB handling,
+  // potential resource constraints, or lack of support for large BLOBs in other engines.
+  // Before enabling for other storages, investigate their BLOB size limits and behavior,
+  // and ensure the test does not cause failures or excessive resource usage.
+  @EnabledIf("isDb2OrOracle")
+  @ParameterizedTest()
+  @MethodSource("provideBlobSizes")
+  public void put_largeBlobData_ShouldWorkCorrectly(int blobSize, String humanReadableBlobSize)
+      throws ExecutionException {
+    String tableName = TABLE + "_large_single_blob";
+    try {
+      // Arrange
+      TableMetadata.Builder metadata =
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.BLOB)
+              .addPartitionKey(COL_NAME1);
+
+      admin.createTable(namespace, tableName, metadata.build(), true, getCreationOptions());
+      byte[] blobData = createLargeBlob(blobSize);
+      Put put =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(tableName)
+              .partitionKey(Key.ofInt(COL_NAME1, 1))
+              .blobValue(COL_NAME2, blobData)
+              .build();
+
+      // Act
+      storage.put(put);
+
+      // Assert
+      Optional<Result> optionalResult =
+          storage.get(
+              Get.newBuilder()
+                  .namespace(namespace)
+                  .table(tableName)
+                  .partitionKey(Key.ofInt(COL_NAME1, 1))
+                  .build());
+      assertThat(optionalResult).isPresent();
+      Result result = optionalResult.get();
+      assertThat(result.getColumns().get(COL_NAME2).getBlobValueAsBytes()).isEqualTo(blobData);
+    } finally {
+      admin.dropTable(namespace, tableName, true);
+    }
+  }
+
+  Stream<Arguments> provideBlobSizes() {
+    List<Arguments> args = new ArrayList<>();
+    if (isOracle()) {
+      // As explained in
+      // `com.scalar.db.storage.jdbc.RdbEngineOracle.bindBlobColumnToPreparedStatement()`,
+      // handing a BLOB size bigger than 32,766 bytes requires a workaround so we particularly test
+      // values around it.
+      args.add(Arguments.of(32_766, "32.766 KB"));
+      args.add(Arguments.of(32_767, "32.767 KB"));
+    }
+    args.add(Arguments.of(100_000_000, "100 MB"));
+    return args.stream();
+  }
+
+  @EnabledIf("isOracle")
+  @Test
+  public void put_largeBlobData_WithMultipleBlobColumnsShouldWorkCorrectly()
+      throws ExecutionException {
+    String tableName = TABLE + "_large_multiples_blob";
+    try {
+      // Arrange
+      TableMetadata.Builder metadata =
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.BLOB)
+              .addColumn(COL_NAME3, DataType.BLOB)
+              .addPartitionKey(COL_NAME1);
+
+      admin.createTable(namespace, tableName, metadata.build(), true, getCreationOptions());
+      byte[] blobDataCol2 = createLargeBlob(32_766);
+      byte[] blobDataCol3 = createLargeBlob(5000);
+      Put put =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(tableName)
+              .partitionKey(Key.ofInt(COL_NAME1, 1))
+              .blobValue(COL_NAME2, blobDataCol2)
+              .blobValue(COL_NAME3, blobDataCol3)
+              .build();
+
+      // Act
+      storage.put(put);
+
+      // Assert
+      Optional<Result> optionalResult =
+          storage.get(
+              Get.newBuilder()
+                  .namespace(namespace)
+                  .table(tableName)
+                  .partitionKey(Key.ofInt(COL_NAME1, 1))
+                  .build());
+      assertThat(optionalResult).isPresent();
+      Result result = optionalResult.get();
+      assertThat(result.getColumns().get(COL_NAME2).getBlobValueAsBytes()).isEqualTo(blobDataCol2);
+      assertThat(result.getColumns().get(COL_NAME3).getBlobValueAsBytes()).isEqualTo(blobDataCol3);
+    } finally {
+      admin.dropTable(namespace, tableName, true);
+    }
+  }
+
+  @EnabledIf("isOracle")
+  @Test
+  public void put_largeBlobData_WithAllColumnsTypesShouldWorkCorrectly() throws ExecutionException {
+    // Arrange
+    IntColumn partitionKeyValue = (IntColumn) getColumnWithMaxValue(PARTITION_KEY, DataType.INT);
+    BooleanColumn col1Value = (BooleanColumn) getColumnWithMaxValue(COL_NAME1, DataType.BOOLEAN);
+    IntColumn col2Value = (IntColumn) getColumnWithMaxValue(COL_NAME2, DataType.INT);
+    BigIntColumn col3Value = (BigIntColumn) getColumnWithMaxValue(COL_NAME3, DataType.BIGINT);
+    FloatColumn col4Value = (FloatColumn) getColumnWithMaxValue(COL_NAME4, DataType.FLOAT);
+    DoubleColumn col5Value = (DoubleColumn) getColumnWithMaxValue(COL_NAME5, DataType.DOUBLE);
+    TextColumn col6Value = (TextColumn) getColumnWithMaxValue(COL_NAME6, DataType.TEXT);
+    BlobColumn col7Value = BlobColumn.of(COL_NAME7, createLargeBlob(32_766));
+    DateColumn col8Value = (DateColumn) getColumnWithMaxValue(COL_NAME8, DataType.DATE);
+    TimeColumn col9Value = (TimeColumn) getColumnWithMaxValue(COL_NAME9, DataType.TIME);
+    TimestampTZColumn col10Value =
+        (TimestampTZColumn) getColumnWithMaxValue(COL_NAME10, DataType.TIMESTAMPTZ);
+    TimestampColumn column11Value = null;
+    if (isTimestampTypeSupported()) {
+      column11Value = (TimestampColumn) getColumnWithMaxValue(COL_NAME11, DataType.TIMESTAMP);
+    }
+
+    PutBuilder.Buildable put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+            .value(col1Value)
+            .value(col2Value)
+            .value(col3Value)
+            .value(col4Value)
+            .value(col5Value)
+            .value(col6Value)
+            .value(col7Value)
+            .value(col8Value)
+            .value(col9Value)
+            .value(col10Value);
+    if (isTimestampTypeSupported()) {
+      put.value(column11Value);
+    }
+    // Act
+    storage.put(put.build());
+
+    // Assert
+    assertResult(
+        partitionKeyValue,
+        col1Value,
+        col2Value,
+        col3Value,
+        col4Value,
+        col5Value,
+        col6Value,
+        col7Value,
+        col8Value,
+        col9Value,
+        col10Value,
+        column11Value);
+  }
+
+  private byte[] createLargeBlob(int size) {
+    byte[] blob = new byte[size];
+    random.nextBytes(blob);
+    return blob;
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isDb2OrOracle() {
+    return JdbcEnv.isOracle() || JdbcEnv.isDb2();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isOracle() {
+    return JdbcEnv.isOracle();
   }
 }

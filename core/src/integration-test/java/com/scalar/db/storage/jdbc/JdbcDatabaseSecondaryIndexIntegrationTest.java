@@ -81,6 +81,10 @@ public class JdbcDatabaseSecondaryIndexIntegrationTest
         JdbcTestUtils.filterDataTypes(
             Arrays.asList(DataType.values()),
             rdbEngine,
-            ImmutableMap.of(RdbEngineDb2.class, ImmutableList.of(DataType.BLOB))));
+            ImmutableMap.of(
+                RdbEngineDb2.class,
+                ImmutableList.of(DataType.BLOB),
+                RdbEngineOracle.class,
+                ImmutableList.of(DataType.BLOB))));
   }
 }

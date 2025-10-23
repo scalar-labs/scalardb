@@ -42,4 +42,9 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
     }
     return super.getColumnWithRandomValue(random, columnName, dataType);
   }
+
+  @Override
+  protected boolean isConditionOnBlobColumnSupported() {
+    return !JdbcTestUtils.isOracle(rdbEngine);
+  }
 }

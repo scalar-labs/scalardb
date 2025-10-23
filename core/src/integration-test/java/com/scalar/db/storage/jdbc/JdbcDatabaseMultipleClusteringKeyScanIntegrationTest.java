@@ -100,7 +100,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
         rdbEngine,
         ImmutableMap.of(
             RdbEngineOracle.class,
-            ImmutableList.of(DataType.TIMESTAMPTZ),
+            ImmutableList.of(DataType.TIMESTAMPTZ, DataType.BLOB),
             RdbEngineDb2.class,
             ImmutableList.of(DataType.BLOB)));
   }

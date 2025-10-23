@@ -130,7 +130,8 @@ public class PreparedStatementBinder implements ColumnVisitor {
       if (column.hasNullValue()) {
         preparedStatement.setNull(index++, getSqlType(column.getName()));
       } else {
-        preparedStatement.setBytes(index++, column.getBlobValueAsBytes());
+        rdbEngine.bindBlobColumnToPreparedStatement(
+            preparedStatement, index++, column.getBlobValueAsBytes());
       }
     } catch (SQLException e) {
       sqlException = e;

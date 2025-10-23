@@ -514,7 +514,7 @@ public class JdbcAdminImportTestUtils {
     columns.put("col17", "NCLOB(512)");
     columns.put("col18", "BINARY(5)");
     columns.put("col19", "VARBINARY(512)");
-    columns.put("col20", "BLOB(1024)");
+    columns.put("col20", "BLOB(2G)");
     columns.put("col21", "CHAR(5) FOR BIT DATA");
     columns.put("col22", "VARCHAR(512) FOR BIT DATA");
     columns.put("col23", "DATE");
