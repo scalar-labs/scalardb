@@ -444,8 +444,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE, null));
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
       return JsonConvertor.deserialize(
           response.getPayload(),
           new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
@@ -461,8 +460,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Map<String, String> readVersionMap) throws ExecutionException {
     try {
       ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE, null));
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
       readVersionMap.put(NAMESPACE_METADATA_TABLE, response.getVersion());
       return JsonConvertor.deserialize(
           response.getPayload(),
@@ -479,8 +477,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE, null));
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
       return JsonConvertor.deserialize(
           response.getPayload(), new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
     } catch (ObjectStorageWrapperException e) {
@@ -495,8 +492,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Map<String, String> readVersionMap) throws ExecutionException {
     try {
       ObjectStorageWrapperResponse response =
-          wrapper.get(
-              ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE, null));
+          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
       readVersionMap.put(TABLE_METADATA_TABLE, response.getVersion());
       return JsonConvertor.deserialize(
           response.getPayload(), new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
@@ -512,7 +508,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       wrapper.insert(
-          ObjectStorageUtils.getObjectKey(metadataNamespace, table, null),
+          ObjectStorageUtils.getObjectKey(metadataNamespace, table),
           JsonConvertor.serialize(metadataTable));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to insert the metadata table.", e);
@@ -523,7 +519,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String table, Map<String, T> metadataTable, String readVersion) throws ExecutionException {
     try {
       wrapper.update(
-          ObjectStorageUtils.getObjectKey(metadataNamespace, table, null),
+          ObjectStorageUtils.getObjectKey(metadataNamespace, table),
           JsonConvertor.serialize(metadataTable),
           readVersion);
     } catch (Exception e) {
@@ -533,7 +529,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private void deleteMetadataTable(String table, String readVersion) throws ExecutionException {
     try {
-      wrapper.delete(ObjectStorageUtils.getObjectKey(metadataNamespace, table, null), readVersion);
+      wrapper.delete(ObjectStorageUtils.getObjectKey(metadataNamespace, table), readVersion);
     } catch (Exception e) {
       throw new ExecutionException("Failed to delete the metadata table.", e);
     }
@@ -541,7 +537,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private void deleteTableData(String namespace, String table) throws ExecutionException {
     try {
-      wrapper.deleteByPrefix(ObjectStorageUtils.getObjectKey(namespace, table, null));
+      wrapper.deleteByPrefix(ObjectStorageUtils.getObjectKey(namespace, table));
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(

@@ -61,7 +61,7 @@ public class MutateStatementHandler extends StatementHandler {
     }
   }
 
-  public void mutate(
+  private void mutate(
       String namespaceName, String tableName, String partitionKey, List<Mutation> mutations)
       throws ExecutionException {
     Map<PartitionIdentifier, String> readVersionMap = new HashMap<>();

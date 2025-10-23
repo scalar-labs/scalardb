@@ -1,4 +1,4 @@
-package com.scalar.db.storage.objectstorage;
+package com.scalar.db.storage.objectstorage.blob;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
@@ -6,6 +6,7 @@ import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

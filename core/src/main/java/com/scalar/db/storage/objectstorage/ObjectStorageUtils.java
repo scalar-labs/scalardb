@@ -4,19 +4,20 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.objectstorage.blob.BlobConfig;
+import com.scalar.db.storage.objectstorage.blob.BlobWrapper;
 import java.util.Objects;
-import javax.annotation.Nullable;
 
 public class ObjectStorageUtils {
   public static final char OBJECT_KEY_DELIMITER = '/';
-  public static final char CONCATENATED_KEY_DELIMITER = '*';
+  public static final char CONCATENATED_KEY_DELIMITER = ':';
 
-  public static String getObjectKey(String namespace, String table, @Nullable String partition) {
-    if (partition == null) {
-      return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table);
-    } else {
-      return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table, partition);
-    }
+  public static String getObjectKey(String namespace, String table, String partition) {
+    return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table, partition);
+  }
+
+  public static String getObjectKey(String namespace, String table) {
+    return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table);
   }
 
   public static ObjectStorageConfig getObjectStorageConfig(DatabaseConfig databaseConfig) {

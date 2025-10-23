@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
@@ -25,8 +26,7 @@ public class ClusteringKeyComparator implements Comparator<Map<String, Object>> 
           ColumnValueMapper.convert(
               clusteringKey2.get(columnName), columnName, metadata.getColumnDataType(columnName));
 
-      int cmp =
-          new ColumnComparator(metadata.getColumnDataType(columnName)).compare(column1, column2);
+      int cmp = Ordering.natural().compare(column1, column2);
       if (cmp != 0) {
         return order == Scan.Ordering.Order.ASC ? cmp : -cmp;
       }

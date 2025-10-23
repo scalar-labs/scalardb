@@ -1,4 +1,4 @@
-package com.scalar.db.storage.objectstorage;
+package com.scalar.db.storage.objectstorage.blob;
 
 import com.azure.core.http.HttpHeaderName;
 import com.azure.core.util.BinaryData;
@@ -12,6 +12,9 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import java.time.Duration;
 import java.util.Set;
 import java.util.stream.Collectors;
