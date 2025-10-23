@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
@@ -13,18 +14,40 @@ import java.util.List;
 
 /** Export manager implementation which manages the export task that exports data in CSV format */
 public class CsvExportManager extends ExportManager {
-
   /**
-   * Constructs a {@code CsvExportManager} with the specified {@link DistributedStorage}, {@link
-   * ScalarDbDao}, and {@link ProducerTaskFactory}.
+   * Constructs a {@code CsvExportManager} for exporting data using a {@link DistributedStorage}
+   * instance.
    *
-   * @param storage the {@code DistributedStorage} instance used to read data from the database
-   * @param dao the {@code ScalarDbDao} used to execute export-related database operations
-   * @param producerTaskFactory the factory used to create producer tasks for exporting data
+   * <p>This constructor is used when exporting data in non-transactional (storage) mode.
+   *
+   * @param distributedStorage the {@link DistributedStorage} used to read data directly from
+   *     storage
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
+   * @param producerTaskFactory the factory used to create producer tasks for generating
+   *     CSV-formatted output
    */
   public CsvExportManager(
-      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
-    super(storage, dao, producerTaskFactory);
+      DistributedStorage distributedStorage,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(distributedStorage, dao, producerTaskFactory);
+  }
+
+  /**
+   * Constructs a {@code CsvExportManager} for exporting data using a {@link
+   * DistributedTransactionManager}.
+   *
+   * @param distributedTransactionManager the transaction manager used to read data with
+   *     transactional guarantees
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
+   * @param producerTaskFactory the factory used to create producer tasks for generating
+   *     CSV-formatted output
+   */
+  public CsvExportManager(
+      DistributedTransactionManager distributedTransactionManager,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(distributedTransactionManager, dao, producerTaskFactory);
   }
 
   /**
