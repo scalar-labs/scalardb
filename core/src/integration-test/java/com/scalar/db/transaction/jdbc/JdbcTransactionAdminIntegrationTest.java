@@ -222,7 +222,7 @@ public class JdbcTransactionAdminIntegrationTest
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      TableMetadata.Builder currentTableMetadataBuilder =
+      TableMetadata currentTableMetadata =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
@@ -236,13 +236,11 @@ public class JdbcTransactionAdminIntegrationTest
               .addColumn("c10", DataType.TIME)
               .addColumn("c11", DataType.TIMESTAMPTZ)
               .addPartitionKey("c1")
-              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder.addColumn("c12", DataType.TIMESTAMP);
-      }
-      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC)
+              .addColumn("c12", DataType.TIMESTAMP)
+              .build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
-      InsertBuilder.Buildable insert =
+      Insert insert =
           Insert.newBuilder()
               .namespace(namespace1)
               .table(TABLE4)
@@ -256,11 +254,10 @@ public class JdbcTransactionAdminIntegrationTest
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
               .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c11", Instant.now());
-      if (isTimestampTypeSupported()) {
-        insert.timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
-      }
-      transactionalInsert(insert.build());
+              .timestampTZValue("c11", Instant.now())
+              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC))
+              .build();
+      transactionalInsert(insert);
 
       // Act Assert
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
@@ -281,10 +278,8 @@ public class JdbcTransactionAdminIntegrationTest
           .isInstanceOf(UnsupportedOperationException.class);
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
           .isInstanceOf(UnsupportedOperationException.class);
-      if (isTimestampTypeSupported()) {
-        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
-            .isInstanceOf(UnsupportedOperationException.class);
-      }
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
@@ -295,8 +290,7 @@ public class JdbcTransactionAdminIntegrationTest
   public void
       alterColumnType_Db2_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
           throws ExecutionException, TransactionException {
-    try (DistributedTransactionManager transactionManager =
-        transactionFactory.getTransactionManager()) {
+    try {
       // Arrange
       Map<String, String> options = getCreationOptions();
       TableMetadata.Builder currentTableMetadataBuilder =
@@ -312,11 +306,9 @@ public class JdbcTransactionAdminIntegrationTest
               .addColumn("c9", DataType.DATE)
               .addColumn("c10", DataType.TIME)
               .addColumn("c11", DataType.TIMESTAMPTZ)
+              .addColumn("c12", DataType.TIMESTAMP)
               .addPartitionKey("c1")
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder.addColumn("c12", DataType.TIMESTAMP);
-      }
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
       InsertBuilder.Buildable insert =
@@ -333,10 +325,8 @@ public class JdbcTransactionAdminIntegrationTest
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
               .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c11", Instant.now());
-      if (isTimestampTypeSupported()) {
-        insert.timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
-      }
+              .timestampTZValue("c11", Instant.now())
+              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
       transactionalInsert(insert.build());
 
       // Act Assert
@@ -358,12 +348,10 @@ public class JdbcTransactionAdminIntegrationTest
           .doesNotThrowAnyException();
       assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
           .doesNotThrowAnyException();
-      if (isTimestampTypeSupported()) {
-        assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
-            .doesNotThrowAnyException();
-      }
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+          .doesNotThrowAnyException();
 
-      TableMetadata.Builder expectedTableMetadataBuilder =
+      TableMetadata expectedTableMetadata =
           TableMetadata.newBuilder()
               .addColumn("c1", DataType.INT)
               .addColumn("c2", DataType.INT)
@@ -376,12 +364,10 @@ public class JdbcTransactionAdminIntegrationTest
               .addColumn("c9", DataType.TEXT)
               .addColumn("c10", DataType.TEXT)
               .addColumn("c11", DataType.TEXT)
+              .addColumn("c12", DataType.TEXT)
               .addPartitionKey("c1")
-              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
-      if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder.addColumn("c12", DataType.TEXT);
-      }
-      TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC)
+              .build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
