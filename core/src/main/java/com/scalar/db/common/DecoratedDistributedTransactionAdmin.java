@@ -384,6 +384,107 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void createRole(String roleName) throws ExecutionException {
+    distributedTransactionAdmin.createRole(roleName);
+  }
+
+  @Override
+  public void dropRole(String roleName) throws ExecutionException {
+    distributedTransactionAdmin.dropRole(roleName);
+  }
+
+  @Override
+  public List<RoleDetail> getRoles() throws ExecutionException {
+    return distributedTransactionAdmin.getRoles();
+  }
+
+  @Override
+  public List<RoleDetail> getRolesForUser(String username) throws ExecutionException {
+    return distributedTransactionAdmin.getRolesForUser(username);
+  }
+
+  @Override
+  public void grantRoleToUser(String username, String roleName, boolean withAdminOption)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantRoleToUser(username, roleName, withAdminOption);
+  }
+
+  @Override
+  public void revokeRoleFromUser(String username, String roleName) throws ExecutionException {
+    distributedTransactionAdmin.revokeRoleFromUser(username, roleName);
+  }
+
+  @Override
+  public void revokeAdminOptionFromUser(String username, String roleName)
+      throws ExecutionException {
+    distributedTransactionAdmin.revokeAdminOptionFromUser(username, roleName);
+  }
+
+  @Override
+  public List<UserRole> getUsersForRole(String roleName) throws ExecutionException {
+    return distributedTransactionAdmin.getUsersForRole(roleName);
+  }
+
+  @Override
+  public void grantRoleToRole(String roleName, String memberRole, boolean withAdminOption)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantRoleToRole(roleName, memberRole, withAdminOption);
+  }
+
+  @Override
+  public void revokeRoleFromRole(String roleName, String memberRole) throws ExecutionException {
+    distributedTransactionAdmin.revokeRoleFromRole(roleName, memberRole);
+  }
+
+  @Override
+  public void revokeAdminOptionFromRole(String roleName, String memberRole)
+      throws ExecutionException {
+    distributedTransactionAdmin.revokeAdminOptionFromRole(roleName, memberRole);
+  }
+
+  @Override
+  public Set<Privilege> getRolePrivileges(String username, String roleName, String namespaceName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getRolePrivileges(username, roleName, namespaceName);
+  }
+
+  @Override
+  public Set<Privilege> getRolePrivileges(
+      String username, String roleName, String namespaceName, String tableName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getRolePrivileges(
+        username, roleName, namespaceName, tableName);
+  }
+
+  @Override
+  public void grantPrivilegeToRole(String roleName, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantPrivilegeToRole(roleName, namespaceName, privileges);
+  }
+
+  @Override
+  public void grantPrivilegeToRole(
+      String roleName, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantPrivilegeToRole(
+        roleName, namespaceName, tableName, privileges);
+  }
+
+  @Override
+  public void revokePrivilegeFromRole(
+      String roleName, String namespaceName, Privilege... privileges) throws ExecutionException {
+    distributedTransactionAdmin.revokePrivilegeFromRole(roleName, namespaceName, privileges);
+  }
+
+  @Override
+  public void revokePrivilegeFromRole(
+      String roleName, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    distributedTransactionAdmin.revokePrivilegeFromRole(
+        roleName, namespaceName, tableName, privileges);
+  }
+
+  @Override
   public void createPolicy(String policyName, @Nullable String dataTagColumnName)
       throws ExecutionException {
     distributedTransactionAdmin.createPolicy(policyName, dataTagColumnName);
