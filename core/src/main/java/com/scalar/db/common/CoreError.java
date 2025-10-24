@@ -808,6 +808,12 @@ public enum CoreError implements ScalarDbError {
       "Db2 does not support column type conversion from %s to %s",
       "",
       ""),
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0241",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1112,6 +1118,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0062",
       "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
+      "",
+      ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR,
+      "0063",
+      "Getting the MySQL JDBC connection metadata failed.",
       "",
       ""),
 

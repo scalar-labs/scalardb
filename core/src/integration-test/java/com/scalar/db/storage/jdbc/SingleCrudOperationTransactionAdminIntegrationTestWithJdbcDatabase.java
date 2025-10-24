@@ -74,10 +74,16 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
   }
 
   @SuppressWarnings("unused")
+  private boolean isTiDB() {
+    return JdbcTestUtils.isTidb(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
   private boolean isColumnTypeConversionToTextNotFullySupported() {
     return JdbcTestUtils.isDb2(rdbEngine)
         || JdbcTestUtils.isOracle(rdbEngine)
-        || JdbcTestUtils.isSqlite(rdbEngine);
+        || JdbcTestUtils.isSqlite(rdbEngine)
+        || isTiDB();
   }
 
   @SuppressWarnings("unused")
@@ -216,6 +222,95 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
   @EnabledIf("isDb2")
   public void
       alterColumnType_Db2_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
+          throws ExecutionException, TransactionException {
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata.Builder currentTableMetadataBuilder =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.INT)
+              .addColumn("c4", DataType.BIGINT)
+              .addColumn("c5", DataType.FLOAT)
+              .addColumn("c6", DataType.DOUBLE)
+              .addColumn("c7", DataType.TEXT)
+              .addColumn("c8", DataType.BLOB)
+              .addColumn("c9", DataType.DATE)
+              .addColumn("c10", DataType.TIME)
+              .addColumn("c11", DataType.TIMESTAMPTZ)
+              .addColumn("c12", DataType.TIMESTAMP)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC);
+      TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
+      admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
+      InsertBuilder.Buildable insert =
+          Insert.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE4)
+              .partitionKey(Key.ofInt("c1", 1))
+              .clusteringKey(Key.ofInt("c2", 2))
+              .intValue("c3", 1)
+              .bigIntValue("c4", 2L)
+              .floatValue("c5", 3.0f)
+              .doubleValue("c6", 4.0d)
+              .textValue("c7", "5")
+              .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue("c11", Instant.now())
+              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
+      transactionalInsert(insert.build());
+
+      // Act Assert
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c3", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c4", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c5", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c6", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c7", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c8", DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c9", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c10", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c11", DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(() -> admin.alterColumnType(namespace1, TABLE4, "c12", DataType.TEXT))
+          .doesNotThrowAnyException();
+
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addColumn("c3", DataType.TEXT)
+              .addColumn("c4", DataType.TEXT)
+              .addColumn("c5", DataType.TEXT)
+              .addColumn("c6", DataType.TEXT)
+              .addColumn("c7", DataType.TEXT)
+              .addColumn("c8", DataType.BLOB)
+              .addColumn("c9", DataType.TEXT)
+              .addColumn("c10", DataType.TEXT)
+              .addColumn("c11", DataType.TEXT)
+              .addColumn("c12", DataType.TEXT)
+              .addPartitionKey("c1")
+              .addClusteringKey("c2", Scan.Ordering.Order.ASC)
+              .build();
+      assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(namespace1, TABLE4, true);
+    }
+  }
+
+  @Test
+  @EnabledIf("isTiDB")
+  public void
+      alterColumnType_TiDB_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
           throws ExecutionException, TransactionException {
     try {
       // Arrange

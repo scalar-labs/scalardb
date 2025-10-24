@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
-import org.assertj.core.util.Strings;
 
 public final class JdbcEnv {
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
