@@ -195,10 +195,7 @@ public interface CrudOperable<E extends TransactionException> {
     void close() throws E;
   }
 
-  /**
-   * A batch operation result returned by {@link CrudOperable#batch(List)}. Represents the result of
-   * a get operation or a scan operation.
-   */
+  /** A batch operation result returned by {@link CrudOperable#batch(List)}. */
   interface BatchResult {
     /**
      * Returns the type of the operation.
