@@ -4,6 +4,7 @@ import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Result;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -27,17 +28,17 @@ public class BatchResultImpl implements CrudOperable.BatchResult {
     this.scanResult = null;
   }
 
-  public BatchResultImpl(@Nullable Optional<Result> getResult) {
+  public BatchResultImpl(Optional<Result> getResult) {
     this.type = Type.GET;
-    this.getResult = getResult;
+    this.getResult = Objects.requireNonNull(getResult);
     this.scanResult = null;
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public BatchResultImpl(@Nullable List<Result> scanResult) {
+  public BatchResultImpl(List<Result> scanResult) {
     this.type = Type.SCAN;
     this.getResult = null;
-    this.scanResult = scanResult;
+    this.scanResult = Objects.requireNonNull(scanResult);
   }
 
   @Override

@@ -62,11 +62,7 @@ public class ReadOnlyDistributedTransaction extends DecoratedDistributedTransact
   @Override
   public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {
     for (Operation operation : operations) {
-      if (operation instanceof Put
-          || operation instanceof Insert
-          || operation instanceof Upsert
-          || operation instanceof Update
-          || operation instanceof Delete) {
+      if (operation instanceof Mutation) {
         throw new IllegalStateException(
             CoreError.MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION.buildMessage(getId()));
       }
