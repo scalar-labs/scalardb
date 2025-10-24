@@ -1123,7 +1123,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
       Category.INTERNAL_ERROR,
       "0063",
-      "Getting the MySQL JDBC connection metadata failed.",
+      "Getting the MySQL JDBC connection metadata failed",
       "",
       ""),
 
