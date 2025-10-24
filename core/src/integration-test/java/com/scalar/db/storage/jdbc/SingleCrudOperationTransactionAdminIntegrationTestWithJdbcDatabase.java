@@ -74,7 +74,7 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
   }
 
   @SuppressWarnings("unused")
-  private boolean isTiDB() {
+  private boolean isTidb() {
     return JdbcTestUtils.isTidb(rdbEngine);
   }
 
@@ -83,7 +83,7 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
     return JdbcTestUtils.isDb2(rdbEngine)
         || JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
-        || isTiDB();
+        || isTidb();
   }
 
   @SuppressWarnings("unused")
@@ -308,7 +308,7 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
   }
 
   @Test
-  @EnabledIf("isTiDB")
+  @EnabledIf("isTidb")
   public void
       alterColumnType_TiDB_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
           throws ExecutionException, TransactionException {

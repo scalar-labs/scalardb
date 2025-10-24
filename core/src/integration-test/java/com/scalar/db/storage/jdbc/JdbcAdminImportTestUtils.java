@@ -635,7 +635,7 @@ public class JdbcAdminImportTestUtils {
               UNSUPPORTED_DATA_TYPES_MYSQL.stream()
                   .filter(type -> !type.equalsIgnoreCase("JSON"))
                   .collect(Collectors.toList())));
-    } else if (isTiDB()) {
+    } else if (isTidb()) {
       data.addAll(
           prepareCreateNonImportableTableSql(
               namespace,
@@ -891,7 +891,7 @@ public class JdbcAdminImportTestUtils {
     }
   }
 
-  private boolean isTiDB() {
+  private boolean isTidb() {
     try (Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("TiDB");
