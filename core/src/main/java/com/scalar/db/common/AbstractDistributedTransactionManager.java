@@ -5,7 +5,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
-import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
@@ -73,8 +73,8 @@ public abstract class AbstractDistributedTransactionManager
     throw new UnsupportedOperationException("resume is not supported in this implementation");
   }
 
-  protected <T extends Mutation> List<T> copyAndSetTargetToIfNot(List<T> mutations) {
-    return ScalarDbUtils.copyAndSetTargetToIfNot(mutations, namespace, tableName);
+  protected <T extends Operation> List<T> copyAndSetTargetToIfNot(List<T> operations) {
+    return ScalarDbUtils.copyAndSetTargetToIfNot(operations, namespace, tableName);
   }
 
   protected Get copyAndSetTargetToIfNot(Get get) {

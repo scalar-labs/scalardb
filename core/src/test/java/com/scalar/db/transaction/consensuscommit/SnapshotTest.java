@@ -258,18 +258,6 @@ public class SnapshotTest {
         .build();
   }
 
-  private Put prepareAnotherPut() {
-    Key partitionKey = Key.ofText(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = Key.ofText(ANY_NAME_6, ANY_TEXT_6);
-    return Put.newBuilder()
-        .namespace(ANY_NAMESPACE_NAME)
-        .table(ANY_TABLE_NAME)
-        .partitionKey(partitionKey)
-        .clusteringKey(clusteringKey)
-        .consistency(Consistency.LINEARIZABLE)
-        .build();
-  }
-
   private Put preparePutWithPartitionKeyOnly() {
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     return Put.newBuilder()

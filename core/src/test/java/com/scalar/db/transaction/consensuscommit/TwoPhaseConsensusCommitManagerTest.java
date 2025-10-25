@@ -12,12 +12,14 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -1420,5 +1422,35 @@ public class TwoPhaseConsensusCommitManagerTest {
     verify(transaction).prepare();
     verify(transaction).validate();
     verify(transaction).commit();
+  }
+
+  @Test
+  public void batch_ShouldBatch() throws TransactionException {
+    // Arrange
+    TwoPhaseCommitTransaction transaction = mock(TwoPhaseCommitTransaction.class);
+
+    TwoPhaseConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    @SuppressWarnings("unchecked")
+    List<Operation> operations = mock(List.class);
+
+    @SuppressWarnings("unchecked")
+    List<CrudOperable.BatchResult> batchResults = mock(List.class);
+
+    when(transaction.batch(operations)).thenReturn(batchResults);
+
+    // Act
+    List<CrudOperable.BatchResult> actual = spied.batch(operations);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).batch(operations);
+    verify(transaction).prepare();
+    verify(transaction).validate();
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(batchResults);
   }
 }

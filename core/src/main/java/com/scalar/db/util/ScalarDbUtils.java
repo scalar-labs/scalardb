@@ -11,7 +11,6 @@ import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.InsertBuilder;
 import com.scalar.db.api.LikeExpression;
-import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
@@ -63,11 +62,31 @@ public final class ScalarDbUtils {
   private ScalarDbUtils() {}
 
   @SuppressWarnings("unchecked")
-  public static <T extends Mutation> List<T> copyAndSetTargetToIfNot(
-      List<T> mutations, Optional<String> namespace, Optional<String> tableName) {
-    return mutations.stream()
-        .map(m -> (T) copyAndSetTargetToIfNot(m, namespace, tableName))
+  public static <T extends Operation> List<T> copyAndSetTargetToIfNot(
+      List<T> operations, Optional<String> namespace, Optional<String> tableName) {
+    return operations.stream()
+        .map(o -> (T) copyAndSetTargetToIfNot(o, namespace, tableName))
         .collect(Collectors.toList());
+  }
+
+  public static Operation copyAndSetTargetToIfNot(
+      Operation operation, Optional<String> namespace, Optional<String> tableName) {
+    if (operation instanceof Get) {
+      return copyAndSetTargetToIfNot((Get) operation, namespace, tableName);
+    } else if (operation instanceof Scan) {
+      return copyAndSetTargetToIfNot((Scan) operation, namespace, tableName);
+    } else if (operation instanceof Put) {
+      return copyAndSetTargetToIfNot((Put) operation, namespace, tableName);
+    } else if (operation instanceof Delete) {
+      return copyAndSetTargetToIfNot((Delete) operation, namespace, tableName);
+    } else if (operation instanceof Insert) {
+      return copyAndSetTargetToIfNot((Insert) operation, namespace, tableName);
+    } else if (operation instanceof Upsert) {
+      return copyAndSetTargetToIfNot((Upsert) operation, namespace, tableName);
+    } else {
+      assert operation instanceof Update;
+      return copyAndSetTargetToIfNot((Update) operation, namespace, tableName);
+    }
   }
 
   public static Get copyAndSetTargetToIfNot(
@@ -96,22 +115,6 @@ public final class ScalarDbUtils {
     Scan ret = builder.build();
     checkIfTargetIsSet(ret);
     return ret;
-  }
-
-  public static Mutation copyAndSetTargetToIfNot(
-      Mutation mutation, Optional<String> namespace, Optional<String> tableName) {
-    if (mutation instanceof Put) {
-      return copyAndSetTargetToIfNot((Put) mutation, namespace, tableName);
-    } else if (mutation instanceof Delete) {
-      return copyAndSetTargetToIfNot((Delete) mutation, namespace, tableName);
-    } else if (mutation instanceof Insert) {
-      return copyAndSetTargetToIfNot((Insert) mutation, namespace, tableName);
-    } else if (mutation instanceof Upsert) {
-      return copyAndSetTargetToIfNot((Upsert) mutation, namespace, tableName);
-    } else {
-      assert mutation instanceof Update;
-      return copyAndSetTargetToIfNot((Update) mutation, namespace, tableName);
-    }
   }
 
   public static Put copyAndSetTargetToIfNot(

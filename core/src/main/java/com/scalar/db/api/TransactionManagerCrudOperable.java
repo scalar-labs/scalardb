@@ -190,6 +190,24 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
       throws CrudConflictException, CrudException, UnsatisfiedConditionException,
           UnknownTransactionStatusException;
 
+  /**
+   * {@inheritDoc}
+   *
+   * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
+   *     (e.g., a conflict error). You can retry the transaction from the beginning
+   * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
+   *     faults. You can try retrying the transaction from the beginning, but the transaction may
+   *     still fail if the cause is nontransient
+   * @throws UnsatisfiedConditionException if a condition is specified in a {@link Put}, {@link
+   *     Delete}, or {@link Update} command, and if the condition is not satisfied or the entry does
+   *     not exist
+   * @throws UnknownTransactionStatusException if the status of the commit is unknown
+   */
+  @Override
+  List<BatchResult> batch(List<? extends Operation> operations)
+      throws CrudConflictException, CrudException, UnsatisfiedConditionException,
+          UnknownTransactionStatusException;
+
   interface Scanner extends CrudOperable.Scanner<TransactionException> {
     /**
      * {@inheritDoc}

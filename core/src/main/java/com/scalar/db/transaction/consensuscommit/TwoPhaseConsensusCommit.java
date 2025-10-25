@@ -157,25 +157,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(!mutations.isEmpty());
-    for (Mutation m : mutations) {
-      if (m instanceof Put) {
-        put((Put) m);
-      } else if (m instanceof Delete) {
-        delete((Delete) m);
-      } else if (m instanceof Insert) {
-        insert((Insert) m);
-      } else if (m instanceof Upsert) {
-        upsert((Upsert) m);
-      } else {
-        assert m instanceof Update;
-        update((Update) m);
-      }
-    }
-  }
-
-  @Override
   public void prepare() throws PreparationException {
     if (!context.areAllScannersClosed()) {
       throw new IllegalStateException(

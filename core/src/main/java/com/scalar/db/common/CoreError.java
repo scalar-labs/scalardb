@@ -808,6 +808,17 @@ public enum CoreError implements ScalarDbError {
       "Db2 does not support column type conversion from %s to %s",
       "",
       ""),
+  EMPTY_OPERATIONS_SPECIFIED(Category.USER_ERROR, "0241", "The operations are empty", "", ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_MULTIPLE_OPERATIONS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0242",
+      "Multiple operations are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BATCH_RESULT_DOES_NOT_HAVE_GET_RESULT(
+      Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
+  BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
+      Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
 
   //
   // Errors for the concurrency error category

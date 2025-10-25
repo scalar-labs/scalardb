@@ -13,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -21,6 +22,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -1393,5 +1395,33 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
+  }
+
+  @Test
+  public void batch_ShouldBatch() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    @SuppressWarnings("unchecked")
+    List<Operation> operations = mock(List.class);
+
+    @SuppressWarnings("unchecked")
+    List<CrudOperable.BatchResult> batchResults = mock(List.class);
+
+    when(transaction.batch(operations)).thenReturn(batchResults);
+
+    // Act
+    List<CrudOperable.BatchResult> actual = spied.batch(operations);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).batch(operations);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(batchResults);
   }
 }

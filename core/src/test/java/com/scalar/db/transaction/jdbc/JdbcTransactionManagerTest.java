@@ -11,12 +11,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -1557,5 +1559,31 @@ public class JdbcTransactionManagerTest {
     verify(spied).begin();
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
+  }
+
+  @Test
+  public void batch_ShouldBatch() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    JdbcTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).beginReadOnly();
+
+    @SuppressWarnings("unchecked")
+    List<Operation> operations = mock(List.class);
+
+    @SuppressWarnings("unchecked")
+    List<CrudOperable.BatchResult> batchResults = mock(List.class);
+
+    when(transaction.batch(operations)).thenReturn(batchResults);
+
+    // Act
+    List<CrudOperable.BatchResult> actual = spied.batch(operations);
+
+    // Assert
+    verify(spied).beginReadOnly();
+    verify(transaction).batch(operations);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(batchResults);
   }
 }

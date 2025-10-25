@@ -8,6 +8,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -237,6 +238,12 @@ public class TransactionService implements DistributedTransactionManager {
   public void mutate(List<? extends Mutation> mutations)
       throws CrudException, UnknownTransactionStatusException {
     manager.mutate(mutations);
+  }
+
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations)
+      throws CrudException, UnknownTransactionStatusException {
+    return manager.batch(operations);
   }
 
   @Override

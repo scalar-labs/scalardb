@@ -226,6 +226,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void batch_ShouldBatchProperly() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void
       get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns() {}
 
@@ -311,6 +316,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Override
   @Test
   public void mutate_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void batch_DefaultNamespaceGiven_ShouldWorkProperly() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
@@ -449,6 +459,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
 
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void getAndUpdate_ShouldGetAndUpdateCorrectly() {}
+
   @Disabled(
       "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
   @Override
@@ -459,7 +474,19 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
       "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
   @Override
   @Test
+  public void manager_batch_ShouldBatchProperly() {}
+
+  @Disabled(
+      "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
+  @Override
+  @Test
   public void manager_mutate_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled(
+      "Single CRUD operation transactions don't support executing multiple mutations in a transaction")
+  @Override
+  @Test
+  public void manager_batch_DefaultNamespaceGiven_ShouldWorkProperly() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
