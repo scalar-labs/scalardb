@@ -45,7 +45,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cassandra_3.0_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestCassandraPermission
@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cassandra_3.11_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestCassandraPermission
@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dynamo_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestDynamoPermission
@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mysql_5.7_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mysql_8.0_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -197,7 +197,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mysql_8.4_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -232,7 +232,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: postgresql_13_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -267,7 +267,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: postgresql_14_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -302,7 +302,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: postgresql_15_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -337,7 +337,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: postgresql_16_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -372,7 +372,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: postgresql_17_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -407,7 +407,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: oracle_19_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -449,7 +449,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: oracle_21_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -508,7 +508,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: oracle_23_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -541,7 +541,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sqlserver_2017_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -578,7 +578,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sqlserver_2019_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -615,7 +615,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sqlserver_2022_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -645,7 +645,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mariadb_10.11_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -675,7 +675,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mariadb_11.4_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -705,7 +705,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: yugabytedb_2_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -759,7 +759,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: db2_11.5_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
@@ -813,7 +813,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: db2_12.1_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
