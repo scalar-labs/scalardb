@@ -504,4 +504,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // Observed performance degradation when using read-only connections in MySQL. So we do not
     // set the read-only mode for MySQL connections.
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql(String namespace) {
+    return "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '"
+        + namespace
+        + "'";
+  }
 }

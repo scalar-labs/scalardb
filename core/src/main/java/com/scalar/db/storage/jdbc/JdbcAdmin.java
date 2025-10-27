@@ -481,6 +481,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      Set<String> remainingTables = getNamespaceTableNamesInternal(connection, namespace);
+      if (!remainingTables.isEmpty()) {
+        throw new IllegalStateException(
+            CoreError.NAMESPACE_NOT_EMPTY.buildMessage(namespace, remainingTables));
+      }
       execute(connection, rdbEngine.dropNamespaceSql(namespace));
       deleteFromNamespacesTable(connection, namespace);
       deleteNamespacesTableAndMetadataSchemaIfEmpty(connection);
@@ -701,6 +706,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throw new ExecutionException(
           "Getting the list of tables of the " + namespace + " schema failed", e);
     }
+  }
+
+  private Set<String> getNamespaceTableNamesInternal(Connection connection, String namespace)
+      throws SQLException {
+    String sql = rdbEngine.getTableNamesInNamespaceSql(namespace);
+    Set<String> tableNames = new HashSet<>();
+    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      try (ResultSet resultSet = statement.executeQuery()) {
+        while (resultSet.next()) {
+          tableNames.add(resultSet.getString(1));
+        }
+      }
+    }
+    return tableNames;
   }
 
   @Override

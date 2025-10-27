@@ -367,4 +367,12 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
     // Do nothing. SQLite does not support read-only mode.
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql(String namespace) {
+    return "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '"
+        + namespace
+        + NAMESPACE_SEPARATOR
+        + "%'";
+  }
 }

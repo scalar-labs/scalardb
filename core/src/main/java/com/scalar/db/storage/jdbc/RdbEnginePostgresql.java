@@ -395,4 +395,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       getTimeTypeStrategy() {
     return timeTypeEngine;
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql(String namespace) {
+    return "SELECT table_name FROM information_schema.tables WHERE table_schema = '"
+        + namespace
+        + "'";
+  }
 }

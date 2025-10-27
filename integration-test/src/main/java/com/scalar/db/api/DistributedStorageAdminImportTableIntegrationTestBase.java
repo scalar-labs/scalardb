@@ -249,7 +249,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
 
       // Act
       assertThatCode(() -> admin.dropNamespace(getNamespace()))
-          .isInstanceOf(ExecutionException.class);
+          .isInstanceOf(IllegalStateException.class);
 
       // Assert
       assertThat(admin.namespaceExists(getNamespace())).isTrue();
