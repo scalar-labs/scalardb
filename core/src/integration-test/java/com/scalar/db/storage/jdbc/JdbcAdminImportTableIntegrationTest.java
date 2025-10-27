@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.AdminTestUtils;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
@@ -66,6 +67,11 @@ public class JdbcAdminImportTableIntegrationTest
   @Override
   protected void dropNonImportableTable(String table) throws SQLException {
     testUtils.dropTable(getNamespace(), table);
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new JdbcAdminTestUtils(getProperties(testName));
   }
 
   @SuppressWarnings("unused")
