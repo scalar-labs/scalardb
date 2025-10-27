@@ -269,4 +269,8 @@ public class JdbcAdminImportTableIntegrationTest
       }
     }
   }
+
+  @Test
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ShouldNotDropNonScalarDBTables() {}
 }
