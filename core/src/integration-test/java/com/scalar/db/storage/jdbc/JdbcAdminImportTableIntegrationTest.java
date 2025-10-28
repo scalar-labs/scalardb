@@ -81,8 +81,17 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isTidb() {
+    return testUtils.isTidb();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isColumnTypeConversionToTextNotFullySupported() {
-    return JdbcEnv.isDb2() || JdbcEnv.isSqlServer() || JdbcEnv.isOracle() || JdbcEnv.isSqlite();
+    return JdbcEnv.isDb2()
+        || JdbcEnv.isSqlServer()
+        || JdbcEnv.isOracle()
+        || JdbcEnv.isSqlite()
+        || isTidb();
   }
 
   @SuppressWarnings("unused")
@@ -191,6 +200,54 @@ public class JdbcAdminImportTableIntegrationTest
               && !metadata.getClusteringKeyNames().contains(column)) {
             if (metadata.getColumnDataType(column).equals(DataType.BLOB)) {
               // Conversion from BLOB to TEXT is not supported in Db2 engine
+              continue;
+            }
+            admin.alterColumnType(getNamespace(), testData.getTableName(), column, DataType.TEXT);
+          }
+        }
+
+        // Assert
+        TableMetadata newMetadata = admin.getTableMetadata(getNamespace(), testData.getTableName());
+        assertThat(newMetadata).isNotNull();
+        for (String column : metadata.getColumnNames()) {
+          if (!metadata.getPartitionKeyNames().contains(column)
+              && !metadata.getClusteringKeyNames().contains(column)) {
+            if (metadata.getColumnDataType(column).equals(DataType.BLOB)) {
+              continue;
+            }
+            assertThat(newMetadata.getColumnDataType(column)).isEqualTo(DataType.TEXT);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  @EnabledIf("isTidb")
+  public void
+      alterColumnType_Tidb_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
+          throws Exception {
+    // Arrange
+    testDataList.addAll(createExistingDatabaseWithAllDataTypes());
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        admin.importTable(
+            getNamespace(),
+            testData.getTableName(),
+            Collections.emptyMap(),
+            testData.getOverrideColumnsType());
+      }
+    }
+
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        // Act
+        TableMetadata metadata = testData.getTableMetadata();
+        for (String column : metadata.getColumnNames()) {
+          if (!metadata.getPartitionKeyNames().contains(column)
+              && !metadata.getClusteringKeyNames().contains(column)) {
+            if (metadata.getColumnDataType(column).equals(DataType.BLOB)) {
+              // Conversion from BLOB to TEXT is not supported in TiDB
               continue;
             }
             admin.alterColumnType(getNamespace(), testData.getTableName(), column, DataType.TEXT);

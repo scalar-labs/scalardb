@@ -143,10 +143,16 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @SuppressWarnings("unused")
+  private boolean isTidb() {
+    return JdbcTestUtils.isTidb(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
   private boolean isColumnTypeConversionToTextNotFullySupported() {
     return JdbcTestUtils.isDb2(rdbEngine)
         || JdbcTestUtils.isOracle(rdbEngine)
-        || JdbcTestUtils.isSqlite(rdbEngine);
+        || JdbcTestUtils.isSqlite(rdbEngine)
+        || isTidb();
   }
 
   @SuppressWarnings("unused")
@@ -434,6 +440,129 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               .addPartitionKey(getColumnName1())
               .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
               .addColumn(getColumnName12(), DataType.TEXT)
+              .build();
+      assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
+          .isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+    }
+  }
+
+  @Test
+  @EnabledIf("isTidb")
+  public void
+      alterColumnType_Tidb_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
+          throws ExecutionException {
+    try (DistributedStorage storage = storageFactory.getStorage()) {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMP)
+              .addColumn(getColumnName12(), DataType.TIMESTAMPTZ)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .build();
+
+      admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(getNamespace1())
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName2(), 2))
+              .intValue(getColumnName3(), 1)
+              .bigIntValue(getColumnName4(), 2L)
+              .floatValue(getColumnName5(), 3.0f)
+              .doubleValue(getColumnName6(), 4.0d)
+              .textValue(getColumnName7(), "5")
+              .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
+              .timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC))
+              .timestampTZValue(getColumnName12(), Instant.now());
+
+      storage.put(put.build());
+      storage.close();
+
+      // Act Assert
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName3(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName4(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName5(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName6(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName7(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName8(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName9(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
+          .doesNotThrowAnyException();
+
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addColumn(getColumnName5(), DataType.TEXT)
+              .addColumn(getColumnName6(), DataType.TEXT)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.TEXT)
+              .addColumn(getColumnName10(), DataType.TEXT)
+              .addColumn(getColumnName11(), DataType.TEXT)
+              .addColumn(getColumnName12(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
               .build();
       assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
           .isEqualTo(expectedTableMetadata);
