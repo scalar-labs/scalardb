@@ -126,10 +126,13 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
             + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE)
             + " WHERE "
             + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
-            + " = '"
-            + getFullTableName(namespace, table)
-            + "'";
-    execute(deleteMetadataStatement);
+            + " = ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(deleteMetadataStatement)) {
+      preparedStatement.setString(1, getFullTableName(namespace, table));
+      preparedStatement.executeUpdate();
+    }
   }
 
   @Override

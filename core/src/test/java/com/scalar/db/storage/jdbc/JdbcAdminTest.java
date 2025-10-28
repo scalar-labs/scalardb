@@ -1957,7 +1957,6 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
 
     Connection connection = mock(Connection.class);
-    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
     Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
     Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
@@ -1968,13 +1967,7 @@ public class JdbcAdminTest {
             selectAllFromNamespaceTablePrepStmt,
             selectAllFromMetadataTablePrepStmt,
             dropNamespaceTableStmt);
-    // Mock for getNamespaceTableNamesInternal() check - returns empty ResultSet (namespace is
-    // empty)
-    ResultSet emptyResultSet = mock(ResultSet.class);
-    when(emptyResultSet.next()).thenReturn(false);
-    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTablePrepStmt);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet1 =
@@ -2129,21 +2122,21 @@ public class JdbcAdminTest {
 
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStatementMock = mock(Statement.class);
-    PreparedStatement isNamespaceEmptyStatementMock = mock(PreparedStatement.class);
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
     Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
+      PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
       when(connection.createStatement())
           .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+      ResultSet emptyResultSet = mock(ResultSet.class);
+      when(emptyResultSet.next()).thenReturn(false);
+      when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+      when(connection.prepareStatement(anyString()))
+          .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
     } else {
       when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
+      when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     }
-    // Mock for isNamespaceEmpty() check - returns empty ResultSet (namespace is empty)
-    ResultSet emptyResultSet = mock(ResultSet.class);
-    when(emptyResultSet.next()).thenReturn(false);
-    when(isNamespaceEmptyStatementMock.executeQuery()).thenReturn(emptyResultSet);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(isNamespaceEmptyStatementMock, deleteFromNamespaceTableMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
     ResultSet resultSet =

@@ -370,6 +370,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public String getTableNamesInNamespaceSql() {
-    return "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?";
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
+    return null;
   }
 }

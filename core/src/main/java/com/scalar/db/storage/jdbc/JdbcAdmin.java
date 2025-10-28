@@ -712,6 +712,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private Set<String> getNamespaceTableNamesInternal(Connection connection, String namespace)
       throws SQLException {
     String sql = rdbEngine.getTableNamesInNamespaceSql();
+    if (Strings.isNullOrEmpty(sql)) {
+      return Collections.emptySet();
+    }
     Set<String> tableNames = new HashSet<>();
     try (PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, namespace);

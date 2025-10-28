@@ -354,6 +354,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       getNamespacesContainer()
           .deleteItem(new CosmosNamespace(namespace), new CosmosItemRequestOptions());
       deleteMetadataDatabaseIfEmpty();
+    } catch (IllegalArgumentException e) {
+      throw e;
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Deleting the %s database failed", namespace), e);
     }

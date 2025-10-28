@@ -587,7 +587,8 @@ public class CosmosAdminTest {
     // Arrange
     String namespace = "ns";
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(any())).thenReturn(database, metadataDatabase);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
@@ -596,6 +597,12 @@ public class CosmosAdminTest {
     when(namespacesContainer.<CosmosNamespace>queryItems(anyString(), any(), any()))
         .thenReturn(pagedIterable);
     when(pagedIterable.stream()).thenReturn(Stream.of(new CosmosNamespace(METADATA_DATABASE)));
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosContainerProperties> emptyContainerPagedIterable =
+        mock(CosmosPagedIterable.class);
+    when(emptyContainerPagedIterable.stream()).thenReturn(Stream.empty());
+    when(database.readAllContainers()).thenReturn(emptyContainerPagedIterable);
 
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosContainerProperties> containerPagedIterable =
@@ -613,7 +620,7 @@ public class CosmosAdminTest {
     admin.dropNamespace(namespace);
 
     // Assert
-    verify(client).getDatabase(namespace);
+    verify(client, times(2)).getDatabase(namespace);
     verify(database).delete();
     verify(client, times(3)).getDatabase(METADATA_DATABASE);
     verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
@@ -628,9 +635,16 @@ public class CosmosAdminTest {
     // Arrange
     String namespace = "ns";
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(any())).thenReturn(database, metadataDatabase);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosContainerProperties> emptyContainerPagedIterable =
+        mock(CosmosPagedIterable.class);
+    when(emptyContainerPagedIterable.stream()).thenReturn(Stream.empty());
+    when(database.readAllContainers()).thenReturn(emptyContainerPagedIterable);
 
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
@@ -642,7 +656,7 @@ public class CosmosAdminTest {
     admin.dropNamespace(namespace);
 
     // Assert
-    verify(client).getDatabase(namespace);
+    verify(client, times(2)).getDatabase(namespace);
     verify(database).delete();
     verify(client, times(2)).getDatabase(METADATA_DATABASE);
     verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
