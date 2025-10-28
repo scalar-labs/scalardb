@@ -3425,7 +3425,6 @@ public class JdbcAdminTest {
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "ALTER TABLE `ns`.`table` RENAME TO `ns`.`table_new`",
         "DELETE FROM `" + METADATA_SCHEMA + "`.`metadata` WHERE `full_table_name` = 'ns.table'",
-        "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
         "INSERT INTO `"
             + METADATA_SCHEMA
             + "`.`metadata` VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3445,7 +3444,6 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3466,7 +3464,6 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
@@ -3485,7 +3482,6 @@ public class JdbcAdminTest {
             + "].[metadata] WHERE [full_table_name]=? ORDER BY [ordinal_position] ASC",
         "EXEC sp_rename '[ns].[table]', 'table_new'",
         "DELETE FROM [" + METADATA_SCHEMA + "].[metadata] WHERE [full_table_name] = 'ns.table'",
-        "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
         "INSERT INTO ["
             + METADATA_SCHEMA
             + "].[metadata] VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,0,1)",
@@ -3503,7 +3499,6 @@ public class JdbcAdminTest {
             + "$metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "ALTER TABLE \"ns$table\" RENAME TO \"ns$table_new\"",
         "DELETE FROM \"" + METADATA_SCHEMA + "$metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "$metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,FALSE,1)",
@@ -3523,7 +3518,6 @@ public class JdbcAdminTest {
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",
-        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('ns.table_new','c1','TEXT','PARTITION',NULL,false,1)",
