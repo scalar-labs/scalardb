@@ -819,6 +819,12 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
   BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
       Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0245",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1125,6 +1131,8 @@ public enum CoreError implements ScalarDbError {
       "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category
