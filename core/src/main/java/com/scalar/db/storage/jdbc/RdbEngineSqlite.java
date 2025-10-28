@@ -369,10 +369,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTableNamesInNamespaceSql(String namespace) {
-    return "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '"
-        + namespace
-        + NAMESPACE_SEPARATOR
-        + "%'";
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?";
   }
 }

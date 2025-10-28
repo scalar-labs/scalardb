@@ -585,8 +585,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTableNamesInNamespaceSql(String namespace) {
-    return String.format(
-        "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = '%s' AND TYPE = 'T'", namespace);
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'";
   }
 }

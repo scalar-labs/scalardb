@@ -453,7 +453,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTableNamesInNamespaceSql(String namespace) {
-    return String.format("SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = '%s'", namespace);
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
   }
 }

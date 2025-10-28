@@ -397,9 +397,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTableNamesInNamespaceSql(String namespace) {
-    return "SELECT table_name FROM information_schema.tables WHERE table_schema = '"
-        + namespace
-        + "'";
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
   }
 }

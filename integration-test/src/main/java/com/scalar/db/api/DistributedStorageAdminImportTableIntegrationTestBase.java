@@ -255,7 +255,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
       assertThat(admin.namespaceExists(getNamespace())).isTrue();
       for (TestData testData : testDataList) {
         if (!testData.isImportableTable()) {
-          adminTestUtils.tableExists(getNamespace(), testData.getTableName());
+          assertThat(adminTestUtils.tableExists(getNamespace(), testData.getTableName())).isTrue();
         }
       }
     } finally {
