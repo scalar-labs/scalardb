@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -484,20 +485,205 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete()
+  public void mutate_MutationsGiven_ShouldCallCrudHandlerPutAndDelete()
       throws CrudException, ExecutionException {
     // Arrange
-    Put put = preparePut();
-    Delete delete = prepareDelete();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
 
     // Act
-    transaction.mutate(Arrays.asList(put, delete));
+    transaction.mutate(Arrays.asList(put, insert, upsert, update, delete));
 
     // Assert
+    Put expectedPutFromInsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableInsertMode()
+            .build();
+    Put expectedPutFromUpsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableImplicitPreRead()
+            .build();
+    Put expectedPutFromUpdate =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
+            .build();
+
     verify(crud).put(put, context);
+    verify(crud).put(expectedPutFromInsert, context);
+    verify(crud).put(expectedPutFromUpsert, context);
+    verify(crud).put(expectedPutFromUpdate, context);
     verify(crud).delete(delete, context);
     verify(mutationOperationChecker).check(put);
+    verify(mutationOperationChecker).check(expectedPutFromInsert);
+    verify(mutationOperationChecker).check(expectedPutFromUpsert);
+    verify(mutationOperationChecker).check(expectedPutFromUpdate);
     verify(mutationOperationChecker).check(delete);
+  }
+
+  @Test
+  public void mutate_EmptyMutationsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.mutate(Collections.emptyList()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void batch_OperationsGiven_ShouldCallCrudHandlerProperly()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Get get = prepareGet();
+    Scan scan = prepareScan();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    TransactionResult result1 = mock(TransactionResult.class);
+    TransactionResult result2 = mock(TransactionResult.class);
+    TransactionResult result3 = mock(TransactionResult.class);
+
+    when(crud.get(get, context)).thenReturn(Optional.of(result1));
+    when(crud.scan(scan, context)).thenReturn(Arrays.asList(result2, result3));
+
+    // Act
+    List<CrudOperable.BatchResult> results =
+        transaction.batch(Arrays.asList(get, scan, put, insert, upsert, update, delete));
+
+    // Assert
+    Put expectedPutFromInsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableInsertMode()
+            .build();
+    Put expectedPutFromUpsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableImplicitPreRead()
+            .build();
+    Put expectedPutFromUpdate =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .enableImplicitPreRead()
+            .build();
+
+    verify(crud).get(get, context);
+    verify(crud).scan(scan, context);
+    verify(crud).put(put, context);
+    verify(crud).put(expectedPutFromInsert, context);
+    verify(crud).put(expectedPutFromUpsert, context);
+    verify(crud).put(expectedPutFromUpdate, context);
+    verify(crud).delete(delete, context);
+    verify(mutationOperationChecker).check(put);
+    verify(mutationOperationChecker).check(expectedPutFromInsert);
+    verify(mutationOperationChecker).check(expectedPutFromUpsert);
+    verify(mutationOperationChecker).check(expectedPutFromUpdate);
+    verify(mutationOperationChecker).check(delete);
+    assertThat(results).hasSize(7);
+    assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+    assertThat(results.get(0).getGetResult()).hasValue(result1);
+    assertThat(results.get(1).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+    assertThat(results.get(1).getScanResult()).containsExactly(result2, result3);
+    assertThat(results.get(2).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+    assertThat(results.get(3).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+    assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+    assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+    assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+  }
+
+  @Test
+  public void batch_EmptyOperationsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.batch(Collections.emptyList()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
