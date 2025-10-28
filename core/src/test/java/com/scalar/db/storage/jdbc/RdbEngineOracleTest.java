@@ -10,6 +10,7 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.util.Arrays;
@@ -153,18 +154,14 @@ class RdbEngineOracleTest {
 
   @Test
   public void
-      throwIfCrossPartitionScanConditionOnBlobColumnNotSupported_WithoutBlobCondition_ShouldNotThrowException() {
+      throwIfConjunctionsOnBlobColumnNotSupported_WithoutBlobCondition_ShouldNotThrowException() {
     // Arrange
     TableMetadata metadata = mock(TableMetadata.class);
-    ScanAll scanAll =
-        (ScanAll)
-            Scan.newBuilder()
-                .namespace("ns")
-                .table("tbl")
-                .all()
-                .where(ConditionBuilder.column("int_column").isEqualToInt(10))
-                .and(ConditionBuilder.column("text_column").isEqualToText("value"))
-                .build();
+    java.util.Set<Conjunction> conjunctions =
+        java.util.Collections.singleton(
+            Conjunction.of(
+                ConditionBuilder.column("int_column").isEqualToInt(10),
+                ConditionBuilder.column("text_column").isEqualToText("value")));
 
     when(metadata.getColumnDataType("int_column")).thenReturn(DataType.INT);
     when(metadata.getColumnDataType("text_column")).thenReturn(DataType.TEXT);
@@ -172,41 +169,35 @@ class RdbEngineOracleTest {
     // Act & Assert
     assertThatCode(
             () ->
-                rdbEngineOracle.throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
-                    scanAll, metadata))
+                rdbEngineOracle.throwIfConjunctionsOnBlobColumnNotSupported(conjunctions, metadata))
         .doesNotThrowAnyException();
   }
 
   @Test
   public void
-      throwIfCrossPartitionScanConditionOnBlobColumnNotSupported_WithNoConditions_ShouldNotThrowException() {
+      throwIfConjunctionsOnBlobColumnNotSupported_WithNoConditions_ShouldNotThrowException() {
     // Arrange
     TableMetadata metadata = mock(TableMetadata.class);
-    ScanAll scanAll = (ScanAll) Scan.newBuilder().namespace("ns").table("tbl").all().build();
 
     // Act & Assert
     assertThatCode(
             () ->
-                rdbEngineOracle.throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
-                    scanAll, metadata))
+                rdbEngineOracle.throwIfConjunctionsOnBlobColumnNotSupported(
+                    java.util.Collections.emptySet(), metadata))
         .doesNotThrowAnyException();
   }
 
   @Test
   public void
-      throwIfCrossPartitionScanConditionOnBlobColumnNotSupported_WithMixedConditions_ShouldThrowWhenBlobPresent() {
+      throwIfConjunctionsOnBlobColumnNotSupported_WithMixedConditions_ShouldThrowWhenBlobPresent() {
     // Arrange
     TableMetadata metadata = mock(TableMetadata.class);
-    ScanAll scanAll =
-        (ScanAll)
-            Scan.newBuilder()
-                .namespace("ns")
-                .table("tbl")
-                .all()
-                .where(ConditionBuilder.column("int_column").isGreaterThanInt(100))
-                .and(ConditionBuilder.column("blob_column").isNotEqualToBlob(new byte[] {5, 6}))
-                .and(ConditionBuilder.column("text_column").isEqualToText("test"))
-                .build();
+    java.util.Set<Conjunction> conjunctions =
+        java.util.Collections.singleton(
+            Conjunction.of(
+                ConditionBuilder.column("int_column").isGreaterThanInt(100),
+                ConditionBuilder.column("blob_column").isNotEqualToBlob(new byte[] {5, 6}),
+                ConditionBuilder.column("text_column").isEqualToText("test")));
 
     when(metadata.getColumnDataType("int_column")).thenReturn(DataType.INT);
     when(metadata.getColumnDataType("blob_column")).thenReturn(DataType.BLOB);
@@ -215,8 +206,7 @@ class RdbEngineOracleTest {
     // Act & Assert
     assertThatThrownBy(
             () ->
-                rdbEngineOracle.throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
-                    scanAll, metadata))
+                rdbEngineOracle.throwIfConjunctionsOnBlobColumnNotSupported(conjunctions, metadata))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("blob_column");
   }

@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -26,6 +27,7 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -313,14 +315,14 @@ public interface RdbEngineStrategy {
       ScanAll scanAll, TableMetadata metadata) {}
 
   /**
-   * Throws an exception if a cross-partition scan operation with a condition on a blob column is
-   * specified and is not supported in the underlying storage.
+   * Throws an exception if one of the conjunction targets a blob column and is not supported in the
+   * underlying storage.
    *
-   * @param scanAll the ScanAll operation
+   * @param conjunctions a set of conjunction
    * @param metadata the table metadata
-   * @throws UnsupportedOperationException if the ScanAll operation contains a condition on a blob
-   *     column, and it is not supported in the underlying storage
+   * @throws UnsupportedOperationException if one of the conjunction targets a blob column, and it
+   *     is not supported in the underlying storage
    */
-  default void throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
-      ScanAll scanAll, TableMetadata metadata) {}
+  default void throwIfConjunctionsOnBlobColumnNotSupported(
+      Set<Conjunction> conjunctions, TableMetadata metadata) {}
 }

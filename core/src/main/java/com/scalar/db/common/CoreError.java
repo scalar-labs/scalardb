@@ -820,10 +820,10 @@ public enum CoreError implements ScalarDbError {
       "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
       "",
       ""),
-  JDBC_ORACLE_CROSS_PARTITION_SCAN_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
+  JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0243",
-      "With Oracle, setting a condition on a BLOB column when using a cross partition scan operation is not supported. Condition: %s",
+      "With Oracle, setting a condition on a BLOB column when using a selection operation is not supported. Condition: %s",
       "",
       ""),
 

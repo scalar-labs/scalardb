@@ -7,6 +7,7 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -472,10 +474,10 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public void throwIfCrossPartitionScanConditionOnBlobColumnNotSupported(
-      ScanAll scanAll, TableMetadata metadata) {
+  public void throwIfConjunctionsOnBlobColumnNotSupported(
+      Set<Conjunction> conjunctions, TableMetadata metadata) {
     Optional<ConditionalExpression> conditionalExpression =
-        scanAll.getConjunctions().stream()
+        conjunctions.stream()
             .flatMap(conjunction -> conjunction.getConditions().stream())
             .filter(
                 condition ->
@@ -483,8 +485,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
             .findFirst();
     if (conditionalExpression.isPresent()) {
       throw new UnsupportedOperationException(
-          CoreError.JDBC_ORACLE_CROSS_PARTITION_SCAN_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED
-              .buildMessage(conditionalExpression.get()));
+          CoreError.JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage(
+              conditionalExpression.get()));
     }
   }
 
