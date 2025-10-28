@@ -426,34 +426,32 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void grantRoleToRole(String roleName, String memberRole, boolean withAdminOption)
+  public void grantRoleToRole(String roleName, String memberRoleName, boolean withAdminOption)
       throws ExecutionException {
-    distributedTransactionAdmin.grantRoleToRole(roleName, memberRole, withAdminOption);
+    distributedTransactionAdmin.grantRoleToRole(roleName, memberRoleName, withAdminOption);
   }
 
   @Override
-  public void revokeRoleFromRole(String roleName, String memberRole) throws ExecutionException {
-    distributedTransactionAdmin.revokeRoleFromRole(roleName, memberRole);
+  public void revokeRoleFromRole(String roleName, String memberRoleName) throws ExecutionException {
+    distributedTransactionAdmin.revokeRoleFromRole(roleName, memberRoleName);
   }
 
   @Override
-  public void revokeAdminOptionFromRole(String roleName, String memberRole)
+  public void revokeAdminOptionFromRole(String roleName, String memberRoleName)
       throws ExecutionException {
-    distributedTransactionAdmin.revokeAdminOptionFromRole(roleName, memberRole);
+    distributedTransactionAdmin.revokeAdminOptionFromRole(roleName, memberRoleName);
   }
 
   @Override
-  public Set<Privilege> getRolePrivileges(String username, String roleName, String namespaceName)
+  public Set<Privilege> getRolePrivileges(String roleName, String namespaceName)
       throws ExecutionException {
-    return distributedTransactionAdmin.getRolePrivileges(username, roleName, namespaceName);
+    return distributedTransactionAdmin.getRolePrivileges(roleName, namespaceName);
   }
 
   @Override
-  public Set<Privilege> getRolePrivileges(
-      String username, String roleName, String namespaceName, String tableName)
+  public Set<Privilege> getRolePrivileges(String roleName, String namespaceName, String tableName)
       throws ExecutionException {
-    return distributedTransactionAdmin.getRolePrivileges(
-        username, roleName, namespaceName, tableName);
+    return distributedTransactionAdmin.getRolePrivileges(roleName, namespaceName, tableName);
   }
 
   @Override

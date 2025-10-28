@@ -272,12 +272,12 @@ public interface AuthAdmin {
    * Grants a role to another role.
    *
    * @param roleName the role name
-   * @param memberRole the member role name
+   * @param memberRoleName the member role name
    * @param withAdminOption if true, the member role can grant the role to other roles
    * @throws IllegalArgumentException if the role does not exist or the member role does not exist
    * @throws ExecutionException if the operation fails
    */
-  default void grantRoleToRole(String roleName, String memberRole, boolean withAdminOption)
+  default void grantRoleToRole(String roleName, String memberRoleName, boolean withAdminOption)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
@@ -286,11 +286,12 @@ public interface AuthAdmin {
    * Revokes a role from another role.
    *
    * @param roleName the role name
-   * @param memberRole the member role name
+   * @param memberRoleName the member role name
    * @throws IllegalArgumentException if the role does not exist or the member role does not exist
    * @throws ExecutionException if the operation fails
    */
-  default void revokeRoleFromRole(String roleName, String memberRole) throws ExecutionException {
+  default void revokeRoleFromRole(String roleName, String memberRoleName)
+      throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
@@ -298,41 +299,38 @@ public interface AuthAdmin {
    * Revokes admin option from a role for another role.
    *
    * @param roleName the role name
-   * @param memberRole the member role name
+   * @param memberRoleName the member role name
    * @throws IllegalArgumentException if the role does not exist or the member role does not exist
    * @throws ExecutionException if the operation fails
    */
-  default void revokeAdminOptionFromRole(String roleName, String memberRole)
+  default void revokeAdminOptionFromRole(String roleName, String memberRoleName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Retrieves privileges for the given username, role and namespace.
+   * Retrieves privileges for the given role and namespace.
    *
-   * @param username the username
    * @param roleName the role name
    * @param namespaceName the namespace name
    * @return a set of privileges for the given role and namespace
    * @throws ExecutionException if the operation fails
    */
-  default Set<Privilege> getRolePrivileges(String username, String roleName, String namespaceName)
+  default Set<Privilege> getRolePrivileges(String roleName, String namespaceName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Retrieves privileges for the given username, role, namespace, and table.
+   * Retrieves privileges for the given role, namespace, and table.
    *
-   * @param username the username
    * @param roleName the role name
    * @param namespaceName the namespace name
    * @param tableName the table name
    * @return a set of privileges for the given role, namespace, and table
    * @throws ExecutionException if the operation fails
    */
-  default Set<Privilege> getRolePrivileges(
-      String username, String roleName, String namespaceName, String tableName)
+  default Set<Privilege> getRolePrivileges(String roleName, String namespaceName, String tableName)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
