@@ -1,5 +1,6 @@
 package com.scalar.db.exception.transaction;
 
+import com.scalar.db.api.AuthAdmin;
 import javax.annotation.Nullable;
 
 /**
@@ -28,5 +29,32 @@ public class CommitException extends TransactionException {
       @Nullable String transactionId,
       boolean authenticationError) {
     super(message, cause, transactionId, authenticationError, false, false, null);
+  }
+
+  public CommitException(
+      String message,
+      @Nullable String transactionId,
+      boolean authenticationError,
+      boolean authorizationError,
+      @Nullable AuthAdmin.Privilege requiredPrivileges) {
+    super(
+        message, transactionId, authenticationError, authorizationError, false, requiredPrivileges);
+  }
+
+  public CommitException(
+      String message,
+      Throwable cause,
+      @Nullable String transactionId,
+      boolean authenticationError,
+      boolean authorizationError,
+      @Nullable AuthAdmin.Privilege requiredPrivileges) {
+    super(
+        message,
+        cause,
+        transactionId,
+        authenticationError,
+        authorizationError,
+        false,
+        requiredPrivileges);
   }
 }

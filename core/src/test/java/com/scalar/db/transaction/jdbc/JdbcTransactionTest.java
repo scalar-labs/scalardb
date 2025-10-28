@@ -10,7 +10,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
@@ -31,7 +33,9 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -879,5 +883,214 @@ public class JdbcTransactionTest {
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update)).isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void mutate_MutationsGiven_ShouldCallJdbcServiceProperly()
+      throws CrudException, ExecutionException, SQLException {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    Put expectedPutFromInsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    Put expectedPutFromUpsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Put expectedPutFromUpdate =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+
+    when(jdbcService.put(put, connection)).thenReturn(true);
+    when(jdbcService.put(expectedPutFromInsert, connection)).thenReturn(true);
+    when(jdbcService.put(expectedPutFromUpsert, connection)).thenReturn(true);
+    when(jdbcService.put(expectedPutFromUpdate, connection)).thenReturn(true);
+    when(jdbcService.delete(delete, connection)).thenReturn(true);
+
+    // Act
+    transaction.mutate(Arrays.asList(put, insert, upsert, update, delete));
+
+    // Assert
+    verify(jdbcService).put(put, connection);
+    verify(jdbcService).put(expectedPutFromInsert, connection);
+    verify(jdbcService).put(expectedPutFromUpsert, connection);
+    verify(jdbcService).put(expectedPutFromUpdate, connection);
+    verify(jdbcService).delete(delete, connection);
+  }
+
+  @Test
+  public void mutate_EmptyMutationsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.mutate(Collections.emptyList()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void batch_OperationsGiven_ShouldCallJdbcServiceProperly()
+      throws CrudException, ExecutionException, SQLException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .build();
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    Result result3 = mock(Result.class);
+
+    Put expectedPutFromInsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    Put expectedPutFromUpsert =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Put expectedPutFromUpdate =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4))
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+
+    when(jdbcService.get(get, connection)).thenReturn(Optional.of(result1));
+    when(jdbcService.scan(scan, connection)).thenReturn(Arrays.asList(result2, result3));
+    when(jdbcService.put(put, connection)).thenReturn(true);
+    when(jdbcService.put(expectedPutFromInsert, connection)).thenReturn(true);
+    when(jdbcService.put(expectedPutFromUpsert, connection)).thenReturn(true);
+    when(jdbcService.put(expectedPutFromUpdate, connection)).thenReturn(true);
+    when(jdbcService.delete(delete, connection)).thenReturn(true);
+
+    // Act
+    List<CrudOperable.BatchResult> results =
+        transaction.batch(Arrays.asList(get, scan, put, insert, upsert, update, delete));
+
+    // Assert
+    verify(jdbcService).get(get, connection);
+    verify(jdbcService).scan(scan, connection);
+    verify(jdbcService).put(put, connection);
+    verify(jdbcService).put(expectedPutFromInsert, connection);
+    verify(jdbcService).put(expectedPutFromUpsert, connection);
+    verify(jdbcService).put(expectedPutFromUpdate, connection);
+    verify(jdbcService).delete(delete, connection);
+    assertThat(results).hasSize(7);
+    assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+    assertThat(results.get(0).getGetResult()).hasValue(result1);
+    assertThat(results.get(1).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+    assertThat(results.get(1).getScanResult()).containsExactly(result2, result3);
+    assertThat(results.get(2).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+    assertThat(results.get(3).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+    assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+    assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+    assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+  }
+
+  @Test
+  public void batch_EmptyOperationsGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.batch(Collections.emptyList()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
