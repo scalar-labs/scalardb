@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_TABLE = "metadata";
   public static final String NAMESPACES_TABLE = "namespaces";
-  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
+  @VisibleForTesting public static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
   @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
   @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
   @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
@@ -483,8 +483,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       Set<String> remainingTables = getNamespaceTableNamesInternal(connection, namespace);
       if (!remainingTables.isEmpty()) {
-        throw new IllegalStateException(
-            CoreError.NAMESPACE_NOT_EMPTY.buildMessage(namespace, remainingTables));
+        throw new IllegalArgumentException(
+            CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
+                namespace, remainingTables));
       }
       execute(connection, rdbEngine.dropNamespaceSql(namespace));
       deleteFromNamespacesTable(connection, namespace);

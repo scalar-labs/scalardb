@@ -172,6 +172,20 @@ public class DynamoAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteMetadata(String namespace, String table) {
+    String fullTableName =
+        getFullTableName(Namespace.of(namespacePrefix, namespace).prefixed(), table);
+    Map<String, AttributeValue> keyToDelete = new HashMap<>();
+    keyToDelete.put("table", AttributeValue.builder().s(fullTableName).build());
+
+    client.deleteItem(
+        DeleteItemRequest.builder()
+            .tableName(getFullTableName(metadataNamespace, DynamoAdmin.METADATA_TABLE))
+            .key(keyToDelete)
+            .build());
+  }
+
+  @Override
   public void dropTable(String nonPrefixedNamespace, String table) {
     String namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace).prefixed();
     client.deleteTable(

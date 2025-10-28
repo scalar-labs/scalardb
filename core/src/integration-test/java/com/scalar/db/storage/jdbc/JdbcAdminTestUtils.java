@@ -64,6 +64,19 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     execute(insertCorruptedMetadataStatement);
   }
 
+  @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    String deleteMetadataStatement =
+        "DELETE FROM "
+            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE)
+            + " WHERE "
+            + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
+            + " = '"
+            + getFullTableName(namespace, table)
+            + "'";
+    execute(deleteMetadataStatement);
+  }
+
   private void execute(String sql) throws SQLException {
     try (Connection connection = dataSource.getConnection()) {
       JdbcAdmin.execute(connection, sql);
