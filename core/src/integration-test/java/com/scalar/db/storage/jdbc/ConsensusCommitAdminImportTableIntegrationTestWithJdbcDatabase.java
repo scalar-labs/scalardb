@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminImportTableIntegrationTestBase;
+import com.scalar.db.util.AdminTestUtils;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
@@ -53,6 +54,11 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     testUtils.dropTable(getNamespace(), table);
   }
 
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new JdbcAdminTestUtils(getProperties(testName));
+  }
+
   @SuppressWarnings("unused")
   private boolean isSqlite() {
     return JdbcEnv.isSqlite();
@@ -72,4 +78,9 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
       throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();
   }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void dropNamespace_ShouldNotDropNonScalarDBTables() {}
 }

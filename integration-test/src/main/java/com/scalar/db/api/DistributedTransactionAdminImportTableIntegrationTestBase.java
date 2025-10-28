@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
@@ -9,6 +10,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -104,6 +106,8 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
 
   protected abstract void dropNonImportableTable(String table) throws Exception;
 
+  protected abstract AdminTestUtils getAdminTestUtils(String testName);
+
   @Test
   public void importTable_ShouldWorkProperly() throws Exception {
     // Arrange
@@ -132,6 +136,43 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
     assertThatThrownBy(
             () -> admin.importTable(getNamespace(), "unsupported_db", Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void dropNamespace_ShouldNotDropNonScalarDBTables() throws Exception {
+    AdminTestUtils adminTestUtils = getAdminTestUtils(TEST_NAME);
+    try {
+      // Arrange
+      testDataList.addAll(createExistingDatabaseWithAllDataTypes());
+      for (TestData testData : testDataList) {
+        if (testData.isImportableTable()) {
+          admin.importTable(
+              getNamespace(),
+              testData.getTableName(),
+              Collections.emptyMap(),
+              testData.getOverrideColumnsType());
+        }
+      }
+      for (TestData testData : testDataList) {
+        if (testData.isImportableTable()) {
+          admin.dropTable(getNamespace(), testData.getTableName());
+        }
+      }
+
+      // Act
+      assertThatCode(() -> admin.dropNamespace(getNamespace()))
+          .isInstanceOf(IllegalStateException.class);
+
+      // Assert
+      assertThat(admin.namespaceExists(getNamespace())).isTrue();
+      for (TestData testData : testDataList) {
+        if (!testData.isImportableTable()) {
+          adminTestUtils.tableExists(getNamespace(), testData.getTableName());
+        }
+      }
+    } finally {
+      adminTestUtils.close();
+    }
   }
 
   private void importTable_ForImportableTable_ShouldImportProperly(
