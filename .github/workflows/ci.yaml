@@ -1902,6 +1902,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -1976,6 +1977,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
@@ -2050,6 +2052,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         mode:
           - label: default
