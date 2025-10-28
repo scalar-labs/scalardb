@@ -506,7 +506,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .namespace(namespace)
             .table(TABLE)
             .indexKey(Key.ofInt(SOME_COLUMN, 2))
-            .consistency(Consistency.LINEARIZABLE)
             .build();
 
     Get getBuiltByBuilder =
@@ -544,7 +543,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .namespace(namespace)
             .table(TABLE)
             .indexKey(Key.ofInt(SOME_COLUMN, 2))
-            .consistency(Consistency.LINEARIZABLE)
             .build();
 
     Scan scanBuiltByBuilder =
@@ -1019,6 +1017,108 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void batch_ShouldBatchProperly() throws TransactionException {
+    // Arrange
+    populateRecords();
+    Get get = prepareGet(0, 0);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .build();
+    Put put = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 200).build();
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 300)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, 250)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 150)
+            .build();
+    Delete delete = prepareDelete(0, 1);
+
+    // Act
+    DistributedTransaction tx = manager.start();
+    List<CrudOperable.BatchResult> results =
+        tx.batch(Arrays.asList(get, scan, put, insert, upsert, update, delete));
+    tx.commit();
+
+    // Assert
+    assertThat(results).hasSize(7);
+
+    // Verify get
+    assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+    Optional<Result> getResult = results.get(0).getGetResult();
+    assertThat(getResult).isPresent();
+    assertThat(getResult.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(getResult.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(getResult.get())).isEqualTo(INITIAL_BALANCE);
+
+    // Verify scan
+    assertThat(results.get(1).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+    List<Result> scanResult = results.get(1).getScanResult();
+    assertThat(scanResult).hasSize(NUM_TYPES);
+    assertThat(scanResult.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(scanResult.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(scanResult.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(scanResult.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(scanResult.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(scanResult.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(scanResult.get(3).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(scanResult.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    // Verify put
+    assertThat(results.get(2).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+    Optional<Result> putResult = get(prepareGet(0, 0));
+    assertThat(putResult).isPresent();
+    assertThat(getBalance(putResult.get())).isEqualTo(200);
+
+    // Verify insert
+    assertThat(results.get(3).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+    Optional<Result> insertResult = get(prepareGet(4, 0));
+    assertThat(insertResult).isPresent();
+    assertThat(getBalance(insertResult.get())).isEqualTo(300);
+
+    // Verify upsert
+    assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+    Optional<Result> upsertResult = get(prepareGet(2, 1));
+    assertThat(upsertResult).isPresent();
+    assertThat(getBalance(upsertResult.get())).isEqualTo(250);
+
+    // Verify update
+    assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+    Optional<Result> updateResult = get(prepareGet(1, 0));
+    assertThat(updateResult).isPresent();
+    assertThat(getBalance(updateResult.get())).isEqualTo(150);
+
+    // Verify delete
+    assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+    Optional<Result> deleteResult = get(prepareGet(0, 1));
+    assertThat(deleteResult).isEmpty();
+  }
+
+  @Test
   public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
       throws TransactionException {
     // Arrange
@@ -1465,6 +1565,121 @@ public abstract class DistributedTransactionIntegrationTestBase {
                 tx.commit();
               })
           .doesNotThrowAnyException();
+    }
+  }
+
+  @Test
+  public void batch_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
+      Get get =
+          Get.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE).partitionKey(Key.ofInt(ACCOUNT_ID, 1)).build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 200)
+              .build();
+      Insert insert =
+          Insert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Upsert upsert =
+          Upsert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .intValue(BALANCE, 250)
+              .build();
+      Update update =
+          Update.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 150)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act
+      DistributedTransaction tx = managerWithDefaultNamespace.start();
+      List<CrudOperable.BatchResult> results =
+          tx.batch(Arrays.asList(get, scan, put, insert, upsert, update, delete));
+      tx.commit();
+
+      // Assert
+      assertThat(results).hasSize(7);
+
+      // Verify get
+      assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+      Optional<Result> getResult = results.get(0).getGetResult();
+      assertThat(getResult).isPresent();
+      assertThat(getResult.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(getResult.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(getBalance(getResult.get())).isEqualTo(INITIAL_BALANCE);
+
+      // Verify scan
+      assertThat(results.get(1).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+      List<Result> scanResult = results.get(1).getScanResult();
+      assertThat(scanResult).hasSize(NUM_TYPES);
+      assertThat(scanResult.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(scanResult.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(scanResult.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(scanResult.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(scanResult.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(scanResult.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(scanResult.get(3).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(scanResult.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      // Verify put
+      assertThat(results.get(2).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+      Optional<Result> putResult = get(prepareGet(0, 0));
+      assertThat(putResult).isPresent();
+      assertThat(getBalance(putResult.get())).isEqualTo(200);
+
+      // Verify insert
+      assertThat(results.get(3).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+      Optional<Result> insertResult = get(prepareGet(4, 0));
+      assertThat(insertResult).isPresent();
+      assertThat(getBalance(insertResult.get())).isEqualTo(300);
+
+      // Verify upsert
+      assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+      Optional<Result> upsertResult = get(prepareGet(2, 1));
+      assertThat(upsertResult).isPresent();
+      assertThat(getBalance(upsertResult.get())).isEqualTo(250);
+
+      // Verify update
+      assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+      Optional<Result> updateResult = get(prepareGet(1, 0));
+      assertThat(updateResult).isPresent();
+      assertThat(getBalance(updateResult.get())).isEqualTo(150);
+
+      // Verify delete
+      assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+      Optional<Result> deleteResult = get(prepareGet(0, 1));
+      assertThat(deleteResult).isEmpty();
     }
   }
 
@@ -2071,6 +2286,114 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void getAndUpdate_ShouldGetAndUpdateCorrectly() throws TransactionException {
+    // Arrange
+    populateRecords();
+    int amount = 100;
+
+    // Act Assert
+    DistributedTransaction transaction = manager.begin();
+
+    Get get1 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .build();
+
+    List<CrudOperable.BatchResult> batchResults = transaction.batch(Arrays.asList(get1, get2));
+    assertThat(batchResults).hasSize(2);
+    Optional<Result> result1 = batchResults.get(0).getGetResult();
+    assertThat(result1).isPresent();
+    Optional<Result> result2 = batchResults.get(1).getGetResult();
+    assertThat(result2).isPresent();
+
+    Update update1 =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, getBalance(result1.get()) - amount)
+            .build();
+    Update update2 =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, getBalance(result2.get()) + amount)
+            .build();
+
+    transaction.mutate(Arrays.asList(update1, update2));
+
+    Get get3 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .build();
+    Get get4 =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .build();
+
+    batchResults = transaction.batch(Arrays.asList(get3, get4));
+    assertThat(batchResults).hasSize(2);
+    Optional<Result> result3 = batchResults.get(0).getGetResult();
+    assertThat(result3).isPresent();
+    Optional<Result> result4 = batchResults.get(1).getGetResult();
+    assertThat(result4).isPresent();
+
+    Update update3 =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, getBalance(result3.get()) - amount)
+            .build();
+    Update update4 =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, getBalance(result4.get()) + amount)
+            .build();
+
+    transaction.mutate(Arrays.asList(update3, update4));
+
+    transaction.commit();
+
+    // Assert
+    Optional<Result> finalResult1 = manager.get(get1);
+    assertThat(finalResult1).isPresent();
+    assertThat(getBalance(finalResult1.get())).isEqualTo(INITIAL_BALANCE - amount);
+    Optional<Result> finalResult2 = manager.get(get2);
+    assertThat(finalResult2).isPresent();
+    assertThat(getBalance(finalResult2.get())).isEqualTo(INITIAL_BALANCE + amount);
+    Optional<Result> finalResult3 = manager.get(get3);
+    assertThat(finalResult3).isPresent();
+    assertThat(getBalance(finalResult3.get())).isEqualTo(INITIAL_BALANCE - amount);
+    Optional<Result> finalResult4 = manager.get(get4);
+    assertThat(finalResult4).isPresent();
+    assertThat(getBalance(finalResult4.get())).isEqualTo(INITIAL_BALANCE + amount);
+  }
+
+  @Test
   public void manager_get_GetGivenForCommittedRecord_ShouldReturnRecord()
       throws TransactionException {
     // Arrange
@@ -2403,6 +2726,106 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void manager_batch_ShouldBatchProperly() throws TransactionException {
+    // Arrange
+    populateRecords();
+    Get get = prepareGet(0, 0);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .build();
+    Put put = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 200).build();
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 300)
+            .build();
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, 250)
+            .build();
+    Update update =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 150)
+            .build();
+    Delete delete = prepareDelete(0, 1);
+
+    // Act
+    List<CrudOperable.BatchResult> results =
+        manager.batch(Arrays.asList(get, scan, put, insert, upsert, update, delete));
+
+    // Assert
+    assertThat(results).hasSize(7);
+
+    // Verify get
+    assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+    Optional<Result> getResult = results.get(0).getGetResult();
+    assertThat(getResult).isPresent();
+    assertThat(getResult.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(getResult.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(getBalance(getResult.get())).isEqualTo(INITIAL_BALANCE);
+
+    // Verify scan
+    assertThat(results.get(1).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+    List<Result> scanResult = results.get(1).getScanResult();
+    assertThat(scanResult).hasSize(NUM_TYPES);
+    assertThat(scanResult.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(scanResult.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(scanResult.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(scanResult.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(scanResult.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(scanResult.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(scanResult.get(3).getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(scanResult.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+    assertThat(scanResult.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    // Verify put
+    assertThat(results.get(2).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+    Optional<Result> putResult = get(prepareGet(0, 0));
+    assertThat(putResult).isPresent();
+    assertThat(getBalance(putResult.get())).isEqualTo(200);
+
+    // Verify insert
+    assertThat(results.get(3).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+    Optional<Result> insertResult = get(prepareGet(4, 0));
+    assertThat(insertResult).isPresent();
+    assertThat(getBalance(insertResult.get())).isEqualTo(300);
+
+    // Verify upsert
+    assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+    Optional<Result> upsertResult = get(prepareGet(2, 1));
+    assertThat(upsertResult).isPresent();
+    assertThat(getBalance(upsertResult.get())).isEqualTo(250);
+
+    // Verify update
+    assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+    Optional<Result> updateResult = get(prepareGet(1, 0));
+    assertThat(updateResult).isPresent();
+    assertThat(getBalance(updateResult.get())).isEqualTo(150);
+
+    // Verify delete
+    assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+    Optional<Result> deleteResult = get(prepareGet(0, 1));
+    assertThat(deleteResult).isEmpty();
+  }
+
+  @Test
   public void manager_get_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
@@ -2610,6 +3033,120 @@ public abstract class DistributedTransactionIntegrationTestBase {
     }
   }
 
+  @Test
+  public void manager_batch_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
+    Properties properties = getProperties(getTestName());
+    properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
+    try (DistributedTransactionManager managerWithDefaultNamespace =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Arrange
+      populateRecords();
+      Get get =
+          Get.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .build();
+      Scan scan = Scan.newBuilder().table(TABLE).partitionKey(Key.ofInt(ACCOUNT_ID, 1)).build();
+      Put put =
+          Put.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 200)
+              .build();
+      Insert insert =
+          Insert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 300)
+              .build();
+      Upsert upsert =
+          Upsert.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .intValue(BALANCE, 250)
+              .build();
+      Update update =
+          Update.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+              .intValue(BALANCE, 150)
+              .build();
+      Delete delete =
+          Delete.newBuilder()
+              .table(TABLE)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+              .build();
+
+      // Act
+      List<CrudOperable.BatchResult> results =
+          managerWithDefaultNamespace.batch(
+              Arrays.asList(get, scan, put, insert, upsert, update, delete));
+
+      // Assert
+      assertThat(results).hasSize(7);
+
+      // Verify get
+      assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+      Optional<Result> getResult = results.get(0).getGetResult();
+      assertThat(getResult).isPresent();
+      assertThat(getResult.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(getResult.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(getBalance(getResult.get())).isEqualTo(INITIAL_BALANCE);
+
+      // Verify scan
+      assertThat(results.get(1).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+      List<Result> scanResult = results.get(1).getScanResult();
+      assertThat(scanResult).hasSize(NUM_TYPES);
+      assertThat(scanResult.get(0).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(scanResult.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(scanResult.get(1).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+      assertThat(scanResult.get(1).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(scanResult.get(2).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+      assertThat(scanResult.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      assertThat(scanResult.get(3).getInt(ACCOUNT_ID)).isEqualTo(1);
+      assertThat(scanResult.get(3).getInt(ACCOUNT_TYPE)).isEqualTo(3);
+      assertThat(scanResult.get(3).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      // Verify put
+      assertThat(results.get(2).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+      Optional<Result> putResult = get(prepareGet(0, 0));
+      assertThat(putResult).isPresent();
+      assertThat(getBalance(putResult.get())).isEqualTo(200);
+
+      // Verify insert
+      assertThat(results.get(3).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+      Optional<Result> insertResult = get(prepareGet(4, 0));
+      assertThat(insertResult).isPresent();
+      assertThat(getBalance(insertResult.get())).isEqualTo(300);
+
+      // Verify upsert
+      assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+      Optional<Result> upsertResult = get(prepareGet(2, 1));
+      assertThat(upsertResult).isPresent();
+      assertThat(getBalance(upsertResult.get())).isEqualTo(250);
+
+      // Verify update
+      assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+      Optional<Result> updateResult = get(prepareGet(1, 0));
+      assertThat(updateResult).isPresent();
+      assertThat(getBalance(updateResult.get())).isEqualTo(150);
+
+      // Verify delete
+      assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+      Optional<Result> deleteResult = get(prepareGet(0, 1));
+      assertThat(deleteResult).isEmpty();
+    }
+  }
+
   protected Optional<Result> get(Get get) throws TransactionException {
     DistributedTransaction tx = manager.start();
     try {
@@ -2702,7 +3239,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .table(TABLE)
         .partitionKey(partitionKey)
         .clusteringKey(clusteringKey)
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
@@ -2719,19 +3255,13 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .namespace(namespace)
         .table(TABLE)
         .partitionKey(partitionKey)
-        .consistency(Consistency.LINEARIZABLE)
         .start(Key.ofInt(ACCOUNT_TYPE, fromType))
         .end(Key.ofInt(ACCOUNT_TYPE, toType))
         .build();
   }
 
   protected Scan prepareScanAll() {
-    return Scan.newBuilder()
-        .namespace(namespace)
-        .table(TABLE)
-        .all()
-        .consistency(Consistency.LINEARIZABLE)
-        .build();
+    return Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
   }
 
   protected Put preparePut(int id, int type) {
@@ -2742,7 +3272,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .table(TABLE)
         .partitionKey(partitionKey)
         .clusteringKey(clusteringKey)
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
@@ -2776,7 +3305,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
         .table(TABLE)
         .partitionKey(partitionKey)
         .clusteringKey(clusteringKey)
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
