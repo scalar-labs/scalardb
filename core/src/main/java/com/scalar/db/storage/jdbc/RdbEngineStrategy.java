@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -14,6 +15,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -25,6 +27,7 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -219,6 +222,11 @@ public interface RdbEngineStrategy {
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
   }
 
+  default void bindBlobColumnToPreparedStatement(
+      PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
+    preparedStatement.setBytes(index, bytes);
+  }
+
   default DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
     return DateColumn.of(columnName, resultSet.getObject(columnName, LocalDate.class));
   }
@@ -305,4 +313,16 @@ public interface RdbEngineStrategy {
    */
   default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
       ScanAll scanAll, TableMetadata metadata) {}
+
+  /**
+   * Throws an exception if one of the conjunctions column is not supported in the underlying
+   * storage.
+   *
+   * @param conjunctions a set of conjunction
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if one of the conjunctions column is not supported in the
+   *     underlying storage
+   */
+  default void throwIfConjunctionsColumnNotSupported(
+      Set<Conjunction> conjunctions, TableMetadata metadata) {}
 }

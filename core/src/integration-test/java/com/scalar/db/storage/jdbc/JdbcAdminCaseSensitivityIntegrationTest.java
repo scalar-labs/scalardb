@@ -611,6 +611,6 @@ public class JdbcAdminCaseSensitivityIntegrationTest
 
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
-    return !JdbcTestUtils.isDb2(rdbEngine);
+    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
   }
 }
