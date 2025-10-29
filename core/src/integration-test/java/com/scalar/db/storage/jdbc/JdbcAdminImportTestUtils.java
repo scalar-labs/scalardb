@@ -897,7 +897,8 @@ public class JdbcAdminImportTestUtils {
   }
 
   boolean isTidb() {
-    try (Connection connection = dataSource.getConnection()) {
+    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+        Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("TiDB");
     } catch (SQLException e) {
