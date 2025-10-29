@@ -819,9 +819,15 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
   BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
       Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
-  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
       Category.USER_ERROR,
       "0245",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
+  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+      Category.USER_ERROR,
+      "0246",
       "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
       "",
       ""),
