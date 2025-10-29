@@ -399,7 +399,7 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public List<RoleDetail> getRolesForUser(String username) throws ExecutionException {
+  public List<UserRoleDetail> getRolesForUser(String username) throws ExecutionException {
     return distributedTransactionAdmin.getRolesForUser(username);
   }
 

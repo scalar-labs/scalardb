@@ -214,7 +214,7 @@ public interface AuthAdmin {
    * @return a list of {@link RoleDetail}s for the given user
    * @throws ExecutionException if the operation fails
    */
-  default List<RoleDetail> getRolesForUser(String username) throws ExecutionException {
+  default List<UserRoleDetail> getRolesForUser(String username) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
@@ -410,6 +410,10 @@ public interface AuthAdmin {
     Role getRole();
 
     List<RoleHierarchy> getRoleHierarchies();
+  }
+
+  interface UserRoleDetail extends RoleDetail {
+    boolean hasAdminOptionOnUser();
   }
 
   /** Represents a user-role assignment */
