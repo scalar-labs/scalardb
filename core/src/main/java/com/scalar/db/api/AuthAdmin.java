@@ -406,6 +406,7 @@ public interface AuthAdmin {
     String getName();
   }
 
+  /** Represents a role with its hierarchy information. */
   interface RoleDetail {
     Role getRole();
 
