@@ -819,21 +819,27 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
   BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
       Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
-  JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
       Category.USER_ERROR,
       "0245",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0246",
       "With Oracle, using a BLOB column as partition key, clustering key or secondary index is not supported.",
       "",
       ""),
   JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0246",
+      "0247",
       "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
       "",
       ""),
   JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0247",
+      "0248",
       "With Oracle, setting a condition on a BLOB column when using a selection operation is not supported. Condition: %s",
       "",
       ""),
@@ -1143,6 +1149,8 @@ public enum CoreError implements ScalarDbError {
       "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category
