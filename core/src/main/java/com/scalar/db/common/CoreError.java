@@ -1137,6 +1137,8 @@ public enum CoreError implements ScalarDbError {
       "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category
