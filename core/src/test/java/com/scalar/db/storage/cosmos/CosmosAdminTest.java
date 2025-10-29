@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
@@ -663,6 +664,33 @@ public class CosmosAdminTest {
     verify(namespacesContainer)
         .deleteItem(eq(new CosmosNamespace(namespace)), refEq(new CosmosItemRequestOptions()));
     verify(metadataDatabase, never()).delete();
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeft_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String namespace = "ns";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosContainerProperties> containerPagedIterable =
+        mock(CosmosPagedIterable.class);
+    when(containerPagedIterable.stream())
+        .thenReturn(Stream.of(mock(CosmosContainerProperties.class)));
+    when(database.readAllContainers()).thenReturn(containerPagedIterable);
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
+    when(namespacesContainer.queryItems(anyString(), any(), any())).thenReturn(pagedIterable);
+    when(pagedIterable.stream()).thenReturn(Stream.empty());
+
+    // Act Assert
+    assertThatCode(() -> admin.dropNamespace(namespace))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

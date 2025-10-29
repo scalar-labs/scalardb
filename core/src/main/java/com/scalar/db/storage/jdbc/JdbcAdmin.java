@@ -481,7 +481,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      Set<String> remainingTables = getNamespaceTableNamesInternal(connection, namespace);
+      Set<String> remainingTables = getInternalTableNames(connection, namespace);
       if (!remainingTables.isEmpty()) {
         throw new IllegalArgumentException(
             CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
@@ -709,7 +709,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private Set<String> getNamespaceTableNamesInternal(Connection connection, String namespace)
+  private Set<String> getInternalTableNames(Connection connection, String namespace)
       throws SQLException {
     String sql = rdbEngine.getTableNamesInNamespaceSql();
     if (Strings.isNullOrEmpty(sql)) {
