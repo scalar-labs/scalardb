@@ -85,7 +85,7 @@ public class JdbcOperationCheckerTest {
     operationChecker.checkConjunctions(selection, tableMetadata);
 
     // Assert
-    verify(rdbEngine).throwIfConjunctionsOnBlobColumnNotSupported(conjunctions, tableMetadata);
+    verify(rdbEngine).throwIfConjunctionsColumnNotSupported(conjunctions, tableMetadata);
   }
 
   @Test
@@ -94,7 +94,7 @@ public class JdbcOperationCheckerTest {
     Exception exception = new RuntimeException();
     doThrow(exception)
         .when(rdbEngine)
-        .throwIfConjunctionsOnBlobColumnNotSupported(any(), any(TableMetadata.class));
+        .throwIfConjunctionsColumnNotSupported(any(), any(TableMetadata.class));
     Set<Conjunction> conjunctions = Collections.emptySet();
     when(selection.getConjunctions()).thenReturn(conjunctions);
 
@@ -104,6 +104,6 @@ public class JdbcOperationCheckerTest {
         .isEqualTo(exception);
 
     // Assert
-    verify(rdbEngine).throwIfConjunctionsOnBlobColumnNotSupported(conjunctions, tableMetadata);
+    verify(rdbEngine).throwIfConjunctionsColumnNotSupported(conjunctions, tableMetadata);
   }
 }

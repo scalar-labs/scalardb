@@ -153,8 +153,7 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void
-      throwIfConjunctionsOnBlobColumnNotSupported_WithoutBlobCondition_ShouldNotThrowException() {
+  public void throwIfConjunctionsColumnNotSupported_WithoutBlobCondition_ShouldNotThrowException() {
     // Arrange
     TableMetadata metadata = mock(TableMetadata.class);
     java.util.Set<Conjunction> conjunctions =
@@ -168,28 +167,26 @@ class RdbEngineOracleTest {
 
     // Act & Assert
     assertThatCode(
-            () ->
-                rdbEngineOracle.throwIfConjunctionsOnBlobColumnNotSupported(conjunctions, metadata))
+            () -> rdbEngineOracle.throwIfConjunctionsColumnNotSupported(conjunctions, metadata))
         .doesNotThrowAnyException();
   }
 
   @Test
-  public void
-      throwIfConjunctionsOnBlobColumnNotSupported_WithNoConditions_ShouldNotThrowException() {
+  public void throwIfConjunctionsColumnNotSupported_WithNoConditions_ShouldNotThrowException() {
     // Arrange
     TableMetadata metadata = mock(TableMetadata.class);
 
     // Act & Assert
     assertThatCode(
             () ->
-                rdbEngineOracle.throwIfConjunctionsOnBlobColumnNotSupported(
+                rdbEngineOracle.throwIfConjunctionsColumnNotSupported(
                     java.util.Collections.emptySet(), metadata))
         .doesNotThrowAnyException();
   }
 
   @Test
   public void
-      throwIfConjunctionsOnBlobColumnNotSupported_WithMixedConditions_ShouldThrowWhenBlobPresent() {
+      throwIfConjunctionsColumnNotSupported_WithMixedConditions_ShouldThrowWhenBlobPresent() {
     // Arrange
     TableMetadata metadata = mock(TableMetadata.class);
     java.util.Set<Conjunction> conjunctions =
@@ -205,8 +202,7 @@ class RdbEngineOracleTest {
 
     // Act & Assert
     assertThatThrownBy(
-            () ->
-                rdbEngineOracle.throwIfConjunctionsOnBlobColumnNotSupported(conjunctions, metadata))
+            () -> rdbEngineOracle.throwIfConjunctionsColumnNotSupported(conjunctions, metadata))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("blob_column");
   }

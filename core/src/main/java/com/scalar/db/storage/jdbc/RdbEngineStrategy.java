@@ -315,14 +315,14 @@ public interface RdbEngineStrategy {
       ScanAll scanAll, TableMetadata metadata) {}
 
   /**
-   * Throws an exception if one of the conjunction targets a blob column and is not supported in the
-   * underlying storage.
+   * Throws an exception if one of the conjunctions column is not supported in the underlying
+   * storage.
    *
    * @param conjunctions a set of conjunction
    * @param metadata the table metadata
-   * @throws UnsupportedOperationException if one of the conjunction targets a blob column, and it
-   *     is not supported in the underlying storage
+   * @throws UnsupportedOperationException if one of the conjunctions column is not supported in the
+   *     underlying storage
    */
-  default void throwIfConjunctionsOnBlobColumnNotSupported(
+  default void throwIfConjunctionsColumnNotSupported(
       Set<Conjunction> conjunctions, TableMetadata metadata) {}
 }

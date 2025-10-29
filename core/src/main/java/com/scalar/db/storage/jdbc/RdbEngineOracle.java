@@ -474,7 +474,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public void throwIfConjunctionsOnBlobColumnNotSupported(
+  public void throwIfConjunctionsColumnNotSupported(
       Set<Conjunction> conjunctions, TableMetadata metadata) {
     Optional<ConditionalExpression> conditionalExpression =
         conjunctions.stream()

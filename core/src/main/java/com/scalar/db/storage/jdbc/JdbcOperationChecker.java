@@ -31,6 +31,6 @@ public class JdbcOperationChecker extends OperationChecker {
   @Override
   protected void checkConjunctions(Selection selection, TableMetadata metadata) {
     super.checkConjunctions(selection, metadata);
-    rdbEngine.throwIfConjunctionsOnBlobColumnNotSupported(selection.getConjunctions(), metadata);
+    rdbEngine.throwIfConjunctionsColumnNotSupported(selection.getConjunctions(), metadata);
   }
 }
