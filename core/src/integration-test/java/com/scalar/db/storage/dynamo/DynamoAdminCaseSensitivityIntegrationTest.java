@@ -30,6 +30,11 @@ public class DynamoAdminCaseSensitivityIntegrationTest
   }
 
   @Override
+  @Disabled("DynamoDB does not have a concept of namespaces")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
+
+  @Override
   @Disabled("DynamoDB does not support dropping columns")
   public void dropColumnFromTable_DropColumnForEachExistingDataType_ShouldDropColumnsCorrectly() {}
 
