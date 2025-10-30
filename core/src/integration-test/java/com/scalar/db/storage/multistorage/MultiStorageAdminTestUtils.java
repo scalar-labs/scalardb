@@ -1,7 +1,9 @@
 package com.scalar.db.storage.multistorage;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
+import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.ClusterManager;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
@@ -88,6 +90,25 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    // Do nothing for Cassandra
+
+    // for JDBC
+    String deleteMetadataStatement =
+        "DELETE FROM "
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE)
+            + " WHERE "
+            + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
+            + " = ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(deleteMetadataStatement)) {
+      preparedStatement.setString(1, getFullTableName(namespace, table));
+      preparedStatement.executeUpdate();
+    }
+  }
+
+  @Override
   public boolean namespaceExists(String namespace) throws SQLException {
     boolean existsOnCassandra = namespaceExistsOnCassandra(namespace);
     boolean existsOnJdbc = namespaceExistsOnJdbc(namespace);
@@ -141,6 +162,33 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
               getFullTableName(namespace, table)));
     }
     return existsOnCassandra || existsOnJdbc;
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) throws Exception {
+    boolean existsOnCassandra = tableExistsOnCassandra(namespace, table);
+    boolean existsOnJdbc = tableExistsOnJdbc(namespace, table);
+
+    if (existsOnCassandra && existsOnJdbc) {
+      throw new IllegalStateException(
+          String.format(
+              "The %s table should not exist on both storages",
+              getFullTableName(namespace, table)));
+    } else if (!(existsOnCassandra || existsOnJdbc)) {
+      throw new IllegalStateException(
+          String.format(
+              "The %s table does not exist on both storages", getFullTableName(namespace, table)));
+    }
+
+    if (existsOnCassandra) {
+      String dropTableQuery =
+          SchemaBuilder.dropTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+              .getQueryString();
+      clusterManager.getSession().execute(dropTableQuery);
+    } else {
+      String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
+      execute(dropTableStatement);
+    }
   }
 
   private boolean tableExistsOnCassandra(String namespace, String table) {

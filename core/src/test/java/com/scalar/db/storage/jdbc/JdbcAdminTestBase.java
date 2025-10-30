@@ -10,6 +10,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -1618,15 +1619,88 @@ public abstract class JdbcAdminTestBase {
 
     Connection connection = mock(Connection.class);
     Statement dropSchemaStatement = mock(Statement.class);
+    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+    ResultSet emptyResultSet = mock(ResultSet.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(dropSchemaStatement);
+    when(connection.prepareStatement(any())).thenReturn(getTableNamesPrepStmt);
+    when(emptyResultSet.next()).thenReturn(false);
+    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
 
     // Act
     admin.dropNamespace(namespace);
 
     // Assert
     verify(dropSchemaStatement).execute(expectedDropSchemaStatement);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForMysql_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.MYSQL);
+  }
+
+  @Test
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForPostgresql_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.POSTGRESQL);
+  }
+
+  @Test
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForSqlServer_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.SQL_SERVER);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForOracle_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.ORACLE);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForSqlite_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Do nothing. SQLite does not have a concept of namespaces.
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForDb2_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.DB2);
+  }
+
+  private void dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine) throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    Statement dropNamespaceStatementMock = mock(Statement.class);
+    Statement selectNamespaceStatementMock = mock(Statement.class);
+    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+    when(connection.createStatement())
+        .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+    ResultSet emptyResultSet = mock(ResultSet.class);
+    when(emptyResultSet.next()).thenReturn(true).thenReturn(false);
+    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+    when(connection.prepareStatement(any())).thenReturn(getTableNamesPrepStmt);
+    when(dataSource.getConnection()).thenReturn(connection);
+    // Namespaces table does not contain other namespaces
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(false);
+    when(selectNamespaceStatementMock.executeQuery(anyString())).thenReturn(resultSet);
+
+    // Act Assert
+    assertThatCode(() -> admin.dropNamespace(namespace))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
