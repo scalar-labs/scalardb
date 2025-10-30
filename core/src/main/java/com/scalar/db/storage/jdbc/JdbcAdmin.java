@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 public class JdbcAdmin implements DistributedStorageAdmin {
   public static final String METADATA_TABLE = "metadata";
 
-  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
+  @VisibleForTesting public static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
   @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
   @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
   @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
@@ -379,6 +379,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      Set<String> remainingTables = getInternalTableNames(connection, namespace);
+      if (!remainingTables.isEmpty()) {
+        throw new IllegalArgumentException(
+            CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
+                namespace, remainingTables));
+      }
       execute(connection, rdbEngine.dropNamespaceSql(namespace));
     } catch (SQLException e) {
       rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
@@ -582,6 +588,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
       throw new ExecutionException("Retrieving the namespace table names failed", e);
     }
+  }
+
+  private Set<String> getInternalTableNames(Connection connection, String namespace)
+      throws SQLException {
+    String sql = rdbEngine.getTableNamesInNamespaceSql();
+    if (Strings.isNullOrEmpty(sql)) {
+      return Collections.emptySet();
+    }
+    Set<String> tableNames = new HashSet<>();
+    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, namespace);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        while (resultSet.next()) {
+          tableNames.add(resultSet.getString(1));
+        }
+      }
+    }
+    return tableNames;
   }
 
   @Override

@@ -244,4 +244,6 @@ public interface RdbEngineStrategy {
       throws SQLException {
     connection.setReadOnly(readOnly);
   }
+
+  String getTableNamesInNamespaceSql();
 }

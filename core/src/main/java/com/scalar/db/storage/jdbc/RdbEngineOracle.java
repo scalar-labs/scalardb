@@ -410,4 +410,9 @@ public class RdbEngineOracle extends AbstractRdbEngine {
       getTimeTypeStrategy() {
     return timeTypeEngine;
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
+  }
 }
