@@ -442,4 +442,9 @@ public class RdbEngineOracle extends AbstractRdbEngine {
               from.toString(), to.toString()));
     }
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
+  }
 }

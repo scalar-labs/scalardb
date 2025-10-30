@@ -303,4 +303,6 @@ public interface RdbEngineStrategy {
    */
   default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
       ScanAll scanAll, TableMetadata metadata) {}
+
+  String getTableNamesInNamespaceSql();
 }

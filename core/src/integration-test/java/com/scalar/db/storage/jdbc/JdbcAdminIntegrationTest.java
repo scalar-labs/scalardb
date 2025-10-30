@@ -17,6 +17,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -48,6 +49,11 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     return new JdbcConfig(new DatabaseConfig(properties))
         .getTableMetadataSchema()
         .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new JdbcAdminTestUtils(getProperties(testName));
   }
 
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are
@@ -159,6 +165,12 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   private boolean isWideningColumnTypeConversionNotFullySupported() {
     return JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isSqlite(rdbEngine);
   }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
 
   @Test
   @Override
