@@ -211,4 +211,6 @@ public interface RdbEngineStrategy {
   }
 
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
+
+  String getTableNamesInNamespaceSql();
 }

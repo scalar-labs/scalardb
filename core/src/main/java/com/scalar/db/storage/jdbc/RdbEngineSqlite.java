@@ -334,4 +334,10 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   public RdbEngineTimeTypeStrategy<Integer, Long, Long, Long> getTimeTypeStrategy() {
     return timeTypeEngine;
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
+    return null;
+  }
 }
