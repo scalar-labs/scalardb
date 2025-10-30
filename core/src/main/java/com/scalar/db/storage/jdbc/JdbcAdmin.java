@@ -565,8 +565,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  @Override
-  public TableMetadata getImportTableMetadata(
+  @VisibleForTesting
+  TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
@@ -1032,34 +1032,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           String.format(
               "Renaming the %s table to %s failed",
               getFullTableName(namespace, oldTableName), getFullTableName(namespace, newTableName)),
-          e);
-    }
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
-      throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
-      }
-
-      String addNewColumnStatement =
-          "ALTER TABLE "
-              + encloseFullTableName(namespace, table)
-              + " ADD "
-              + enclose(columnName)
-              + " "
-              + rdbEngine.getDataTypeForEngine(columnType);
-
-      execute(connection, addNewColumnStatement);
-    } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format(
-              "Adding the new %s column to the %s table failed",
-              columnName, getFullTableName(namespace, table)),
           e);
     }
   }
