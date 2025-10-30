@@ -57,13 +57,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   public static final String TABLE_METADATA_CONTAINER = "metadata";
   public static final String NAMESPACES_CONTAINER = "namespaces";
-  @VisibleForTesting public static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String ID = "id";
   private static final String CONCATENATED_PARTITION_KEY = "concatenatedPartitionKey";
   private static final String PARTITION_KEY_PATH = "/" + CONCATENATED_PARTITION_KEY;
   private static final String CLUSTERING_KEY_PATH_PREFIX = "/clusteringKey/";
   private static final String SECONDARY_INDEX_KEY_PATH_PREFIX = "/values/";
   private static final String EXCLUDED_PATH = "/*";
+  @VisibleForTesting public static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
       "cosmosdb_stored_procedure/" + STORED_PROCEDURE_FILE_NAME;
   private static final StorageInfo STORAGE_INFO =

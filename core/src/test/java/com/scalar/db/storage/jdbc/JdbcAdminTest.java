@@ -2188,6 +2188,12 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForSqlite_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Do nothing. SQLite does not have a concept of namespaces.
+  }
+
+  @Test
   public void dropNamespace_WithNonScalarDBTableLeftForDb2_ShouldThrowIllegalArgumentException()
       throws Exception {
     dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.DB2);
@@ -2203,19 +2209,14 @@ public class JdbcAdminTest {
     Statement dropNamespaceStatementMock = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
     Statement selectNamespaceStatementMock = mock(Statement.class);
-    if (rdbEngine != RdbEngine.SQLITE) {
-      PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
-      when(connection.createStatement())
-          .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
-      ResultSet emptyResultSet = mock(ResultSet.class);
-      when(emptyResultSet.next()).thenReturn(true).thenReturn(false);
-      when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
-      when(connection.prepareStatement(anyString()))
-          .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
-    } else {
-      when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
-      when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
-    }
+    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+    when(connection.createStatement())
+        .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+    ResultSet emptyResultSet = mock(ResultSet.class);
+    when(emptyResultSet.next()).thenReturn(true).thenReturn(false);
+    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table does not contain other namespaces
     ResultSet resultSet = mock(ResultSet.class);
