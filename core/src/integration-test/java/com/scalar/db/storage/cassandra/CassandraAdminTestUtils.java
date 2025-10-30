@@ -1,5 +1,8 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
+
+import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
@@ -29,6 +32,11 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    // Do nothing
+  }
+
+  @Override
   public boolean namespaceExists(String namespace) {
     return clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace) != null;
   }
@@ -36,6 +44,14 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
   @Override
   public boolean tableExists(String namespace, String table) {
     return clusterManager.getMetadata(namespace, table) != null;
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) {
+    String dropTableQuery =
+        SchemaBuilder.dropTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+            .getQueryString();
+    clusterManager.getSession().execute(dropTableQuery);
   }
 
   @Override
