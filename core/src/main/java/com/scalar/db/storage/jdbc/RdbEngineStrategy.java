@@ -140,4 +140,6 @@ public interface RdbEngineStrategy {
   default @Nullable String getSchemaName(String namespace) {
     return namespace;
   }
+
+  String getTableNamesInNamespaceSql();
 }

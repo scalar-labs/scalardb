@@ -8,6 +8,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -187,6 +188,8 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  protected abstract AdminTestUtils getAdminTestUtils(String testName);
+
   @AfterAll
   public void afterAll() throws Exception {
     try {
@@ -362,6 +365,29 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace3, getTable1(), true);
       admin.dropNamespace(namespace3, true);
+    }
+  }
+
+  @Test
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    AdminTestUtils adminTestUtils = getAdminTestUtils(getTestName());
+    String nonManagedTable = "non_managed_table";
+    try {
+      // Arrange
+      admin.createNamespace(namespace3, getCreationOptions());
+      admin.createTable(namespace3, nonManagedTable, getTableMetadata(), getCreationOptions());
+      adminTestUtils.deleteMetadata(namespace3, nonManagedTable);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.dropNamespace(namespace3))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      adminTestUtils.dropTable(namespace3, nonManagedTable);
+      admin.dropNamespace(namespace3, true);
+
+      adminTestUtils.close();
     }
   }
 

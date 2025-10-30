@@ -278,4 +278,10 @@ public class RdbEngineSqlite implements RdbEngineStrategy {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? null : escape;
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
+    return null;
+  }
 }
