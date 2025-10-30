@@ -313,4 +313,9 @@ class RdbEnginePostgresql implements RdbEngineStrategy {
   public Driver getDriver() {
     return new org.postgresql.Driver();
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
+  }
 }

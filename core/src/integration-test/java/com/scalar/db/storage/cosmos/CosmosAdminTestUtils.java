@@ -76,6 +76,15 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
     container.upsertItem(corruptedMetadata);
   }
 
+  @Override
+  public void deleteMetadata(String namespace, String table) {
+    String fullTableName = getFullTableName(namespace, table);
+    CosmosContainer container =
+        client.getDatabase(metadataDatabase).getContainer(CosmosAdmin.METADATA_CONTAINER);
+    container.deleteItem(
+        fullTableName, new PartitionKey(fullTableName), new CosmosItemRequestOptions());
+  }
+
   /**
    * Retrieve the stored procedure for the given table
    *
@@ -115,6 +124,11 @@ public class CosmosAdminTestUtils extends AdminTestUtils {
       throw e;
     }
     return true;
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) {
+    client.getDatabase(namespace).getContainer(table).delete();
   }
 
   @Override

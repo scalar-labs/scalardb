@@ -374,4 +374,9 @@ class RdbEngineMysql implements RdbEngineStrategy {
     // method is used for filtering.
     return namespace;
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?";
+  }
 }
