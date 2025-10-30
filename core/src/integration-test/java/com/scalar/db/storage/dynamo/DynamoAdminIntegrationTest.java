@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -25,6 +26,11 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   }
 
   @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new DynamoAdminTestUtils(getProperties(testName));
+  }
+
+  @Override
   protected String getSystemNamespaceName(Properties properties) {
     return new DynamoConfig(new DatabaseConfig(properties))
         .getTableMetadataNamespace()
@@ -33,6 +39,12 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
 
   // Since DynamoDB doesn't have the namespace concept, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors
+
+  @Disabled
+  @Test
+  @Override
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
 
   @Disabled
   @Test

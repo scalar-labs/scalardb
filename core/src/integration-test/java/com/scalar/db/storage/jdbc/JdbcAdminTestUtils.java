@@ -56,6 +56,22 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     execute(insertCorruptedMetadataStatement);
   }
 
+  @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    String deleteMetadataStatement =
+        "DELETE FROM "
+            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE)
+            + " WHERE "
+            + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
+            + " = ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(deleteMetadataStatement)) {
+      preparedStatement.setString(1, getFullTableName(namespace, table));
+      preparedStatement.executeUpdate();
+    }
+  }
+
   private void execute(String sql) throws SQLException {
     try (Connection connection = dataSource.getConnection()) {
       JdbcAdmin.execute(connection, sql);
@@ -108,6 +124,12 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
               "Checking if the %s table exists failed", getFullTableName(namespace, table)),
           e);
     }
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) throws Exception {
+    String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
+    execute(dropTableStatement);
   }
 
   @Override

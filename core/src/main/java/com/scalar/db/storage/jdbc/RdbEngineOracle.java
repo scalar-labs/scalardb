@@ -352,4 +352,9 @@ public class RdbEngineOracle implements RdbEngineStrategy {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? null : escape;
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
+  }
 }
