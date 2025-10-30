@@ -8,6 +8,7 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
@@ -2005,6 +2006,7 @@ public class JdbcAdminTest {
 
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStmt = mock(Statement.class);
+    PreparedStatement isNamespaceEmptyStatementMock = mock(PreparedStatement.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
     Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
     Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
@@ -2018,7 +2020,12 @@ public class JdbcAdminTest {
             selectAllFromMetadataTablePrepStmt,
             dropNamespaceTableStmt,
             dropMetadataSchemaStmt);
-    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
+    // Mock for isNamespaceEmpty() check - returns empty ResultSet (namespace is empty)
+    ResultSet emptyResultSet = mock(ResultSet.class);
+    when(emptyResultSet.next()).thenReturn(false);
+    when(isNamespaceEmptyStatementMock.executeQuery()).thenReturn(emptyResultSet);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(isNamespaceEmptyStatementMock, deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet =
@@ -2119,12 +2126,18 @@ public class JdbcAdminTest {
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
     Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
+      PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
       when(connection.createStatement())
           .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+      ResultSet emptyResultSet = mock(ResultSet.class);
+      when(emptyResultSet.next()).thenReturn(false);
+      when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+      when(connection.prepareStatement(anyString()))
+          .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
     } else {
       when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
+      when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     }
-    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
     ResultSet resultSet =
@@ -2143,6 +2156,76 @@ public class JdbcAdminTest {
     verify(deleteFromNamespaceTableMock).setString(1, namespace);
     verify(deleteFromNamespaceTableMock).execute();
     verify(selectNamespaceStatementMock).executeQuery(selectNamespaceStatement);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForMysql_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.MYSQL);
+  }
+
+  @Test
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForPostgresql_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.POSTGRESQL);
+  }
+
+  @Test
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForSqlServer_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.SQL_SERVER);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForOracle_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.ORACLE);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForSqlite_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Do nothing. SQLite does not have a concept of namespaces.
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForDb2_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.DB2);
+  }
+
+  private void dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine) throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    Statement dropNamespaceStatementMock = mock(Statement.class);
+    PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
+    Statement selectNamespaceStatementMock = mock(Statement.class);
+    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+    when(connection.createStatement())
+        .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+    ResultSet emptyResultSet = mock(ResultSet.class);
+    when(emptyResultSet.next()).thenReturn(true).thenReturn(false);
+    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
+    when(dataSource.getConnection()).thenReturn(connection);
+    // Namespaces table does not contain other namespaces
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(false);
+    when(selectNamespaceStatementMock.executeQuery(anyString())).thenReturn(resultSet);
+
+    // Act Assert
+    assertThatCode(() -> admin.dropNamespace(namespace))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

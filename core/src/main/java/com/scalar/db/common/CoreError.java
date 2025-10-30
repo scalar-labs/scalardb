@@ -843,6 +843,12 @@ public enum CoreError implements ScalarDbError {
       "With Oracle, setting a condition on a BLOB column when using a selection operation is not supported. Condition: %s",
       "",
       ""),
+  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+      Category.USER_ERROR,
+      "0249",
+      "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

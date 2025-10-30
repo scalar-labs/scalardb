@@ -583,4 +583,9 @@ class RdbEngineDb2 extends AbstractRdbEngine {
               .buildMessage(orderingOnBlobColumn.get()));
     }
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'";
+  }
 }
