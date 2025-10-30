@@ -825,6 +825,12 @@ public enum CoreError implements ScalarDbError {
       "TiDB does not support column type conversion from %s to %s",
       "",
       ""),
+  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+      Category.USER_ERROR,
+      "0246",
+      "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

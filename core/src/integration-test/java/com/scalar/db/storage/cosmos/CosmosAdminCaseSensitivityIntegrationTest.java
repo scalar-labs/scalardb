@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -17,6 +18,11 @@ public class CosmosAdminCaseSensitivityIntegrationTest
   @Override
   protected Map<String, String> getCreationOptions() {
     return CosmosEnv.getCreationOptions();
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new CosmosAdminTestUtils(getProperties(testName));
   }
 
   @Override

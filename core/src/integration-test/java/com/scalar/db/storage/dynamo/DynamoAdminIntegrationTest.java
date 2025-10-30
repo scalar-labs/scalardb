@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -17,6 +18,11 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Override
   protected Map<String, String> getCreationOptions() {
     return DynamoEnv.getCreationOptions();
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new DynamoAdminTestUtils(getProperties(testName));
   }
 
   @Override
@@ -78,6 +84,11 @@ public class DynamoAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Test
   @Override
   public void createTable_ForNonExistingNamespace_ShouldThrowIllegalArgumentException() {}
+
+  @Override
+  @Disabled("DynamoDB does not have a concept of namespaces")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
 
   @Override
   @Disabled("DynamoDB does not support dropping columns")
