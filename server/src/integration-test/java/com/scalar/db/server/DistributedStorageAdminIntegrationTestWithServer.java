@@ -44,7 +44,7 @@ public class DistributedStorageAdminIntegrationTestWithServer
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new ServerAdminTestUtils(getProperties(testName));
+    return new ServerAdminTestUtils(ServerEnv.getServer1Properties(testName));
   }
 
   @Override
