@@ -43,6 +43,15 @@ public abstract class AdminTestUtils {
   public abstract void corruptMetadata(String namespace, String table) throws Exception;
 
   /**
+   * Deletes the metadata for the specified table.
+   *
+   * @param namespace the namespace
+   * @param table the table name
+   * @throws Exception if an error occurs
+   */
+  public abstract void deleteMetadata(String namespace, String table) throws Exception;
+
+  /**
    * Returns whether the table metadata for the coordinator tables are present or not.
    *
    * @return whether the table metadata for the coordinator tables are present or not
@@ -94,6 +103,15 @@ public abstract class AdminTestUtils {
    * @throws Exception if an error occurs
    */
   public abstract boolean tableExists(String namespace, String table) throws Exception;
+
+  /**
+   * Drops the table in the underlying storage.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @throws Exception if an errors occurs
+   */
+  public abstract void dropTable(String namespace, String table) throws Exception;
 
   /**
    * Closes connections to the storage

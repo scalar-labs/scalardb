@@ -1207,9 +1207,14 @@ public abstract class JdbcAdminTestBase {
 
     Connection connection = mock(Connection.class);
     Statement dropSchemaStatement = mock(Statement.class);
+    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+    ResultSet emptyResultSet = mock(ResultSet.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(dropSchemaStatement);
+    when(connection.prepareStatement(any())).thenReturn(getTableNamesPrepStmt);
+    when(emptyResultSet.next()).thenReturn(false);
+    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
 
     // Act
     admin.dropNamespace(namespace);

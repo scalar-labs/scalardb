@@ -1,6 +1,7 @@
 package com.scalar.db.server;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
@@ -39,6 +40,11 @@ public class DistributedStorageAdminIntegrationTestWithServer
   protected String getSystemNamespaceName(Properties properties) {
     // "Unused for ScalarDB Server"
     return null;
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new ServerAdminTestUtils(ServerEnv.getServer1Properties(testName));
   }
 
   @Override

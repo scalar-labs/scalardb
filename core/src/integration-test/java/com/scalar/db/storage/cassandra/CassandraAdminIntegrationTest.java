@@ -2,6 +2,7 @@ package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 
 public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
@@ -15,5 +16,10 @@ public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegr
     return new CassandraConfig(new DatabaseConfig(properties))
         .getSystemNamespaceName()
         .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+  }
+
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new CassandraAdminTestUtils(getProperties(testName));
   }
 }
