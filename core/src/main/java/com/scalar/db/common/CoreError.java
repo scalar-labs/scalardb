@@ -849,6 +849,38 @@ public enum CoreError implements ScalarDbError {
       "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
       "",
       ""),
+  OBJECT_STORAGE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0250",
+      "Import-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_INDEX_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0251",
+      "Index-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0252",
+      "Object Storage does not support the dropping column feature",
+      "",
+      ""),
+  OBJECT_STORAGE_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0253",
+      "Object Storage does not support the renaming column feature",
+      "",
+      ""),
+  OBJECT_STORAGE_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0254", "Renaming tables is not supported in Object Storage", "", ""),
+  OBJECT_STORAGE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0255",
+      "Object Storage does not support the altering column type feature",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

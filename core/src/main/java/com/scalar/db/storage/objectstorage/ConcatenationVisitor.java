@@ -1,0 +1,136 @@
+package com.scalar.db.storage.objectstorage;
+
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.ColumnVisitor;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import javax.annotation.concurrent.NotThreadSafe;
+
+/** A visitor class to make a concatenated key string for the partition key. */
+@NotThreadSafe
+public class ConcatenationVisitor implements ColumnVisitor {
+  private final List<String> columns;
+
+  public ConcatenationVisitor() {
+    columns = new ArrayList<>();
+  }
+
+  public String build() {
+    return String.join(String.valueOf(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER), columns);
+  }
+
+  /**
+   * Sets the specified {@code BooleanColumn} to the key string
+   *
+   * @param column a {@code BooleanColumn} to be set
+   */
+  @Override
+  public void visit(BooleanColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(column.getBooleanValue()));
+  }
+
+  /**
+   * Sets the specified {@code IntColumn} to the key string
+   *
+   * @param column a {@code IntColumn} to be set
+   */
+  @Override
+  public void visit(IntColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(column.getIntValue()));
+  }
+
+  /**
+   * Sets the specified {@code BigIntColumn} to the key string
+   *
+   * @param column a {@code BigIntColumn} to be set
+   */
+  @Override
+  public void visit(BigIntColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(column.getBigIntValue()));
+  }
+
+  /**
+   * Sets the specified {@code FloatColumn} to the key string
+   *
+   * @param column a {@code FloatColumn} to be set
+   */
+  @Override
+  public void visit(FloatColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(column.getFloatValue()));
+  }
+
+  /**
+   * Sets the specified {@code DoubleColumn} to the key string
+   *
+   * @param column a {@code DoubleColumn} to be set
+   */
+  @Override
+  public void visit(DoubleColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(column.getDoubleValue()));
+  }
+
+  /**
+   * Sets the specified {@code TextColumn} to the key string
+   *
+   * @param column a {@code TextColumn} to be set
+   */
+  @Override
+  public void visit(TextColumn column) {
+    assert !column.hasNullValue();
+    column.getValue().ifPresent(columns::add);
+  }
+
+  /**
+   * Sets the specified {@code BlobColumn} to the key string
+   *
+   * @param column a {@code BlobColumn} to be set
+   */
+  @Override
+  public void visit(BlobColumn column) {
+    assert !column.hasNullValue();
+    // Use Base64 encoding
+    columns.add(
+        Base64.getUrlEncoder().withoutPadding().encodeToString(column.getBlobValueAsBytes()));
+  }
+
+  @Override
+  public void visit(DateColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+
+  @Override
+  public void visit(TimeColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+
+  @Override
+  public void visit(TimestampColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+
+  @Override
+  public void visit(TimestampTZColumn column) {
+    assert !column.hasNullValue();
+    columns.add(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)));
+  }
+}
