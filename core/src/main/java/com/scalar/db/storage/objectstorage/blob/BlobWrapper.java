@@ -177,7 +177,16 @@ public class BlobWrapper implements ObjectStorageWrapper {
     try {
       client
           .listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
-          .forEach(blobItem -> client.getBlobClient(blobItem.getName()).delete());
+          .forEach(
+              blobItem -> {
+                try {
+                  client.getBlobClient(blobItem.getName()).delete();
+                } catch (BlobStorageException e) {
+                  if (!e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
+                    throw e;
+                  }
+                }
+              });
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
           String.format("Failed to delete the objects with prefix '%s'", prefix), e);
