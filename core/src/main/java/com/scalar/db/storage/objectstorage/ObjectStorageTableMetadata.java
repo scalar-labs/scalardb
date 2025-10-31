@@ -6,6 +6,7 @@ import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -34,13 +35,17 @@ public class ObjectStorageTableMetadata {
       @Nullable Map<String, String> clusteringOrders,
       @Nullable Set<String> secondaryIndexNames,
       @Nullable Map<String, String> columns) {
-    this.partitionKeyNames = partitionKeyNames != null ? partitionKeyNames : new LinkedHashSet<>();
+    this.partitionKeyNames =
+        partitionKeyNames != null ? new LinkedHashSet<>(partitionKeyNames) : new LinkedHashSet<>();
     this.clusteringKeyNames =
-        clusteringKeyNames != null ? clusteringKeyNames : new LinkedHashSet<>();
-    this.clusteringOrders = clusteringOrders != null ? clusteringOrders : Collections.emptyMap();
+        clusteringKeyNames != null
+            ? new LinkedHashSet<>(clusteringKeyNames)
+            : new LinkedHashSet<>();
+    this.clusteringOrders =
+        clusteringOrders != null ? new HashMap<>(clusteringOrders) : Collections.emptyMap();
     this.secondaryIndexNames =
-        secondaryIndexNames != null ? secondaryIndexNames : Collections.emptySet();
-    this.columns = columns != null ? columns : Collections.emptyMap();
+        secondaryIndexNames != null ? new HashSet<>(secondaryIndexNames) : Collections.emptySet();
+    this.columns = columns != null ? new HashMap<>(columns) : Collections.emptyMap();
   }
 
   public ObjectStorageTableMetadata(TableMetadata tableMetadata) {

@@ -119,8 +119,7 @@ public class BlobWrapper implements ObjectStorageWrapper {
           || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
         throw new PreconditionFailedException(
             String.format(
-                String.format(
-                    "Failed to update the object with key '%s' due to precondition failure", key)),
+                "Failed to update the object with key '%s' due to precondition failure", key),
             e);
       }
       throw new ObjectStorageWrapperException(

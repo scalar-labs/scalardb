@@ -31,16 +31,24 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void truncateNamespacesTable() throws Exception {
-    wrapper.delete(
-        ObjectStorageUtils.getObjectKey(
-            metadataNamespace, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE));
+    try {
+      wrapper.delete(
+          ObjectStorageUtils.getObjectKey(
+              metadataNamespace, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE));
+    } catch (PreconditionFailedException e) {
+      // The namespace metadata table object does not exist, so do nothing
+    }
   }
 
   @Override
   public void truncateMetadataTable() throws Exception {
-    wrapper.delete(
-        ObjectStorageUtils.getObjectKey(
-            metadataNamespace, ObjectStorageAdmin.TABLE_METADATA_TABLE));
+    try {
+      wrapper.delete(
+          ObjectStorageUtils.getObjectKey(
+              metadataNamespace, ObjectStorageAdmin.TABLE_METADATA_TABLE));
+    } catch (PreconditionFailedException e) {
+      // The table metadata table object does not exist, so do nothing
+    }
   }
 
   @Override
