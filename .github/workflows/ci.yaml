@@ -2126,6 +2126,15 @@ jobs:
     name: Azure Blob Storage integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
     services:
       postgres:
         image: mcr.microsoft.com/azure-storage/azurite
@@ -2174,7 +2183,7 @@ jobs:
             --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
-        run: ./gradlew integrationTestObjectStorage -Dscalardb.jdbc.url=http://localhost:5432/ -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()
