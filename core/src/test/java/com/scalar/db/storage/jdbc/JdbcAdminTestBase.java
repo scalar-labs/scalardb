@@ -611,7 +611,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
@@ -649,7 +649,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
@@ -1031,7 +1031,7 @@ public abstract class JdbcAdminTestBase {
         "CREATE TABLE \""
             + tableMetadataSchemaName
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -4157,7 +4157,8 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  void createTableInternal_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+  void
+  createTable_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
       throws SQLException {
     // Arrange
     TableMetadata metadata1 =
@@ -4210,6 +4211,75 @@ public abstract class JdbcAdminTestBase {
                     "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
                 new GetColumnsResultSetMocker.Row(
                     indexColumn, DataType.BLOB.toString(), null, null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.createIndex(namespace, table, indexColumn, Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
+  }
+
+  @Test
+  void
+      createTable_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    TableMetadata metadata1 =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.BLOB).build();
+    TableMetadata metadata2 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck", DataType.BLOB)
+            .build();
+    TableMetadata metadata3 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.BLOB)
+            .addSecondaryIndex("col")
+            .build();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+        when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable( "ns", "tbl", metadata1, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTable( "ns", "tbl", metadata2, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTable( "ns", "tbl", metadata3, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
+  }
+
+    @Test
+  void createIndex_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String indexColumn = "index_col";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    PreparedStatement checkStatement = prepareStatementForNamespaceCheck();
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+     ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+            new GetColumnsResultSetMocker.Row(
+                "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new GetColumnsResultSetMocker.Row(
+                indexColumn, DataType.BLOB.toString(), null, null, false)));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
     Statement statement = mock(Statement.class);
