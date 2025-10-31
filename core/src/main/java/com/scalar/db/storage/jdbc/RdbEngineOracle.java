@@ -497,11 +497,6 @@ public class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String getTableNamesInNamespaceSql() {
-    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
-  }
-
-  @Override
   public void bindBlobColumnToPreparedStatement(
       PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
     // When writing to the BLOB data type with a BLOB size greater than 32766 using a MERGE INTO
@@ -530,5 +525,10 @@ public class RdbEngineOracle extends AbstractRdbEngine {
       InputStream inputStream = new ByteArrayInputStream(bytes);
       preparedStatement.setBinaryStream(index, inputStream);
     }
+  }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
   }
 }

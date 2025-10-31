@@ -4157,8 +4157,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  void
-  createTable_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+  void createTable_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
       throws SQLException {
     // Arrange
     TableMetadata metadata1 =
@@ -4226,8 +4225,7 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  void
-      createTable_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+  void createTable_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
       throws SQLException {
     // Arrange
     TableMetadata metadata1 =
@@ -4247,22 +4245,22 @@ public abstract class JdbcAdminTestBase {
             .addSecondaryIndex("col")
             .build();
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
-        when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
     // Act Assert
-    assertThatThrownBy(() -> admin.createTable( "ns", "tbl", metadata1, false))
+    assertThatThrownBy(() -> admin.createTable("ns", "tbl", metadata1, false))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContainingAll("BLOB", "key");
-    assertThatThrownBy(() -> admin.createTable( "ns", "tbl", metadata2, false))
+    assertThatThrownBy(() -> admin.createTable("ns", "tbl", metadata2, false))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContainingAll("BLOB", "key");
-    assertThatThrownBy(() -> admin.createTable( "ns", "tbl", metadata3, false))
+    assertThatThrownBy(() -> admin.createTable("ns", "tbl", metadata3, false))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContainingAll("BLOB", "index");
   }
 
-    @Test
+  @Test
   void createIndex_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
       throws SQLException {
     // Arrange
@@ -4273,13 +4271,13 @@ public abstract class JdbcAdminTestBase {
 
     PreparedStatement checkStatement = prepareStatementForNamespaceCheck();
     PreparedStatement selectStatement = mock(PreparedStatement.class);
-     ResultSet resultSet =
+    ResultSet resultSet =
         mockResultSet(
             Arrays.asList(
-            new GetColumnsResultSetMocker.Row(
-                "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
-            new GetColumnsResultSetMocker.Row(
-                indexColumn, DataType.BLOB.toString(), null, null, false)));
+                new GetColumnsResultSetMocker.Row(
+                    "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    indexColumn, DataType.BLOB.toString(), null, null, false)));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
     Statement statement = mock(Statement.class);
