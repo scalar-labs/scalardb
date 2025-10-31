@@ -27,6 +27,11 @@ public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIn
   public void truncateTable_ShouldTruncateProperly() {}
 
   @Override
+  @Disabled("Object Storage does not have a concept of namespaces")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
+
+  @Override
   @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly() {}
 

@@ -43,7 +43,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     metadataNamespace = objectStorageConfig.getMetadataNamespace();
   }
 
-  public ObjectStorageAdmin(ObjectStorageWrapper wrapper, ObjectStorageConfig objectStorageConfig) {
+  ObjectStorageAdmin(ObjectStorageWrapper wrapper, ObjectStorageConfig objectStorageConfig) {
     this.wrapper = wrapper;
     metadataNamespace = objectStorageConfig.getMetadataNamespace();
   }

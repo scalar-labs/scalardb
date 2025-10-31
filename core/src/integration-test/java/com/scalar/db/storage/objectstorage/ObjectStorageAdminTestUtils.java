@@ -21,12 +21,12 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void dropNamespacesTable() {
-    // Blob does not have a concept of table
+    // Object Storage does not have a concept of table
   }
 
   @Override
   public void dropMetadataTable() {
-    // Blob does not have a concept of table
+    // Object Storage does not have a concept of table
   }
 
   @Override
@@ -65,25 +65,50 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    String objectKey =
+        ObjectStorageUtils.getObjectKey(metadataNamespace, ObjectStorageAdmin.TABLE_METADATA_TABLE);
+    Optional<ObjectStorageWrapperResponse> response = wrapper.get(objectKey);
+    if (!response.isPresent()) {
+      throw new IllegalArgumentException("The specified table metadata does not exist");
+    }
+    Map<String, ObjectStorageTableMetadata> metadataTable =
+        Serializer.deserialize(
+            response.get().getPayload(),
+            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+
+    String tableMetadataKey =
+        String.join(
+            String.valueOf(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER), namespace, table);
+    metadataTable.remove(tableMetadataKey);
+
+    if (metadataTable.isEmpty()) {
+      wrapper.delete(objectKey);
+    } else {
+      wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
+    }
+  }
+
+  @Override
   public void dropNamespace(String namespace) {
-    // Blob does not have a concept of namespace
+    // Object Storage does not have a concept of namespace
   }
 
   @Override
   public boolean namespaceExists(String namespace) {
-    // Blob does not have a concept of namespace
+    // Object Storage does not have a concept of namespace
     return true;
   }
 
   @Override
   public boolean tableExists(String namespace, String table) {
-    // Blob does not have a concept of table
+    // Object Storage does not have a concept of table
     return true;
   }
 
   @Override
   public void dropTable(String namespace, String table) {
-    // Blob does not have a concept of table
+    // Object Storage does not have a concept of table
   }
 
   @Override

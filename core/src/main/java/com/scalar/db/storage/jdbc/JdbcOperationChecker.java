@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
@@ -25,5 +26,11 @@ public class JdbcOperationChecker extends OperationChecker {
   protected void checkOrderingsForScanAll(ScanAll scanAll, TableMetadata metadata) {
     super.checkOrderingsForScanAll(scanAll, metadata);
     rdbEngine.throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(scanAll, metadata);
+  }
+
+  @Override
+  protected void checkConjunctions(Selection selection, TableMetadata metadata) {
+    super.checkConjunctions(selection, metadata);
+    rdbEngine.throwIfConjunctionsColumnNotSupported(selection.getConjunctions(), metadata);
   }
 }
