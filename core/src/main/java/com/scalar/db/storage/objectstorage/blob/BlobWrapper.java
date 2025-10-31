@@ -24,8 +24,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class BlobWrapper implements ObjectStorageWrapper {
-  public static final String STORAGE_NAME = "blob";
-
   private final BlobContainerClient client;
   private final Duration requestTimeoutInSeconds;
   private final ParallelTransferOptions parallelTransferOptions;

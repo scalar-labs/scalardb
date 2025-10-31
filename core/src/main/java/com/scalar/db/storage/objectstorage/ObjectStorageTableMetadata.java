@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -51,7 +52,9 @@ public class ObjectStorageTableMetadata {
   public ObjectStorageTableMetadata(TableMetadata tableMetadata) {
     Map<String, String> clusteringOrders =
         tableMetadata.getClusteringKeyNames().stream()
-            .collect(Collectors.toMap(c -> c, c -> tableMetadata.getClusteringOrder(c).name()));
+            .collect(
+                Collectors.toMap(
+                    Function.identity(), c -> tableMetadata.getClusteringOrder(c).name()));
     Map<String, String> columnTypeByName = new HashMap<>();
     tableMetadata
         .getColumnNames()
