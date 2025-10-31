@@ -443,29 +443,20 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable()
       throws ExecutionException {
-    try {
-      Optional<ObjectStorageWrapperResponse> response =
-          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
-      if (!response.isPresent()) {
-        return Collections.emptyMap();
-      }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    } catch (ObjectStorageWrapperException e) {
-      throw new ExecutionException("Failed to get the metadata table.", e);
-    }
+    return getNamespaceMetadataTable(null);
   }
 
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable(
-      Map<String, String> readVersionMap) throws ExecutionException {
+      @Nullable Map<String, String> readVersionMap) throws ExecutionException {
     try {
       Optional<ObjectStorageWrapperResponse> response =
           wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
       if (!response.isPresent()) {
         return Collections.emptyMap();
       }
-      readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
+      if (readVersionMap != null) {
+        readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
+      }
       return Serializer.deserialize(
           response.get().getPayload(),
           new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
@@ -476,29 +467,20 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private Map<String, ObjectStorageTableMetadata> getTableMetadataTable()
       throws ExecutionException {
-    try {
-      Optional<ObjectStorageWrapperResponse> response =
-          wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
-      if (!response.isPresent()) {
-        return Collections.emptyMap();
-      }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
-    } catch (ObjectStorageWrapperException e) {
-      throw new ExecutionException("Failed to get the metadata table.", e);
-    }
+    return getTableMetadataTable(null);
   }
 
   private Map<String, ObjectStorageTableMetadata> getTableMetadataTable(
-      Map<String, String> readVersionMap) throws ExecutionException {
+      @Nullable Map<String, String> readVersionMap) throws ExecutionException {
     try {
       Optional<ObjectStorageWrapperResponse> response =
           wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
       if (!response.isPresent()) {
         return Collections.emptyMap();
       }
-      readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
+      if (readVersionMap != null) {
+        readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
+      }
       return Serializer.deserialize(
           response.get().getPayload(),
           new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
