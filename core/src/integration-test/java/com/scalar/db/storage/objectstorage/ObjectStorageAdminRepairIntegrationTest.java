@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Disabled;
 
 public class ObjectStorageAdminRepairIntegrationTest
     extends DistributedStorageAdminRepairIntegrationTestBase {
+
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);

@@ -540,7 +540,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   private void deleteTableData(String namespace, String table) throws ExecutionException {
     try {
-      wrapper.deleteByPrefix(ObjectStorageUtils.getObjectKey(namespace, table));
+      wrapper.deleteByPrefix(ObjectStorageUtils.getObjectKey(namespace, table, ""));
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(

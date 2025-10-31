@@ -1,6 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 public interface ObjectStorageConfig {
+
   /**
    * Returns the storage name.
    *

@@ -9,6 +9,7 @@ public class ObjectStorageNamespaceMetadata {
   private final String name;
 
   // The default constructor is required by Jackson to deserialize JSON object
+  @SuppressWarnings("unused")
   public ObjectStorageNamespaceMetadata() {
     this(null);
   }

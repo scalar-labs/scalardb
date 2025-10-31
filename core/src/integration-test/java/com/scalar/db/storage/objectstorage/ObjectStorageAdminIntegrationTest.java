@@ -23,6 +23,10 @@ public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIn
   }
 
   @Override
+  @Disabled("Temporary disable because it includes DML operations")
+  public void truncateTable_ShouldTruncateProperly() {}
+
+  @Override
   @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly() {}
 

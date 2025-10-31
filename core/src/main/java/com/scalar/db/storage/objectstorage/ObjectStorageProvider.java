@@ -7,9 +7,10 @@ import com.scalar.db.common.CommonDistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 
 public interface ObjectStorageProvider extends DistributedStorageProvider {
+
   @Override
   default DistributedStorage createDistributedStorage(DatabaseConfig config) {
-    return new ObjectStorage(config);
+    return null;
   }
 
   @Override

@@ -59,6 +59,15 @@ public class ObjectStorageTableMetadata {
     this.columns = columnTypeByName;
   }
 
+  private ObjectStorageTableMetadata(Builder builder) {
+    this(
+        builder.partitionKeyNames,
+        builder.clusteringKeyNames,
+        builder.clusteringOrders,
+        builder.secondaryIndexNames,
+        builder.columns);
+  }
+
   public LinkedHashSet<String> getPartitionKeyNames() {
     return partitionKeyNames;
   }
@@ -137,6 +146,49 @@ public class ObjectStorageTableMetadata {
         return DataType.TIMESTAMPTZ;
       default:
         throw new AssertionError("Unknown column type: " + columnType);
+    }
+  }
+
+  public static ObjectStorageTableMetadata.Builder newBuilder() {
+    return new ObjectStorageTableMetadata.Builder();
+  }
+
+  public static final class Builder {
+    private LinkedHashSet<String> partitionKeyNames;
+    private LinkedHashSet<String> clusteringKeyNames;
+    private Map<String, String> clusteringOrders;
+    private Set<String> secondaryIndexNames;
+    private Map<String, String> columns;
+
+    private Builder() {}
+
+    public ObjectStorageTableMetadata.Builder partitionKeyNames(LinkedHashSet<String> val) {
+      partitionKeyNames = val;
+      return this;
+    }
+
+    public ObjectStorageTableMetadata.Builder clusteringKeyNames(LinkedHashSet<String> val) {
+      clusteringKeyNames = val;
+      return this;
+    }
+
+    public ObjectStorageTableMetadata.Builder clusteringOrders(Map<String, String> val) {
+      clusteringOrders = val;
+      return this;
+    }
+
+    public ObjectStorageTableMetadata.Builder secondaryIndexNames(Set<String> val) {
+      secondaryIndexNames = val;
+      return this;
+    }
+
+    public ObjectStorageTableMetadata.Builder columns(Map<String, String> val) {
+      columns = val;
+      return this;
+    }
+
+    public ObjectStorageTableMetadata build() {
+      return new ObjectStorageTableMetadata(this);
     }
   }
 }

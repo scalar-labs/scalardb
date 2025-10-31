@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 public class ObjectStorageUtilsTest {
+
   @Test
   public void getObjectKey_GivenAllNames_ShouldReturnExpectedObjectKey() {
     // Arrange

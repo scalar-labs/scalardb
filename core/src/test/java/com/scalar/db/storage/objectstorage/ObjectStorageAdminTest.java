@@ -1,8 +1,10 @@
 package com.scalar.db.storage.objectstorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,12 +75,13 @@ public class ObjectStorageAdminTest {
     Map<String, String> clusteringOrders = ImmutableMap.of("c2", "ASC", "c3", "DESC");
 
     ObjectStorageTableMetadata objectStorageTableMetadata =
-        new ObjectStorageTableMetadata(
-            partitionKeyNames,
-            clusteringKeyNames,
-            clusteringOrders,
-            Collections.emptySet(),
-            columnsMap);
+        ObjectStorageTableMetadata.newBuilder()
+            .partitionKeyNames(partitionKeyNames)
+            .clusteringKeyNames(clusteringKeyNames)
+            .clusteringOrders(clusteringOrders)
+            .secondaryIndexNames(Collections.emptySet())
+            .columns(columnsMap)
+            .build();
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     metadataTable.put(tableMetadataKey, objectStorageTableMetadata);
@@ -296,7 +299,8 @@ public class ObjectStorageAdminTest {
   }
 
   @Test
-  public void dropNamespace_ShouldDeleteNamespaceMetadata() throws Exception {
+  public void dropNamespace_ShouldDeleteNamespaceMetadataAndDeleteMetadataTableIfEmpty()
+      throws Exception {
     // Arrange
     String namespace = "ns";
     Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
@@ -318,6 +322,132 @@ public class ObjectStorageAdminTest {
   }
 
   @Test
+  public void dropNamespace_ShouldDeleteNamespaceMetadataAndUpdateMetadataTableIfNotEmpty()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String anotherNamespace = "other_ns";
+    Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
+    metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
+    metadataTable.put(anotherNamespace, new ObjectStorageNamespaceMetadata(anotherNamespace));
+    String serializedMetadata = Serializer.serialize(metadataTable);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serializedMetadata, "version1");
+    String expectedObjectKey =
+        ObjectStorageUtils.getObjectKey(
+            METADATA_NAMESPACE, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE);
+
+    when(wrapper.get(expectedObjectKey)).thenReturn(Optional.of(response));
+
+    // Act
+    admin.dropNamespace(namespace);
+
+    // Assert
+    verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
+    Map<String, ObjectStorageNamespaceMetadata> updatedMetadata =
+        Serializer.deserialize(
+            payloadCaptor.getValue(),
+            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+    assertThat(updatedMetadata).doesNotContainKey(namespace);
+    assertThat(updatedMetadata).containsKey(anotherNamespace);
+  }
+
+  @Test
+  public void dropTable_ShouldDeleteTableMetadataAndDropMetadataTableIfEmpty() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
+
+    Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
+    metadataTable.put(tableMetadataKey, ObjectStorageTableMetadata.newBuilder().build());
+    String serializedMetadata = Serializer.serialize(metadataTable);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serializedMetadata, "version1");
+    String expectedObjectKey =
+        ObjectStorageUtils.getObjectKey(
+            METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
+
+    when(wrapper.get(expectedObjectKey)).thenReturn(Optional.of(response));
+
+    // Act
+    admin.dropTable(namespace, table);
+
+    // Assert
+    verify(wrapper).delete(eq(expectedObjectKey), eq("version1"));
+  }
+
+  @Test
+  public void dropTable_ShouldDeleteTableMetadataAndUpdateMetadataTableIfNotEmpty()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String anotherTable = "tbl2";
+    String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
+    String anotherTableMetadataKey =
+        namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + anotherTable;
+
+    Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
+    metadataTable.put(tableMetadataKey, ObjectStorageTableMetadata.newBuilder().build());
+    metadataTable.put(anotherTableMetadataKey, ObjectStorageTableMetadata.newBuilder().build());
+    String serializedMetadata = Serializer.serialize(metadataTable);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serializedMetadata, "version1");
+    String expectedObjectKey =
+        ObjectStorageUtils.getObjectKey(
+            METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
+
+    when(wrapper.get(expectedObjectKey)).thenReturn(Optional.of(response));
+
+    // Act
+    admin.dropTable(namespace, table);
+
+    // Assert
+    verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
+    Map<String, ObjectStorageTableMetadata> updatedMetadata =
+        Serializer.deserialize(
+            payloadCaptor.getValue(),
+            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+    assertThat(updatedMetadata).doesNotContainKey(tableMetadataKey);
+    assertThat(updatedMetadata).containsKey(anotherTableMetadataKey);
+  }
+
+  @Test
+  public void truncateTable_ShouldDeleteTableData() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String tableDataPrefix = ObjectStorageUtils.getObjectKey(namespace, table, "");
+
+    // Act
+    admin.truncateTable(namespace, table);
+
+    // Assert
+    verify(wrapper).deleteByPrefix(tableDataPrefix);
+    verify(wrapper, never())
+        .delete(
+            ObjectStorageUtils.getObjectKey(
+                METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE));
+  }
+
+  @Test
+  public void truncateTable_WithMetadataOnlyTable_ShouldNotThrowException() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String tableDataPrefix = ObjectStorageUtils.getObjectKey(namespace, table, "");
+
+    // Act Assert
+    assertThatCode(() -> admin.truncateTable(namespace, table)).doesNotThrowAnyException();
+    verify(wrapper).deleteByPrefix(tableDataPrefix);
+    verify(wrapper, never())
+        .delete(
+            ObjectStorageUtils.getObjectKey(
+                METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE));
+  }
+
+  @Test
   public void getNamespaceTableNames_ShouldReturnTableNamesProperly() throws Exception {
     // Arrange
     String namespace = "ns";
@@ -326,12 +456,9 @@ public class ObjectStorageAdminTest {
     String tableMetadataKey3 = "other_ns" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "t3";
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
-    metadataTable.put(
-        tableMetadataKey1, new ObjectStorageTableMetadata(null, null, null, null, null));
-    metadataTable.put(
-        tableMetadataKey2, new ObjectStorageTableMetadata(null, null, null, null, null));
-    metadataTable.put(
-        tableMetadataKey3, new ObjectStorageTableMetadata(null, null, null, null, null));
+    metadataTable.put(tableMetadataKey1, ObjectStorageTableMetadata.newBuilder().build());
+    metadataTable.put(tableMetadataKey2, ObjectStorageTableMetadata.newBuilder().build());
+    metadataTable.put(tableMetadataKey3, ObjectStorageTableMetadata.newBuilder().build());
 
     String serializedTableMetadata = Serializer.serialize(metadataTable);
     ObjectStorageWrapperResponse tableMetadataResponse =
@@ -372,8 +499,11 @@ public class ObjectStorageAdminTest {
     LinkedHashSet<String> partitionKeyNames = Sets.newLinkedHashSet(currentColumn);
     Map<String, String> columns = ImmutableMap.of(currentColumn, "text");
     ObjectStorageTableMetadata existingTableMetadata =
-        new ObjectStorageTableMetadata(
-            partitionKeyNames, null, null, Collections.emptySet(), columns);
+        ObjectStorageTableMetadata.newBuilder()
+            .partitionKeyNames(partitionKeyNames)
+            .secondaryIndexNames(Collections.emptySet())
+            .columns(columns)
+            .build();
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     metadataTable.put(tableMetadataKey, existingTableMetadata);
@@ -484,17 +614,6 @@ public class ObjectStorageAdminTest {
     String tableMetadataKey2 = "ns1" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl2";
     String tableMetadataKey3 = "ns2" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl3";
 
-    Map<String, ObjectStorageTableMetadata> tableMetadataMap = new HashMap<>();
-    tableMetadataMap.put(
-        tableMetadataKey1, new ObjectStorageTableMetadata(null, null, null, null, null));
-    tableMetadataMap.put(
-        tableMetadataKey2, new ObjectStorageTableMetadata(null, null, null, null, null));
-    tableMetadataMap.put(
-        tableMetadataKey3, new ObjectStorageTableMetadata(null, null, null, null, null));
-    String serializedTableMetadata = Serializer.serialize(tableMetadataMap);
-    ObjectStorageWrapperResponse tableMetadataResponse =
-        new ObjectStorageWrapperResponse(serializedTableMetadata, "version1");
-
     Map<String, ObjectStorageNamespaceMetadata> namespaceMetadataMap = new HashMap<>();
     String serializedNamespaceMetadata = Serializer.serialize(namespaceMetadataMap);
     ObjectStorageWrapperResponse namespaceMetadataResponse =
@@ -508,6 +627,13 @@ public class ObjectStorageAdminTest {
             METADATA_NAMESPACE, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE);
 
     // Mock table metadata to return existing tables
+    Map<String, ObjectStorageTableMetadata> tableMetadataMap = new HashMap<>();
+    tableMetadataMap.put(tableMetadataKey1, ObjectStorageTableMetadata.newBuilder().build());
+    tableMetadataMap.put(tableMetadataKey2, ObjectStorageTableMetadata.newBuilder().build());
+    tableMetadataMap.put(tableMetadataKey3, ObjectStorageTableMetadata.newBuilder().build());
+    String serializedTableMetadata = Serializer.serialize(tableMetadataMap);
+    ObjectStorageWrapperResponse tableMetadataResponse =
+        new ObjectStorageWrapperResponse(serializedTableMetadata, "version1");
     when(wrapper.get(tableMetadataObjectKey)).thenReturn(Optional.of(tableMetadataResponse));
 
     // First call returns empty namespace metadata, second call returns metadata with ns1
@@ -517,7 +643,6 @@ public class ObjectStorageAdminTest {
         Serializer.serialize(namespaceMetadataMapAfterInsert);
     ObjectStorageWrapperResponse namespaceMetadataResponseAfterInsert =
         new ObjectStorageWrapperResponse(serializedNamespaceMetadataAfterInsert, "version3");
-
     when(wrapper.get(namespaceMetadataObjectKey))
         .thenReturn(Optional.of(namespaceMetadataResponse))
         .thenReturn(Optional.of(namespaceMetadataResponseAfterInsert));
@@ -526,7 +651,7 @@ public class ObjectStorageAdminTest {
     admin.upgrade(Collections.emptyMap());
 
     // Assert
-    // First namespace should trigger insert (when metadata table is empty)
+    // First namespace should trigger insert when metadata table is empty
     verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
 
     Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =

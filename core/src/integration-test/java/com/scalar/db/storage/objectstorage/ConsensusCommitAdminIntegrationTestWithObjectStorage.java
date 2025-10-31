@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminIntegrationTestWithObjectStorage
     extends ConsensusCommitAdminIntegrationTestBase {
+
   @Override
   protected Properties getProps(String testName) {
     return ObjectStorageEnv.getProperties(testName);
@@ -16,6 +17,10 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new ObjectStorageAdminTestUtils(getProperties(testName));
   }
+
+  @Override
+  @Disabled("Temporary disable because it includes DML operations")
+  public void truncateTable_ShouldTruncateProperly() {}
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
