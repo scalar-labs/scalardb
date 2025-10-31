@@ -1149,7 +1149,8 @@ jobs:
   integration-test-for-jdbc-sqlserver-2017:
     name: SQL Server 2017 integration test (${{ matrix.mode.label }})
     runs-on: windows-latest
-    env: # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
+    env:
+      # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
       # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
       SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
       SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
