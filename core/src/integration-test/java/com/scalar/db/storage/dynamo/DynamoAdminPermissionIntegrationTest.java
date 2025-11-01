@@ -48,16 +48,6 @@ public class DynamoAdminPermissionIntegrationTest
   @Test
   @Override
   @Disabled("Import-related functionality is not supported in DynamoDB")
-  public void getImportTableMetadata_WithSufficientPermission_ShouldSucceed() {}
-
-  @Test
-  @Override
-  @Disabled("Import-related functionality is not supported in DynamoDB")
-  public void addRawColumnToTable_WithSufficientPermission_ShouldSucceed() {}
-
-  @Test
-  @Override
-  @Disabled("Import-related functionality is not supported in DynamoDB")
   public void importTable_WithSufficientPermission_ShouldSucceed() {}
 
   @Test

@@ -377,16 +377,16 @@ public enum CoreError implements ScalarDbError {
       ""),
   MULTI_STORAGE_STORAGE_NOT_FOUND(
       Category.USER_ERROR, "0084", "Storage not found. Storage: %s", "", ""),
-  JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0085", "The namespace name is not acceptable. Namespace: %s", "", ""),
-  JDBC_TABLE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0086", "The table name is not acceptable. Table: %s", "", ""),
-  JDBC_IMPORT_NOT_SUPPORTED(
+  JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
-      "0087",
-      "Importing tables is not allowed in the RDB engine. RDB engine: %s",
+      "0085",
+      "The namespace name is not acceptable in SQLite. Namespace: %s",
       "",
       ""),
+  JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0086", "The table name is not acceptable in SQLite. Table: %s", "", ""),
+  JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0087", "Importing tables is not allowed in SQLite", "", ""),
   JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
       Category.USER_ERROR, "0088", "The %s table must have a primary key", "", ""),
   JDBC_RDB_ENGINE_NOT_SUPPORTED(
