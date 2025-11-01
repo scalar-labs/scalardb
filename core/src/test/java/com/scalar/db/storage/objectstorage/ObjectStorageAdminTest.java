@@ -614,11 +614,6 @@ public class ObjectStorageAdminTest {
     String tableMetadataKey2 = "ns1" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl2";
     String tableMetadataKey3 = "ns2" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl3";
 
-    Map<String, ObjectStorageNamespaceMetadata> namespaceMetadataMap = new HashMap<>();
-    String serializedNamespaceMetadata = Serializer.serialize(namespaceMetadataMap);
-    ObjectStorageWrapperResponse namespaceMetadataResponse =
-        new ObjectStorageWrapperResponse(serializedNamespaceMetadata, "version2");
-
     String tableMetadataObjectKey =
         ObjectStorageUtils.getObjectKey(
             METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
@@ -636,41 +631,20 @@ public class ObjectStorageAdminTest {
         new ObjectStorageWrapperResponse(serializedTableMetadata, "version1");
     when(wrapper.get(tableMetadataObjectKey)).thenReturn(Optional.of(tableMetadataResponse));
 
-    // First call returns empty namespace metadata, second call returns metadata with ns1
-    Map<String, ObjectStorageNamespaceMetadata> namespaceMetadataMapAfterInsert = new HashMap<>();
-    namespaceMetadataMapAfterInsert.put("ns1", new ObjectStorageNamespaceMetadata("ns1"));
-    String serializedNamespaceMetadataAfterInsert =
-        Serializer.serialize(namespaceMetadataMapAfterInsert);
-    ObjectStorageWrapperResponse namespaceMetadataResponseAfterInsert =
-        new ObjectStorageWrapperResponse(serializedNamespaceMetadataAfterInsert, "version3");
-    when(wrapper.get(namespaceMetadataObjectKey))
-        .thenReturn(Optional.of(namespaceMetadataResponse))
-        .thenReturn(Optional.of(namespaceMetadataResponseAfterInsert));
+    // Mock non-existing namespace metadata
+    when(wrapper.get(namespaceMetadataObjectKey)).thenReturn(Optional.empty());
 
     // Act
     admin.upgrade(Collections.emptyMap());
 
     // Assert
-    // First namespace should trigger insert when metadata table is empty
+    verify(wrapper).get(tableMetadataObjectKey);
     verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
 
     Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
         Serializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    assertThat(insertedMetadata).containsKey("ns1");
-
-    // Second namespace should trigger update (when metadata table is not empty)
-    verify(wrapper)
-        .update(
-            eq(namespaceMetadataObjectKey),
-            payloadCaptor.capture(),
-            eq(namespaceMetadataResponseAfterInsert.getVersion()));
-
-    Map<String, ObjectStorageNamespaceMetadata> updatedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    assertThat(updatedMetadata).containsKeys("ns1", "ns2");
+    assertThat(insertedMetadata).containsKeys("ns1", "ns2");
   }
 }

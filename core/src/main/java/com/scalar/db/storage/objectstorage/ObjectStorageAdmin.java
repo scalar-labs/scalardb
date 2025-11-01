@@ -78,7 +78,20 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     try {
-      insertNamespaceMetadata(namespace);
+      // Insert the namespace metadata
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
+          getNamespaceMetadataTable(readVersionMap);
+      assert !metadataTable.containsKey(namespace);
+      if (metadataTable.isEmpty()) {
+        Map<String, ObjectStorageNamespaceMetadata> newMetadataTable =
+            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace));
+        insertMetadataTable(NAMESPACE_METADATA_TABLE, newMetadataTable);
+      } else {
+        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
+        updateMetadataTable(
+            NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
+      }
     } catch (Exception e) {
       throw new ExecutionException(
           String.format("Failed to create the namespace %s", namespace), e);
@@ -90,7 +103,20 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
-      insertTableMetadata(namespace, table, metadata);
+      // Insert the table metadata
+      String tableMetadataKey = getTableMetadataKey(namespace, table);
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
+      assert !metadataTable.containsKey(tableMetadataKey);
+      if (metadataTable.isEmpty()) {
+        Map<String, ObjectStorageTableMetadata> newMetadataTable =
+            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
+        insertMetadataTable(TABLE_METADATA_TABLE, newMetadataTable);
+      } else {
+        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
+        updateMetadataTable(
+            TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
+      }
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(
@@ -103,7 +129,18 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     try {
       deleteTableData(namespace, table);
-      deleteTableMetadata(namespace, table);
+      // Delete the table metadata
+      String tableMetadataKey = getTableMetadataKey(namespace, table);
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
+      assert metadataTable.containsKey(tableMetadataKey);
+      metadataTable.remove(tableMetadataKey);
+      String readVersion = readVersionMap.get(TABLE_METADATA_TABLE);
+      if (metadataTable.isEmpty()) {
+        deleteMetadataTable(TABLE_METADATA_TABLE, readVersion);
+      } else {
+        updateMetadataTable(TABLE_METADATA_TABLE, metadataTable, readVersion);
+      }
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(
@@ -130,7 +167,18 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try {
-      deleteNamespaceMetadata(namespace);
+      // Delete the namespace metadata
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
+          getNamespaceMetadataTable(readVersionMap);
+      assert metadataTable.containsKey(namespace);
+      metadataTable.remove(namespace);
+      String readVersion = readVersionMap.get(NAMESPACE_METADATA_TABLE);
+      if (metadataTable.isEmpty()) {
+        deleteMetadataTable(NAMESPACE_METADATA_TABLE, readVersion);
+      } else {
+        updateMetadataTable(NAMESPACE_METADATA_TABLE, metadataTable, readVersion);
+      }
     } catch (Exception e) {
       throw new ExecutionException(String.format("Failed to drop the namespace %s", namespace), e);
     }
@@ -201,7 +249,19 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public void repairNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     try {
-      upsertNamespaceMetadata(namespace);
+      // Upsert the namespace metadata
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
+          getNamespaceMetadataTable(readVersionMap);
+      if (metadataTable.isEmpty()) {
+        insertMetadataTable(
+            NAMESPACE_METADATA_TABLE,
+            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace)));
+      } else {
+        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
+        updateMetadataTable(
+            NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
+      }
     } catch (Exception e) {
       throw new ExecutionException(
           String.format("Failed to repair the namespace %s", namespace), e);
@@ -224,7 +284,19 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
-      upsertTableMetadata(namespace, table, metadata);
+      // Upsert the table metadata
+      String tableMetadataKey = getTableMetadataKey(namespace, table);
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
+      if (metadataTable.isEmpty()) {
+        insertMetadataTable(
+            TABLE_METADATA_TABLE,
+            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata)));
+      } else {
+        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
+        updateMetadataTable(
+            TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
+      }
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(
@@ -238,10 +310,16 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     try {
-      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      // Update the table metadata
+      String tableMetadataKey = getTableMetadataKey(namespace, table);
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
+      TableMetadata currentTableMetadata = metadataTable.get(tableMetadataKey).toTableMetadata();
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
-      upsertTableMetadata(namespace, table, updatedTableMetadata);
+      metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(updatedTableMetadata));
+      updateMetadataTable(
+          TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
     } catch (Exception e) {
       throw new ExecutionException(
           String.format(
@@ -293,151 +371,31 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     try {
-      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable();
+      // Get all namespace names from the table metadata table
+      Map<String, ObjectStorageTableMetadata> tableMetadataTable = getTableMetadataTable();
       List<String> namespaceNames =
-          metadataTable.keySet().stream()
+          tableMetadataTable.keySet().stream()
               .map(ObjectStorageAdmin::getNamespaceNameFromTableMetadataKey)
               .distinct()
               .collect(Collectors.toList());
-      for (String namespaceName : namespaceNames) {
-        upsertNamespaceMetadata(namespaceName);
+      // Upsert the namespace metadata table
+      Map<String, String> readVersionMap = new HashMap<>();
+      Map<String, ObjectStorageNamespaceMetadata> namespaceMetadataTable =
+          getNamespaceMetadataTable(readVersionMap);
+      Map<String, ObjectStorageNamespaceMetadata> newNamespaceMetadataTable =
+          namespaceNames.stream()
+              .collect(
+                  Collectors.toMap(namespace -> namespace, ObjectStorageNamespaceMetadata::new));
+      if (namespaceMetadataTable.isEmpty()) {
+        insertMetadataTable(NAMESPACE_METADATA_TABLE, newNamespaceMetadataTable);
+      } else {
+        updateMetadataTable(
+            NAMESPACE_METADATA_TABLE,
+            newNamespaceMetadataTable,
+            readVersionMap.get(NAMESPACE_METADATA_TABLE));
       }
     } catch (Exception e) {
       throw new ExecutionException("Failed to upgrade", e);
-    }
-  }
-
-  private void insertNamespaceMetadata(String namespace) throws ExecutionException {
-    try {
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
-          getNamespaceMetadataTable(readVersionMap);
-      if (metadataTable.containsKey(namespace)) {
-        throw new ExecutionException(
-            String.format("The namespace metadata already exists: %s", namespace));
-      }
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            NAMESPACE_METADATA_TABLE,
-            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace)));
-      } else {
-        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
-        updateMetadataTable(
-            NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to insert the namespace metadata: %s", namespace), e);
-    }
-  }
-
-  private void insertTableMetadata(String namespace, String table, TableMetadata metadata)
-      throws ExecutionException {
-    String tableMetadataKey = getTableMetadataKey(namespace, table);
-    try {
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
-      if (metadataTable.containsKey(tableMetadataKey)) {
-        throw new ExecutionException(
-            String.format("The table metadata already exists: %s", tableMetadataKey));
-      }
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            TABLE_METADATA_TABLE,
-            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata)));
-      } else {
-        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
-        updateMetadataTable(
-            TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to insert the table metadata: %s", tableMetadataKey), e);
-    }
-  }
-
-  private void upsertNamespaceMetadata(String namespace) throws ExecutionException {
-    try {
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
-          getNamespaceMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            NAMESPACE_METADATA_TABLE,
-            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace)));
-      } else {
-        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
-        updateMetadataTable(
-            NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to upsert the namespace metadata: %s", namespace), e);
-    }
-  }
-
-  private void upsertTableMetadata(String namespace, String table, TableMetadata metadata)
-      throws ExecutionException {
-    String tableMetadataKey = getTableMetadataKey(namespace, table);
-    try {
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            TABLE_METADATA_TABLE,
-            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata)));
-      } else {
-        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
-        updateMetadataTable(
-            TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to upsert the table metadata: %s", tableMetadataKey), e);
-    }
-  }
-
-  private void deleteNamespaceMetadata(String namespace) throws ExecutionException {
-    try {
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
-          getNamespaceMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty() || !metadataTable.containsKey(namespace)) {
-        throw new ExecutionException(
-            String.format("The namespace metadata does not exist: %s", namespace));
-      }
-      metadataTable.remove(namespace);
-      String readVersion = readVersionMap.get(NAMESPACE_METADATA_TABLE);
-      if (metadataTable.isEmpty()) {
-        deleteMetadataTable(NAMESPACE_METADATA_TABLE, readVersion);
-      } else {
-        updateMetadataTable(NAMESPACE_METADATA_TABLE, metadataTable, readVersion);
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to delete the namespace metadata: %s", namespace), e);
-    }
-  }
-
-  private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
-    String tableMetadataKey = getTableMetadataKey(namespace, table);
-    try {
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty() || !metadataTable.containsKey(tableMetadataKey)) {
-        throw new ExecutionException(
-            String.format("The table metadata does not exist: %s", tableMetadataKey));
-      }
-      metadataTable.remove(tableMetadataKey);
-      String readVersion = readVersionMap.get(TABLE_METADATA_TABLE);
-      if (metadataTable.isEmpty()) {
-        deleteMetadataTable(TABLE_METADATA_TABLE, readVersion);
-      } else {
-        updateMetadataTable(TABLE_METADATA_TABLE, metadataTable, readVersion);
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to delete the table metadata: %s", tableMetadataKey), e);
     }
   }
 
