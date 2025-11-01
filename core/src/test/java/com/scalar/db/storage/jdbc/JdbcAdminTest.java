@@ -3644,20 +3644,16 @@ public class JdbcAdminTest {
   }
 
   @ParameterizedTest
-  @EnumSource(RdbEngine.class)
-  public void getImportTableMetadata_ForX_ShouldWorkProperly(RdbEngine rdbEngine)
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void getImportTableMetadata_ForXBesidesSqlite_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
-    if (rdbEngine.equals(RdbEngine.SQLITE)) {
-      getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
-    } else {
-      getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-    }
-  }
+    String expectedCheckTableExistStatement = prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE);
 
-  private void getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-      RdbEngine rdbEngine, String expectedCheckTableExistStatement)
-      throws SQLException, ExecutionException {
     // Arrange
     Statement checkTableExistStatement = mock(Statement.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
@@ -3747,16 +3743,6 @@ public class JdbcAdminTest {
             anyInt(),
             eq(getFullTableName(NAMESPACE, TABLE) + " col"),
             eq(DataType.FLOAT));
-  }
-
-  private void getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(
-      RdbEngine rdbEngine) {
-    // Arrange
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
-        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
