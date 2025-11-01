@@ -1,5 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Operation;
@@ -15,8 +17,8 @@ public class StatementHandler {
   protected final TableMetadataManager metadataManager;
 
   public StatementHandler(ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
-    this.wrapper = wrapper;
-    this.metadataManager = metadataManager;
+    this.wrapper = checkNotNull(wrapper);
+    this.metadataManager = checkNotNull(metadataManager);
   }
 
   @Nonnull
