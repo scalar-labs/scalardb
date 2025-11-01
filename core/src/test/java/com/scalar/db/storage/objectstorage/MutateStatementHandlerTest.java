@@ -118,7 +118,33 @@ public class MutateStatementHandlerTest {
     Map<String, Object> values = new HashMap<>();
     values.put(ANY_NAME_3, ANY_INT_1);
     values.put(ANY_NAME_4, ANY_INT_2);
-    return new ObjectStorageRecord("concat_key", null, null, values);
+    return ObjectStorageRecord.newBuilder().id("concat_key").values(values).build();
+  }
+
+  private void setupNonExistentPartition() throws ObjectStorageWrapperException {
+    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+  }
+
+  private void setupPartitionWithRecord(String recordId) throws ObjectStorageWrapperException {
+    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    partition.put(recordId, prepareExistingRecord());
+    String serializedPartition = Serializer.serialize(partition);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
+    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+  }
+
+  private void setupPartitionWithRecords(String recordId, String... additionalRecordIds)
+      throws ObjectStorageWrapperException {
+    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    partition.put(recordId, prepareExistingRecord());
+    for (String additionalRecordId : additionalRecordIds) {
+      partition.put(additionalRecordId, prepareExistingRecord());
+    }
+    String serializedPartition = Serializer.serialize(partition);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
+    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
   }
 
   @Test
@@ -130,7 +156,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act
     handler.handle(put);
@@ -149,12 +175,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(put);
@@ -174,7 +195,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act
     handler.handle(put);
@@ -193,12 +214,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(put);
@@ -234,8 +250,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act
     handler.handle(put);
@@ -255,12 +270,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord("another_record_key");
 
     // Act
     handler.handle(put);
@@ -276,13 +286,8 @@ public class MutateStatementHandlerTest {
           throws Exception {
     // Arrange
     Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfNotExists()).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
     ObjectStorageMutation mutation = new ObjectStorageMutation(put, metadata);
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -293,7 +298,7 @@ public class MutateStatementHandlerTest {
       throws Exception {
     // Arrange
     Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -305,11 +310,7 @@ public class MutateStatementHandlerTest {
           throws Exception {
     // Arrange
     Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord("another_record_key");
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -324,13 +325,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(put);
@@ -351,7 +346,7 @@ public class MutateStatementHandlerTest {
                 ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
                     .build())
             .build();
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -368,11 +363,7 @@ public class MutateStatementHandlerTest {
                 ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
                     .build())
             .build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord("another_record_key");
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -393,13 +384,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(put);
@@ -419,13 +404,8 @@ public class MutateStatementHandlerTest {
                 ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isEqualToInt(999))
                     .build())
             .build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
     ObjectStorageMutation mutation = new ObjectStorageMutation(put, metadata);
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
@@ -476,15 +456,8 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation.getConcatenatedPartitionKey());
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
     String expectedExistingRecordKey = "existing_record_key";
-    partition.put(expectedExistingRecordKey, prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecords(mutation.getRecordId(), expectedExistingRecordKey);
 
     // Act
     handler.handle(delete);
@@ -504,13 +477,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(delete);
@@ -530,15 +497,8 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
     String expectedExistingRecordKey = "existing_record_key";
-    partition.put(expectedExistingRecordKey, prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecords(mutation.getRecordId(), expectedExistingRecordKey);
 
     // Act
     handler.handle(delete);
@@ -559,13 +519,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(delete);
@@ -599,15 +553,8 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
     String expectedExistingRecordKey = "existing_record_key";
-    partition.put(expectedExistingRecordKey, prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecords(mutation.getRecordId(), expectedExistingRecordKey);
 
     // Act
     handler.handle(delete);
@@ -628,13 +575,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(delete);
@@ -649,7 +590,7 @@ public class MutateStatementHandlerTest {
     // Arrange
     Delete delete =
         Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -662,11 +603,7 @@ public class MutateStatementHandlerTest {
     // Arrange
     Delete delete =
         Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord("another_record_key");
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -689,15 +626,8 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
     String expectedExistingRecordKey = "existing_record_key";
-    partition.put(expectedExistingRecordKey, prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecords(mutation.getRecordId(), expectedExistingRecordKey);
 
     // Act
     handler.handle(delete);
@@ -724,12 +654,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, concatenatedPartitionKey);
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act
     handler.handle(delete);
@@ -750,11 +675,7 @@ public class MutateStatementHandlerTest {
                         ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
                     .build())
             .build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord("another_record_key");
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -772,7 +693,7 @@ public class MutateStatementHandlerTest {
                         ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
                     .build())
             .build();
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -789,12 +710,7 @@ public class MutateStatementHandlerTest {
                     .build())
             .build();
     ObjectStorageMutation mutation = new ObjectStorageMutation(delete, metadata);
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(mutation.getRecordId(), prepareExistingRecord());
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecord(mutation.getRecordId());
 
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
@@ -837,7 +753,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation1.getConcatenatedPartitionKey());
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act
     handler.handle(Arrays.asList(put1, put2, put3, put4));
@@ -886,11 +802,11 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation1.getConcatenatedPartitionKey());
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    String serializedPartition = Serializer.serialize(partition);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedPartition, VERSION);
-    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+    setupPartitionWithRecords(
+        mutation1.getRecordId(),
+        mutation2.getRecordId(),
+        mutation3.getRecordId(),
+        mutation4.getRecordId());
 
     // Act
     handler.handle(Arrays.asList(put1, put2, put3, put4));
@@ -948,7 +864,7 @@ public class MutateStatementHandlerTest {
     String expectedObjectKey2 =
         ObjectStorageUtils.getObjectKey(
             ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation3.getConcatenatedPartitionKey());
-    when(wrapper.get(anyString())).thenReturn(Optional.empty());
+    setupNonExistentPartition();
 
     // Act
     handler.handle(Arrays.asList(put1, put2, put3, put4));

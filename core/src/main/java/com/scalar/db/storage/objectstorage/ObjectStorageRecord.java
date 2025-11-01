@@ -1,11 +1,14 @@
 package com.scalar.db.storage.objectstorage;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
+@SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @Immutable
 public class ObjectStorageRecord {
   private final String id;
@@ -24,9 +27,10 @@ public class ObjectStorageRecord {
       @Nullable Map<String, Object> clusteringKey,
       @Nullable Map<String, Object> values) {
     this.id = id != null ? id : "";
-    this.partitionKey = partitionKey != null ? partitionKey : Collections.emptyMap();
-    this.clusteringKey = clusteringKey != null ? clusteringKey : Collections.emptyMap();
-    this.values = values != null ? values : Collections.emptyMap();
+    this.partitionKey = partitionKey != null ? new HashMap<>(partitionKey) : Collections.emptyMap();
+    this.clusteringKey =
+        clusteringKey != null ? new HashMap<>(clusteringKey) : Collections.emptyMap();
+    this.values = values != null ? new HashMap<>(values) : Collections.emptyMap();
   }
 
   public ObjectStorageRecord(ObjectStorageRecord record) {
@@ -73,5 +77,40 @@ public class ObjectStorageRecord {
   @Override
   public int hashCode() {
     return Objects.hash(id, partitionKey, clusteringKey, values);
+  }
+
+  public static ObjectStorageRecord.Builder newBuilder() {
+    return new ObjectStorageRecord.Builder();
+  }
+
+  public static final class Builder {
+    private String id;
+    private Map<String, Object> partitionKey = new HashMap<>();
+    private Map<String, Object> clusteringKey = new HashMap<>();
+    private Map<String, Object> values = new HashMap<>();
+
+    public Builder id(String id) {
+      this.id = id;
+      return this;
+    }
+
+    public Builder partitionKey(Map<String, Object> partitionKey) {
+      this.partitionKey = partitionKey;
+      return this;
+    }
+
+    public Builder clusteringKey(Map<String, Object> clusteringKey) {
+      this.clusteringKey = clusteringKey;
+      return this;
+    }
+
+    public Builder values(Map<String, Object> values) {
+      this.values = values;
+      return this;
+    }
+
+    public ObjectStorageRecord build() {
+      return new ObjectStorageRecord(id, partitionKey, clusteringKey, values);
+    }
   }
 }

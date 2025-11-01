@@ -26,9 +26,12 @@ public class ClusteringKeyComparator implements Comparator<Map<String, Object>> 
           ColumnValueMapper.convert(
               clusteringKey2.get(columnName), columnName, metadata.getColumnDataType(columnName));
 
-      int cmp = Ordering.natural().compare(column1, column2);
+      int cmp =
+          order == Scan.Ordering.Order.ASC
+              ? Ordering.natural().compare(column1, column2)
+              : Ordering.natural().compare(column2, column1);
       if (cmp != 0) {
-        return order == Scan.Ordering.Order.ASC ? cmp : -cmp;
+        return cmp;
       }
     }
     return 0;

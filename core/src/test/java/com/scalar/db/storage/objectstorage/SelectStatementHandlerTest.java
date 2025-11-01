@@ -85,18 +85,42 @@ public class SelectStatementHandlerTest {
   }
 
   private Map<String, ObjectStorageRecord> createPartitionWithRecord() {
+    Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+    Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2);
+    Map<String, Object> values = Collections.singletonMap(ANY_NAME_3, ANY_TEXT_3);
     Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    Map<String, Object> partitionKey = new HashMap<>();
-    partitionKey.put(ANY_NAME_1, ANY_TEXT_1);
-    Map<String, Object> clusteringKey = new HashMap<>();
-    clusteringKey.put(ANY_NAME_2, ANY_TEXT_2);
-    Map<String, Object> values = new HashMap<>();
-    values.put(ANY_NAME_3, ANY_TEXT_3);
-    String recordId = ANY_TEXT_1 + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + ANY_TEXT_2;
-    ObjectStorageRecord record =
-        new ObjectStorageRecord(recordId, partitionKey, clusteringKey, values);
-    partition.put(recordId, record);
+    addRecordToPartition(partition, partitionKey, clusteringKey, values);
     return partition;
+  }
+
+  private ObjectStorageRecord createRecord(
+      Map<String, Object> partitionKey,
+      Map<String, Object> clusteringKey,
+      Map<String, Object> values) {
+    String recordId = buildRecordId(partitionKey, clusteringKey);
+    return ObjectStorageRecord.newBuilder()
+        .id(recordId)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .values(values)
+        .build();
+  }
+
+  private void addRecordToPartition(
+      Map<String, ObjectStorageRecord> partition,
+      Map<String, Object> partitionKey,
+      Map<String, Object> clusteringKey,
+      Map<String, Object> values) {
+    ObjectStorageRecord record = createRecord(partitionKey, clusteringKey, values);
+    String recordId = buildRecordId(partitionKey, clusteringKey);
+    partition.put(recordId, record);
+  }
+
+  private String buildRecordId(
+      Map<String, Object> partitionKey, Map<String, Object> clusteringKey) {
+    String partitionKeyValue = (String) partitionKey.get(ANY_NAME_1);
+    String clusteringKeyValue = (String) clusteringKey.get(ANY_NAME_2);
+    return partitionKeyValue + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + clusteringKeyValue;
   }
 
   @Test
@@ -230,14 +254,9 @@ public class SelectStatementHandlerTest {
 
     // Create multiple records
     for (int i = 0; i < 5; i++) {
-      Map<String, Object> partitionKey = new HashMap<>();
-      partitionKey.put(ANY_NAME_1, ANY_TEXT_1);
-      Map<String, Object> clusteringKey = new HashMap<>();
-      clusteringKey.put(ANY_NAME_2, ANY_TEXT_2 + i);
-      String recordId = ANY_TEXT_1 + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + ANY_TEXT_2 + i;
-      ObjectStorageRecord record =
-          new ObjectStorageRecord(recordId, partitionKey, clusteringKey, new HashMap<>());
-      partition.put(recordId, record);
+      Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+      Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
+      addRecordToPartition(partition, partitionKey, clusteringKey, Collections.emptyMap());
     }
 
     String serialized = Serializer.serialize(partition);
@@ -271,14 +290,9 @@ public class SelectStatementHandlerTest {
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
     Map<String, ObjectStorageRecord> partition2 = new HashMap<>();
-    Map<String, Object> partitionKey2 = new HashMap<>();
-    partitionKey2.put(ANY_NAME_1, ANY_TEXT_2);
-    Map<String, Object> clusteringKey2 = new HashMap<>();
-    clusteringKey2.put(ANY_NAME_2, ANY_TEXT_3);
-    String recordId2 = ANY_TEXT_2 + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + ANY_TEXT_3;
-    ObjectStorageRecord record2 =
-        new ObjectStorageRecord(recordId2, partitionKey2, clusteringKey2, new HashMap<>());
-    partition2.put(recordId2, record2);
+    Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
+    Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
+    addRecordToPartition(partition2, partitionKey2, clusteringKey2, Collections.emptyMap());
     String serialized2 = Serializer.serialize(partition2);
     ObjectStorageWrapperResponse response2 =
         new ObjectStorageWrapperResponse(serialized2, "version2");
@@ -315,14 +329,9 @@ public class SelectStatementHandlerTest {
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
     Map<String, ObjectStorageRecord> partition2 = new HashMap<>();
-    Map<String, Object> partitionKey2 = new HashMap<>();
-    partitionKey2.put(ANY_NAME_1, ANY_TEXT_2);
-    Map<String, Object> clusteringKey2 = new HashMap<>();
-    clusteringKey2.put(ANY_NAME_2, ANY_TEXT_3);
-    String recordId2 = ANY_TEXT_2 + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + ANY_TEXT_3;
-    ObjectStorageRecord record2 =
-        new ObjectStorageRecord(recordId2, partitionKey2, clusteringKey2, new HashMap<>());
-    partition2.put(recordId2, record2);
+    Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
+    Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
+    addRecordToPartition(partition2, partitionKey2, clusteringKey2, Collections.emptyMap());
     String serialized2 = Serializer.serialize(partition2);
     ObjectStorageWrapperResponse response2 =
         new ObjectStorageWrapperResponse(serialized2, "version2");
@@ -358,14 +367,9 @@ public class SelectStatementHandlerTest {
 
     // Create multiple records with different clustering keys
     for (int i = 0; i < 5; i++) {
-      Map<String, Object> partitionKey = new HashMap<>();
-      partitionKey.put(ANY_NAME_1, ANY_TEXT_1);
-      Map<String, Object> clusteringKey = new HashMap<>();
-      clusteringKey.put(ANY_NAME_2, ANY_TEXT_2 + i);
-      ObjectStorageRecord record =
-          new ObjectStorageRecord(
-              ANY_TEXT_1 + ":" + ANY_TEXT_2 + i, partitionKey, clusteringKey, new HashMap<>());
-      partition.put(ANY_TEXT_1 + ":" + ANY_TEXT_2 + i, record);
+      Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+      Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
+      addRecordToPartition(partition, partitionKey, clusteringKey, Collections.emptyMap());
     }
 
     String serialized = Serializer.serialize(partition);
@@ -391,14 +395,9 @@ public class SelectStatementHandlerTest {
 
     // Create multiple records with different clustering keys
     for (int i = 0; i < 5; i++) {
-      Map<String, Object> partitionKey = new HashMap<>();
-      partitionKey.put(ANY_NAME_1, ANY_TEXT_1);
-      Map<String, Object> clusteringKey = new HashMap<>();
-      clusteringKey.put(ANY_NAME_2, ANY_TEXT_2 + i);
-      ObjectStorageRecord record =
-          new ObjectStorageRecord(
-              ANY_TEXT_1 + ":" + ANY_TEXT_2 + i, partitionKey, clusteringKey, new HashMap<>());
-      partition.put(ANY_TEXT_1 + ":" + ANY_TEXT_2 + i, record);
+      Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+      Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
+      addRecordToPartition(partition, partitionKey, clusteringKey, Collections.emptyMap());
     }
 
     String serialized = Serializer.serialize(partition);
@@ -424,14 +423,9 @@ public class SelectStatementHandlerTest {
 
     // Create multiple records
     for (int i = 0; i < 3; i++) {
-      Map<String, Object> partitionKey = new HashMap<>();
-      partitionKey.put(ANY_NAME_1, ANY_TEXT_1);
-      Map<String, Object> clusteringKey = new HashMap<>();
-      clusteringKey.put(ANY_NAME_2, ANY_TEXT_2 + i);
-      ObjectStorageRecord record =
-          new ObjectStorageRecord(
-              ANY_TEXT_1 + ":" + ANY_TEXT_2 + i, partitionKey, clusteringKey, new HashMap<>());
-      partition.put(ANY_TEXT_1 + ":" + ANY_TEXT_2 + i, record);
+      Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+      Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
+      addRecordToPartition(partition, partitionKey, clusteringKey, Collections.emptyMap());
     }
 
     String serialized = Serializer.serialize(partition);

@@ -9,6 +9,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -16,6 +17,7 @@ public class StatementHandler {
   protected final ObjectStorageWrapper wrapper;
   protected final TableMetadataManager metadataManager;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public StatementHandler(ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
     this.wrapper = checkNotNull(wrapper);
     this.metadataManager = checkNotNull(metadataManager);

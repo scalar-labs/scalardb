@@ -26,11 +26,13 @@ public class ObjectStorageMutation extends ObjectStorageOperation {
     }
     Put put = (Put) mutation;
 
-    return new ObjectStorageRecord(
-        getRecordId(),
-        toMap(put.getPartitionKey().getColumns()),
-        put.getClusteringKey().map(k -> toMap(k.getColumns())).orElse(Collections.emptyMap()),
-        toMapForPut(put));
+    return ObjectStorageRecord.newBuilder()
+        .id(getRecordId())
+        .partitionKey(toMap(put.getPartitionKey().getColumns()))
+        .clusteringKey(
+            put.getClusteringKey().map(k -> toMap(k.getColumns())).orElse(Collections.emptyMap()))
+        .values(toMapForPut(put))
+        .build();
   }
 
   @Nonnull

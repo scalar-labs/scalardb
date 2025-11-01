@@ -4,6 +4,7 @@ import com.azure.core.http.HttpHeaderName;
 import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobDownloadContentResponse;
 import com.azure.storage.blob.models.BlobErrorCode;
 import com.azure.storage.blob.models.BlobItem;
@@ -12,6 +13,7 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
+import com.azure.storage.common.StorageSharedKeyCredential;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
@@ -28,8 +30,13 @@ public class BlobWrapper implements ObjectStorageWrapper {
   private final Duration requestTimeoutInSeconds;
   private final ParallelTransferOptions parallelTransferOptions;
 
-  public BlobWrapper(BlobContainerClient client, BlobConfig config) {
-    this.client = client;
+  public BlobWrapper(BlobConfig config) {
+    this.client =
+        new BlobServiceClientBuilder()
+            .endpoint(config.getEndpoint())
+            .credential(new StorageSharedKeyCredential(config.getUsername(), config.getPassword()))
+            .buildClient()
+            .getBlobContainerClient(config.getBucket());
     this.requestTimeoutInSeconds = Duration.ofSeconds(config.getRequestTimeoutInSeconds());
     this.parallelTransferOptions =
         new ParallelTransferOptions()

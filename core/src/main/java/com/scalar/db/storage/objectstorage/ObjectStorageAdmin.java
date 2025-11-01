@@ -12,6 +12,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     metadataNamespace = objectStorageConfig.getMetadataNamespace();
   }
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ObjectStorageAdmin(ObjectStorageWrapper wrapper, ObjectStorageConfig objectStorageConfig) {
     this.wrapper = wrapper;
     metadataNamespace = objectStorageConfig.getMetadataNamespace();

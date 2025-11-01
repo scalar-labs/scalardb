@@ -252,8 +252,10 @@ public class SelectStatementHandler extends StatementHandler {
                           record.getClusteringKey().get(column.getName()),
                           column.getName(),
                           column.getDataType());
-                  int cmp = Ordering.natural().compare(recordColumn, column);
-                  cmp = order == Scan.Ordering.Order.ASC ? cmp : -cmp;
+                  int cmp =
+                      order == Scan.Ordering.Order.ASC
+                          ? Ordering.natural().compare(recordColumn, column)
+                          : Ordering.natural().compare(column, recordColumn);
                   if (isStart) {
                     if (isInclusive) {
                       return cmp >= 0;
