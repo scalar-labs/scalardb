@@ -19,15 +19,17 @@ import javax.annotation.concurrent.Immutable;
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @Immutable
 public class ObjectStorageTableMetadata {
+  public static final Integer DEFAULT_VERSION = 1;
   private final LinkedHashSet<String> partitionKeyNames;
   private final LinkedHashSet<String> clusteringKeyNames;
   private final Map<String, String> clusteringOrders;
   private final Set<String> secondaryIndexNames;
   private final Map<String, String> columns;
+  private final Integer version;
 
   // The default constructor is required by Jackson to deserialize JSON object
   public ObjectStorageTableMetadata() {
-    this(null, null, null, null, null);
+    this(null, null, null, null, null, null);
   }
 
   public ObjectStorageTableMetadata(
@@ -35,7 +37,8 @@ public class ObjectStorageTableMetadata {
       @Nullable LinkedHashSet<String> clusteringKeyNames,
       @Nullable Map<String, String> clusteringOrders,
       @Nullable Set<String> secondaryIndexNames,
-      @Nullable Map<String, String> columns) {
+      @Nullable Map<String, String> columns,
+      @Nullable Integer version) {
     this.partitionKeyNames =
         partitionKeyNames != null ? new LinkedHashSet<>(partitionKeyNames) : new LinkedHashSet<>();
     this.clusteringKeyNames =
@@ -47,9 +50,10 @@ public class ObjectStorageTableMetadata {
     this.secondaryIndexNames =
         secondaryIndexNames != null ? new HashSet<>(secondaryIndexNames) : Collections.emptySet();
     this.columns = columns != null ? new HashMap<>(columns) : Collections.emptyMap();
+    this.version = version != null ? version : DEFAULT_VERSION;
   }
 
-  public ObjectStorageTableMetadata(TableMetadata tableMetadata) {
+  public ObjectStorageTableMetadata(TableMetadata tableMetadata, Integer version) {
     Map<String, String> clusteringOrders =
         tableMetadata.getClusteringKeyNames().stream()
             .collect(
@@ -67,6 +71,11 @@ public class ObjectStorageTableMetadata {
     this.clusteringOrders = clusteringOrders;
     this.secondaryIndexNames = tableMetadata.getSecondaryIndexNames();
     this.columns = columnTypeByName;
+    this.version = version;
+  }
+
+  public ObjectStorageTableMetadata(TableMetadata tableMetadata) {
+    this(tableMetadata, DEFAULT_VERSION);
   }
 
   private ObjectStorageTableMetadata(Builder builder) {
@@ -75,7 +84,8 @@ public class ObjectStorageTableMetadata {
         builder.clusteringKeyNames,
         builder.clusteringOrders,
         builder.secondaryIndexNames,
-        builder.columns);
+        builder.columns,
+        builder.version);
   }
 
   public LinkedHashSet<String> getPartitionKeyNames() {
@@ -98,6 +108,10 @@ public class ObjectStorageTableMetadata {
     return columns;
   }
 
+  public Integer getVersion() {
+    return version;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -111,13 +125,19 @@ public class ObjectStorageTableMetadata {
         && Objects.equals(clusteringKeyNames, that.clusteringKeyNames)
         && Objects.equals(clusteringOrders, that.clusteringOrders)
         && Objects.equals(secondaryIndexNames, that.secondaryIndexNames)
-        && Objects.equals(columns, that.columns);
+        && Objects.equals(columns, that.columns)
+        && Objects.equals(version, that.version);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
-        partitionKeyNames, clusteringKeyNames, clusteringOrders, secondaryIndexNames, columns);
+        partitionKeyNames,
+        clusteringKeyNames,
+        clusteringOrders,
+        secondaryIndexNames,
+        columns,
+        version);
   }
 
   public TableMetadata toTableMetadata() {
@@ -169,6 +189,7 @@ public class ObjectStorageTableMetadata {
     private Map<String, String> clusteringOrders;
     private Set<String> secondaryIndexNames;
     private Map<String, String> columns;
+    private Integer version;
 
     private Builder() {}
 
@@ -194,6 +215,11 @@ public class ObjectStorageTableMetadata {
 
     public ObjectStorageTableMetadata.Builder columns(Map<String, String> val) {
       columns = val;
+      return this;
+    }
+
+    public ObjectStorageTableMetadata.Builder version(Integer val) {
+      version = val;
       return this;
     }
 
