@@ -6753,7 +6753,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Act Assert
     DistributedTransaction transaction = begin(manager, readOnly);
     Optional<Result> actual =
-        manager.get(
+        transaction.get(
             Get.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)
