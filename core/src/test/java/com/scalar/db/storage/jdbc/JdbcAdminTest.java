@@ -8,6 +8,7 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
@@ -563,7 +564,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -577,7 +578,7 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -704,7 +705,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" RAW(2000),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -2005,6 +2006,7 @@ public class JdbcAdminTest {
 
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStmt = mock(Statement.class);
+    PreparedStatement isNamespaceEmptyStatementMock = mock(PreparedStatement.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
     Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
     Statement selectAllFromMetadataTablePrepStmt = mock(Statement.class);
@@ -2018,7 +2020,12 @@ public class JdbcAdminTest {
             selectAllFromMetadataTablePrepStmt,
             dropNamespaceTableStmt,
             dropMetadataSchemaStmt);
-    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
+    // Mock for isNamespaceEmpty() check - returns empty ResultSet (namespace is empty)
+    ResultSet emptyResultSet = mock(ResultSet.class);
+    when(emptyResultSet.next()).thenReturn(false);
+    when(isNamespaceEmptyStatementMock.executeQuery()).thenReturn(emptyResultSet);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(isNamespaceEmptyStatementMock, deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet =
@@ -2119,12 +2126,18 @@ public class JdbcAdminTest {
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
     Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
+      PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
       when(connection.createStatement())
           .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+      ResultSet emptyResultSet = mock(ResultSet.class);
+      when(emptyResultSet.next()).thenReturn(false);
+      when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+      when(connection.prepareStatement(anyString()))
+          .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
     } else {
       when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
+      when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     }
-    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
     ResultSet resultSet =
@@ -2143,6 +2156,76 @@ public class JdbcAdminTest {
     verify(deleteFromNamespaceTableMock).setString(1, namespace);
     verify(deleteFromNamespaceTableMock).execute();
     verify(selectNamespaceStatementMock).executeQuery(selectNamespaceStatement);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForMysql_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.MYSQL);
+  }
+
+  @Test
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForPostgresql_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.POSTGRESQL);
+  }
+
+  @Test
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForSqlServer_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.SQL_SERVER);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForOracle_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+        RdbEngine.ORACLE);
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForSqlite_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Do nothing. SQLite does not have a concept of namespaces.
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeftForDb2_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(RdbEngine.DB2);
+  }
+
+  private void dropNamespace_WithNonScalarDBTableLeftForX_ShouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine) throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    Statement dropNamespaceStatementMock = mock(Statement.class);
+    PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
+    Statement selectNamespaceStatementMock = mock(Statement.class);
+    PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+    when(connection.createStatement())
+        .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
+    ResultSet emptyResultSet = mock(ResultSet.class);
+    when(emptyResultSet.next()).thenReturn(true).thenReturn(false);
+    when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
+    when(dataSource.getConnection()).thenReturn(connection);
+    // Namespaces table does not contain other namespaces
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(false);
+    when(selectNamespaceStatementMock.executeQuery(anyString())).thenReturn(resultSet);
+
+    // Act Assert
+    assertThatCode(() -> admin.dropNamespace(namespace))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -4716,7 +4799,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  void createTableInternal_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException() {
+  void
+      createTableInternal_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException() {
     // Arrange
     TableMetadata metadata1 =
         TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.BLOB).build();
@@ -4749,13 +4833,77 @@ public class JdbcAdminTest {
   }
 
   @Test
-  void createIndex_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+  void createIndex_Db2_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
       throws SQLException {
     // Arrange
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "index_col";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "pk", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                indexColumn, DataType.BLOB.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    Statement statement = mock(Statement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.createIndex(namespace, table, indexColumn, Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
+  }
+
+  @Test
+  void
+      createTableInternal_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    TableMetadata metadata1 =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.BLOB).build();
+    TableMetadata metadata2 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck", DataType.BLOB)
+            .build();
+    TableMetadata metadata3 =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.BLOB)
+            .addSecondaryIndex("col")
+            .build();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTableInternal(connection, "ns", "tbl", metadata1, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTableInternal(connection, "ns", "tbl", metadata2, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "key");
+    assertThatThrownBy(() -> admin.createTableInternal(connection, "ns", "tbl", metadata3, false))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContainingAll("BLOB", "index");
+  }
+
+  @Test
+  void createIndex_Oracle_WithBlobColumnAsKeyOrIndex_ShouldThrowUnsupportedOperationException()
+      throws SQLException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String indexColumn = "index_col";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
 
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =

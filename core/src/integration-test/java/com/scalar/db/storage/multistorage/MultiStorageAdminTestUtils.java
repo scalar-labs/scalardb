@@ -117,6 +117,25 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    // Do nothing for Cassandra
+
+    // for JDBC
+    String deleteMetadataStatement =
+        "DELETE FROM "
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE)
+            + " WHERE "
+            + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
+            + " = ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(deleteMetadataStatement)) {
+      preparedStatement.setString(1, getFullTableName(namespace, table));
+      preparedStatement.executeUpdate();
+    }
+  }
+
+  @Override
   public void dropNamespace(String namespace) throws SQLException {
     boolean existsOnCassandra = namespaceExistsOnCassandra(namespace);
     boolean existsOnJdbc = namespaceExistsOnJdbc(namespace);
