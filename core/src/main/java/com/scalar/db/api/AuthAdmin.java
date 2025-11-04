@@ -208,10 +208,10 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieves a list of {@link RoleDetail}s for the given user.
+   * Retrieves a list of {@link UserRoleDetail}s for the given user.
    *
    * @param username the username
-   * @return a list of {@link RoleDetail}s for the given user
+   * @return a list of {@link UserRoleDetail}s for the given user
    * @throws ExecutionException if the operation fails
    */
   default List<UserRoleDetail> getRolesForUser(String username) throws ExecutionException {
@@ -223,7 +223,7 @@ public interface AuthAdmin {
    *
    * @param username the username
    * @param roleName the role name
-   * @param withAdminOption if true, the user can grant the role to other users
+   * @param withAdminOption if true, the user can grant the role to other users or roles
    * @throws IllegalArgumentException if the user does not exist or the role does not exist
    * @throws ExecutionException if the operation fails
    */
@@ -269,11 +269,13 @@ public interface AuthAdmin {
   }
 
   /**
-   * Grants a role to another role.
+   * Grants a member role to a role. Users or roles that have the role will inherit all privileges
+   * from the member role.
    *
    * @param roleName the role name
-   * @param memberRoleName the member role name
-   * @param withAdminOption if true, the member role can grant the role to other roles
+   * @param memberRoleName the member role name to be granted to the role
+   * @param withAdminOption if true, users or roles that have the role can grant the member role to
+   *     other users or roles
    * @throws IllegalArgumentException if the role does not exist or the member role does not exist
    * @throws ExecutionException if the operation fails
    */
@@ -401,7 +403,7 @@ public interface AuthAdmin {
     boolean isSuperuser();
   }
 
-  /** Represents a role */
+  /** Represents a role. */
   interface Role {
     String getName();
   }
@@ -413,11 +415,19 @@ public interface AuthAdmin {
     List<RoleHierarchy> getRoleHierarchies();
   }
 
+  /**
+   * Represents a role detail for a specific user, including whether the user has admin option for
+   * this role.
+   */
   interface UserRoleDetail extends RoleDetail {
+    /**
+     * Returns whether the user has admin option for this role. This is distinct from the admin
+     * option in role hierarchies, which applies to role-to-role grants.
+     */
     boolean hasAdminOptionOnUser();
   }
 
-  /** Represents a user-role assignment */
+  /** Represents a user-role assignment. */
   interface UserRole {
     String getUsername();
 
@@ -426,12 +436,15 @@ public interface AuthAdmin {
     boolean hasAdminOption();
   }
 
-  /** Represents a role hierarchy (role-to-role assignment) */
+  /** Represents a role hierarchy (role-to-role assignment). */
   interface RoleHierarchy {
+    /** Returns the role name. */
     String getRoleName();
 
+    /** Returns the member role name granted to the role. */
     String getMemberRoleName();
 
+    /** Returns whether admin option is granted for this hierarchy. */
     boolean hasAdminOption();
   }
 
