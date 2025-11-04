@@ -10,7 +10,7 @@ public interface ObjectStorageProvider extends DistributedStorageProvider {
 
   @Override
   default DistributedStorage createDistributedStorage(DatabaseConfig config) {
-    return null;
+    return new ObjectStorage(config);
   }
 
   @Override
