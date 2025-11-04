@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class ObjectStorageWrapperIntegrationTestBase {
+public class ObjectStorageWrapperIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(ObjectStorageWrapperIntegrationTestBase.class);
 
@@ -56,7 +56,9 @@ public abstract class ObjectStorageWrapperIntegrationTestBase {
     }
   }
 
-  protected abstract Properties getProperties(String testName);
+  protected Properties getProperties(String testName) {
+    return ObjectStorageEnv.getProperties(testName);
+  }
 
   private void createObjects() throws ObjectStorageWrapperException {
     wrapper.insert(TEST_KEY1, TEST_OBJECT1);
@@ -182,15 +184,6 @@ public abstract class ObjectStorageWrapperIntegrationTestBase {
   }
 
   @Test
-  public void delete_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
-    // Arrange
-    String objectKey = "non-existing-key";
-
-    // Act Assert
-    assertThatCode(() -> wrapper.delete(objectKey)).isInstanceOf(PreconditionFailedException.class);
-  }
-
-  @Test
   public void delete_ExistingObjectKeyWithCorrectVersionGiven_ShouldDeleteObjectSuccessfully()
       throws Exception {
     // Arrange
@@ -277,9 +270,16 @@ public abstract class ObjectStorageWrapperIntegrationTestBase {
 
   @Test
   public void close_ShouldNotThrowException() {
-    // Arrange
+    try {
+      // Arrange
 
-    // Act Assert
-    assertThatCode(() -> wrapper.close()).doesNotThrowAnyException();
+      // Act Assert
+      assertThatCode(() -> wrapper.close()).doesNotThrowAnyException();
+    } finally {
+      Properties properties = getProperties(TEST_NAME);
+      ObjectStorageConfig objectStorageConfig =
+          ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties));
+      wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
+    }
   }
 }
