@@ -60,14 +60,13 @@ public class BlobStorageConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithoutOptimizationOptionsGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithoutNonMandatoryOptionsGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_CONTACT_POINT);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
-    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
 
     // Act
     BlobStorageConfig config = new BlobStorageConfig(new DatabaseConfig(props));
@@ -77,7 +76,6 @@ public class BlobStorageConfigTest {
     assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getParallelUploadBlockSizeInBytes())
         .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
     assertThat(config.getParallelUploadMaxParallelism())
@@ -99,35 +97,6 @@ public class BlobStorageConfigTest {
     // Act Assert
     assertThatThrownBy(() -> new BlobStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void constructor_WithoutSystemNamespaceName_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_CONTACT_POINT);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
-
-    // Act
-    BlobStorageConfig config = new BlobStorageConfig(new DatabaseConfig(props));
-
-    // Assert
-    assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getMetadataNamespace())
-        .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
-    assertThat(config.getParallelUploadBlockSizeInBytes())
-        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
-    assertThat(config.getParallelUploadMaxParallelism())
-        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
-    assertThat(config.getParallelUploadThresholdInBytes())
-        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
-    assertThat(config.getRequestTimeoutInSeconds())
-        .isEqualTo(BlobStorageConfig.DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
   }
 
   @Test
