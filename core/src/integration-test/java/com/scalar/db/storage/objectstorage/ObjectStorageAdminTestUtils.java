@@ -3,6 +3,8 @@ package com.scalar.db.storage.objectstorage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -67,7 +69,11 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     String tableMetadataKey =
         String.join(
             String.valueOf(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER), namespace, table);
-    metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata());
+    metadataTable.put(
+        tableMetadataKey,
+        ObjectStorageTableMetadata.newBuilder()
+            .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList("corrupted")))
+            .build());
 
     wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
   }

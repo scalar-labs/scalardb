@@ -1,5 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -10,13 +12,10 @@ public class ObjectStorageNamespaceMetadata {
   private final String name;
   private final Integer version;
 
-  // The default constructor is required by Jackson to deserialize JSON object
-  @SuppressWarnings("unused")
-  public ObjectStorageNamespaceMetadata() {
-    this(null, null);
-  }
-
-  public ObjectStorageNamespaceMetadata(@Nullable String name, @Nullable Integer version) {
+  @JsonCreator
+  public ObjectStorageNamespaceMetadata(
+      @JsonProperty("name") @Nullable String name,
+      @JsonProperty("version") @Nullable Integer version) {
     this.name = name != null ? name : "";
     this.version = version != null ? version : DEFAULT_VERSION;
   }
