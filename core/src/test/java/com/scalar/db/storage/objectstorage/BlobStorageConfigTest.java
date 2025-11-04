@@ -4,17 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.objectstorage.blob.BlobConfig;
+import com.scalar.db.storage.objectstorage.blobstorage.BlobStorageConfig;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
-public class BlobConfigTest {
+public class BlobStorageConfigTest {
   private static final String ANY_USERNAME = "any_user";
   private static final String ANY_PASSWORD = "any_password";
   private static final String ANY_BUCKET = "bucket";
   private static final String ANY_ENDPOINT = "http://localhost:10000/" + ANY_USERNAME;
   private static final String ANY_CONTACT_POINT = ANY_ENDPOINT + "/" + ANY_BUCKET;
-  private static final String BLOB_STORAGE = "blob";
+  private static final String BLOB_STORAGE = "blob-storage";
   private static final String ANY_TABLE_METADATA_NAMESPACE = "any_namespace";
   private static final String ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = "5242880"; // 5MB
   private static final String ANY_PARALLEL_UPLOAD_MAX_PARALLELISM = "4";
@@ -31,15 +31,17 @@ public class BlobConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
     props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
     props.setProperty(
-        BlobConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+        BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
+        ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
     props.setProperty(
-        BlobConfig.PARALLEL_UPLOAD_MAX_PARALLELISM, ANY_PARALLEL_UPLOAD_MAX_PARALLELISM);
+        BlobStorageConfig.PARALLEL_UPLOAD_MAX_PARALLELISM, ANY_PARALLEL_UPLOAD_MAX_PARALLELISM);
     props.setProperty(
-        BlobConfig.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, ANY_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
-    props.setProperty(BlobConfig.REQUEST_TIMEOUT_IN_SECONDS, ANY_REQUEST_TIMEOUT_IN_SECONDS);
+        BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
+        ANY_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
+    props.setProperty(BlobStorageConfig.REQUEST_TIMEOUT_IN_SECONDS, ANY_REQUEST_TIMEOUT_IN_SECONDS);
 
     // Act
-    BlobConfig config = new BlobConfig(new DatabaseConfig(props));
+    BlobStorageConfig config = new BlobStorageConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
@@ -68,7 +70,7 @@ public class BlobConfigTest {
     props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
 
     // Act
-    BlobConfig config = new BlobConfig(new DatabaseConfig(props));
+    BlobStorageConfig config = new BlobStorageConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
@@ -77,13 +79,13 @@ public class BlobConfigTest {
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getParallelUploadBlockSizeInBytes())
-        .isEqualTo(BlobConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
     assertThat(config.getParallelUploadMaxParallelism())
-        .isEqualTo(BlobConfig.DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
+        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
     assertThat(config.getParallelUploadThresholdInBytes())
-        .isEqualTo(BlobConfig.DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
+        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
     assertThat(config.getRequestTimeoutInSeconds())
-        .isEqualTo(BlobConfig.DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
+        .isEqualTo(BlobStorageConfig.DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
   }
 
   @Test
@@ -95,7 +97,7 @@ public class BlobConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
 
     // Act Assert
-    assertThatThrownBy(() -> new BlobConfig(new DatabaseConfig(props)))
+    assertThatThrownBy(() -> new BlobStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -109,7 +111,7 @@ public class BlobConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
 
     // Act
-    BlobConfig config = new BlobConfig(new DatabaseConfig(props));
+    BlobStorageConfig config = new BlobStorageConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.getEndpoint()).isEqualTo(ANY_ENDPOINT);
@@ -119,13 +121,13 @@ public class BlobConfigTest {
     assertThat(config.getMetadataNamespace())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     assertThat(config.getParallelUploadBlockSizeInBytes())
-        .isEqualTo(BlobConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
     assertThat(config.getParallelUploadMaxParallelism())
-        .isEqualTo(BlobConfig.DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
+        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
     assertThat(config.getParallelUploadThresholdInBytes())
-        .isEqualTo(BlobConfig.DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
+        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
     assertThat(config.getRequestTimeoutInSeconds())
-        .isEqualTo(BlobConfig.DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
+        .isEqualTo(BlobStorageConfig.DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
   }
 
   @Test
@@ -137,7 +139,7 @@ public class BlobConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
 
     // Act
-    assertThatThrownBy(() -> new BlobConfig(new DatabaseConfig(props)))
+    assertThatThrownBy(() -> new BlobStorageConfig(new DatabaseConfig(props)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

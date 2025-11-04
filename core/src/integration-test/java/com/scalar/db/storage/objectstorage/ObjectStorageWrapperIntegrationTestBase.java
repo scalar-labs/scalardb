@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class ObjectStorageWrapperIntegrationTestBase {
+public class ObjectStorageWrapperIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(ObjectStorageWrapperIntegrationTestBase.class);
 
@@ -56,7 +56,9 @@ public abstract class ObjectStorageWrapperIntegrationTestBase {
     }
   }
 
-  protected abstract Properties getProperties(String testName);
+  protected Properties getProperties(String testName) {
+    return ObjectStorageEnv.getProperties(testName);
+  }
 
   private void createObjects() throws ObjectStorageWrapperException {
     wrapper.insert(TEST_KEY1, TEST_OBJECT1);

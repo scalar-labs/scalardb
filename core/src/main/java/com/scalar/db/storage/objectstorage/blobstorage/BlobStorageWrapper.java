@@ -1,4 +1,4 @@
-package com.scalar.db.storage.objectstorage.blob;
+package com.scalar.db.storage.objectstorage.blobstorage;
 
 import com.azure.core.http.HttpHeaderName;
 import com.azure.core.util.BinaryData;
@@ -23,12 +23,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class BlobWrapper implements ObjectStorageWrapper {
+public class BlobStorageWrapper implements ObjectStorageWrapper {
   private final BlobContainerClient client;
   private final Duration requestTimeoutInSeconds;
   private final ParallelTransferOptions parallelTransferOptions;
 
-  public BlobWrapper(BlobConfig config) {
+  public BlobStorageWrapper(BlobStorageConfig config) {
     this.client =
         new BlobServiceClientBuilder()
             .endpoint(config.getEndpoint())

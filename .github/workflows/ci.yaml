@@ -2122,8 +2122,8 @@ jobs:
           name: tidb_8_5_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
 
-  integration-test-for-blob:
-    name: Azure Blob Storage integration test (${{ matrix.mode.label }})
+  integration-test-for-blob-storage:
+    name: Blob Storage integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
     strategy:

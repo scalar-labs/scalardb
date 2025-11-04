@@ -1,7 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.objectstorage.blob.BlobConfig;
+import com.scalar.db.storage.objectstorage.blobstorage.BlobStorageConfig;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -30,7 +30,7 @@ public class ObjectStorageEnv {
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, endpoint);
     properties.setProperty(DatabaseConfig.USERNAME, accountName);
     properties.setProperty(DatabaseConfig.PASSWORD, accountKey);
-    properties.setProperty(DatabaseConfig.STORAGE, BlobConfig.STORAGE_NAME);
+    properties.setProperty(DatabaseConfig.STORAGE, BlobStorageConfig.STORAGE_NAME);
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
