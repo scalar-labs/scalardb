@@ -268,7 +268,7 @@ public class OperationChecker {
     }
   }
 
-  private void checkConjunctions(Selection selection, TableMetadata metadata) {
+  protected void checkConjunctions(Selection selection, TableMetadata metadata) {
     for (Conjunction conjunction : selection.getConjunctions()) {
       for (ConditionalExpression condition : conjunction.getConditions()) {
         boolean isValid;

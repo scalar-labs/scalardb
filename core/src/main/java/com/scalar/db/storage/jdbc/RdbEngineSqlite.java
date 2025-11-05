@@ -367,4 +367,10 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
     // Do nothing. SQLite does not support read-only mode.
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
+    return null;
+  }
 }

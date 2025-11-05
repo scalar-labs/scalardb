@@ -58,6 +58,11 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
+  public void deleteMetadata(String namespace, String table) throws Exception {
+    // Do nothing
+  }
+
+  @Override
   public void dropNamespace(String namespace) {
     String dropKeyspaceQuery =
         SchemaBuilder.dropKeyspace(quoteIfNecessary(namespace)).getQueryString();
