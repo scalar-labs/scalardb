@@ -94,7 +94,7 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
         rdbEngine,
         ImmutableMap.of(
             RdbEngineOracle.class,
-            ImmutableList.of(DataType.TIMESTAMPTZ),
+            ImmutableList.of(DataType.TIMESTAMPTZ, DataType.BLOB),
             RdbEngineYugabyte.class,
             ImmutableList.of(DataType.FLOAT, DataType.DOUBLE),
             RdbEngineDb2.class,

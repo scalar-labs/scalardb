@@ -167,8 +167,19 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isValidNamespaceOrTableName(String namespaceOrTableName) {
-    return !namespaceOrTableName.contains(NAMESPACE_SEPARATOR);
+  public void throwIfInvalidNamespaceName(String namespaceName) {
+    if (namespaceName.contains(NAMESPACE_SEPARATOR)) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE.buildMessage(namespaceName));
+    }
+  }
+
+  @Override
+  public void throwIfInvalidTableName(String tableName) {
+    if (tableName.contains(NAMESPACE_SEPARATOR)) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE.buildMessage(tableName));
+    }
   }
 
   @Override
@@ -310,8 +321,9 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isImportable() {
-    return false;
+  public void throwIfImportNotSupported() {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_SQLITE_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
@@ -360,12 +372,17 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   @Override
   public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
     throw new UnsupportedOperationException(
-        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage(
-            from.toString(), to.toString()));
+        CoreError.JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
   public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
     // Do nothing. SQLite does not support read-only mode.
+  }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
+    return null;
   }
 }

@@ -1,11 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
@@ -704,87 +703,30 @@ public abstract class ConsensusCommitAdminTestBase {
             .addColumn(column, DataType.INT)
             .addPartitionKey(primaryKeyColumn)
             .build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(null);
-    when(distributedStorageAdmin.getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType))
-        .thenReturn(metadata);
     doNothing()
         .when(distributedStorageAdmin)
-        .addRawColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
+        .importTable(anyString(), anyString(), anyMap(), anyMap());
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
+    doNothing()
+        .when(distributedStorageAdmin)
+        .addNewColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
 
     // Act
     admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType);
 
     // Assert
-    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
-    verify(distributedStorageAdmin).getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType);
+    verify(distributedStorageAdmin).importTable(NAMESPACE, TABLE, options, overrideColumnsType);
     for (Entry<String, DataType> entry :
         ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
       verify(distributedStorageAdmin)
-          .addRawColumnToTable(NAMESPACE, TABLE, entry.getKey(), entry.getValue());
+          .addNewColumnToTable(NAMESPACE, TABLE, entry.getKey(), entry.getValue());
     }
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
     verify(distributedStorageAdmin)
-        .addRawColumnToTable(
+        .addNewColumnToTable(
             NAMESPACE, TABLE, getBeforeImageColumnName(column, metadata), DataType.INT);
     verify(distributedStorageAdmin, never())
-        .addRawColumnToTable(NAMESPACE, TABLE, primaryKeyColumn, DataType.INT);
-    verify(distributedStorageAdmin).repairNamespace(NAMESPACE, options);
-    verify(distributedStorageAdmin)
-        .repairTable(NAMESPACE, TABLE, buildTransactionTableMetadata(metadata), options);
-  }
-
-  @Test
-  public void importTable_WithStorageTableAlreadyExists_ShouldThrowIllegalArgumentException()
-      throws ExecutionException {
-    // Arrange
-    String primaryKeyColumn = "pk";
-    String column = "col";
-    TableMetadata metadata =
-        TableMetadata.newBuilder()
-            .addColumn(primaryKeyColumn, DataType.INT)
-            .addColumn(column, DataType.INT)
-            .addPartitionKey(primaryKeyColumn)
-            .build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
-
-    // Act
-    Throwable thrown =
-        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void importTable_WithTransactionTableAlreadyExists_ShouldThrowIllegalArgumentException()
-      throws ExecutionException {
-    // Arrange
-    String primaryKeyColumn = "pk";
-    String column = "col";
-    TableMetadata metadata =
-        TableMetadata.newBuilder()
-            .addColumn(primaryKeyColumn, DataType.INT)
-            .addColumn(column, DataType.INT)
-            .addColumn(Attribute.ID, DataType.TEXT)
-            .addColumn(Attribute.STATE, DataType.INT)
-            .addColumn(Attribute.VERSION, DataType.INT)
-            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
-            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
-            .addColumn(Attribute.BEFORE_PREFIX + column, DataType.INT)
-            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
-            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
-            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
-            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
-            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
-            .addPartitionKey(primaryKeyColumn)
-            .build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
-
-    // Act
-    Throwable thrown =
-        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+        .addNewColumnToTable(NAMESPACE, TABLE, primaryKeyColumn, DataType.INT);
   }
 
   @Test

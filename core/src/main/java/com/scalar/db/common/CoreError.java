@@ -377,16 +377,16 @@ public enum CoreError implements ScalarDbError {
       ""),
   MULTI_STORAGE_STORAGE_NOT_FOUND(
       Category.USER_ERROR, "0084", "Storage not found. Storage: %s", "", ""),
-  JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0085", "The namespace name is not acceptable. Namespace: %s", "", ""),
-  JDBC_TABLE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0086", "The table name is not acceptable. Table: %s", "", ""),
-  JDBC_IMPORT_NOT_SUPPORTED(
+  JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
-      "0087",
-      "Importing tables is not allowed in the RDB engine. RDB engine: %s",
+      "0085",
+      "The namespace name is not acceptable in SQLite. Namespace: %s",
       "",
       ""),
+  JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0086", "The table name is not acceptable in SQLite. Table: %s", "", ""),
+  JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0087", "Importing tables is not allowed in SQLite", "", ""),
   JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
       Category.USER_ERROR, "0088", "The %s table must have a primary key", "", ""),
   JDBC_RDB_ENGINE_NOT_SUPPORTED(
@@ -808,6 +808,47 @@ public enum CoreError implements ScalarDbError {
       "Db2 does not support column type conversion from %s to %s",
       "",
       ""),
+  EMPTY_OPERATIONS_SPECIFIED(Category.USER_ERROR, "0241", "The operations are empty", "", ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_MULTIPLE_OPERATIONS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0242",
+      "Multiple operations are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BATCH_RESULT_DOES_NOT_HAVE_GET_RESULT(
+      Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
+  BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
+      Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0245",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0246",
+      "With Oracle, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0247",
+      "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0248",
+      "With Oracle, setting a condition on a BLOB column when using a selection operation is not supported. Condition: %s",
+      "",
+      ""),
+  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+      Category.USER_ERROR,
+      "0249",
+      "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1070,10 +1111,10 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
-  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED(
       Category.INTERNAL_ERROR,
       "0046",
-      "Handling the before-preparation snapshot hook failed. Details: %s",
+      "Handling the before-preparation hook failed. Details: %s",
       "",
       ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
@@ -1114,6 +1155,8 @@ public enum CoreError implements ScalarDbError {
       "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
       "",
       ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category
