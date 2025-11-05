@@ -247,6 +247,32 @@ public abstract class ObjectStorageWrapperIntegrationTestBase {
   }
 
   @Test
+  public void getKeys_WithPrefixForTheNumberOfObjectsExceedingTheListLimit_ShouldReturnAllKeys()
+      throws Exception {
+    String prefix = "large-prefix-";
+    int numberOfObjects = 5001;
+    try {
+      // Arrange
+      for (int i = 0; i < numberOfObjects; i++) {
+        wrapper.insert(prefix + i, "object-" + i);
+      }
+
+      // Act
+      Set<String> keys = wrapper.getKeys(prefix);
+
+      // Assert
+      assertThat(keys.size()).isEqualTo(numberOfObjects);
+      for (int i = 0; i < numberOfObjects; i++) {
+        assertThat(keys).contains(prefix + i);
+      }
+    } finally {
+      for (int i = 0; i < numberOfObjects; i++) {
+        wrapper.delete(prefix + i);
+      }
+    }
+  }
+
+  @Test
   public void deleteByPrefix_WithExistingPrefix_ShouldDeleteObjectsSuccessfully() throws Exception {
     // Arrange
 
