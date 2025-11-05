@@ -608,43 +608,10 @@ public class ObjectStorageAdminTest {
   }
 
   @Test
-  public void upgrade_WithExistingTables_ShouldUpsertNamespaces() throws Exception {
+  public void upgrade_ShouldDoNothing() {
     // Arrange
-    String tableMetadataKey1 = "ns1" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl1";
-    String tableMetadataKey2 = "ns1" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl2";
-    String tableMetadataKey3 = "ns2" + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + "tbl3";
 
-    String tableMetadataObjectKey =
-        ObjectStorageUtils.getObjectKey(
-            METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
-    String namespaceMetadataObjectKey =
-        ObjectStorageUtils.getObjectKey(
-            METADATA_NAMESPACE, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE);
-
-    // Mock table metadata to return existing tables
-    Map<String, ObjectStorageTableMetadata> tableMetadataMap = new HashMap<>();
-    tableMetadataMap.put(tableMetadataKey1, ObjectStorageTableMetadata.newBuilder().build());
-    tableMetadataMap.put(tableMetadataKey2, ObjectStorageTableMetadata.newBuilder().build());
-    tableMetadataMap.put(tableMetadataKey3, ObjectStorageTableMetadata.newBuilder().build());
-    String serializedTableMetadata = Serializer.serialize(tableMetadataMap);
-    ObjectStorageWrapperResponse tableMetadataResponse =
-        new ObjectStorageWrapperResponse(serializedTableMetadata, "version1");
-    when(wrapper.get(tableMetadataObjectKey)).thenReturn(Optional.of(tableMetadataResponse));
-
-    // Mock non-existing namespace metadata
-    when(wrapper.get(namespaceMetadataObjectKey)).thenReturn(Optional.empty());
-
-    // Act
-    admin.upgrade(Collections.emptyMap());
-
-    // Assert
-    verify(wrapper).get(tableMetadataObjectKey);
-    verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
-
-    Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    assertThat(insertedMetadata).containsKeys("ns1", "ns2");
+    // Act Assert
+    assertThatCode(() -> admin.upgrade(Collections.emptyMap())).doesNotThrowAnyException();
   }
 }

@@ -2,7 +2,6 @@ package com.scalar.db.storage.objectstorage.blobstorage;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
-import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -21,10 +20,6 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   public static final String PARALLEL_UPLOAD_THRESHOLD_IN_BYTES =
       PREFIX + "parallel_upload_threshold_in_bytes";
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
-
-  /** @deprecated As of 5.0, will be removed. */
-  @Deprecated
-  public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
   public static final long DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = 4 * 1024 * 1024; // 4MB
   public static final int DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM = 4;
@@ -63,20 +58,7 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-
-    if (databaseConfig.getProperties().containsKey(TABLE_METADATA_NAMESPACE)) {
-      logger.warn(
-          "The configuration property \""
-              + TABLE_METADATA_NAMESPACE
-              + "\" is deprecated and will be removed in 5.0.0.");
-      metadataNamespace =
-          getString(
-              databaseConfig.getProperties(),
-              TABLE_METADATA_NAMESPACE,
-              DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
-    } else {
-      metadataNamespace = databaseConfig.getSystemNamespaceName();
-    }
+    metadataNamespace = databaseConfig.getSystemNamespaceName();
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
       logger.warn(

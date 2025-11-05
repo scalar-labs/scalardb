@@ -15,9 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class ObjectStorageWrapperIntegrationTestBase {
+public class ObjectStorageWrapperIntegrationTest {
   private static final Logger logger =
-      LoggerFactory.getLogger(ObjectStorageWrapperIntegrationTestBase.class);
+      LoggerFactory.getLogger(ObjectStorageWrapperIntegrationTest.class);
 
   private static final String TEST_NAME = "object_storage_wrapper_integration_test";
   private static final String TEST_KEY1 = "test-key1";

@@ -143,4 +143,9 @@ public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIn
   @Override
   @Disabled("Object Storage does not support renaming tables")
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
+
+  @Override
+  @Disabled("There is nothing that needs to be upgraded with Object Storage")
+  public void
+      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }

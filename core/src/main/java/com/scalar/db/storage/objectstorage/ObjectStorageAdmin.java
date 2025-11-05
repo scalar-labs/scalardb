@@ -370,33 +370,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    try {
-      // Get all namespace names from the table metadata table
-      Map<String, ObjectStorageTableMetadata> tableMetadataTable = getTableMetadataTable();
-      List<String> namespaceNames =
-          tableMetadataTable.keySet().stream()
-              .map(ObjectStorageAdmin::getNamespaceNameFromTableMetadataKey)
-              .distinct()
-              .collect(Collectors.toList());
-      // Upsert the namespace metadata table
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageNamespaceMetadata> namespaceMetadataTable =
-          getNamespaceMetadataTable(readVersionMap);
-      Map<String, ObjectStorageNamespaceMetadata> newNamespaceMetadataTable =
-          namespaceNames.stream()
-              .collect(
-                  Collectors.toMap(namespace -> namespace, ObjectStorageNamespaceMetadata::new));
-      if (namespaceMetadataTable.isEmpty()) {
-        insertMetadataTable(NAMESPACE_METADATA_TABLE, newNamespaceMetadataTable);
-      } else {
-        updateMetadataTable(
-            NAMESPACE_METADATA_TABLE,
-            newNamespaceMetadataTable,
-            readVersionMap.get(NAMESPACE_METADATA_TABLE));
-      }
-    } catch (Exception e) {
-      throw new ExecutionException("Failed to upgrade", e);
-    }
+    // Currently, nothing needs to be upgraded. Do nothing.
   }
 
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable()
