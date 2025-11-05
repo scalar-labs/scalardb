@@ -27,8 +27,6 @@ import com.scalar.db.dataloader.core.exception.ColumnParsingException;
 import com.scalar.db.dataloader.core.exception.KeyParsingException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
-import com.scalar.db.dataloader.core.tablemetadata.TableMetadataStorageService;
-import com.scalar.db.dataloader.core.tablemetadata.TableMetadataTransactionService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
@@ -67,7 +65,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
 
       TableMetadataService tableMetadataService =
-          createTableMetadataService(scalarDbMode, scalarDbPropertiesFilePath);
+          createTableMetadataService(scalarDbPropertiesFilePath);
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =
@@ -130,28 +128,24 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   /**
-   * Creates a {@link TableMetadataService} instance based on the specified {@link ScalarDbMode} and
-   * ScalarDB configuration file.
+   * Creates and initializes a {@link TableMetadataService} using the provided ScalarDB properties
+   * file.
    *
-   * <p>If the mode is {@code TRANSACTION}, this method initializes a {@link TransactionFactory} and
-   * uses its transaction admin to create a {@link TableMetadataTransactionService}. Otherwise, it
-   * initializes a {@link StorageFactory} and creates a {@link TableMetadataStorageService} using
-   * its storage admin.
+   * <p>This method loads the ScalarDB configuration from the specified properties file and uses it
+   * to create a {@link TransactionFactory}. From the factory, it retrieves a {@link
+   * com.scalar.db.api.DistributedTransactionAdmin} instance and uses it to construct a {@link
+   * TableMetadataService}, which provides access to table metadata operations.
    *
-   * @param scalarDbMode the mode ScalarDB is running in (either {@code STORAGE} or {@code
-   *     TRANSACTION})
-   * @param scalarDbPropertiesFilePath the path to the ScalarDB properties file
-   * @return an appropriate {@link TableMetadataService} based on the mode
-   * @throws IOException if reading the ScalarDB properties file fails
+   * @param scalarDbPropertiesFilePath the path to the ScalarDB properties file used for
+   *     configuration
+   * @return a fully initialized {@link TableMetadataService} instance
+   * @throws IOException if an error occurs while reading the ScalarDB properties file or
+   *     initializing the {@link TransactionFactory}
    */
-  private TableMetadataService createTableMetadataService(
-      ScalarDbMode scalarDbMode, String scalarDbPropertiesFilePath) throws IOException {
-    if (scalarDbMode.equals(ScalarDbMode.TRANSACTION)) {
-      TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
-      return new TableMetadataTransactionService(transactionFactory.getTransactionAdmin());
-    }
-    StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
-    return new TableMetadataStorageService(storageFactory.getStorageAdmin());
+  private TableMetadataService createTableMetadataService(String scalarDbPropertiesFilePath)
+      throws IOException {
+    TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
+    return new TableMetadataService(transactionFactory.getTransactionAdmin());
   }
 
   /**

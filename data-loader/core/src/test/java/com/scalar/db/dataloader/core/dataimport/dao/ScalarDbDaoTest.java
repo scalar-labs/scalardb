@@ -26,6 +26,7 @@ import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,12 +40,14 @@ class ScalarDbDaoTest {
   private ScalarDbDao dao;
   private DistributedTransactionManager manager;
   private DistributedStorage distributedStorage;
+  private SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
 
   @BeforeEach
   void setUp() {
     this.dao = new ScalarDbDao();
     this.distributedStorage = mock(DistributedStorage.class);
     this.manager = mock(DistributedTransactionManager.class);
+    this.singleCrudOperationTransactionManager = mock(SingleCrudOperationTransactionManager.class);
   }
 
   @Test
@@ -198,6 +201,34 @@ class ScalarDbDaoTest {
     assertNotNull(result);
     assertEquals(mockScanner, result);
     result = this.dao.createScanner(TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, manager);
+    // Assert
+    assertNotNull(result);
+    assertEquals(mockScanner, result);
+  }
+
+  @Test
+  void createScanner_withSingleCrudTransactionManager_ShouldCreateScannerObject()
+      throws CrudException, ScalarDbDaoException {
+    // Create Scan Object
+    TransactionManagerCrudOperable.Scanner mockScanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
+    when(singleCrudOperationTransactionManager.getScanner(any())).thenReturn(mockScanner);
+    TransactionManagerCrudOperable.Scanner result =
+        this.dao.createScanner(
+            TEST_NAMESPACE,
+            TEST_TABLE_NAME,
+            null,
+            new ScanRange(null, null, false, false),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            0,
+            singleCrudOperationTransactionManager);
+    // Assert
+    assertNotNull(result);
+    assertEquals(mockScanner, result);
+    result =
+        this.dao.createScanner(
+            TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, singleCrudOperationTransactionManager);
     // Assert
     assertNotNull(result);
     assertEquals(mockScanner, result);

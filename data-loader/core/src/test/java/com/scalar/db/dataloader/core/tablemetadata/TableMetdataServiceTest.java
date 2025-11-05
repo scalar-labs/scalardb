@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-class TableMetadataTransactionServiceTest {
+class TableMetadataServiceTest {
 
   DistributedTransactionAdmin transactionAdmin;
   TableMetadataService tableMetadataService;
@@ -25,28 +25,23 @@ class TableMetadataTransactionServiceTest {
     transactionAdmin = Mockito.mock(DistributedTransactionAdmin.class);
     Mockito.when(transactionAdmin.getTableMetadata("namespace", "table"))
         .thenReturn(UnitTestUtils.createTestTableMetadata());
-
-    tableMetadataService = new TableMetadataTransactionService(transactionAdmin);
+    tableMetadataService = new TableMetadataService(transactionAdmin);
   }
 
   @Test
   void getTableMetadata_withValidNamespaceAndTable_shouldReturnTableMetadataMap()
       throws TableMetadataException {
+
     Map<String, TableMetadata> expected = new HashMap<>();
     expected.put("namespace.table", UnitTestUtils.createTestTableMetadata());
-
     TableMetadataRequest tableMetadataRequest = new TableMetadataRequest("namespace", "table");
     Map<String, TableMetadata> output =
         tableMetadataService.getTableMetadata(Collections.singleton(tableMetadataRequest));
-
     Assertions.assertEquals(expected.get("namespace.table"), output.get("namespace.table"));
   }
 
   @Test
-  void getTableMetadata_withInvalidNamespaceAndTable_shouldThrowException()
-      throws ExecutionException {
-    Mockito.when(transactionAdmin.getTableMetadata("namespace2", "table2")).thenReturn(null);
-
+  void getTableMetadata_withInvalidNamespaceAndTable_shouldThrowException() {
     TableMetadataRequest tableMetadataRequest = new TableMetadataRequest("namespace2", "table2");
     assertThatThrownBy(
             () ->

@@ -3,8 +3,9 @@ package com.scalar.db.dataloader.cli.command.dataimport;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -24,10 +25,9 @@ import com.scalar.db.dataloader.core.dataimport.processor.DefaultImportProcessor
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
-import com.scalar.db.dataloader.core.tablemetadata.TableMetadataStorageService;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +53,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    //    CommandLineInputUtils.isSingleCrudOperation(configFilePath);
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
@@ -105,9 +106,11 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       ControlFile controlFile, String namespace, String tableName)
       throws IOException, TableMetadataException {
     File configFile = new File(configFilePath);
-    StorageFactory storageFactory = StorageFactory.create(configFile);
-    try (DistributedStorageAdmin storageAdmin = storageFactory.getStorageAdmin()) {
-      TableMetadataService tableMetadataService = new TableMetadataStorageService(storageAdmin);
+    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+    try (DistributedTransactionAdmin distributedTransactionAdmin =
+        transactionFactory.getTransactionAdmin()) {
+      TableMetadataService tableMetadataService =
+          new TableMetadataService(distributedTransactionAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
       if (controlFile != null) {
         for (ControlFileTable table : controlFile.getTables()) {
@@ -157,8 +160,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               null,
               scalarDbTransactionManager.getDistributedTransactionManager());
     } else {
+      DatabaseConfig databaseConfig = new DatabaseConfig(configFile);
       ScalarDbStorageManager scalarDbStorageManager =
-          new ScalarDbStorageManager(StorageFactory.create(configFile));
+          new ScalarDbStorageManager(new SingleCrudOperationTransactionManager(databaseConfig));
       importManager =
           new ImportManager(
               tableMetadataMap,
@@ -166,7 +170,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               importOptions,
               importProcessorFactory,
               ScalarDbMode.STORAGE,
-              scalarDbStorageManager.getDistributedStorage(),
+              scalarDbStorageManager.getSingleCrudOperationTransactionManager(),
               null);
     }
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {

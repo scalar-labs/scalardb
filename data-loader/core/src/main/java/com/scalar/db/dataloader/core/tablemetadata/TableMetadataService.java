@@ -1,18 +1,24 @@
 package com.scalar.db.dataloader.core.tablemetadata;
 
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
+import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 /**
- * Abstract base class for retrieving {@link TableMetadata} from ScalarDB. Provides shared logic for
- * fetching metadata for a collection of tables. Subclasses must implement the specific logic for
- * fetching individual table metadata.
+ * Service for retrieving {@link TableMetadata} from ScalarDB. Provides methods to fetch metadata
+ * for individual tables or a collection of tables.
  */
-public abstract class TableMetadataService {
+@SuppressWarnings("SameNameButDifferent")
+@RequiredArgsConstructor
+public class TableMetadataService {
+
+  private final DistributedTransactionAdmin transactionAdmin;
 
   /**
    * Retrieves the {@link TableMetadata} for a specific namespace and table name.
@@ -25,12 +31,17 @@ public abstract class TableMetadataService {
    */
   public TableMetadata getTableMetadata(String namespace, String tableName)
       throws TableMetadataException {
-    TableMetadata metadata = getTableMetadataInternal(namespace, tableName);
-    if (metadata == null) {
+    try {
+      TableMetadata tableMetadata = transactionAdmin.getTableMetadata(namespace, tableName);
+      if (tableMetadata == null) {
+        throw new TableMetadataException(
+            DataLoaderError.MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
+      }
+      return tableMetadata;
+    } catch (ExecutionException e) {
       throw new TableMetadataException(
-          DataLoaderError.MISSING_NAMESPACE_OR_TABLE.buildMessage(namespace, tableName));
+          DataLoaderError.TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()), e);
     }
-    return metadata;
   }
 
   /**
@@ -49,25 +60,15 @@ public abstract class TableMetadataService {
   public Map<String, TableMetadata> getTableMetadata(Collection<TableMetadataRequest> requests)
       throws TableMetadataException {
     Map<String, TableMetadata> metadataMap = new HashMap<>();
+
     for (TableMetadataRequest request : requests) {
       String namespace = request.getNamespace();
       String tableName = request.getTable();
-      TableMetadata metadata = getTableMetadata(namespace, tableName);
+      TableMetadata tableMetadata = getTableMetadata(namespace, tableName);
       String key = TableMetadataUtil.getTableLookupKey(namespace, tableName);
-      metadataMap.put(key, metadata);
+      metadataMap.put(key, tableMetadata);
     }
+
     return metadataMap;
   }
-
-  /**
-   * Abstract method for retrieving table metadata for a specific namespace and table. Subclasses
-   * must implement this to define how the metadata is fetched.
-   *
-   * @param namespace The namespace of the table.
-   * @param tableName The table name.
-   * @return The {@link TableMetadata} object, or null if not found.
-   * @throws TableMetadataException if an error occurs during metadata retrieval.
-   */
-  protected abstract TableMetadata getTableMetadataInternal(String namespace, String tableName)
-      throws TableMetadataException;
 }

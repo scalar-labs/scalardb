@@ -1,49 +1,32 @@
 package com.scalar.db.dataloader.core.dataimport.dao;
 
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.service.StorageFactory;
-import javax.annotation.Nullable;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 
 /**
- * A manager class for handling ScalarDB operations in storage mode.
+ * A manager class for handling ScalarDB operations in single CRUD operation mode.
  *
- * <p>Provides access to {@link DistributedStorage} for data operations and {@link
- * DistributedStorageAdmin} for administrative operations such as schema management.
+ * <p>Provides access to {@link SingleCrudOperationTransactionManager} for executing individual CRUD
+ * operations in a lightweight, non-distributed manner.
  *
- * <p>This class is typically used when interacting with ScalarDB in a non-transactional,
- * storage-only configuration.
+ * <p>This class is typically used when ScalarDB is configured in single CRUD operation mode,
+ * allowing direct operations without the overhead of distributed transactions.
  */
 public class ScalarDbStorageManager {
 
-  @Nullable private final DistributedStorage storage;
-  private final DistributedStorageAdmin storageAdmin;
+  private final SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
 
   /**
-   * Constructs a {@code ScalarDbStorageManager} using the provided {@link StorageFactory}.
+   * Constructs a {@code ScalarDbStorageManager} with the provided {@link
+   * SingleCrudOperationTransactionManager}.
    *
-   * @param storageFactory the factory used to create the ScalarDB storage and admin instances
+   * @param manager the {@code SingleCrudOperationTransactionManager} instance to be used for
+   *     performing storage operations
    */
-  public ScalarDbStorageManager(StorageFactory storageFactory) {
-    storage = storageFactory.getStorage();
-    storageAdmin = storageFactory.getStorageAdmin();
+  public ScalarDbStorageManager(SingleCrudOperationTransactionManager manager) {
+    singleCrudOperationTransactionManager = manager;
   }
 
-  /**
-   * Returns distributed storage for ScalarDB connection that is running in storage mode
-   *
-   * @return distributed storage object
-   */
-  public DistributedStorage getDistributedStorage() {
-    return storage;
-  }
-
-  /**
-   * Returns distributed storage admin for ScalarDB admin operations
-   *
-   * @return distributed storage admin object
-   */
-  public DistributedStorageAdmin getDistributedStorageAdmin() {
-    return storageAdmin;
+  public SingleCrudOperationTransactionManager getSingleCrudOperationTransactionManager() {
+    return this.singleCrudOperationTransactionManager;
   }
 }

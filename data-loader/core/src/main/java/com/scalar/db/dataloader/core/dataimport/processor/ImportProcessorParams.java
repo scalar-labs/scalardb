@@ -1,11 +1,11 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.util.Map;
 import lombok.Builder;
 import lombok.Value;
@@ -36,8 +36,8 @@ public class ImportProcessorParams {
   /** Data Access Object for ScalarDB operations. */
   ScalarDbDao dao;
 
-  /** Storage interface for non-transactional operations. */
-  DistributedStorage distributedStorage;
+  /** Transaction manager for handling single crud operations. */
+  SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
 
   /** Transaction manager for handling transactional operations. */
   DistributedTransactionManager distributedTransactionManager;

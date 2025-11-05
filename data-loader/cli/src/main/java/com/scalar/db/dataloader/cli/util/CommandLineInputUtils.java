@@ -1,9 +1,12 @@
 package com.scalar.db.dataloader.cli.util;
 
 import com.scalar.db.dataloader.core.DataLoaderError;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 
@@ -60,5 +63,33 @@ public class CommandLineInputUtils {
     if (value < 1) {
       throw new CommandLine.ParameterException(commandLine, error.buildMessage());
     }
+  }
+
+  /**
+   * Checks whether the configuration file specifies the ScalarDB transaction manager as {@code
+   * "single-crud-operation"}.
+   *
+   * <p>This method loads the given properties file, reads the value of the {@code
+   * scalar.db.transaction_manager} property, and returns {@code true} if it is set to {@code
+   * "single-crud-operation"}; otherwise, it returns {@code false}.
+   *
+   * <p>If the file cannot be read or an I/O error occurs, the exception is printed to the standard
+   * error stream and {@code false} may be returned if the property is missing or null.
+   *
+   * @param configFilePath the path to the configuration properties file
+   * @return {@code true} if the {@code scalar.db.transaction_manager} property is set to {@code
+   *     "single-crud-operation"}; {@code false} otherwise
+   */
+  public static boolean isSingleCrudOperation(String configFilePath) {
+    Properties props = new Properties();
+    try {
+      try (FileInputStream fis = new FileInputStream(configFilePath)) {
+        props.load(fis);
+      }
+    } catch (IOException e) {
+      return false; // gracefully handle missing file or read errors
+    }
+    String trnManager = props.getProperty("scalar.db.transaction_manager");
+    return "single-crud-operation".equals(trnManager);
   }
 }

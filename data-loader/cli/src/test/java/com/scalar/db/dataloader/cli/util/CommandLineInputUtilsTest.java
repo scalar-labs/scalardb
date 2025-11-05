@@ -3,16 +3,31 @@ package com.scalar.db.dataloader.cli.util;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.scalar.db.dataloader.core.DataLoaderError;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 class CommandLineInputUtilsTest {
+
+  private File tempFile;
+
+  @AfterEach
+  void cleanUp() {
+    if (tempFile != null && tempFile.exists()) {
+      tempFile.delete();
+    }
+  }
 
   @Test
   public void parseKeyValue_validKeyValue_ShouldReturnEntry() {
@@ -184,5 +199,48 @@ class CommandLineInputUtilsTest {
         exception2
             .getMessage()
             .contains(DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE.buildMessage()));
+  }
+
+  @Test
+  void testIsSingleCrudOperation_ReturnsTrue_WhenPropertyMatches() throws IOException {
+    tempFile = createTempPropertiesFile("scalar.db.transaction_manager=single-crud-operation");
+
+    boolean result = CommandLineInputUtils.isSingleCrudOperation(tempFile.getAbsolutePath());
+
+    assertTrue(result, "Expected true when property is 'single-crud-operation'");
+  }
+
+  @Test
+  void testIsSingleCrudOperation_ReturnsFalse_WhenPropertyDiffers() throws IOException {
+    tempFile = createTempPropertiesFile("scalar.db.transaction_manager=two-phase-commit");
+
+    boolean result = CommandLineInputUtils.isSingleCrudOperation(tempFile.getAbsolutePath());
+
+    assertFalse(result, "Expected false when property is not 'single-crud-operation'");
+  }
+
+  @Test
+  void testIsSingleCrudOperation_ReturnsFalse_WhenPropertyMissing() throws IOException {
+    tempFile = createTempPropertiesFile("some.other.property=value");
+
+    boolean result = CommandLineInputUtils.isSingleCrudOperation(tempFile.getAbsolutePath());
+
+    assertFalse(result, "Expected false when property is missing");
+  }
+
+  @Test
+  void testIsSingleCrudOperation_HandlesMissingFileGracefully() {
+    boolean result = CommandLineInputUtils.isSingleCrudOperation("nonexistent.properties");
+
+    // Should not throw an exception, just print stack trace and return false
+    assertFalse(result, "Expected false when file does not exist");
+  }
+
+  private File createTempPropertiesFile(String content) throws IOException {
+    File file = Files.createTempFile("test-config", ".properties").toFile();
+    try (FileWriter writer = new FileWriter(file)) {
+      writer.write(content);
+    }
+    return file;
   }
 }

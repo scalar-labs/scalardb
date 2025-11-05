@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -13,6 +12,7 @@ import com.scalar.db.dataloader.core.dataimport.processor.TableColumnDataTypes;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +44,7 @@ public class ImportManager implements ImportEventListener {
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
   private final ScalarDbMode scalarDbMode;
-  private final DistributedStorage distributedStorage;
+  private final SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
   private final DistributedTransactionManager distributedTransactionManager;
 
   /**
@@ -62,7 +62,7 @@ public class ImportManager implements ImportEventListener {
             .tableMetadataByTableName(tableMetadata)
             .dao(new ScalarDbDao())
             .distributedTransactionManager(distributedTransactionManager)
-            .distributedStorage(distributedStorage)
+            .singleCrudOperationTransactionManager(singleCrudOperationTransactionManager)
             .tableColumnDataTypes(getTableColumnDataTypes())
             .build();
     ImportProcessor processor = importProcessorFactory.createImportProcessor(params);
@@ -169,8 +169,8 @@ public class ImportManager implements ImportEventListener {
   /** Close resources properly once the process is completed */
   public void closeResources() {
     try {
-      if (distributedStorage != null) {
-        distributedStorage.close();
+      if (singleCrudOperationTransactionManager != null) {
+        singleCrudOperationTransactionManager.close();
       } else if (distributedTransactionManager != null) {
         distributedTransactionManager.close();
       }
