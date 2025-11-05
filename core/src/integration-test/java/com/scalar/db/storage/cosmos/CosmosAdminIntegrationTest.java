@@ -95,4 +95,8 @@ public class CosmosAdminIntegrationTest extends DistributedStorageAdminIntegrati
   @Override
   @Disabled("Cosmos DB does not support renaming tables")
   public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly() {}
+
+  @Override
+  @Disabled("Cosmos DB does not support renaming tables")
+  public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
 }

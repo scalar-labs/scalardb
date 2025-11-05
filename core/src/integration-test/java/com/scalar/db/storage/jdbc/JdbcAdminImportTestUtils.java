@@ -146,6 +146,38 @@ public class JdbcAdminImportTestUtils {
     }
   }
 
+  public List<String> getIntCompatibleColumnNamesOnExistingDatabase(String table) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingMysqlDatabase(table);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingPostgresDatabase(table);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingOracleDatabase(table);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingSqlServerDatabase(table);
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingDb2Database(table);
+    } else {
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
+    }
+  }
+
+  public List<String> getFloatCompatibleColumnNamesOnExistingDatabase(String table) {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingMysqlDatabase(table);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingPostgresDatabase(table);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingOracleDatabase(table);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingSqlServerDatabase(table);
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingDb2Database(table);
+    } else {
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
+    }
+  }
+
   public void dropTable(String namespace, String table) throws SQLException {
     String dropTable = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
     execute(dropTable);
@@ -482,7 +514,7 @@ public class JdbcAdminImportTestUtils {
     columns.put("col17", "NCLOB(512)");
     columns.put("col18", "BINARY(5)");
     columns.put("col19", "VARBINARY(512)");
-    columns.put("col20", "BLOB(1024)");
+    columns.put("col20", "BLOB(2G)");
     columns.put("col21", "CHAR(5) FOR BIT DATA");
     columns.put("col22", "VARCHAR(512) FOR BIT DATA");
     columns.put("col23", "DATE");
@@ -603,6 +635,13 @@ public class JdbcAdminImportTestUtils {
               UNSUPPORTED_DATA_TYPES_MYSQL.stream()
                   .filter(type -> !type.equalsIgnoreCase("JSON"))
                   .collect(Collectors.toList())));
+    } else if (isTidb()) {
+      data.addAll(
+          prepareCreateNonImportableTableSql(
+              namespace,
+              UNSUPPORTED_DATA_TYPES_MYSQL.stream()
+                  .filter(type -> !type.equalsIgnoreCase("GEOMETRY"))
+                  .collect(Collectors.toList())));
     } else {
       data.addAll(prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL));
     }
@@ -610,6 +649,22 @@ public class JdbcAdminImportTestUtils {
     executeCreateTableSql(data);
 
     return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingMysqlDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col04", "col05", "col06");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingMysqlDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col08");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
   }
 
   private List<TestData> createExistingPostgresDatabaseWithAllDataTypes(String namespace)
@@ -644,6 +699,24 @@ public class JdbcAdminImportTestUtils {
     executeCreateTableSql(data);
 
     return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingPostgresDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col03");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingPostgresDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col05");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
   }
 
   private List<TestData> createExistingOracleDatabaseWithAllDataTypes(String namespace)
@@ -697,6 +770,27 @@ public class JdbcAdminImportTestUtils {
     return ImmutableList.copyOf(data);
   }
 
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingOracleDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of();
+    } else if (table.equals(SUPPORTED_TABLE_NAME + "_long_raw")) {
+      return ImmutableList.of();
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingOracleDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col04");
+    } else if (table.equals(SUPPORTED_TABLE_NAME + "_long_raw")) {
+      return ImmutableList.of();
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
   private List<TestData> createExistingSqlServerDatabaseWithAllDataTypes(String namespace)
       throws SQLException {
     List<JdbcTestData> data = new ArrayList<>();
@@ -721,6 +815,24 @@ public class JdbcAdminImportTestUtils {
     executeCreateTableSql(data);
 
     return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingSqlServerDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col03", "col04");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingSqlServerDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col06");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
   }
 
   private List<TestData> createExistingDb2DatabaseWithAllDataTypes(String namespace)
@@ -749,6 +861,22 @@ public class JdbcAdminImportTestUtils {
     return ImmutableList.copyOf(data);
   }
 
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingDb2Database(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col01", "col02");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingDb2Database(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col04", "col05");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
   private void executeCreateTableSql(List<JdbcTestData> data) throws SQLException {
     String[] sqls = data.stream().map(JdbcTestData::getCreateTableSql).toArray(String[]::new);
     execute(sqls);
@@ -759,7 +887,16 @@ public class JdbcAdminImportTestUtils {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
     } catch (SQLException e) {
-      throw new RuntimeException("Get database product version failed");
+      throw new RuntimeException("Get database product version failed", e);
+    }
+  }
+
+  boolean isTidb() {
+    try (Connection connection = dataSource.getConnection()) {
+      String version = connection.getMetaData().getDatabaseProductVersion();
+      return version.contains("TiDB");
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database product version failed", e);
     }
   }
 

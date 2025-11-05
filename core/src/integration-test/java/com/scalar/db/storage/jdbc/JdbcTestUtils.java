@@ -90,6 +90,10 @@ public final class JdbcTestUtils {
     return rdbEngine instanceof RdbEngineMariaDB;
   }
 
+  public static boolean isTidb(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineTidb;
+  }
+
   /**
    * Filters the data types based on the RDB engine and the excluded data types.
    *
