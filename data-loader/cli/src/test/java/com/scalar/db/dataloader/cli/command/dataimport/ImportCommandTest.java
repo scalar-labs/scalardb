@@ -149,4 +149,79 @@ public class ImportCommandTest {
     // Verify the value was applied to maxThreads
     assertEquals(12, command.maxThreads);
   }
+
+  @Test
+  void call_withBothLogSuccessAndEnableLogSuccess_shouldThrowException() throws Exception {
+    Path configFile = tempDir.resolve("config.properties");
+    Files.createFile(configFile);
+    Path importFile = tempDir.resolve("import.json");
+    Files.createFile(importFile);
+
+    // Simulate command line parsing with both deprecated and new options
+    String[] args = {
+      "--config",
+      configFile.toString(),
+      "--file",
+      importFile.toString(),
+      "--namespace",
+      "sample",
+      "--table",
+      "table",
+      "--log-success",
+      "--enable-log-success",
+      "--max-threads",
+      "16"
+    };
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    // Parse args - this will trigger our validation
+    cmd.parseArgs(args);
+
+    // Now call the command, which should throw the validation error
+    CommandLine.ParameterException thrown =
+        assertThrows(
+            CommandLine.ParameterException.class,
+            command::call,
+            "Expected to throw ParameterException when both deprecated and new options are specified");
+    assertTrue(
+        thrown
+            .getMessage()
+            .contains(
+                "Cannot specify both deprecated option '--log-success' and new option '--enable-log-success'"));
+  }
+
+  @Test
+  void call_withOnlyDeprecatedLogSuccess_shouldApplyValue() throws Exception {
+    Path configFile = tempDir.resolve("config.properties");
+    Files.createFile(configFile);
+    Path importFile = tempDir.resolve("import.json");
+    Files.createFile(importFile);
+
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      configFile.toString(),
+      "--file",
+      importFile.toString(),
+      "--namespace",
+      "sample",
+      "--table",
+      "table",
+      "--max-threads",
+      "12",
+      "--log-success"
+    };
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertTrue(command.logSuccessRecordsDeprecated);
+
+    // Apply deprecated options (this is what the command does after validation)
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied to enable-log-success
+    assertTrue(command.enableLogSuccessRecords);
+  }
 }
