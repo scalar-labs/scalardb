@@ -32,10 +32,8 @@ public class ObjectStorageAdminTest {
 
   @Mock private ObjectStorageWrapper wrapper;
   @Mock private ObjectStorageConfig config;
-  private ObjectStorageAdmin admin;
-
-  @Captor private ArgumentCaptor<String> objectKeyCaptor;
   @Captor private ArgumentCaptor<String> payloadCaptor;
+  private ObjectStorageAdmin admin;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -128,19 +126,14 @@ public class ObjectStorageAdminTest {
     Throwable thrown2 = catchThrowable(() -> admin.dropIndex(namespace, table, column));
     Throwable thrown3 =
         catchThrowable(
-            () -> admin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
-    Throwable thrown4 =
-        catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown5 =
-        catchThrowable(
             () ->
                 admin.importTable(
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
-    Throwable thrown6 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
-    Throwable thrown7 =
+    Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
+    Throwable thrown5 =
         catchThrowable(() -> admin.renameColumn(namespace, table, column, "newCol"));
-    Throwable thrown8 = catchThrowable(() -> admin.renameTable(namespace, table, "newTable"));
-    Throwable thrown9 =
+    Throwable thrown6 = catchThrowable(() -> admin.renameTable(namespace, table, "newTable"));
+    Throwable thrown7 =
         catchThrowable(() -> admin.alterColumnType(namespace, table, column, DataType.INT));
 
     // Assert
@@ -151,8 +144,6 @@ public class ObjectStorageAdminTest {
     assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown6).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown7).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown8).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown9).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

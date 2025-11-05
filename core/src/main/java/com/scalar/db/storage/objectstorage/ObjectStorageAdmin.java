@@ -49,22 +49,6 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(
-      String namespace, String table, Map<String, DataType> overrideColumnsType)
-      throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.OBJECT_STORAGE_IMPORT_NOT_SUPPORTED.buildMessage());
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
-      throws ExecutionException {
-    throw new UnsupportedOperationException(
-        CoreError.OBJECT_STORAGE_IMPORT_NOT_SUPPORTED.buildMessage());
-  }
-
-  @Override
   public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
     return STORAGE_INFO;
   }
