@@ -309,18 +309,16 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       throws ExecutionException {
     checkNamespace(namespace);
 
+    // import the original table
+    admin.importTable(namespace, table, options, overrideColumnsType);
+
     TableMetadata tableMetadata = admin.getTableMetadata(namespace, table);
-    if (tableMetadata != null) {
-      throw new IllegalArgumentException(
-          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
-              ScalarDbUtils.getFullTableName(namespace, table)));
-    }
-    tableMetadata = admin.getImportTableMetadata(namespace, table, overrideColumnsType);
+    assert tableMetadata != null;
 
     // add transaction metadata columns
     for (Map.Entry<String, DataType> entry :
         ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
-      admin.addRawColumnToTable(namespace, table, entry.getKey(), entry.getValue());
+      admin.addNewColumnToTable(namespace, table, entry.getKey(), entry.getValue());
     }
 
     // add before image columns
@@ -328,11 +326,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     for (String columnName : nonPrimaryKeyColumns) {
       String beforeColumnName = getBeforeImageColumnName(columnName, tableMetadata);
       DataType columnType = tableMetadata.getColumnDataType(columnName);
-      admin.addRawColumnToTable(namespace, table, beforeColumnName, columnType);
+      admin.addNewColumnToTable(namespace, table, beforeColumnName, columnType);
     }
-
-    // add ScalarDB metadata
-    admin.repairTable(namespace, table, buildTransactionTableMetadata(tableMetadata), options);
   }
 
   @Override

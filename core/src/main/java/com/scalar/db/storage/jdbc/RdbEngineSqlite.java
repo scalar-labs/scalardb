@@ -161,8 +161,19 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isValidTableName(String tableName) {
-    return !tableName.contains(NAMESPACE_SEPARATOR);
+  public void throwIfInvalidNamespaceName(String namespaceName) {
+    if (namespaceName.contains(NAMESPACE_SEPARATOR)) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE.buildMessage(namespaceName));
+    }
+  }
+
+  @Override
+  public void throwIfInvalidTableName(String tableName) {
+    if (tableName.contains(NAMESPACE_SEPARATOR)) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE.buildMessage(tableName));
+    }
   }
 
   @Override
@@ -314,8 +325,9 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isImportable() {
-    return false;
+  public void throwIfImportNotSupported() {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_SQLITE_IMPORT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

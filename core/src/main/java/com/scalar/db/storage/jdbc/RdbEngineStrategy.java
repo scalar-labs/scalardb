@@ -71,9 +71,9 @@ public interface RdbEngineStrategy {
 
   String[] createNamespaceSqls(String fullNamespace);
 
-  default boolean isValidTableName(String tableName) {
-    return true;
-  }
+  default void throwIfInvalidNamespaceName(String namespaceName) {}
+
+  default void throwIfInvalidTableName(String tableName) {}
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
@@ -167,9 +167,7 @@ public interface RdbEngineStrategy {
 
   Driver getDriver();
 
-  default boolean isImportable() {
-    return true;
-  }
+  default void throwIfImportNotSupported() {}
 
   /**
    * Return properly-preprocessed like pattern for each underlying database.
