@@ -897,21 +897,6 @@ public class MultiStorageAdminTest {
   }
 
   @Test
-  public void getImportTableMetadata_ForTable1InNamespace1_ShouldCallAdmin1()
-      throws ExecutionException {
-    // Arrange
-    String namespace = NAMESPACE1;
-    String table = TABLE1;
-    Map<String, DataType> overrideColumnsType = ImmutableMap.of("c", DataType.TIMESTAMPTZ);
-
-    // Act
-    multiStorageAdmin.getImportTableMetadata(namespace, table, overrideColumnsType);
-
-    // Assert
-    verify(admin1).getImportTableMetadata(namespace, table, overrideColumnsType);
-  }
-
-  @Test
   public void getStorageInfo_ShouldReturnProperStorageInfo() throws ExecutionException {
     // Arrange
     MultiStorageAdmin.AdminHolder s1 = new MultiStorageAdmin.AdminHolder("s1", admin1);

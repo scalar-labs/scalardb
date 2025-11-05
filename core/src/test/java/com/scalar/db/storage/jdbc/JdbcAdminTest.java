@@ -3727,20 +3727,16 @@ public class JdbcAdminTest {
   }
 
   @ParameterizedTest
-  @EnumSource(RdbEngine.class)
-  public void getImportTableMetadata_ForX_ShouldWorkProperly(RdbEngine rdbEngine)
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void getImportTableMetadata_ForXBesidesSqlite_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
-    if (rdbEngine.equals(RdbEngine.SQLITE)) {
-      getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(rdbEngine);
-    } else {
-      getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-    }
-  }
+    String expectedCheckTableExistStatement = prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE);
 
-  private void getImportTableMetadata_ForOtherThanSQLite_ShouldWorkProperly(
-      RdbEngine rdbEngine, String expectedCheckTableExistStatement)
-      throws SQLException, ExecutionException {
     // Arrange
     Statement checkTableExistStatement = mock(Statement.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
@@ -3830,16 +3826,6 @@ public class JdbcAdminTest {
             anyInt(),
             eq(getFullTableName(NAMESPACE, TABLE) + " col"),
             eq(DataType.FLOAT));
-  }
-
-  private void getImportTableMetadata_ForSQLite_ShouldThrowUnsupportedOperationException(
-      RdbEngine rdbEngine) {
-    // Arrange
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
-        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -3967,76 +3953,6 @@ public class JdbcAdminTest {
     verify(checkTableExistStatement, description(description))
         .execute(expectedCheckTableExistStatement);
     assertThat(thrown).as(description).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void addRawColumnToTable_ForX_ShouldWorkProperly()
-      throws SQLException, ExecutionException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      addRawColumnToTable_ForX_ShouldWorkProperly(
-          rdbEngine,
-          prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE),
-          prepareSqlForAlterTableAddColumn(rdbEngine, COLUMN_1));
-    }
-  }
-
-  private void addRawColumnToTable_ForX_ShouldWorkProperly(
-      RdbEngine rdbEngine, String... expectedSqlStatements)
-      throws SQLException, ExecutionException {
-    // Arrange
-    List<Statement> expectedStatements = new ArrayList<>();
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
-    }
-    when(connection.createStatement())
-        .thenReturn(
-            expectedStatements.get(0),
-            expectedStatements.subList(1, expectedStatements.size()).toArray(new Statement[0]));
-
-    when(dataSource.getConnection()).thenReturn(connection);
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-
-    // Act
-    admin.addRawColumnToTable(NAMESPACE, TABLE, COLUMN_1, DataType.INT);
-
-    // Assert
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      verify(
-              expectedStatements.get(i),
-              description("database engine specific test failed: " + rdbEngine))
-          .execute(expectedSqlStatements[i]);
-    }
-  }
-
-  @Test
-  public void addRawColumnToTable_WithNonExistingTableForX_ShouldThrowIllegalArgumentException()
-      throws SQLException {
-    for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
-      addRawColumnToTable_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
-          rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
-    }
-  }
-
-  private void addRawColumnToTable_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
-      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
-    // Arrange
-    Statement checkTableExistStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
-    when(dataSource.getConnection()).thenReturn(connection);
-
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.addRawColumnToTable(NAMESPACE, TABLE, COLUMN_1, DataType.INT))
-        .isInstanceOf(IllegalArgumentException.class);
-    verify(
-            checkTableExistStatement,
-            description("database engine specific test failed: " + rdbEngine))
-        .execute(expectedCheckTableExistStatement);
   }
 
   @ParameterizedTest
