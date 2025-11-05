@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -13,6 +15,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -24,6 +27,7 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -69,9 +73,9 @@ public interface RdbEngineStrategy {
 
   String[] createSchemaIfNotExistsSqls(String fullSchema);
 
-  default boolean isValidNamespaceOrTableName(String tableName) {
-    return true;
-  }
+  default void throwIfInvalidNamespaceName(String namespaceName) {}
+
+  default void throwIfInvalidTableName(String tableName) {}
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);
@@ -98,11 +102,50 @@ public interface RdbEngineStrategy {
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
-  String alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  default String[] dropColumnSql(String namespace, String table, String columnName) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " DROP COLUMN "
+          + enclose(columnName)
+    };
+  }
+
+  default String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, table)
+        + " RENAME COLUMN "
+        + enclose(oldColumnName)
+        + " TO "
+        + enclose(newColumnName);
+  }
+
+  String renameTableSql(String namespace, String oldTableName, String newTableName);
+
+  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
   String tableExistsInternalTableCheckSql(String fullTableName);
 
+  default String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
   String dropIndexSql(String schema, String table, String indexName);
+
+  String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName);
 
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
@@ -116,15 +159,13 @@ public interface RdbEngineStrategy {
     return enclose(schema) + "." + enclose(table);
   }
 
-  SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit);
+  SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit);
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
   Driver getDriver();
 
-  default boolean isImportable() {
-    return true;
-  }
+  default void throwIfImportNotSupported() {}
 
   /**
    * Return properly-preprocessed like pattern for each underlying database.
@@ -179,6 +220,11 @@ public interface RdbEngineStrategy {
     return column.getTimestampTZValue().atOffset(ZoneOffset.UTC);
   }
 
+  default void bindBlobColumnToPreparedStatement(
+      PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
+    preparedStatement.setBytes(index, bytes);
+  }
+
   default DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
     return DateColumn.of(columnName, resultSet.getObject(columnName, LocalDate.class));
   }
@@ -205,9 +251,10 @@ public interface RdbEngineStrategy {
   /**
    * Return the connection properties for the underlying database.
    *
+   * @param config the JDBC configuration
    * @return a map where key=property_name and value=property_value
    */
-  default Map<String, String> getConnectionProperties() {
+  default Map<String, String> getConnectionProperties(JdbcConfig config) {
     return Collections.emptyMap();
   }
 
@@ -230,8 +277,52 @@ public interface RdbEngineStrategy {
     // Do nothing
   }
 
+  /**
+   * Throws an exception if renaming the column is not supported in the underlying database.
+   *
+   * @param columnName the current name of the column to rename
+   * @param tableMetadata the current table metadata
+   * @throws UnsupportedOperationException if renaming the column is not supported
+   */
+  default void throwIfRenameColumnNotSupported(String columnName, TableMetadata tableMetadata) {}
+
+  /**
+   * Throws an exception if altering the column type is not supported in the underlying database.
+   *
+   * @param from the source data type
+   * @param to the target data type
+   * @throws UnsupportedOperationException if altering the column type is not supported
+   */
+  default void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {}
+
   default void setConnectionToReadOnly(Connection connection, boolean readOnly)
       throws SQLException {
     connection.setReadOnly(readOnly);
   }
+
+  /**
+   * Throws an exception if a cross-partition scan operation with ordering on a blob column is
+   * specified and is not supported in the underlying storage.
+   *
+   * @param scanAll the ScanAll operation
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if the ScanAll operation contains an ordering on a blob
+   *     column, and it is not supported in the underlying storage
+   */
+  default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {}
+
+  /**
+   * Throws an exception if one of the conjunctions column is not supported in the underlying
+   * storage.
+   *
+   * @param conjunctions a set of conjunction
+   * @param metadata the table metadata
+   * @throws UnsupportedOperationException if one of the conjunctions column is not supported in the
+   *     underlying storage
+   */
+  default void throwIfConjunctionsColumnNotSupported(
+      Set<Conjunction> conjunctions, TableMetadata metadata) {}
+
+  String getTableNamesInNamespaceSql();
 }

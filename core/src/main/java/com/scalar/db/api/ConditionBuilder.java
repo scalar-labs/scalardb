@@ -1,7 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.api.ConditionalExpression.Operator;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;

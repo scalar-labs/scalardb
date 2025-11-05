@@ -1,7 +1,7 @@
 package com.scalar.db.util.groupcommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;

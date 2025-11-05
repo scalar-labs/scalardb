@@ -27,8 +27,9 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelRollbackEnabled()).isTrue();
     assertThat(config.isAsyncCommitEnabled()).isFalse();
     assertThat(config.isAsyncRollbackEnabled()).isFalse();
-    assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isTrue();
+    assertThat(config.isOnePhaseCommitEnabled()).isFalse();
+    assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
   }
 
@@ -62,7 +63,7 @@ public class ConsensusCommitConfigTest {
   public void constructor_UnsupportedIsolationGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_COMMITTED");
+    props.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "READ_UNCOMMITTED");
 
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(new DatabaseConfig(props)))
@@ -167,6 +168,19 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isFalse();
+  }
+
+  @Test
+  public void constructor_PropertiesWithOnePhaseCommitEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.ONE_PHASE_COMMIT_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isOnePhaseCommitEnabled()).isTrue();
   }
 
   @Test

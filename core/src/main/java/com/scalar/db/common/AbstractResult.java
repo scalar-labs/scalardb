@@ -4,7 +4,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Suppliers;
 import com.scalar.db.api.Result;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ScalarDbUtils;

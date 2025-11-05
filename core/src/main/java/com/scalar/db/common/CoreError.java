@@ -1,4 +1,7 @@
-package com.scalar.db.common.error;
+package com.scalar.db.common;
+
+import com.scalar.db.common.error.Category;
+import com.scalar.db.common.error.ScalarDbError;
 
 public enum CoreError implements ScalarDbError {
 
@@ -118,7 +121,8 @@ public enum CoreError implements ScalarDbError {
   AUTH_NOT_ENABLED(
       Category.USER_ERROR,
       "0022",
-      "The authentication and authorization feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The authentication and authorization feature is not enabled. To use this feature, you must enable it."
+          + " Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_PUT_IF(
@@ -195,9 +199,9 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED(
-      Category.USER_ERROR, "0038", "One or more columns must be specified.", "", ""),
+      Category.USER_ERROR, "0038", "One or more columns must be specified", "", ""),
   TABLE_METADATA_BUILD_ERROR_NO_PARTITION_KEYS_SPECIFIED(
-      Category.USER_ERROR, "0039", "One or more partition keys must be specified.", "", ""),
+      Category.USER_ERROR, "0039", "One or more partition keys must be specified", "", ""),
   TABLE_METADATA_BUILD_ERROR_PARTITION_KEY_COLUMN_DEFINITION_NOT_SPECIFIED(
       Category.USER_ERROR,
       "0040",
@@ -373,16 +377,16 @@ public enum CoreError implements ScalarDbError {
       ""),
   MULTI_STORAGE_STORAGE_NOT_FOUND(
       Category.USER_ERROR, "0084", "Storage not found. Storage: %s", "", ""),
-  JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0085", "The namespace name is not acceptable. Namespace: %s", "", ""),
-  JDBC_TABLE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0086", "The table name is not acceptable. Table: %s", "", ""),
-  JDBC_IMPORT_NOT_SUPPORTED(
+  JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
-      "0087",
-      "Importing tables is not allowed in the RDB engine. RDB engine: %s",
+      "0085",
+      "The namespace name is not acceptable in SQLite. Namespace: %s",
       "",
       ""),
+  JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0086", "The table name is not acceptable in SQLite. Table: %s", "", ""),
+  JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0087", "Importing tables is not allowed in SQLite", "", ""),
   JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
       Category.USER_ERROR, "0088", "The %s table must have a primary key", "", ""),
   JDBC_RDB_ENGINE_NOT_SUPPORTED(
@@ -463,93 +467,12 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0107",
-      "The transaction is not validated."
-          + " When using the SERIALIZABLE isolation level, you need to call validate()"
-          + " before calling commit()",
+      "The transaction is not validated. When using the SERIALIZABLE isolation level,"
+          + " you need to call validate() before calling commit()",
       "",
       ""),
   DYNAMO_BATCH_SIZE_EXCEEDED(
       Category.USER_ERROR, "0108", "DynamoDB cannot batch more than 100 mutations at once", "", ""),
-  SCHEMA_LOADER_ALTERING_PARTITION_KEYS_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0109",
-      "The partition keys of the table %s.%s were modified, but altering partition keys is not supported",
-      "",
-      ""),
-  SCHEMA_LOADER_ALTERING_CLUSTERING_KEYS_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0110",
-      "The clustering keys of the table %s.%s were modified, but altering clustering keys is not supported",
-      "",
-      ""),
-  SCHEMA_LOADER_ALTERING_CLUSTERING_ORDER_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0111",
-      "The clustering ordering of the table %s.%s were modified, but altering clustering ordering is not supported",
-      "",
-      ""),
-  SCHEMA_LOADER_DELETING_COLUMN_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0112",
-      "The column %s of the table %s.%s has been deleted. Column deletion is not supported when altering a table",
-      "",
-      ""),
-  SCHEMA_LOADER_ALTERING_COLUMN_DATA_TYPE_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0113",
-      "The data type of the column %s of the table %s.%s was modified, but altering data types is not supported",
-      "",
-      ""),
-  SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL(
-      Category.USER_ERROR,
-      "0114",
-      "Specifying the '--schema-file' option is required when using the '--repair-all' option",
-      "",
-      ""),
-  SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_ALTER(
-      Category.USER_ERROR,
-      "0115",
-      "Specifying the '--schema-file' option is required when using the '--alter' option",
-      "",
-      ""),
-  SCHEMA_LOADER_SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_IMPORT(
-      Category.USER_ERROR,
-      "0116",
-      "Specifying the '--schema-file' option is required when using the '--import' option",
-      "",
-      ""),
-  SCHEMA_LOADER_SPECIFYING_COORDINATOR_WITH_IMPORT_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0117",
-      "Specifying the '--coordinator' option with the '--import' option is not allowed."
-          + " Create Coordinator tables separately",
-      "",
-      ""),
-  SCHEMA_LOADER_READING_CONFIG_FILE_FAILED(
-      Category.USER_ERROR, "0118", "Reading the configuration file failed. File: %s", "", ""),
-  SCHEMA_LOADER_READING_SCHEMA_FILE_FAILED(
-      Category.USER_ERROR, "0119", "Reading the schema file failed. File: %s", "", ""),
-  SCHEMA_LOADER_PARSING_SCHEMA_JSON_FAILED(
-      Category.USER_ERROR, "0120", "Parsing the schema JSON failed. Details: %s", "", ""),
-  SCHEMA_LOADER_PARSE_ERROR_TABLE_NAME_MUST_CONTAIN_NAMESPACE_AND_TABLE(
-      Category.USER_ERROR,
-      "0121",
-      "The table name must contain the namespace and the table. Table: %s",
-      "",
-      ""),
-  SCHEMA_LOADER_PARSE_ERROR_PARTITION_KEY_MUST_BE_SPECIFIED(
-      Category.USER_ERROR, "0122", "The partition key must be specified. Table: %s", "", ""),
-  SCHEMA_LOADER_PARSE_ERROR_INVALID_CLUSTERING_KEY_FORMAT(
-      Category.USER_ERROR,
-      "0123",
-      "Invalid clustering-key format. The clustering key must be in the format of 'column_name' or 'column_name ASC/DESC'."
-          + " Table: %s; Clustering key: %s",
-      "",
-      ""),
-  SCHEMA_LOADER_PARSE_ERROR_COLUMNS_NOT_SPECIFIED(
-      Category.USER_ERROR, "0124", "Columns must be specified. Table: %s", "", ""),
-  SCHEMA_LOADER_PARSE_ERROR_INVALID_COLUMN_TYPE(
-      Category.USER_ERROR, "0125", "Invalid column type. Table: %s; Column: %s; Type: %s", "", ""),
   OPERATION_CHECK_ERROR_UNSUPPORTED_MUTATION_TYPE(
       Category.USER_ERROR,
       "0126",
@@ -578,32 +501,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0130",
       "Cross-partition scan with ordering is not supported in DynamoDB",
-      "",
-      ""),
-  DATA_LOADER_DIRECTORY_WRITE_ACCESS_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0131",
-      "The directory '%s' does not have write permissions. Please ensure that the current user has write access to the directory.",
-      "",
-      ""),
-  DATA_LOADER_DIRECTORY_CREATE_FAILED(
-      Category.USER_ERROR,
-      "0132",
-      "Failed to create the directory '%s'. Please check if you have sufficient permissions and if there are any file system restrictions. Details: %s",
-      "",
-      ""),
-  DATA_LOADER_MISSING_DIRECTORY_NOT_ALLOWED(
-      Category.USER_ERROR, "0133", "Directory path cannot be null or empty.", "", ""),
-  DATA_LOADER_MISSING_FILE_EXTENSION(
-      Category.USER_ERROR,
-      "0134",
-      "No file extension was found on the provided file name %s.",
-      "",
-      ""),
-  DATA_LOADER_INVALID_FILE_EXTENSION(
-      Category.USER_ERROR,
-      "0135",
-      "Invalid file extension: %s. Allowed extensions are: %s",
       "",
       ""),
   SINGLE_CRUD_OPERATION_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED(
@@ -652,7 +549,8 @@ public enum CoreError implements ScalarDbError {
   ENCRYPTION_NOT_ENABLED(
       Category.USER_ERROR,
       "0143",
-      "The encryption feature is not enabled. To encrypt data at rest, you must enable this feature. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The encryption feature is not enabled. To encrypt data at rest, you must enable this feature."
+          + " Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   INVALID_VARIABLE_KEY_COLUMN_SIZE(
@@ -680,52 +578,11 @@ public enum CoreError implements ScalarDbError {
       "Deleting data already-inserted by the same transaction is not allowed",
       "",
       ""),
-  DATA_LOADER_INVALID_COLUMN_NON_EXISTENT(
-      Category.USER_ERROR,
-      "0148",
-      "Invalid key: Column %s does not exist in the table %s in namespace %s.",
-      "",
-      ""),
-  DATA_LOADER_INVALID_BASE64_ENCODING_FOR_COLUMN_VALUE(
-      Category.USER_ERROR,
-      "0149",
-      "Invalid base64 encoding for blob value '%s' for column %s in table %s in namespace %s",
-      "",
-      ""),
-  DATA_LOADER_INVALID_NUMBER_FORMAT_FOR_COLUMN_VALUE(
-      Category.USER_ERROR,
-      "0150",
-      "Invalid number '%s' specified for column %s in table %s in namespace %s",
-      "",
-      ""),
-  DATA_LOADER_ERROR_METHOD_NULL_ARGUMENT(
-      Category.USER_ERROR, "0151", "Method null argument not allowed", "", ""),
   ABAC_NOT_ENABLED(
       Category.USER_ERROR,
       "0152",
-      "The attribute-based access control feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
-      "",
-      ""),
-  DATA_LOADER_CLUSTERING_KEY_NOT_FOUND(
-      Category.USER_ERROR, "0153", "The provided clustering key %s was not found", "", ""),
-  DATA_LOADER_INVALID_PROJECTION(
-      Category.USER_ERROR, "0154", "The column '%s' was not found", "", ""),
-  DATA_LOADER_INCOMPLETE_PARTITION_KEY(
-      Category.USER_ERROR,
-      "0155",
-      "The provided partition key is incomplete. Required key: %s",
-      "",
-      ""),
-  DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH(
-      Category.USER_ERROR,
-      "0156",
-      "The provided clustering key order does not match the table schema. Required order: %s",
-      "",
-      ""),
-  DATA_LOADER_PARTITION_KEY_ORDER_MISMATCH(
-      Category.USER_ERROR,
-      "0157",
-      "The provided partition key order does not match the table schema. Required order: %s",
+      "The attribute-based access control feature is not enabled. To use this feature, you must enable it."
+          + " Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
   OUT_OF_RANGE_COLUMN_VALUE_FOR_DATE(
@@ -743,7 +600,8 @@ public enum CoreError implements ScalarDbError {
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMP(
       Category.USER_ERROR,
       "0160",
-      "This TIMESTAMP column value is out of the valid range. It must be between 1000-01-01T00:00:00.000 and 9999-12-31T23:59:59.999. Value: %s",
+      "This TIMESTAMP column value is out of the valid range."
+          + " It must be between 1000-01-01T00:00:00.000 and 9999-12-31T23:59:59.999. Value: %s",
       "",
       ""),
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMP(
@@ -755,7 +613,8 @@ public enum CoreError implements ScalarDbError {
   OUT_OF_RANGE_COLUMN_VALUE_FOR_TIMESTAMPTZ(
       Category.USER_ERROR,
       "0162",
-      "This TIMESTAMPTZ column value is out of the valid range. It must be between 1000-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z. Value: %s",
+      "This TIMESTAMPTZ column value is out of the valid range."
+          + " It must be between 1000-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z. Value: %s",
       "",
       ""),
   SUBMILLISECOND_PRECISION_NOT_SUPPORTED_FOR_TIMESTAMPTZ(
@@ -770,166 +629,25 @@ public enum CoreError implements ScalarDbError {
       "The underlying-storage data type %s is not supported as the ScalarDB %s data type: %s",
       "",
       ""),
-  DATA_LOADER_MISSING_NAMESPACE_OR_TABLE(
-      Category.USER_ERROR, "0165", "Missing namespace or table: %s, %s", "", ""),
-  DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED(
-      Category.USER_ERROR, "0166", "Failed to retrieve table metadata. Details: %s", "", ""),
-  DATA_LOADER_DUPLICATE_DATA_MAPPINGS(
-      Category.USER_ERROR,
-      "0167",
-      "Duplicate data mappings found for table '%s' in the control file",
-      "",
-      ""),
-  DATA_LOADER_MISSING_COLUMN_MAPPING(
-      Category.USER_ERROR,
-      "0168",
-      "No mapping found for column '%s' in table '%s' in the control file. Control file validation set at 'FULL'. All columns need to be mapped.",
-      "",
-      ""),
-  DATA_LOADER_CONTROL_FILE_MISSING_DATA_MAPPINGS(
-      Category.USER_ERROR, "0169", "The control file is missing data mappings", "", ""),
-  DATA_LOADER_TARGET_COLUMN_NOT_FOUND(
-      Category.USER_ERROR,
-      "0170",
-      "The target column '%s' for source field '%s' could not be found in table '%s'",
-      "",
-      ""),
-  DATA_LOADER_MISSING_PARTITION_KEY(
-      Category.USER_ERROR,
-      "0171",
-      "The required partition key '%s' is missing in the control file mapping for table '%s'",
-      "",
-      ""),
-  DATA_LOADER_MISSING_CLUSTERING_KEY(
-      Category.USER_ERROR,
-      "0172",
-      "The required clustering key '%s' is missing in the control file mapping for table '%s'",
-      "",
-      ""),
-  DATA_LOADER_MULTIPLE_MAPPINGS_FOR_COLUMN_FOUND(
-      Category.USER_ERROR,
-      "0173",
-      "Duplicated data mappings found for column '%s' in table '%s'",
-      "",
-      ""),
-  DATA_LOADER_MISSING_CLUSTERING_KEY_COLUMN(
-      Category.USER_ERROR,
-      "0174",
-      "Missing required field or column mapping for clustering key %s",
-      "",
-      ""),
-  DATA_LOADER_MISSING_PARTITION_KEY_COLUMN(
-      Category.USER_ERROR,
-      "0175",
-      "Missing required field or column mapping for partition key %s",
-      "",
-      ""),
-  DATA_LOADER_MISSING_COLUMN(
-      Category.USER_ERROR, "0176", "Missing field or column mapping for %s", "", ""),
-  DATA_LOADER_VALUE_TO_STRING_CONVERSION_FAILED(
-      Category.USER_ERROR,
-      "0177",
-      "Something went wrong while converting the ScalarDB values to strings. The table metadata and Value datatype probably do not match. Details: %s",
-      "",
-      ""),
-  DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
-  DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY(
-      Category.USER_ERROR, "0179", "Could not find the partition key", "", ""),
-  DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS(
-      Category.USER_ERROR,
-      "0180",
-      "The source record needs to contain all fields if the UPSERT turns into an INSERT",
-      "",
-      ""),
-  DATA_LOADER_DATA_ALREADY_EXISTS(Category.USER_ERROR, "0181", "Record already exists", "", ""),
-  DATA_LOADER_DATA_NOT_FOUND(Category.USER_ERROR, "0182", "Record was not found", "", ""),
-  DATA_LOADER_COULD_NOT_FIND_CLUSTERING_KEY(
-      Category.USER_ERROR, "0183", "Could not find the clustering key", "", ""),
-  DATA_LOADER_TABLE_METADATA_MISSING(
-      Category.USER_ERROR, "0184", "No table metadata found", "", ""),
-  DATA_LOADER_MISSING_SOURCE_FIELD(
-      Category.USER_ERROR,
-      "0185",
-      "The data mapping source field '%s' for table '%s' is missing in the json data record",
-      "",
-      ""),
-  DATA_LOADER_CSV_DATA_MISMATCH(
-      Category.USER_ERROR, "0186", "The CSV row: %s does not match header: %s.", "", ""),
-  DATA_LOADER_JSON_CONTENT_START_ERROR(
-      Category.USER_ERROR, "0187", "Expected JSON file content to be an array", "", ""),
   REPLICATION_NOT_ENABLED(
       Category.USER_ERROR,
       "0188",
-      "The replication feature is not enabled. To use this feature, you must enable it. Note that this feature is supported only in the ScalarDB Enterprise edition",
+      "The replication feature is not enabled. To use this feature, you must enable it."
+          + " Note that this feature is supported only in the ScalarDB Enterprise edition",
       "",
       ""),
-  DATA_LOADER_IMPORT_TARGET_MISSING(
-      Category.USER_ERROR,
-      "0189",
-      "Missing option: either '--namespace' and'--table' or '--control-file' options must be specified.",
-      "",
-      ""),
-  DATA_LOADER_MISSING_IMPORT_FILE(
-      Category.USER_ERROR,
-      "0190",
-      "The file '%s' specified by the argument '%s' does not exist.",
-      "",
-      ""),
-  DATA_LOADER_LOG_DIRECTORY_WRITE_ACCESS_DENIED(
-      Category.USER_ERROR, "0191", "Cannot write to the log directory: %s", "", ""),
-  DATA_LOADER_LOG_DIRECTORY_CREATION_FAILED(
-      Category.USER_ERROR, "0192", "Failed to create the log directory: %s", "", ""),
-  DATA_LOADER_INVALID_CONTROL_FILE(
-      Category.USER_ERROR, "0193", "Failed to parse the control file: %s", "", ""),
-  DATA_LOADER_DIRECTORY_WRITE_ACCESS(
-      Category.USER_ERROR,
-      "0194",
-      "No permission to create or write files in the directory: %s",
-      "",
-      ""),
-  DATA_LOADER_DIRECTORY_CREATION_FAILED(
-      Category.USER_ERROR, "0195", "Failed to create the directory: %s", "", ""),
-  DATA_LOADER_PATH_IS_NOT_A_DIRECTORY(
-      Category.USER_ERROR, "0196", "Path exists but is not a directory: %s", "", ""),
-  DATA_LOADER_FILE_PATH_IS_BLANK(
-      Category.USER_ERROR, "0197", "File path must not be blank.", "", ""),
-  DATA_LOADER_FILE_NOT_FOUND(Category.USER_ERROR, "0198", "File not found: %s", "", ""),
-  DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE(
-      Category.USER_ERROR,
-      "0199",
-      "Invalid date time value '%s' specified for column %s in table %s in namespace %s.",
-      "",
-      ""),
-  DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT(
-      Category.USER_ERROR, "0200", "Key-value cannot be null or empty", "", ""),
-  DATA_LOADER_INVALID_KEY_VALUE_INPUT(
-      Category.USER_ERROR, "0201", "Invalid key-value format: %s", "", ""),
-  DATA_LOADER_SPLIT_INPUT_VALUE_NULL(Category.USER_ERROR, "0202", "Value must not be null", "", ""),
-  DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL(
-      Category.USER_ERROR, "0203", "Delimiter must not be null", "", ""),
-  DATA_LOADER_CONFIG_FILE_PATH_BLANK(
-      Category.USER_ERROR, "0204", "Config file path must not be blank", "", ""),
   CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
       Category.USER_ERROR,
       "0205",
-      "Some scanners were not closed. All scanners must be closed before committing the transaction.",
+      "Some scanners were not closed. All scanners must be closed before committing the transaction",
       "",
       ""),
   TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
       Category.USER_ERROR,
       "0206",
-      "Some scanners were not closed. All scanners must be closed before preparing the transaction.",
+      "Some scanners were not closed. All scanners must be closed before preparing the transaction",
       "",
       ""),
-  DATA_LOADER_INVALID_DATA_CHUNK_SIZE(
-      Category.USER_ERROR, "0207", "Data chunk size must be greater than 0", "", ""),
-  DATA_LOADER_INVALID_TRANSACTION_SIZE(
-      Category.USER_ERROR, "0208", "Transaction size must be greater than 0", "", ""),
-  DATA_LOADER_INVALID_MAX_THREADS(
-      Category.USER_ERROR, "0209", "Number of max threads must be greater than 0", "", ""),
-  DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE(
-      Category.USER_ERROR, "0210", "Data chunk queue size must be greater than 0", "", ""),
   MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
       Category.USER_ERROR,
       "0211",
@@ -958,6 +676,177 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0215",
       "Mutations across multiple storages are not allowed. Mutations: %s",
+      "",
+      ""),
+  DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0216",
+      "Primary key columns cannot be dropped. Table: %s; Column: %s",
+      "",
+      ""),
+  COSMOS_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "Cosmos DB does not support the dropping column feature",
+      "",
+      ""),
+  DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
+  COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0219",
+      "Cosmos DB does not support the renaming column feature",
+      "",
+      ""),
+  DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0220", "DynamoDB does not support the renaming column feature", "", ""),
+  CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0221",
+      "Cassandra does not support renaming non-primary key columns",
+      "",
+      ""),
+  JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0222",
+      "Db2 does not support renaming primary key or index key columns",
+      "",
+      ""),
+  DYNAMO_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0223",
+      "Import-related functionality is not supported in DynamoDB",
+      "",
+      ""),
+  DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0224",
+      "The BLOB type is supported only for the last column in the partition key in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0225",
+      "The BLOB type is not supported for clustering keys in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0226",
+      "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
+      "",
+      ""),
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
+  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
+      "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0229",
+      "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in Cassandra", "", ""),
+  COSMOS_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
+  DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
+  ALTER_PRIMARY_OR_INDEX_KEY_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0233",
+      "Altering primary key or index key column types is not supported. Table: %s; Column: %s",
+      "",
+      ""),
+  INVALID_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0234",
+      "Invalid column type conversion from %s to %s. Column: %s",
+      "",
+      ""),
+  CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0235",
+      "Cassandra does not support the altering column type feature",
+      "",
+      ""),
+  COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0236",
+      "Cosmos DB does not support the altering column type feature",
+      "",
+      ""),
+  DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0237",
+      "DynamoDB does not support the altering column type feature",
+      "",
+      ""),
+  JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0238",
+      "SQLite does not support the altering column type feature",
+      "",
+      ""),
+  JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0239",
+      "Oracle does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0240",
+      "Db2 does not support column type conversion from %s to %s",
+      "",
+      ""),
+  EMPTY_OPERATIONS_SPECIFIED(Category.USER_ERROR, "0241", "The operations are empty", "", ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_MULTIPLE_OPERATIONS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0242",
+      "Multiple operations are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BATCH_RESULT_DOES_NOT_HAVE_GET_RESULT(
+      Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
+  BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
+      Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0245",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0246",
+      "With Oracle, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0247",
+      "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0248",
+      "With Oracle, setting a condition on a BLOB column when using a selection operation is not supported. Condition: %s",
+      "",
+      ""),
+  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+      Category.USER_ERROR,
+      "0249",
+      "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
       "",
       ""),
 
@@ -1010,19 +899,35 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
-      Category.CONCURRENCY_ERROR, "0013", "The record being prepared already exists", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0013",
+      "The record being prepared already exists. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
-      Category.CONCURRENCY_ERROR, "0014", "A conflict occurred when preparing records", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0014",
+      "A conflict occurred when preparing records. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE(
       Category.CONCURRENCY_ERROR,
       "0015",
-      "The committing state in the coordinator failed. The transaction has been aborted",
+      "The committing state in the coordinator failed. The transaction has been aborted. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ(
-      Category.CONCURRENCY_ERROR, "0016", "A conflict occurred during implicit pre-read", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0016",
+      "A conflict occurred during implicit pre-read. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD(
-      Category.CONCURRENCY_ERROR, "0017", "This record needs to be recovered", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0017",
+      "This record needs to be recovered. Table: %s; Partition Key: %s; Clustering Key: %s; Transaction ID that wrote the record: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_NOT_EXISTS(
       Category.CONCURRENCY_ERROR,
       "0018",
@@ -1063,6 +968,12 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0025",
       "A transaction conflict occurred in the Insert operation",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS(
+      Category.CONCURRENCY_ERROR,
+      "0026",
+      "A conflict occurred when committing records. Details: %s",
       "",
       ""),
 
@@ -1170,20 +1081,21 @@ public enum CoreError implements ScalarDbError {
   JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR, "0035", "Beginning a transaction failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED(
-      Category.INTERNAL_ERROR, "0036", "Preparing records failed", "", ""),
-  CONSENSUS_COMMIT_VALIDATION_FAILED(Category.INTERNAL_ERROR, "0037", "Validation failed", "", ""),
+      Category.INTERNAL_ERROR, "0036", "Preparing records failed. Details: %s", "", ""),
+  CONSENSUS_COMMIT_VALIDATION_FAILED(
+      Category.INTERNAL_ERROR, "0037", "Validation failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED(
-      Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed", "", ""),
+      Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED(
       Category.INTERNAL_ERROR,
       "0039",
-      "Reading a record from the underlying storage failed",
+      "Reading a record from the underlying storage failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED(
       Category.INTERNAL_ERROR,
       "0040",
-      "Scanning records from the underlying storage failed",
+      "Scanning records from the underlying storage failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
@@ -1199,38 +1111,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
-  HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED(
       Category.INTERNAL_ERROR,
       "0046",
-      "Handling the before-preparation snapshot hook failed. Details: %s",
+      "Handling the before-preparation hook failed. Details: %s",
       "",
       ""),
-  DATA_LOADER_ERROR_CRUD_EXCEPTION(
-      Category.INTERNAL_ERROR,
-      "0047",
-      "Something went wrong while trying to save the data. Details: %s",
-      "",
-      ""),
-  DATA_LOADER_ERROR_SCAN(
-      Category.INTERNAL_ERROR,
-      "0048",
-      "Something went wrong while scanning. Are you sure you are running in the correct transaction mode? Details: %s",
-      "",
-      ""),
-  DATA_LOADER_CSV_FILE_READ_FAILED(
-      Category.INTERNAL_ERROR, "0049", "Failed to read CSV file. Details: %s.", "", ""),
-  DATA_LOADER_CSV_FILE_HEADER_READ_FAILED(
-      Category.INTERNAL_ERROR, "0050", "Failed to CSV read header line. Details: %s.", "", ""),
-  DATA_LOADER_DATA_CHUNK_PROCESS_FAILED(
-      Category.INTERNAL_ERROR,
-      "0051",
-      "Data chunk processing was interrupted. Details: %s",
-      "",
-      ""),
-  DATA_LOADER_JSON_FILE_READ_FAILED(
-      Category.INTERNAL_ERROR, "0052", "Failed to read JSON file. Details: %s.", "", ""),
-  DATA_LOADER_JSONLINES_FILE_READ_FAILED(
-      Category.INTERNAL_ERROR, "0053", "Failed to read JSON Lines file. Details: %s.", "", ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
       Category.INTERNAL_ERROR, "0054", "Getting the scanner failed. Details: %s", "", ""),
   JDBC_CLOSING_SCANNER_FAILED(
@@ -1241,6 +1127,36 @@ public enum CoreError implements ScalarDbError {
       "Getting the storage information failed. Namespace: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
+      Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
+  CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
+      Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
+  DROPPING_COLUMN_FROM_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0059",
+      "Dropping a column from the table failed. Table: %s; Column: %s",
+      "",
+      ""),
+  RENAMING_COLUMN_FAILED(
+      Category.INTERNAL_ERROR,
+      "0060",
+      "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
+  RENAMING_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
+      "",
+      ""),
+  ALTERING_COLUMN_TYPE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0062",
+      "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
+      "",
+      ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -1254,21 +1170,31 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist",
+      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_CANNOT_GET_STATE(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR, "0002", "The state cannot be retrieved", "", ""),
+  CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0002",
+      "The coordinator status cannot be retrieved. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0003",
-      "The coordinator status is unknown",
+      "The coordinator status is unknown. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0004",
-      "Aborting state failed with NoMutationException, but the coordinator status does not exist",
+      "Aborting state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_ONE_PHASE_COMMITTING_RECORDS_FAILED(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0005",
+      "One-phase committing records failed. Details: %s",
       "",
       ""),
   ;

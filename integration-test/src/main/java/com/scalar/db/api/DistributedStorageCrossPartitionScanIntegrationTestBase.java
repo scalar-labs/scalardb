@@ -155,14 +155,14 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
             .addColumn(COL_NAME4, DataType.DOUBLE)
             .addColumn(COL_NAME5, DataType.TEXT)
             .addColumn(COL_NAME6, DataType.BOOLEAN)
-            .addColumn(COL_NAME7, DataType.BLOB)
-            .addColumn(COL_NAME8, DataType.DATE)
-            .addColumn(COL_NAME9, DataType.TIME)
-            .addColumn(COL_NAME10, DataType.TIMESTAMPTZ)
+            .addColumn(COL_NAME7, DataType.DATE)
+            .addColumn(COL_NAME8, DataType.TIME)
+            .addColumn(COL_NAME9, DataType.TIMESTAMPTZ)
             .addPartitionKey(PARTITION_KEY_NAME);
     if (isTimestampTypeSupported()) {
-      tableMetadata.addColumn(COL_NAME11, DataType.TIMESTAMP);
+      tableMetadata.addColumn(COL_NAME10, DataType.TIMESTAMP);
     }
+    tableMetadata.addColumn(COL_NAME11, DataType.BLOB);
 
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(getNamespaceName(), true, options);
@@ -375,12 +375,14 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     columns.add(DoubleColumn.of(COL_NAME4, i));
     columns.add(TextColumn.of(COL_NAME5, String.valueOf(i)));
     columns.add(BooleanColumn.of(COL_NAME6, i % 2 == 0));
-    columns.add(BlobColumn.of(COL_NAME7, String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
-    columns.add(DateColumn.of(COL_NAME8, DateColumn.MIN_VALUE.plusDays(i)));
-    columns.add(TimeColumn.of(COL_NAME9, TimeColumn.MIN_VALUE.plusSeconds(i)));
-    columns.add(TimestampTZColumn.of(COL_NAME10, TimestampTZColumn.MIN_VALUE.plusSeconds(i)));
+    columns.add(DateColumn.of(COL_NAME7, DateColumn.MIN_VALUE.plusDays(i)));
+    columns.add(TimeColumn.of(COL_NAME8, TimeColumn.MIN_VALUE.plusSeconds(i)));
+    columns.add(TimestampTZColumn.of(COL_NAME9, TimestampTZColumn.MIN_VALUE.plusSeconds(i)));
     if (isTimestampTypeSupported()) {
-      columns.add(TimestampColumn.of(COL_NAME11, TimestampColumn.MIN_VALUE.plusSeconds(i)));
+      columns.add(TimestampColumn.of(COL_NAME10, TimestampColumn.MIN_VALUE.plusSeconds(i)));
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      columns.add(BlobColumn.of(COL_NAME11, String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
     }
     return columns;
   }
@@ -393,12 +395,14 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     columns.add(DoubleColumn.ofNull(COL_NAME4));
     columns.add(TextColumn.ofNull(COL_NAME5));
     columns.add(BooleanColumn.ofNull(COL_NAME6));
-    columns.add(BlobColumn.ofNull(COL_NAME7));
-    columns.add(DateColumn.ofNull(COL_NAME8));
-    columns.add(TimeColumn.ofNull(COL_NAME9));
-    columns.add(TimestampTZColumn.ofNull(COL_NAME10));
+    columns.add(DateColumn.ofNull(COL_NAME7));
+    columns.add(TimeColumn.ofNull(COL_NAME8));
+    columns.add(TimestampTZColumn.ofNull(COL_NAME9));
     if (isTimestampTypeSupported()) {
-      columns.add(TimestampColumn.ofNull(COL_NAME11));
+      columns.add(TimestampColumn.ofNull(COL_NAME10));
+    }
+    if (isConditionOnBlobColumnSupported()) {
+      columns.add(BlobColumn.ofNull(COL_NAME11));
     }
     return columns;
   }
@@ -924,7 +928,13 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstColumnType : columnTypes.keySet()) {
+      if (firstColumnType == DataType.BLOB && !isOrderingOnBlobColumnSupported()) {
+        continue;
+      }
       for (DataType secondColumnType : columnTypes.get(firstColumnType)) {
+        if (secondColumnType == DataType.BLOB && !isOrderingOnBlobColumnSupported()) {
+          continue;
+        }
         testCallables.add(
             () -> {
               random.get().setSeed(seed);
@@ -1250,6 +1260,14 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   }
 
   protected boolean isTimestampTypeSupported() {
+    return true;
+  }
+
+  protected boolean isOrderingOnBlobColumnSupported() {
+    return true;
+  }
+
+  protected boolean isConditionOnBlobColumnSupported() {
     return true;
   }
 }

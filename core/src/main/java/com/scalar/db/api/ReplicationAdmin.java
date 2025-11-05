@@ -1,6 +1,6 @@
 package com.scalar.db.api;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
 

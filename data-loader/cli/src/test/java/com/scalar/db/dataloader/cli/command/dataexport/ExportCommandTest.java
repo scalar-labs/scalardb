@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import java.io.File;
@@ -40,7 +40,7 @@ class ExportCommandTest {
             exportCommand::call,
             "Expected to throw FileNotFound exception as configuration path is invalid");
     Assertions.assertEquals(
-        CoreError.DATA_LOADER_CONFIG_FILE_PATH_BLANK.buildMessage(), thrown.getMessage());
+        DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage(), thrown.getMessage());
   }
 
   @Test

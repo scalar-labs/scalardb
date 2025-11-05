@@ -3,7 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -14,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -22,6 +22,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -60,10 +61,10 @@ public class ConsensusCommitManagerTest {
   @Mock private DistributedStorage storage;
   @Mock private DistributedStorageAdmin admin;
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
-  @Mock private RecoveryHandler recovery;
+  @Mock private RecoveryExecutor recoveryExecutor;
+  @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
 
   private ConsensusCommitManager manager;
@@ -76,15 +77,14 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
+            crud,
             commit,
+            Isolation.SNAPSHOT,
             null);
-
-    when(consensusCommitConfig.getIsolation()).thenReturn(Isolation.SNAPSHOT);
   }
 
   @Test
@@ -95,9 +95,11 @@ public class ConsensusCommitManagerTest {
     ConsensusCommit transaction = (ConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -108,9 +110,11 @@ public class ConsensusCommitManagerTest {
     ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -127,24 +131,26 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
+            crud,
             commit,
+            Isolation.SNAPSHOT,
             groupCommitter);
 
     // Act
     ConsensusCommit transaction = (ConsensusCommit) managerWithGroupCommit.begin(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getId()).isEqualTo(fullKey);
-    Snapshot snapshot = transaction.getCrudHandler().getSnapshot();
-    assertThat(snapshot.getId()).isEqualTo(fullKey);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(fullKey);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
     verify(groupCommitter).reserve(ANY_TX_ID);
-    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
   @Test
@@ -158,31 +164,33 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
-            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
-            recovery,
+            recoveryExecutor,
+            crud,
             commit,
+            Isolation.SNAPSHOT,
             groupCommitter);
 
     // Act
-    DistributedTransaction transaction = managerWithGroupCommit.beginReadOnly(ANY_TX_ID);
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((DecoratedDistributedTransaction) managerWithGroupCommit.beginReadOnly(ANY_TX_ID))
+                .getOriginalTransaction();
 
     // Assert
-    assertThat(transaction.getId()).isEqualTo(ANY_TX_ID);
-    Snapshot snapshot =
-        ((ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction())
-            .getCrudHandler()
-            .getSnapshot();
-    assertThat(snapshot.getId()).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isTrue();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isFalse();
     verify(groupCommitter, never()).reserve(ANY_TX_ID);
-    assertThat(snapshot.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
   }
 
   @Test
-  public void begin_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery() {
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
     // Arrange
 
     // Act
@@ -190,15 +198,11 @@ public class ConsensusCommitManagerTest {
     ConsensusCommit transaction2 = (ConsensusCommit) manager.begin();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
@@ -251,9 +255,11 @@ public class ConsensusCommitManagerTest {
     ConsensusCommit transaction = (ConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -265,9 +271,11 @@ public class ConsensusCommitManagerTest {
     ConsensusCommit transaction = (ConsensusCommit) manager.start(ANY_TX_ID);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -279,9 +287,11 @@ public class ConsensusCommitManagerTest {
         (ConsensusCommit) manager.start(com.scalar.db.api.Isolation.SERIALIZABLE);
 
     // Assert
-    assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
-    assertThat(transaction.getCrudHandler().getSnapshot().getIsolation())
-        .isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(transaction.getTransactionContext().transactionId).isNotNull();
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    assertThat(transaction.getCrudHandler()).isEqualTo(crud);
+    assertThat(transaction.getCommitHandler()).isEqualTo(commit);
   }
 
   @Test
@@ -294,7 +304,7 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery()
+  public void start_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
       throws TransactionException {
     // Arrange
 
@@ -303,15 +313,11 @@ public class ConsensusCommitManagerTest {
     ConsensusCommit transaction2 = (ConsensusCommit) manager.start();
 
     // Assert
-    assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());
-    assertThat(transaction1.getCrudHandler().getSnapshot().getId())
-        .isNotEqualTo(transaction2.getCrudHandler().getSnapshot().getId());
-    assertThat(transaction1.getCommitHandler())
-        .isEqualTo(transaction2.getCommitHandler())
-        .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
+    assertThat(transaction1.getCrudHandler()).isSameAs(transaction2.getCrudHandler());
+    assertThat(transaction1.getCommitHandler()).isSameAs(transaction2.getCommitHandler());
+    assertThat(transaction1.getTransactionContext())
+        .isNotSameAs(transaction2.getTransactionContext());
+    assertThat(transaction1.getId()).isNotEqualTo(transaction2.getId());
   }
 
   @Test
@@ -405,7 +411,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransactionManager manager =
         new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
-    doThrow(CommitException.class).when(commit).commit(any(), anyBoolean());
+    doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
@@ -484,7 +490,7 @@ public class ConsensusCommitManagerTest {
     DistributedTransactionManager manager =
         new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
 
-    doThrow(CommitException.class).when(commit).commit(any(), anyBoolean());
+    doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {
@@ -1389,5 +1395,33 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
+  }
+
+  @Test
+  public void batch_ShouldBatch() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+
+    @SuppressWarnings("unchecked")
+    List<Operation> operations = mock(List.class);
+
+    @SuppressWarnings("unchecked")
+    List<CrudOperable.BatchResult> batchResults = mock(List.class);
+
+    when(transaction.batch(operations)).thenReturn(batchResults);
+
+    // Act
+    List<CrudOperable.BatchResult> actual = spied.batch(operations);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).batch(operations);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(batchResults);
   }
 }

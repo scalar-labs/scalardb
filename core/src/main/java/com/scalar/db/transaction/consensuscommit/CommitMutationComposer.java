@@ -1,18 +1,15 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -77,6 +74,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       // for rollforward in lazy recovery
       mutations.add(composeDelete(base, result));
     } else {
+      assert result.getState().equals(TransactionState.COMMITTED);
       logger.debug(
           "The record was committed by the originated one "
               + "or rolled forward by another transaction: {}",
@@ -105,7 +103,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     // Set before image columns to null
     if (result != null) {
       TransactionTableMetadata transactionTableMetadata =
-          tableMetadataManager.getTransactionTableMetadata(base);
+          getTransactionTableMetadata(tableMetadataManager, base);
       LinkedHashSet<String> beforeImageColumnNames =
           transactionTableMetadata.getBeforeImageColumnNames();
       TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
@@ -117,15 +115,20 @@ public class CommitMutationComposer extends AbstractMutationComposer {
 
   private Delete composeDelete(Operation base, @Nullable TransactionResult result)
       throws ExecutionException {
-    return new Delete(getPartitionKey(base, result), getClusteringKey(base, result).orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(
-                    STATE, toStateValue(TransactionState.DELETED), Operator.EQ)));
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(getPartitionKey(base, result))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(
+                        ConditionBuilder.column(STATE).isEqualToInt(TransactionState.DELETED.get()))
+                    .build());
+    getClusteringKey(base, result).ifPresent(deleteBuilder::clusteringKey);
+
+    return deleteBuilder.build();
   }
 
   private Key getPartitionKey(Operation base, @Nullable TransactionResult result)
@@ -137,8 +140,9 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       assert base instanceof Selection;
       if (result != null) {
         // for rollforward in lazy recovery
-        TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-        return ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
+        TransactionTableMetadata transactionTableMetadata =
+            getTransactionTableMetadata(tableMetadataManager, base);
+        return ScalarDbUtils.getPartitionKey(result, transactionTableMetadata.getTableMetadata());
       } else {
         throw new AssertionError(
             "This path should not be reached since the EXTRA_WRITE strategy is deleted");
@@ -155,8 +159,9 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       assert base instanceof Selection;
       if (result != null) {
         // for rollforward in lazy recovery
-        TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-        return ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
+        TransactionTableMetadata transactionTableMetadata =
+            getTransactionTableMetadata(tableMetadataManager, base);
+        return ScalarDbUtils.getClusteringKey(result, transactionTableMetadata.getTableMetadata());
       } else {
         throw new AssertionError(
             "This path should not be reached since the EXTRA_WRITE strategy is deleted");

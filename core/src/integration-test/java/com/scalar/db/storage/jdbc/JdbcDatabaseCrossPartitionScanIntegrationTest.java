@@ -80,4 +80,14 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     }
     return Stream.of(Arguments.of(allColumnNames));
   }
+
+  @Override
+  protected boolean isOrderingOnBlobColumnSupported() {
+    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+  }
+
+  @Override
+  protected boolean isConditionOnBlobColumnSupported() {
+    return !JdbcTestUtils.isOracle(rdbEngine);
+  }
 }

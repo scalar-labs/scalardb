@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo.bytes;
 import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
 
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.TextColumn;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

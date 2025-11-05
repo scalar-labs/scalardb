@@ -4,7 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ImmutableLinkedHashSet;
 import java.util.HashMap;
@@ -252,6 +252,33 @@ public class TableMetadata {
     }
 
     /**
+     * Renames a column from {@code oldName} to {@code newName}.
+     *
+     * @param oldName a column name to be renamed
+     * @param newName a new column name
+     * @return a builder instance
+     */
+    public Builder renameColumn(String oldName, String newName) {
+      if (columns.containsKey(oldName)) {
+        LinkedHashMap<String, DataType> newColumns = new LinkedHashMap<>();
+        for (Map.Entry<String, DataType> entry : columns.entrySet()) {
+          if (entry.getKey().equals(oldName)) {
+            newColumns.put(newName, entry.getValue());
+          } else {
+            newColumns.put(entry.getKey(), entry.getValue());
+          }
+        }
+        columns.clear();
+        columns.putAll(newColumns);
+      }
+      if (encryptedColumnNames.contains(oldName)) {
+        encryptedColumnNames.remove(oldName);
+        encryptedColumnNames.add(newName);
+      }
+      return this;
+    }
+
+    /**
      * Adds a partition-key column with the specified name.
      *
      * @param name a column name
@@ -270,6 +297,29 @@ public class TableMetadata {
      */
     public Builder removePartitionKey(String name) {
       partitionKeyNames.remove(name);
+      return this;
+    }
+
+    /**
+     * Renames a partition-key column from {@code oldName} to {@code newName}.
+     *
+     * @param oldName a column name to be renamed
+     * @param newName a new column name
+     * @return a builder instance
+     */
+    public Builder renamePartitionKey(String oldName, String newName) {
+      if (partitionKeyNames.contains(oldName)) {
+        LinkedHashSet<String> newPartitionKeyNames = new LinkedHashSet<>();
+        for (String name : partitionKeyNames) {
+          if (name.equals(oldName)) {
+            newPartitionKeyNames.add(newName);
+          } else {
+            newPartitionKeyNames.add(name);
+          }
+        }
+        partitionKeyNames.clear();
+        partitionKeyNames.addAll(newPartitionKeyNames);
+      }
       return this;
     }
 
@@ -310,6 +360,34 @@ public class TableMetadata {
     }
 
     /**
+     * Renames a clustering-key column from {@code oldName} to {@code newName}.
+     *
+     * @param oldName a column name to be renamed
+     * @param newName a new column name
+     * @return a builder instance
+     */
+    public Builder renameClusteringKey(String oldName, String newName) {
+      if (clusteringKeyNames.contains(oldName)) {
+        LinkedHashSet<String> newClusteringKeyNames = new LinkedHashSet<>();
+        LinkedHashMap<String, Order> newClusteringOrders = new LinkedHashMap<>();
+        for (String name : clusteringKeyNames) {
+          if (name.equals(oldName)) {
+            newClusteringKeyNames.add(newName);
+            newClusteringOrders.put(newName, clusteringOrders.get(oldName));
+          } else {
+            newClusteringKeyNames.add(name);
+            newClusteringOrders.put(name, clusteringOrders.get(name));
+          }
+        }
+        clusteringKeyNames.clear();
+        clusteringOrders.clear();
+        clusteringKeyNames.addAll(newClusteringKeyNames);
+        clusteringOrders.putAll(newClusteringOrders);
+      }
+      return this;
+    }
+
+    /**
      * Adds a secondary-index column with the specified name.
      *
      * @param name a column name
@@ -328,6 +406,21 @@ public class TableMetadata {
      */
     public Builder removeSecondaryIndex(String name) {
       secondaryIndexNames.remove(name);
+      return this;
+    }
+
+    /**
+     * Renames a secondary-index column from {@code oldName} to {@code newName}.
+     *
+     * @param oldName a column name to be renamed
+     * @param newName a new column name
+     * @return a builder instance
+     */
+    public Builder renameSecondaryIndex(String oldName, String newName) {
+      if (secondaryIndexNames.contains(oldName)) {
+        secondaryIndexNames.remove(oldName);
+        secondaryIndexNames.add(newName);
+      }
       return this;
     }
 

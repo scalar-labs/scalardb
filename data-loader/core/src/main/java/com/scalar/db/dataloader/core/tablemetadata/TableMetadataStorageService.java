@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.tablemetadata;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.exception.storage.ExecutionException;
 import lombok.RequiredArgsConstructor;
 
@@ -32,7 +32,7 @@ public class TableMetadataStorageService extends TableMetadataService {
       return storageAdmin.getTableMetadata(namespace, tableName);
     } catch (ExecutionException e) {
       throw new TableMetadataException(
-          CoreError.DATA_LOADER_TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()), e);
+          DataLoaderError.TABLE_METADATA_RETRIEVAL_FAILED.buildMessage(e.getMessage()), e);
     }
   }
 }

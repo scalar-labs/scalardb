@@ -11,12 +11,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -79,7 +81,7 @@ public class JdbcTransactionManagerTest {
             databaseConfig,
             dataSource,
             tableMetadataDataSource,
-            RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL),
+            RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
             jdbcService);
   }
 
@@ -92,17 +94,34 @@ public class JdbcTransactionManagerTest {
 
     // Act
     DistributedTransaction transaction = manager.begin();
-    Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
     transaction.get(get);
-    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
     transaction.scan(scan);
     Put put =
-        new Put(new Key("p1", "val1"))
-            .withValue("v1", "val2")
-            .forNamespace(NAMESPACE)
-            .forTable(TABLE);
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .textValue("v1", "val2")
+            .build();
     transaction.put(put);
-    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .build();
     transaction.delete(delete);
     transaction.mutate(Arrays.asList(put, delete));
     transaction.commit();
@@ -126,7 +145,12 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.get(get);
             })
         .isInstanceOf(CrudException.class);
@@ -208,13 +232,18 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.get(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.get(get);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -230,7 +259,12 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.start();
-              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Scan scan =
+                  Scan.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.scan(scan);
             })
         .isInstanceOf(CrudException.class);
@@ -241,13 +275,18 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.scan(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
-              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Scan scan =
+                  Scan.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.scan(scan);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -627,10 +666,12 @@ public class JdbcTransactionManagerTest {
             () -> {
               DistributedTransaction transaction = manager.start();
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               transaction.put(put);
             })
         .isInstanceOf(CrudException.class);
@@ -641,17 +682,19 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.put(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               transaction.put(put);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -669,7 +712,11 @@ public class JdbcTransactionManagerTest {
             () -> {
               DistributedTransaction transaction = manager.start();
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .build();
               transaction.delete(delete);
             })
         .isInstanceOf(CrudException.class);
@@ -680,14 +727,18 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.delete(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .build();
               transaction.delete(delete);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -705,12 +756,18 @@ public class JdbcTransactionManagerTest {
             () -> {
               DistributedTransaction transaction = manager.start();
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .build();
               transaction.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(CrudException.class);
@@ -721,19 +778,25 @@ public class JdbcTransactionManagerTest {
       throws SQLException, ExecutionException {
     // Arrange
     when(jdbcService.put(any(), any())).thenThrow(sqlException);
-    when(sqlException.getErrorCode()).thenReturn(1213);
+    when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               Delete delete =
-                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .build();
               transaction.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(CrudConflictException.class);
@@ -749,13 +812,20 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.get(get);
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               transaction.put(put);
               transaction.commit();
             })
@@ -774,13 +844,20 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.get(get);
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               transaction.put(put);
               transaction.abort();
             })
@@ -798,13 +875,20 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.begin();
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.get(get);
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               transaction.put(put);
               transaction.rollback();
             })
@@ -824,13 +908,20 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               DistributedTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
               transaction.get(get);
               Put put =
-                  new Put(new Key("p1", "val1"))
-                      .withValue("v1", "val2")
-                      .forNamespace(NAMESPACE)
-                      .forTable(TABLE);
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
               transaction.put(put);
               transaction.commit();
             })
@@ -1468,5 +1559,31 @@ public class JdbcTransactionManagerTest {
     verify(spied).begin();
     verify(transaction).mutate(mutations);
     verify(transaction).commit();
+  }
+
+  @Test
+  public void batch_ShouldBatch() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    JdbcTransactionManager spied = spy(manager);
+    doReturn(transaction).when(spied).beginReadOnly();
+
+    @SuppressWarnings("unchecked")
+    List<Operation> operations = mock(List.class);
+
+    @SuppressWarnings("unchecked")
+    List<CrudOperable.BatchResult> batchResults = mock(List.class);
+
+    when(transaction.batch(operations)).thenReturn(batchResults);
+
+    // Act
+    List<CrudOperable.BatchResult> actual = spied.batch(operations);
+
+    // Assert
+    verify(spied).beginReadOnly();
+    verify(transaction).batch(operations);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(batchResults);
   }
 }

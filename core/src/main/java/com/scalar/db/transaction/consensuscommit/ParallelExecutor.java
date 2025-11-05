@@ -76,7 +76,7 @@ public class ParallelExecutor {
           config.isParallelPreparationEnabled(),
           false,
           stopOnError,
-          "preparation",
+          "prepareRecords",
           transactionId);
     } catch (ValidationConflictException | CrudException e) {
       throw new AssertionError(
@@ -89,7 +89,12 @@ public class ParallelExecutor {
       throws ExecutionException, ValidationConflictException {
     try {
       executeTasks(
-          tasks, config.isParallelValidationEnabled(), false, true, "validation", transactionId);
+          tasks,
+          config.isParallelValidationEnabled(),
+          false,
+          true,
+          "validateRecords",
+          transactionId);
     } catch (CrudException e) {
       throw new AssertionError(
           "Tasks for validating a transaction should not throw CrudException", e);
@@ -147,7 +152,8 @@ public class ParallelExecutor {
     }
   }
 
-  private void executeTasks(
+  @VisibleForTesting
+  void executeTasks(
       List<ParallelExecutorTask> tasks,
       boolean parallel,
       boolean noWait,
@@ -158,14 +164,14 @@ public class ParallelExecutor {
     if (tasks.size() == 1 && !noWait) {
       // If there is only one task and noWait is false, we can run it directly without parallel
       // execution.
-      executeTasksSerially(tasks, stopOnError, taskName, transactionId);
+      tasks.get(0).run();
       return;
     }
 
     if (parallel) {
       executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
     } else {
-      executeTasksSerially(tasks, stopOnError, taskName, transactionId);
+      executeTasksSerially(tasks, stopOnError);
     }
   }
 
@@ -180,80 +186,67 @@ public class ParallelExecutor {
 
     CompletionService<Void> completionService =
         new ExecutorCompletionService<>(parallelExecutorService);
-    tasks.forEach(
-        t ->
-            completionService.submit(
-                () -> {
-                  try {
-                    t.run();
-                  } catch (Exception e) {
-                    logger.warn(
-                        "Failed to run a {} task. Transaction ID: {}", taskName, transactionId, e);
-                    throw e;
-                  }
-                  return null;
-                }));
 
-    if (!noWait) {
-      Exception exception = null;
-      for (int i = 0; i < tasks.size(); i++) {
-        Future<Void> future = ScalarDbUtils.takeUninterruptibly(completionService);
+    // Submit tasks
+    for (ParallelExecutorTask task : tasks) {
+      completionService.submit(
+          () -> {
+            try {
+              task.run();
+            } catch (Exception e) {
+              logger.warn(
+                  "Failed to run a {} task. Transaction ID: {}", taskName, transactionId, e);
+              throw e;
+            }
+            return null;
+          });
+    }
 
-        try {
-          Uninterruptibles.getUninterruptibly(future);
-        } catch (java.util.concurrent.ExecutionException e) {
-          if (e.getCause() instanceof ExecutionException) {
-            if (!stopOnError) {
-              exception = (ExecutionException) e.getCause();
-            } else {
-              throw (ExecutionException) e.getCause();
-            }
-          } else if (e.getCause() instanceof ValidationConflictException) {
-            if (!stopOnError) {
-              exception = (ValidationConflictException) e.getCause();
-            } else {
-              throw (ValidationConflictException) e.getCause();
-            }
-          } else if (e.getCause() instanceof CrudException) {
-            if (!stopOnError) {
-              exception = (CrudException) e.getCause();
-            } else {
-              throw (CrudException) e.getCause();
-            }
-          } else if (e.getCause() instanceof RuntimeException) {
-            throw (RuntimeException) e.getCause();
-          } else if (e.getCause() instanceof Error) {
-            throw (Error) e.getCause();
+    // Optionally wait for completion
+    if (noWait) {
+      return;
+    }
+
+    Throwable throwable = null;
+
+    for (int i = 0; i < tasks.size(); i++) {
+      Future<Void> future = ScalarDbUtils.takeUninterruptibly(completionService);
+      try {
+        Uninterruptibles.getUninterruptibly(future);
+      } catch (java.util.concurrent.ExecutionException e) {
+        Throwable cause = e.getCause();
+
+        if (stopOnError) {
+          rethrow(cause);
+        } else {
+          if (throwable == null) {
+            throwable = cause;
           } else {
-            throw new AssertionError("Can't reach here. Maybe a bug", e);
+            throwable.addSuppressed(cause);
           }
         }
       }
+    }
 
-      if (!stopOnError && exception != null) {
-        if (exception instanceof ExecutionException) {
-          throw (ExecutionException) exception;
-        } else if (exception instanceof ValidationConflictException) {
-          throw (ValidationConflictException) exception;
-        } else {
-          throw (CrudException) exception;
-        }
-      }
+    // Rethrow exception if necessary
+    if (!stopOnError && throwable != null) {
+      rethrow(throwable);
     }
   }
 
-  private void executeTasksSerially(
-      List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
+  private void executeTasksSerially(List<ParallelExecutorTask> tasks, boolean stopOnError)
       throws ExecutionException, ValidationConflictException, CrudException {
     Exception exception = null;
     for (ParallelExecutorTask task : tasks) {
       try {
         task.run();
       } catch (ExecutionException | ValidationConflictException | CrudException e) {
-        logger.warn("Failed to run a {} task. Transaction ID: {}", taskName, transactionId, e);
-
         if (!stopOnError) {
-          exception = e;
+          if (exception == null) {
+            exception = e;
+          } else {
+            exception.addSuppressed(e);
+          }
         } else {
           throw e;
         }
@@ -261,13 +254,24 @@ public class ParallelExecutor {
     }
 
     if (!stopOnError && exception != null) {
-      if (exception instanceof ExecutionException) {
-        throw (ExecutionException) exception;
-      } else if (exception instanceof ValidationConflictException) {
-        throw (ValidationConflictException) exception;
-      } else {
-        throw (CrudException) exception;
-      }
+      rethrow(exception);
+    }
+  }
+
+  private void rethrow(Throwable cause)
+      throws ExecutionException, ValidationConflictException, CrudException {
+    if (cause instanceof ExecutionException) {
+      throw (ExecutionException) cause;
+    } else if (cause instanceof ValidationConflictException) {
+      throw (ValidationConflictException) cause;
+    } else if (cause instanceof CrudException) {
+      throw (CrudException) cause;
+    } else if (cause instanceof RuntimeException) {
+      throw (RuntimeException) cause;
+    } else if (cause instanceof Error) {
+      throw (Error) cause;
+    } else {
+      throw new AssertionError("Unexpected exception type", cause);
     }
   }
 

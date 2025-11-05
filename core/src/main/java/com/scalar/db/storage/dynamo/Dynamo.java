@@ -13,13 +13,14 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -125,7 +126,9 @@ public class Dynamo extends AbstractDistributedStorage {
       } else {
         scanner =
             new FilterableScanner(
-                get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
+                get,
+                selectStatementHandler.handle(
+                    ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)));
       }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
@@ -153,7 +156,8 @@ public class Dynamo extends AbstractDistributedStorage {
       return selectStatementHandler.handle(scan);
     } else {
       return new FilterableScanner(
-          scan, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)));
+          scan,
+          selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)));
     }
   }
 

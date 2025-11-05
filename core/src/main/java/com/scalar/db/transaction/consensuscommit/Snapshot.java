@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -21,10 +22,9 @@ import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
@@ -45,7 +45,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -64,11 +64,11 @@ public class Snapshot {
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
 
   // The get set stores information about the records retrieved by Get operations in this
-  // transaction. This is used for validation and snapshot read.
+  // transaction. This is used for validation and snapshot reads.
   private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
 
   // The scan set stores information about the records retrieved by Scan operations in this
-  // transaction. This is used for validation and snapshot read.
+  // transaction. This is used for validation and snapshot reads.
   private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
 
   // The scanner set stores information about scanners that are not fully scanned. This is used for
@@ -122,17 +122,6 @@ public class Snapshot {
     this.scannerSet = scannerSet;
   }
 
-  @Nonnull
-  public String getId() {
-    return id;
-  }
-
-  @VisibleForTesting
-  @Nonnull
-  Isolation getIsolation() {
-    return isolation;
-  }
-
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
   // is a concurrent map
   public void putIntoReadSet(Key key, Optional<TransactionResult> result) {
@@ -163,14 +152,16 @@ public class Snapshot {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(originalPut);
-      put.getColumns().values().forEach(putBuilder::value);
+      for (Column<?> value : put.getColumns().values()) {
+        putBuilder = putBuilder.value(value);
+      }
 
       // If the implicit pre-read is enabled for the new put, it should also be enabled for the
       // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
       // because, in insert mode, the read set is not used during the preparation phase. Therefore,
       // we only need to enable the implicit pre-read if the previous put is not in insert mode
       if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
-        putBuilder.enableImplicitPreRead();
+        putBuilder = putBuilder.enableImplicitPreRead();
       }
 
       writeSet.put(key, putBuilder.build());
@@ -197,24 +188,45 @@ public class Snapshot {
     scannerSet.add(new ScannerInfo(scan, results));
   }
 
-  public List<Put> getPutsInWriteSet() {
-    return new ArrayList<>(writeSet.values());
+  public Collection<Map.Entry<Key, Put>> getWriteSet() {
+    return new ArrayList<>(writeSet.entrySet());
   }
 
-  public List<Delete> getDeletesInDeleteSet() {
-    return new ArrayList<>(deleteSet.values());
+  public Collection<Map.Entry<Key, Delete>> getDeleteSet() {
+    return new ArrayList<>(deleteSet.entrySet());
   }
 
-  public ReadWriteSets getReadWriteSets() {
-    return new ReadWriteSets(id, readSet, writeSet.entrySet(), deleteSet.entrySet());
+  public Collection<Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>>> getScanSet() {
+    return new ArrayList<>(scanSet.entrySet());
+  }
+
+  public Collection<ScannerInfo> getScannerSet() {
+    return new ArrayList<>(scannerSet);
+  }
+
+  public Collection<Map.Entry<Get, Optional<TransactionResult>>> getGetSet() {
+    return new ArrayList<>(getSet.entrySet());
   }
 
   public boolean containsKeyInReadSet(Key key) {
     return readSet.containsKey(key);
   }
 
+  @Nullable
+  public Optional<TransactionResult> getFromReadSet(Key key) {
+    return readSet.get(key);
+  }
+
   public boolean containsKeyInGetSet(Get get) {
     return getSet.containsKey(get);
+  }
+
+  public boolean containsKeyInWriteSet(Key key) {
+    return writeSet.containsKey(key);
+  }
+
+  public boolean containsKeyInDeleteSet(Key key) {
+    return deleteSet.containsKey(key);
   }
 
   public boolean hasWritesOrDeletes() {
@@ -235,8 +247,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan)
-      throws CrudException {
+  public Optional<LinkedHashMap<Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -290,8 +301,7 @@ public class Snapshot {
     }
   }
 
-  public void to(MutationComposer composer)
-      throws ExecutionException, PreparationConflictException {
+  public void to(MutationComposer composer) throws ExecutionException {
     for (Entry<Key, Put> entry : writeSet.entrySet()) {
       TransactionResult result =
           readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
@@ -513,7 +523,7 @@ public class Snapshot {
   @VisibleForTesting
   void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (!isSerializable()) {
+    if (isolation != Isolation.SERIALIZABLE) {
       return;
     }
 
@@ -548,7 +558,7 @@ public class Snapshot {
       }
     }
 
-    parallelExecutor.validateRecords(tasks, getId());
+    parallelExecutor.validateRecords(tasks, id);
   }
 
   /**
@@ -582,9 +592,14 @@ public class Snapshot {
     Scanner scanner = null;
     try {
       // Only get tx_id and primary key columns because we use only them to compare
-      scan.clearProjections();
-      scan.withProjection(Attribute.ID);
-      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
+      TableMetadata tableMetadata = getTableMetadata(scan);
+      scan =
+          Scan.newBuilder(scan)
+              .clearProjections()
+              .projection(Attribute.ID)
+              .projections(tableMetadata.getPartitionKeyNames())
+              .projections(tableMetadata.getClusteringKeyNames())
+              .build();
 
       if (scan.getLimit() == 0) {
         scanner = storage.scan(scan);
@@ -605,7 +620,7 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult);
+        Key key = new Key(scan, latestTxResult, tableMetadata);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
@@ -627,6 +642,15 @@ public class Snapshot {
 
         // Compare the records of the original scan results and the latest scan results
         if (!originalResultEntry.getKey().equals(key)) {
+          if (writeSet.containsKey(originalResultEntry.getKey())
+              || deleteSet.containsKey(originalResultEntry.getKey())) {
+            // The record is inserted/deleted/updated by this transaction
+
+            // Skip the record of the original scan results
+            originalResultEntry = Iterators.getNext(originalResultIterator, null);
+            continue;
+          }
+
           // The record is inserted/deleted by another transaction
           throwExceptionDueToAntiDependency();
         }
@@ -640,9 +664,21 @@ public class Snapshot {
         originalResultEntry = Iterators.getNext(originalResultIterator, null);
       }
 
-      if (originalResultEntry != null) {
-        // Some of the records of the scan results are deleted by another transaction
-        throwExceptionDueToAntiDependency();
+      while (originalResultEntry != null) {
+        if (writeSet.containsKey(originalResultEntry.getKey())
+            || deleteSet.containsKey(originalResultEntry.getKey())) {
+          // The record is inserted/deleted/updated by this transaction
+
+          // Skip the record of the original scan results
+          originalResultEntry = Iterators.getNext(originalResultIterator, null);
+        } else {
+          // The record is inserted/deleted by another transaction
+          throwExceptionDueToAntiDependency();
+        }
+      }
+
+      if (!latestResult.isPresent()) {
+        return;
       }
 
       if (scan.getLimit() != 0 && results.size() == scan.getLimit()) {
@@ -674,7 +710,7 @@ public class Snapshot {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner", e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
         }
       }
     }
@@ -702,7 +738,9 @@ public class Snapshot {
             .build();
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r), r));
+    TableMetadata tableMetadata = getTableMetadata(scanWithIndex);
+    originalResult.ifPresent(
+        r -> results.put(new Snapshot.Key(scanWithIndex, r, tableMetadata), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false);
@@ -712,8 +750,7 @@ public class Snapshot {
       DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
       throws ExecutionException, ValidationConflictException {
     // Only get the tx_id column because we use only them to compare
-    get.clearProjections();
-    get.withProjection(Attribute.ID);
+    get = Get.newBuilder(get).clearProjections().projection(Attribute.ID).build();
 
     // Check if a read record is not changed
     Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
@@ -723,13 +760,9 @@ public class Snapshot {
   }
 
   private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(operation);
-    if (metadata == null) {
-      assert operation.forFullTableName().isPresent();
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
-    }
-    return metadata.getTableMetadata();
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, operation);
+    return transactionTableMetadata.getTableMetadata();
   }
 
   private boolean isChanged(
@@ -752,14 +785,6 @@ public class Snapshot {
         CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
   }
 
-  private boolean isSerializable() {
-    return isolation == Isolation.SERIALIZABLE;
-  }
-
-  public boolean isValidationRequired() {
-    return isSerializable();
-  }
-
   @Immutable
   public static final class Key implements Comparable<Key> {
     private final String namespace;
@@ -771,11 +796,11 @@ public class Snapshot {
       this((Operation) get);
     }
 
-    public Key(Get get, Result result) {
+    public Key(Get get, Result result, TableMetadata tableMetadata) {
       this.namespace = get.forNamespace().get();
       this.table = get.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     public Key(Put put) {
@@ -786,11 +811,11 @@ public class Snapshot {
       this((Operation) delete);
     }
 
-    public Key(Scan scan, Result result) {
+    public Key(Scan scan, Result result, TableMetadata tableMetadata) {
       this.namespace = scan.forNamespace().get();
       this.table = scan.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     private Key(Operation operation) {
@@ -857,40 +882,6 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
-    }
-  }
-
-  public static class ReadWriteSets {
-    public final String transactionId;
-    public final Map<Key, Optional<TransactionResult>> readSetMap;
-    public final List<Entry<Key, Put>> writeSet;
-    public final List<Entry<Key, Delete>> deleteSet;
-
-    public ReadWriteSets(
-        String transactionId,
-        Map<Key, Optional<TransactionResult>> readSetMap,
-        Collection<Entry<Key, Put>> writeSet,
-        Collection<Entry<Key, Delete>> deleteSet) {
-      this.transactionId = transactionId;
-      this.readSetMap = new HashMap<>(readSetMap);
-      this.writeSet = new ArrayList<>(writeSet);
-      this.deleteSet = new ArrayList<>(deleteSet);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof ReadWriteSets)) return false;
-      ReadWriteSets that = (ReadWriteSets) o;
-      return Objects.equals(transactionId, that.transactionId)
-          && Objects.equals(readSetMap, that.readSetMap)
-          && Objects.equals(writeSet, that.writeSet)
-          && Objects.equals(deleteSet, that.deleteSet);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
     }
   }
 

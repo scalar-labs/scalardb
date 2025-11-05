@@ -9,6 +9,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
     ignore:
       - dependency-name: "*"
         update-types: [ "version-update:semver-major" ]
@@ -24,6 +27,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
 
   - package-ecosystem: "github-actions"
     target-branch: "3"
@@ -34,6 +40,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
+
+  - package-ecosystem: "github-actions"
+    target-branch: "3.16"
+    groups:
+      actions on branch 3.16:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.15"
@@ -44,6 +66,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.14"
@@ -54,6 +79,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
 
   - package-ecosystem: "github-actions"
     target-branch: "3.13"
@@ -64,23 +92,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-
-  - package-ecosystem: "github-actions"
-    target-branch: "3.12"
-    groups:
-      actions on branch 3.12:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "github-actions"
-    target-branch: "3.11"
-    groups:
-      actions on branch 3.11:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"

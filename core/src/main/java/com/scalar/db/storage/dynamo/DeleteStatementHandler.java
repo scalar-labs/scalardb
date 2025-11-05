@@ -6,12 +6,13 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -50,7 +51,8 @@ public class DeleteStatementHandler {
     try {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
-      throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
+      throw new NoMutationException(
+          CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete), e);
     } catch (TransactionConflictException e) {
       throw new RetriableExecutionException(
           CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(

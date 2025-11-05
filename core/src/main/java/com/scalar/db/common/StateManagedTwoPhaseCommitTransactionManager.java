@@ -5,6 +5,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -12,7 +13,6 @@ import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -136,6 +136,12 @@ public class StateManagedTwoPhaseCommitTransactionManager
     public void mutate(List<? extends Mutation> mutations) throws CrudException {
       checkIfActive();
       super.mutate(mutations);
+    }
+
+    @Override
+    public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {
+      checkIfActive();
+      return super.batch(operations);
     }
 
     @Override

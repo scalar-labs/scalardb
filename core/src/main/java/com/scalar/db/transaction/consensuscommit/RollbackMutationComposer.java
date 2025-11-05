@@ -1,18 +1,17 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -22,13 +21,12 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -46,23 +44,28 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     this.storage = storage;
   }
 
-  /** rollback in either prepare phase in commit or lazy recovery phase in read */
+  /** Rollback in either prepare phase in commit or lazy recovery phase in read. */
   @Override
   public void add(Operation base, @Nullable TransactionResult result) throws ExecutionException {
-    // We always re-read the latest record here because of the following reasons:
-    // 1. for usual rollback, we need to check the latest status of the record
-    // 2. for rollback in lazy recovery, the result doesn't have before image columns
-    TransactionResult latest = getLatestResult(base, result).orElse(null);
-    if (latest == null) {
-      // the record was not prepared (yet) by this transaction or has already been rollback deleted
-      return;
-    }
-    if (!Objects.equals(latest.getId(), id)) {
-      // This is the case for the record that was not prepared (yet) by this transaction or has
-      // already been rolled back. We need to use Objects.equals() here since the transaction ID of
-      // the latest record can be NULL (and different from this transaction's ID) when the record
-      // has already been rolled back to the deemed committed state by another transaction.
-      return;
+    TransactionResult latest;
+    if (result == null || !Objects.equals(result.getId(), id)) {
+      // For rollback in prepare phase, we need to check the latest status of the record.
+      latest = getLatestResult(base, result).orElse(null);
+      if (latest == null) {
+        // The record was not prepared (yet) by this transaction or has already been rollback
+        // deleted.
+        return;
+      }
+      if (!Objects.equals(latest.getId(), id)) {
+        // This is the case for the record that was not prepared (yet) by this transaction or has
+        // already been rolled back. We need to use Objects.equals() here since the transaction ID
+        // of the latest record can be NULL (and different from this transaction's ID) when the
+        // record has already been rolled back to the deemed committed state by another transaction.
+        return;
+      }
+    } else {
+      // For rollback in lazy recovery, we can use the result directly.
+      latest = result;
     }
 
     if (latest.hasBeforeImage()) {
@@ -79,28 +82,10 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
             || result.getState().equals(TransactionState.DELETED));
 
     TransactionTableMetadata transactionTableMetadata =
-        tableMetadataManager.getTransactionTableMetadata(base);
+        getTransactionTableMetadata(tableMetadataManager, base);
     LinkedHashSet<String> beforeImageColumnNames =
         transactionTableMetadata.getBeforeImageColumnNames();
     TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
-
-    List<Column<?>> columns = new ArrayList<>();
-    result
-        .getColumns()
-        .forEach(
-            (k, v) -> {
-              if (beforeImageColumnNames.contains(k)) {
-                String key = k.substring(Attribute.BEFORE_PREFIX.length());
-                if (key.equals(Attribute.VERSION) && v.getIntValue() == 0) {
-                  // Since we use version 0 instead of copying NULL for before_version when updating
-                  // a NULL-transaction-metadata record, we conversely change 0 to NULL for
-                  // rollback. See also PrepareMutationComposer.
-                  columns.add(IntColumn.ofNull(Attribute.VERSION));
-                } else {
-                  columns.add(v.copyWith(key));
-                }
-              }
-            });
 
     Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
     Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
@@ -116,7 +101,10 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
                     .build())
             .consistency(Consistency.LINEARIZABLE);
     clusteringKey.ifPresent(putBuilder::clusteringKey);
-    columns.forEach(putBuilder::value);
+
+    Map<String, Column<?>> columns = new HashMap<>();
+    createAfterImageColumnsFromBeforeImage(columns, result, beforeImageColumnNames);
+    columns.values().forEach(putBuilder::value);
 
     // Set before image columns to null
     setBeforeImageColumnsToNull(putBuilder, beforeImageColumnNames, tableMetadata);
@@ -129,19 +117,25 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         && (result.getState().equals(TransactionState.PREPARED)
             || result.getState().equals(TransactionState.DELETED));
 
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-    Key partitionKey = ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
-    Optional<Key> clusteringKey =
-        ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata());
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, base);
+    TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
+    Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+    Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
 
-    return new Delete(partitionKey, clusteringKey.orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(STATE, toStateValue(result.getState()), Operator.EQ)))
-        .withConsistency(Consistency.LINEARIZABLE);
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(partitionKey)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE);
+    clusteringKey.ifPresent(deleteBuilder::clusteringKey);
+
+    return deleteBuilder.build();
   }
 
   private Optional<TransactionResult> getLatestResult(
@@ -167,12 +161,16 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       }
     }
 
-    Get get =
-        new Get(partitionKey, clusteringKey)
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(operation.forNamespace().get())
-            .forTable(operation.forTable().get());
+    GetBuilder.BuildableGetWithPartitionKey getBuilder =
+        Get.newBuilder()
+            .namespace(operation.forNamespace().get())
+            .table(operation.forTable().get())
+            .partitionKey(partitionKey)
+            .consistency(Consistency.LINEARIZABLE);
+    if (clusteringKey != null) {
+      getBuilder.clusteringKey(clusteringKey);
+    }
 
-    return storage.get(get).map(TransactionResult::new);
+    return storage.get(getBuilder.build()).map(TransactionResult::new);
   }
 }

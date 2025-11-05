@@ -1,7 +1,5 @@
 package com.scalar.db.transaction.jdbc;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
@@ -21,7 +19,7 @@ import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransaction;
 import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -278,25 +276,6 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
           e, CoreError.JDBC_TRANSACTION_UPDATE_OPERATION_FAILED.buildMessage(e.getMessage()));
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, txId);
-    }
-  }
-
-  @Override
-  public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
-    for (Mutation mutation : mutations) {
-      if (mutation instanceof Put) {
-        put((Put) mutation);
-      } else if (mutation instanceof Delete) {
-        delete((Delete) mutation);
-      } else if (mutation instanceof Insert) {
-        insert((Insert) mutation);
-      } else if (mutation instanceof Upsert) {
-        upsert((Upsert) mutation);
-      } else {
-        assert mutation instanceof Update;
-        update((Update) mutation);
-      }
     }
   }
 

@@ -4,10 +4,10 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -57,6 +57,17 @@ public class ReadOnlyDistributedTransaction extends DecoratedDistributedTransact
   public void delete(Delete delete) throws CrudException {
     throw new IllegalStateException(
         CoreError.MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION.buildMessage(getId()));
+  }
+
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {
+    for (Operation operation : operations) {
+      if (operation instanceof Mutation) {
+        throw new IllegalStateException(
+            CoreError.MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION.buildMessage(getId()));
+      }
+    }
+    return super.batch(operations);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */

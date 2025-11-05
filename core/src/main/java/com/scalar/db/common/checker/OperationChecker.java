@@ -13,9 +13,9 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -159,7 +159,7 @@ public class OperationChecker {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
-    checkOrderings(scanAll, metadata);
+    checkOrderingsForScanAll(scanAll, metadata);
 
     if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
@@ -258,7 +258,7 @@ public class OperationChecker {
     }
   }
 
-  private void checkOrderings(ScanAll scanAll, TableMetadata metadata) {
+  protected void checkOrderingsForScanAll(ScanAll scanAll, TableMetadata metadata) {
     for (Scan.Ordering ordering : scanAll.getOrderings()) {
       if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
         throw new IllegalArgumentException(
@@ -268,7 +268,7 @@ public class OperationChecker {
     }
   }
 
-  private void checkConjunctions(Selection selection, TableMetadata metadata) {
+  protected void checkConjunctions(Selection selection, TableMetadata metadata) {
     for (Conjunction conjunction : selection.getConjunctions()) {
       for (ConditionalExpression condition : conjunction.getConditions()) {
         boolean isValid;

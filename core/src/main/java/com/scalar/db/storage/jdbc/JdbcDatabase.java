@@ -11,16 +11,17 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -58,8 +59,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     OperationChecker operationChecker =
-        new OperationChecker(
-            databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin));
+        new JdbcOperationChecker(
+            databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin), rdbEngine);
 
     jdbcService =
         new JdbcService(
@@ -138,7 +139,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       connection = dataSource.getConnection();
       if (!jdbcService.put(put, connection)) {
-        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
+        throw new NoMutationException(
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -160,7 +162,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     try {
       connection = dataSource.getConnection();
       if (!jdbcService.delete(delete, connection)) {
-        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
+        throw new NoMutationException(
+            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -210,7 +213,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           throw new ExecutionException(
               CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
         }
-        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage());
+        throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), mutations);
       } else {
         connection.commit();
       }

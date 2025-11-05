@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNextTxVersion;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
@@ -146,8 +147,9 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   private boolean isBeforeRequired(Mutation base, String columnName) throws ExecutionException {
-    TransactionTableMetadata metadata = tableMetadataManager.getTransactionTableMetadata(base);
-    return !metadata.getPrimaryKeyColumnNames().contains(columnName)
-        && metadata.getAfterImageColumnNames().contains(columnName);
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, base);
+    return !transactionTableMetadata.getPrimaryKeyColumnNames().contains(columnName)
+        && transactionTableMetadata.getAfterImageColumnNames().contains(columnName);
   }
 }

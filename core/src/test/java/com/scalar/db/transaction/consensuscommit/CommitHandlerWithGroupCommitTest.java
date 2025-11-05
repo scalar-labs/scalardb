@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -22,6 +23,7 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -67,7 +69,23 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         coordinator,
         tableMetadataManager,
         parallelExecutor,
+        new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        false,
+        groupCommitter);
+  }
+
+  @Override
+  protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
+    createGroupCommitterIfNotExists();
+    return new CommitHandlerWithGroupCommit(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        mutationsGrouper,
+        true,
+        true,
         groupCommitter);
   }
 
@@ -112,10 +130,11 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   @Override
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
-      boolean withSnapshotHook)
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(withSnapshotHook);
+    super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
+        withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -124,10 +143,11 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   @Override
-  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(boolean withSnapshotHook)
+  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withSnapshotHook);
+    super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -137,7 +157,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ValueSource(booleans = {false, true})
   @Override
   public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-      boolean withSnapshotHook)
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
@@ -145,7 +165,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     clearInvocations(groupCommitter);
 
     super.commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-        withSnapshotHook);
+        withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -156,12 +176,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException, ValidationConflictException {
 
     super.commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-        withSnapshotHook);
+        withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter).remove(anyId());
@@ -172,12 +192,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-          boolean withSnapshotHook)
+          boolean withBeforePreparationHook)
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException, ValidationConflictException {
     super
         .commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-            withSnapshotHook);
+            withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -186,12 +206,130 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   @Override
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withSnapshotHook)
+  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withSnapshotHook);
+    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
+    super.onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations();
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    super.onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException();
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    super
+        .onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException();
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws ExecutionException {
+    super
+        .onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException();
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse()
+      throws Exception {
+    super.canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue() throws Exception {
+    super.canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() throws Exception {
+    super.canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException()
+          throws ExecutionException {
+    super
+        .canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException();
+
+    // Assert
+    verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
+      throws CommitException, UnknownTransactionStatusException {
+    super.commit_OnePhaseCommitted_ShouldNotThrowAnyException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
+          throws CommitException, UnknownTransactionStatusException {
+    super
+        .commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException();
+    groupCommitter.remove(anyId());
   }
 }

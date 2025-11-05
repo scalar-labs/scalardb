@@ -3,7 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
@@ -102,10 +102,41 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
+  public String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
+    return "EXEC sp_rename '"
+        + encloseFullTableName(namespace, table)
+        + "."
+        + enclose(oldColumnName)
+        + "', '"
+        + newColumnName
+        + "', 'COLUMN'";
+  }
+
+  @Override
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "EXEC sp_rename '"
+        + encloseFullTableName(namespace, oldTableName)
+        + "', '"
+        + newTableName
+        + "'";
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
       String namespace, String table, String columnName, String columnType) {
-    // SQLServer does not require changes in column data types when making indices.
-    throw new AssertionError();
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " ALTER COLUMN "
+          + enclose(columnName)
+          + " "
+          + columnType
+    };
   }
 
   @Override
@@ -116,6 +147,20 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "EXEC sp_rename '"
+          + encloseFullTableName(schema, table)
+          + "."
+          + enclose(oldIndexName)
+          + "', '"
+          + newIndexName
+          + "', 'INDEX'"
+    };
   }
 
   @Override
@@ -161,13 +206,13 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithTop(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new MergeQuery(builder);
+    return new MergeQuery(builder, null, true);
   }
 
   @Override
@@ -375,7 +420,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties() {
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to it to false by default in a future driver release.
     return ImmutableMap.of("sendTimeAsDatetime", "false");
@@ -385,5 +430,10 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   public RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset>
       getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?";
   }
 }

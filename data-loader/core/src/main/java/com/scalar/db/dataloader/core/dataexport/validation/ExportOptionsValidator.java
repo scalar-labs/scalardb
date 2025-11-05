@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataexport.validation;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.ExportOptions;
 import com.scalar.db.io.Column;
@@ -59,9 +59,9 @@ public class ExportOptionsValidator {
     }
 
     // Make sure that all partition key columns are provided
-    if (partitionKeyNames.size() != key.getColumns().size()) {
+    if (partitionKeyNames.size() != key.size()) {
       throw new ExportOptionsValidationException(
-          CoreError.DATA_LOADER_INCOMPLETE_PARTITION_KEY.buildMessage(partitionKeyNames));
+          DataLoaderError.INCOMPLETE_PARTITION_KEY.buildMessage(partitionKeyNames));
     }
 
     // Check if the order of columns in key.getColumns() matches the order in partitionKeyNames
@@ -71,7 +71,7 @@ public class ExportOptionsValidator {
       if (!partitionKeyIterator.hasNext()
           || !partitionKeyIterator.next().equals(column.getName())) {
         throw new ExportOptionsValidationException(
-            CoreError.DATA_LOADER_PARTITION_KEY_ORDER_MISMATCH.buildMessage(partitionKeyNames));
+            DataLoaderError.PARTITION_KEY_ORDER_MISMATCH.buildMessage(partitionKeyNames));
       }
     }
   }
@@ -113,7 +113,7 @@ public class ExportOptionsValidator {
       // it indicates a mismatch
       if (!clusteringKeyIterator.hasNext()) {
         throw new ExportOptionsValidationException(
-            CoreError.DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH.buildMessage(clusteringKeyNames));
+            DataLoaderError.CLUSTERING_KEY_ORDER_MISMATCH.buildMessage(clusteringKeyNames));
       }
 
       // Get the next expected clustering key name
@@ -122,7 +122,7 @@ public class ExportOptionsValidator {
       // Check if the current column name matches the expected clustering key name
       if (!column.getName().equals(expectedKey)) {
         throw new ExportOptionsValidationException(
-            CoreError.DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH.buildMessage(clusteringKeyNames));
+            DataLoaderError.CLUSTERING_KEY_ORDER_MISMATCH.buildMessage(clusteringKeyNames));
       }
     }
   }
@@ -136,7 +136,7 @@ public class ExportOptionsValidator {
 
     if (!clusteringKeyNames.contains(columnName)) {
       throw new ExportOptionsValidationException(
-          CoreError.DATA_LOADER_CLUSTERING_KEY_NOT_FOUND.buildMessage(columnName));
+          DataLoaderError.CLUSTERING_KEY_NOT_FOUND.buildMessage(columnName));
     }
   }
 
@@ -150,7 +150,7 @@ public class ExportOptionsValidator {
     for (String column : columns) {
       if (!columnNames.contains(column)) {
         throw new ExportOptionsValidationException(
-            CoreError.DATA_LOADER_INVALID_PROJECTION.buildMessage(column));
+            DataLoaderError.INVALID_PROJECTION.buildMessage(column));
       }
     }
   }

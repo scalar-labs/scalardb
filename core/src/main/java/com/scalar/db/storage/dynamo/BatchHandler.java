@@ -8,8 +8,8 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -86,7 +86,7 @@ public class BatchHandler {
       boolean allReasonsAreTransactionConflicts = true;
       for (CancellationReason reason : e.cancellationReasons()) {
         if (reason.code().equals("ConditionalCheckFailed")) {
-          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
+          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), mutations, e);
         }
         if (!reason.code().equals("TransactionConflict") && !reason.code().equals("None")) {
           allReasonsAreTransactionConflicts = false;

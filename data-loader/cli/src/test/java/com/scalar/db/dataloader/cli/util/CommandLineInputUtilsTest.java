@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
@@ -84,9 +84,7 @@ class CommandLineInputUtilsTest {
         assertThrows(
             NullPointerException.class, () -> CommandLineInputUtils.splitByDelimiter(null, "=", 2));
     assertTrue(
-        exception
-            .getMessage()
-            .contains(CoreError.DATA_LOADER_SPLIT_INPUT_VALUE_NULL.buildMessage()));
+        exception.getMessage().contains(DataLoaderError.SPLIT_INPUT_VALUE_NULL.buildMessage()));
   }
 
   @Test
@@ -96,9 +94,7 @@ class CommandLineInputUtilsTest {
             NullPointerException.class,
             () -> CommandLineInputUtils.splitByDelimiter("a=b", null, 2));
     assertTrue(
-        exception
-            .getMessage()
-            .contains(CoreError.DATA_LOADER_SPLIT_INPUT_DELIMITER_NULL.buildMessage()));
+        exception.getMessage().contains(DataLoaderError.SPLIT_INPUT_DELIMITER_NULL.buildMessage()));
   }
 
   @Test
@@ -111,7 +107,7 @@ class CommandLineInputUtilsTest {
     assertDoesNotThrow(
         () ->
             CommandLineInputUtils.validatePositiveValue(
-                commandLine, positiveValue, CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE));
+                commandLine, positiveValue, DataLoaderError.INVALID_DATA_CHUNK_SIZE));
   }
 
   @Test
@@ -124,7 +120,7 @@ class CommandLineInputUtilsTest {
     assertDoesNotThrow(
         () ->
             CommandLineInputUtils.validatePositiveValue(
-                commandLine, minimumPositiveValue, CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE));
+                commandLine, minimumPositiveValue, DataLoaderError.INVALID_DATA_CHUNK_SIZE));
   }
 
   @Test
@@ -132,7 +128,7 @@ class CommandLineInputUtilsTest {
     // Arrange
     CommandLine commandLine = mock(CommandLine.class);
     int zeroValue = 0;
-    CoreError error = CoreError.DATA_LOADER_INVALID_DATA_CHUNK_SIZE;
+    DataLoaderError error = DataLoaderError.INVALID_DATA_CHUNK_SIZE;
 
     // Act & Assert
     CommandLine.ParameterException exception =
@@ -149,7 +145,7 @@ class CommandLineInputUtilsTest {
     // Arrange
     CommandLine commandLine = mock(CommandLine.class);
     int negativeValue = -5;
-    CoreError error = CoreError.DATA_LOADER_INVALID_TRANSACTION_SIZE;
+    DataLoaderError error = DataLoaderError.INVALID_TRANSACTION_SIZE;
 
     // Act & Assert
     CommandLine.ParameterException exception =
@@ -173,9 +169,9 @@ class CommandLineInputUtilsTest {
             CommandLine.ParameterException.class,
             () ->
                 CommandLineInputUtils.validatePositiveValue(
-                    commandLine, negativeValue, CoreError.DATA_LOADER_INVALID_MAX_THREADS));
+                    commandLine, negativeValue, DataLoaderError.INVALID_MAX_THREADS));
     assertTrue(
-        exception1.getMessage().contains(CoreError.DATA_LOADER_INVALID_MAX_THREADS.buildMessage()));
+        exception1.getMessage().contains(DataLoaderError.INVALID_MAX_THREADS.buildMessage()));
 
     // Act & Assert for DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE
     CommandLine.ParameterException exception2 =
@@ -183,12 +179,10 @@ class CommandLineInputUtilsTest {
             CommandLine.ParameterException.class,
             () ->
                 CommandLineInputUtils.validatePositiveValue(
-                    commandLine,
-                    negativeValue,
-                    CoreError.DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE));
+                    commandLine, negativeValue, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE));
     assertTrue(
         exception2
             .getMessage()
-            .contains(CoreError.DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE.buildMessage()));
+            .contains(DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE.buildMessage()));
   }
 }

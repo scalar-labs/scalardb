@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.core.dataexport.validation;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.error.CoreError;
+import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.ExportOptions;
@@ -97,7 +97,7 @@ class ExportOptionsValidatorTest {
     assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata))
         .isInstanceOf(ExportOptionsValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_INCOMPLETE_PARTITION_KEY.buildMessage(
+            DataLoaderError.INCOMPLETE_PARTITION_KEY.buildMessage(
                 singlePkCkMetadata.getPartitionKeyNames()));
   }
 
@@ -111,7 +111,7 @@ class ExportOptionsValidatorTest {
     assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, multiplePkCkMetadata))
         .isInstanceOf(ExportOptionsValidationException.class)
         .hasMessage(
-            CoreError.DATA_LOADER_INCOMPLETE_PARTITION_KEY.buildMessage(
+            DataLoaderError.INCOMPLETE_PARTITION_KEY.buildMessage(
                 multiplePkCkMetadata.getPartitionKeyNames()));
   }
 
@@ -128,7 +128,7 @@ class ExportOptionsValidatorTest {
 
     assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata))
         .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_INVALID_PROJECTION.buildMessage("invalid_column"));
+        .hasMessage(DataLoaderError.INVALID_PROJECTION.buildMessage("invalid_column"));
   }
 
   @Test
@@ -147,7 +147,7 @@ class ExportOptionsValidatorTest {
 
     assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, singlePkCkMetadata))
         .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(CoreError.DATA_LOADER_CLUSTERING_KEY_ORDER_MISMATCH.buildMessage("[ck1]"));
+        .hasMessage(DataLoaderError.CLUSTERING_KEY_ORDER_MISMATCH.buildMessage("[ck1]"));
   }
 
   @Test
@@ -173,8 +173,7 @@ class ExportOptionsValidatorTest {
     // Verify that the validator throws the correct exception
     assertThatThrownBy(() -> ExportOptionsValidator.validate(exportOptions, multiplePkCkMetadata))
         .isInstanceOf(ExportOptionsValidationException.class)
-        .hasMessage(
-            CoreError.DATA_LOADER_PARTITION_KEY_ORDER_MISMATCH.buildMessage(partitionKeyNames));
+        .hasMessage(DataLoaderError.PARTITION_KEY_ORDER_MISMATCH.buildMessage(partitionKeyNames));
   }
 
   private Key createValidPartitionKey() {

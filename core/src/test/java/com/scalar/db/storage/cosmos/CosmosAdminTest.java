@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
@@ -587,7 +588,8 @@ public class CosmosAdminTest {
     // Arrange
     String namespace = "ns";
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(any())).thenReturn(database, metadataDatabase);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
 
@@ -596,6 +598,12 @@ public class CosmosAdminTest {
     when(namespacesContainer.<CosmosNamespace>queryItems(anyString(), any(), any()))
         .thenReturn(pagedIterable);
     when(pagedIterable.stream()).thenReturn(Stream.of(new CosmosNamespace(METADATA_DATABASE)));
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosContainerProperties> emptyContainerPagedIterable =
+        mock(CosmosPagedIterable.class);
+    when(emptyContainerPagedIterable.stream()).thenReturn(Stream.empty());
+    when(database.readAllContainers()).thenReturn(emptyContainerPagedIterable);
 
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosContainerProperties> containerPagedIterable =
@@ -613,7 +621,7 @@ public class CosmosAdminTest {
     admin.dropNamespace(namespace);
 
     // Assert
-    verify(client).getDatabase(namespace);
+    verify(client, times(2)).getDatabase(namespace);
     verify(database).delete();
     verify(client, times(3)).getDatabase(METADATA_DATABASE);
     verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
@@ -628,9 +636,16 @@ public class CosmosAdminTest {
     // Arrange
     String namespace = "ns";
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(any())).thenReturn(database, metadataDatabase);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
     CosmosContainer namespacesContainer = mock(CosmosContainer.class);
     when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosContainerProperties> emptyContainerPagedIterable =
+        mock(CosmosPagedIterable.class);
+    when(emptyContainerPagedIterable.stream()).thenReturn(Stream.empty());
+    when(database.readAllContainers()).thenReturn(emptyContainerPagedIterable);
 
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
@@ -642,13 +657,40 @@ public class CosmosAdminTest {
     admin.dropNamespace(namespace);
 
     // Assert
-    verify(client).getDatabase(namespace);
+    verify(client, times(2)).getDatabase(namespace);
     verify(database).delete();
     verify(client, times(2)).getDatabase(METADATA_DATABASE);
     verify(metadataDatabase, times(2)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
     verify(namespacesContainer)
         .deleteItem(eq(new CosmosNamespace(namespace)), refEq(new CosmosItemRequestOptions()));
     verify(metadataDatabase, never()).delete();
+  }
+
+  @Test
+  public void dropNamespace_WithNonScalarDBTableLeft_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String namespace = "ns";
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
+    CosmosContainer namespacesContainer = mock(CosmosContainer.class);
+    when(metadataDatabase.getContainer(anyString())).thenReturn(namespacesContainer);
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<CosmosContainerProperties> containerPagedIterable =
+        mock(CosmosPagedIterable.class);
+    when(containerPagedIterable.stream())
+        .thenReturn(Stream.of(mock(CosmosContainerProperties.class)));
+    when(database.readAllContainers()).thenReturn(containerPagedIterable);
+
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<Object> pagedIterable = mock(CosmosPagedIterable.class);
+    when(namespacesContainer.queryItems(anyString(), any(), any())).thenReturn(pagedIterable);
+    when(pagedIterable.stream()).thenReturn(Stream.empty());
+
+    // Act Assert
+    assertThatCode(() -> admin.dropNamespace(namespace))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -893,6 +935,13 @@ public class CosmosAdminTest {
     when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
         .thenReturn(storedProcedure);
 
+    // Existing container properties
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+
     // Act Assert
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
@@ -942,6 +991,13 @@ public class CosmosAdminTest {
         .thenReturn(storedProcedure);
     when(cosmosException.getStatusCode()).thenReturn(404);
     when(storedProcedure.read()).thenThrow(cosmosException);
+
+    // Existing container properties
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
 
     // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
@@ -996,6 +1052,13 @@ public class CosmosAdminTest {
     when(cosmosException.getStatusCode()).thenReturn(404);
     when(storedProcedure.read()).thenThrow(cosmosException);
 
+    // Existing container properties
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+
     // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
@@ -1022,6 +1085,49 @@ public class CosmosAdminTest {
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
     verify(scripts).createStoredProcedure(any());
+  }
+
+  @Test
+  public void repairTable_WhenTableAlreadyExistsWithoutIndex_ShouldCreateIndex()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+    // Metadata container
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+    // Stored procedure exists
+    CosmosScripts scripts = mock(CosmosScripts.class);
+    when(container.getScripts()).thenReturn(scripts);
+    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
+    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
+        .thenReturn(storedProcedure);
+    // Existing container properties
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(container, times(1)).replace(properties);
+    verify(properties, times(1)).setIndexingPolicy(any(IndexingPolicy.class));
   }
 
   @Test
@@ -1077,19 +1183,22 @@ public class CosmosAdminTest {
     // Act
     Throwable thrown1 =
         catchThrowable(
-            () -> admin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
-    Throwable thrown2 =
-        catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown3 =
-        catchThrowable(
             () ->
                 admin.importTable(
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
+    Throwable thrown2 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
+    Throwable thrown3 =
+        catchThrowable(() -> admin.renameColumn(namespace, table, column, "newCol"));
+    Throwable thrown4 = catchThrowable(() -> admin.renameTable(namespace, table, "newTable"));
+    Throwable thrown5 =
+        catchThrowable(() -> admin.alterColumnType(namespace, table, column, DataType.INT));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown2).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
+    assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

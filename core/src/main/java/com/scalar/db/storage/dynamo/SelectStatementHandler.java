@@ -12,9 +12,9 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.EmptyScanner;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.error.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -326,8 +326,9 @@ public class SelectStatementHandler {
 
   private Key getKeyWithoutLastValue(Key originalKey) {
     Key.Builder keyBuilder = Key.newBuilder();
-    for (int i = 0; i < originalKey.getColumns().size() - 1; i++) {
-      keyBuilder.add(originalKey.getColumns().get(i));
+    List<Column<?>> columns = originalKey.getColumns();
+    for (int i = 0; i < columns.size() - 1; i++) {
+      keyBuilder.add(columns.get(i));
     }
     return keyBuilder.build();
   }
