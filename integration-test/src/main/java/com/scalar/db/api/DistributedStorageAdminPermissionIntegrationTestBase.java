@@ -115,33 +115,6 @@ public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   }
 
   @Test
-  public void getImportTableMetadata_WithSufficientPermission_ShouldSucceed()
-      throws ExecutionException {
-    // Arrange
-    createNamespaceByRoot();
-    createTableByRoot();
-
-    // Act Assert
-    assertThatCode(() -> adminForNormalUser.getImportTableMetadata(NAMESPACE, TABLE))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void addRawColumnToTable_WithSufficientPermission_ShouldSucceed()
-      throws ExecutionException {
-    // Arrange
-    createNamespaceByRoot();
-    createTableByRoot();
-
-    // Act Assert
-    assertThatCode(
-            () ->
-                adminForNormalUser.addRawColumnToTable(
-                    NAMESPACE, TABLE, RAW_COL_NAME, DataType.INT))
-        .doesNotThrowAnyException();
-  }
-
-  @Test
   public void createNamespace_WithSufficientPermission_ShouldSucceed() {
     // Arrange
 

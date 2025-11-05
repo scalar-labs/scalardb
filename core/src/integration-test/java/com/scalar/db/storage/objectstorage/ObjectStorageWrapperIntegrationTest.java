@@ -15,9 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class ObjectStorageWrapperIntegrationTestBase {
+public class ObjectStorageWrapperIntegrationTest {
   private static final Logger logger =
-      LoggerFactory.getLogger(ObjectStorageWrapperIntegrationTestBase.class);
+      LoggerFactory.getLogger(ObjectStorageWrapperIntegrationTest.class);
 
   private static final String TEST_NAME = "object_storage_wrapper_integration_test";
   private static final String TEST_KEY1 = "test-key1";
@@ -181,6 +181,15 @@ public class ObjectStorageWrapperIntegrationTestBase {
     } finally {
       wrapper.insert(TEST_KEY3, TEST_OBJECT3);
     }
+  }
+
+  @Test
+  public void delete_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
+    // Arrange
+    String objectKey = "non-existing-key";
+
+    // Act Assert
+    assertThatCode(() -> wrapper.delete(objectKey)).isInstanceOf(PreconditionFailedException.class);
   }
 
   @Test
