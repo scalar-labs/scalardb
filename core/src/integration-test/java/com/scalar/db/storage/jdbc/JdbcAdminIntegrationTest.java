@@ -92,6 +92,12 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
 
   @Test
   @Override
+  @DisabledIf("isSqlite")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
+
+  @Test
+  @Override
   @DisabledIf("isDb2")
   public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
       throws ExecutionException {

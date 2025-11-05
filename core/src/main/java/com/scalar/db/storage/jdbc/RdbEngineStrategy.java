@@ -323,4 +323,6 @@ public interface RdbEngineStrategy {
    */
   default void throwIfConjunctionsColumnNotSupported(
       Set<Conjunction> conjunctions, TableMetadata metadata) {}
+
+  String getTableNamesInNamespaceSql();
 }

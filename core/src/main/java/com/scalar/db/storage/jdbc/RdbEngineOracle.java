@@ -535,4 +535,9 @@ class RdbEngineOracle extends AbstractRdbEngine {
       preparedStatement.setBinaryStream(index, inputStream);
     }
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
+  }
 }

@@ -424,6 +424,29 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   @Test
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    AdminTestUtils adminTestUtils = getAdminTestUtils(getTestName());
+    String nonManagedTable = "non_managed_table";
+    try {
+      // Arrange
+      admin.createNamespace(namespace3, getCreationOptions());
+      admin.createTable(namespace3, nonManagedTable, getTableMetadata(), getCreationOptions());
+      adminTestUtils.deleteMetadata(namespace3, nonManagedTable);
+
+      // Act Assert
+      assertThatThrownBy(() -> admin.dropNamespace(namespace3))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      adminTestUtils.dropTable(namespace3, nonManagedTable);
+      admin.dropNamespace(namespace3, true);
+
+      adminTestUtils.close();
+    }
+  }
+
+  @Test
   public void dropNamespace_IfExists_ForNonExistingNamespace_ShouldNotThrowAnyException() {
     // Arrange
 

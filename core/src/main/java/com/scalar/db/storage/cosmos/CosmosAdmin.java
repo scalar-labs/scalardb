@@ -344,10 +344,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try {
+      Set<String> remainingTables = getRawTableNames(namespace);
+      if (!remainingTables.isEmpty()) {
+        throw new IllegalArgumentException(
+            CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
+                namespace, remainingTables));
+      }
       client.getDatabase(namespace).delete();
       getNamespacesContainer()
           .deleteItem(new CosmosNamespace(namespace), new CosmosItemRequestOptions());
       deleteMetadataDatabaseIfEmpty();
+    } catch (IllegalArgumentException e) {
+      throw e;
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Deleting the %s database failed", namespace), e);
     }
@@ -772,5 +780,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public StorageInfo getStorageInfo(String namespace) {
     return STORAGE_INFO;
+  }
+
+  private Set<String> getRawTableNames(String namespace) {
+    return client.getDatabase(namespace).readAllContainers().stream()
+        .map(CosmosContainerProperties::getId)
+        .collect(Collectors.toSet());
   }
 }
