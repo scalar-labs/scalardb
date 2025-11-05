@@ -397,6 +397,7 @@ public interface AuthAdmin {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
+  /** Represents a user. */
   interface User {
     String getName();
 
