@@ -687,19 +687,27 @@ public enum CoreError implements ScalarDbError {
   COSMOS_DROP_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0217",
-      "Cosmos DB does not support the dropping column feature",
+      "Cosmos DB does not support the feature for dropping columns",
       "",
       ""),
   DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
-      Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
+      Category.USER_ERROR,
+      "0218",
+      "DynamoDB does not support the feature for dropping columns",
+      "",
+      ""),
   COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0219",
-      "Cosmos DB does not support the renaming column feature",
+      "Cosmos DB does not support the feature for renaming columns",
       "",
       ""),
   DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
-      Category.USER_ERROR, "0220", "DynamoDB does not support the renaming column feature", "", ""),
+      Category.USER_ERROR,
+      "0220",
+      "DynamoDB does not support the feature for renaming columns",
+      "",
+      ""),
   CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0221",
@@ -775,25 +783,25 @@ public enum CoreError implements ScalarDbError {
   CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0235",
-      "Cassandra does not support the altering column type feature",
+      "Cassandra does not support the feature for altering column types",
       "",
       ""),
   COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0236",
-      "Cosmos DB does not support the altering column type feature",
+      "Cosmos DB does not support the feature for altering column types",
       "",
       ""),
   DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0237",
-      "DynamoDB does not support the altering column type feature",
+      "DynamoDB does not support the feature for altering column types",
       "",
       ""),
   JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0238",
-      "SQLite does not support the altering column type feature",
+      "SQLite does not support the feature for altering column types",
       "",
       ""),
   JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
@@ -864,13 +872,13 @@ public enum CoreError implements ScalarDbError {
   OBJECT_STORAGE_DROP_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0252",
-      "Object Storage does not support the dropping column feature",
+      "Object Storage does not support the feature for dropping columns",
       "",
       ""),
   OBJECT_STORAGE_RENAME_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0253",
-      "Object Storage does not support the renaming column feature",
+      "Object Storage does not support the feature for renaming columns",
       "",
       ""),
   OBJECT_STORAGE_RENAME_TABLE_NOT_SUPPORTED(
@@ -878,7 +886,7 @@ public enum CoreError implements ScalarDbError {
   OBJECT_STORAGE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0255",
-      "Object Storage does not support the altering column type feature",
+      "Object Storage does not support the feature for altering column types",
       "",
       ""),
 

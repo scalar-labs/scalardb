@@ -19,7 +19,7 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   }
 
   @Override
-  @Disabled("Temporary disable because it includes DML operations")
+  @Disabled("Temporarily disabled because it includes DML operations")
   public void truncateTable_ShouldTruncateProperly() {}
 
   @Override
@@ -132,7 +132,7 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
 
   @Override
-  @Disabled("There is nothing that needs to be upgraded with Object Storage")
+  @Disabled("ScalarDB environment does not need to be upgraded with Object Storage")
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }
