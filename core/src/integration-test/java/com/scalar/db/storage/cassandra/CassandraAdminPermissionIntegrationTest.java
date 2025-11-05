@@ -129,16 +129,6 @@ public class CassandraAdminPermissionIntegrationTest
   @Test
   @Override
   @Disabled("Import-related functionality is not supported in Cassandra")
-  public void getImportTableMetadata_WithSufficientPermission_ShouldSucceed() {}
-
-  @Test
-  @Override
-  @Disabled("Import-related functionality is not supported in Cassandra")
-  public void addRawColumnToTable_WithSufficientPermission_ShouldSucceed() {}
-
-  @Test
-  @Override
-  @Disabled("Import-related functionality is not supported in Cassandra")
   public void importTable_WithSufficientPermission_ShouldSucceed() {}
 
   @Test

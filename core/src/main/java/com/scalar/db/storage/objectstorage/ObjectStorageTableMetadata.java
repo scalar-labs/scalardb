@@ -1,5 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
@@ -19,26 +21,19 @@ import javax.annotation.concurrent.Immutable;
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @Immutable
 public class ObjectStorageTableMetadata {
-  public static final Integer DEFAULT_VERSION = 1;
   private final LinkedHashSet<String> partitionKeyNames;
   private final LinkedHashSet<String> clusteringKeyNames;
   private final Map<String, String> clusteringOrders;
   private final Set<String> secondaryIndexNames;
   private final Map<String, String> columns;
-  private final Integer version;
 
-  // The default constructor is required by Jackson to deserialize JSON object
-  public ObjectStorageTableMetadata() {
-    this(null, null, null, null, null, null);
-  }
-
+  @JsonCreator
   public ObjectStorageTableMetadata(
-      @Nullable LinkedHashSet<String> partitionKeyNames,
-      @Nullable LinkedHashSet<String> clusteringKeyNames,
-      @Nullable Map<String, String> clusteringOrders,
-      @Nullable Set<String> secondaryIndexNames,
-      @Nullable Map<String, String> columns,
-      @Nullable Integer version) {
+      @JsonProperty("partitionKeyNames") @Nullable LinkedHashSet<String> partitionKeyNames,
+      @JsonProperty("clusteringKeyNames") @Nullable LinkedHashSet<String> clusteringKeyNames,
+      @JsonProperty("clusteringOrders") @Nullable Map<String, String> clusteringOrders,
+      @JsonProperty("secondaryIndexNames") @Nullable Set<String> secondaryIndexNames,
+      @JsonProperty("columns") @Nullable Map<String, String> columns) {
     this.partitionKeyNames =
         partitionKeyNames != null ? new LinkedHashSet<>(partitionKeyNames) : new LinkedHashSet<>();
     this.clusteringKeyNames =
@@ -50,10 +45,9 @@ public class ObjectStorageTableMetadata {
     this.secondaryIndexNames =
         secondaryIndexNames != null ? new HashSet<>(secondaryIndexNames) : Collections.emptySet();
     this.columns = columns != null ? new HashMap<>(columns) : Collections.emptyMap();
-    this.version = version != null ? version : DEFAULT_VERSION;
   }
 
-  public ObjectStorageTableMetadata(TableMetadata tableMetadata, Integer version) {
+  public ObjectStorageTableMetadata(TableMetadata tableMetadata) {
     Map<String, String> clusteringOrders =
         tableMetadata.getClusteringKeyNames().stream()
             .collect(
@@ -71,11 +65,6 @@ public class ObjectStorageTableMetadata {
     this.clusteringOrders = clusteringOrders;
     this.secondaryIndexNames = tableMetadata.getSecondaryIndexNames();
     this.columns = columnTypeByName;
-    this.version = version;
-  }
-
-  public ObjectStorageTableMetadata(TableMetadata tableMetadata) {
-    this(tableMetadata, DEFAULT_VERSION);
   }
 
   private ObjectStorageTableMetadata(Builder builder) {
@@ -84,8 +73,7 @@ public class ObjectStorageTableMetadata {
         builder.clusteringKeyNames,
         builder.clusteringOrders,
         builder.secondaryIndexNames,
-        builder.columns,
-        builder.version);
+        builder.columns);
   }
 
   public LinkedHashSet<String> getPartitionKeyNames() {
@@ -108,10 +96,6 @@ public class ObjectStorageTableMetadata {
     return columns;
   }
 
-  public Integer getVersion() {
-    return version;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -125,19 +109,13 @@ public class ObjectStorageTableMetadata {
         && Objects.equals(clusteringKeyNames, that.clusteringKeyNames)
         && Objects.equals(clusteringOrders, that.clusteringOrders)
         && Objects.equals(secondaryIndexNames, that.secondaryIndexNames)
-        && Objects.equals(columns, that.columns)
-        && Objects.equals(version, that.version);
+        && Objects.equals(columns, that.columns);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
-        partitionKeyNames,
-        clusteringKeyNames,
-        clusteringOrders,
-        secondaryIndexNames,
-        columns,
-        version);
+        partitionKeyNames, clusteringKeyNames, clusteringOrders, secondaryIndexNames, columns);
   }
 
   public TableMetadata toTableMetadata() {
@@ -189,7 +167,6 @@ public class ObjectStorageTableMetadata {
     private Map<String, String> clusteringOrders;
     private Set<String> secondaryIndexNames;
     private Map<String, String> columns;
-    private Integer version;
 
     private Builder() {}
 
@@ -215,11 +192,6 @@ public class ObjectStorageTableMetadata {
 
     public ObjectStorageTableMetadata.Builder columns(Map<String, String> val) {
       columns = val;
-      return this;
-    }
-
-    public ObjectStorageTableMetadata.Builder version(Integer val) {
-      version = val;
       return this;
     }
 

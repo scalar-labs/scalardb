@@ -1,7 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.objectstorage.blob.BlobConfig;
+import com.scalar.db.storage.objectstorage.blobstorage.BlobStorageConfig;
 import java.util.Objects;
 
 public class ObjectStorageUtils {
@@ -17,8 +17,8 @@ public class ObjectStorageUtils {
   }
 
   public static ObjectStorageConfig getObjectStorageConfig(DatabaseConfig databaseConfig) {
-    if (Objects.equals(databaseConfig.getStorage(), BlobConfig.STORAGE_NAME)) {
-      return new BlobConfig(databaseConfig);
+    if (Objects.equals(databaseConfig.getStorage(), BlobStorageConfig.STORAGE_NAME)) {
+      return new BlobStorageConfig(databaseConfig);
     } else {
       throw new IllegalArgumentException(
           "Unsupported Object Storage: " + databaseConfig.getStorage());

@@ -1,8 +1,7 @@
-package com.scalar.db.storage.objectstorage.blob;
+package com.scalar.db.storage.objectstorage.blobstorage;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
-import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -10,8 +9,8 @@ import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BlobConfig implements ObjectStorageConfig {
-  public static final String STORAGE_NAME = "blob";
+public class BlobStorageConfig implements ObjectStorageConfig {
+  public static final String STORAGE_NAME = "blob-storage";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
 
   public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
@@ -22,16 +21,12 @@ public class BlobConfig implements ObjectStorageConfig {
       PREFIX + "parallel_upload_threshold_in_bytes";
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
 
-  /** @deprecated As of 5.0, will be removed. */
-  @Deprecated
-  public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
-
   public static final long DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = 4 * 1024 * 1024; // 4MB
   public static final int DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM = 4;
   public static final long DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES = 4 * 1024 * 1024; // 4MB
   public static final int DEFAULT_REQUEST_TIMEOUT_IN_SECONDS = 15;
 
-  private static final Logger logger = LoggerFactory.getLogger(BlobConfig.class);
+  private static final Logger logger = LoggerFactory.getLogger(BlobStorageConfig.class);
   private final String endpoint;
   private final String username;
   private final String password;
@@ -43,7 +38,7 @@ public class BlobConfig implements ObjectStorageConfig {
   private final long parallelUploadThresholdInBytes;
   private final int requestTimeoutInSeconds;
 
-  public BlobConfig(DatabaseConfig databaseConfig) {
+  public BlobStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
     if (!storage.equals(STORAGE_NAME)) {
       throw new IllegalArgumentException(
@@ -63,26 +58,13 @@ public class BlobConfig implements ObjectStorageConfig {
     }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-
-    if (databaseConfig.getProperties().containsKey(TABLE_METADATA_NAMESPACE)) {
-      logger.warn(
-          "The configuration property \""
-              + TABLE_METADATA_NAMESPACE
-              + "\" is deprecated and will be removed in 5.0.0.");
-      metadataNamespace =
-          getString(
-              databaseConfig.getProperties(),
-              TABLE_METADATA_NAMESPACE,
-              DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
-    } else {
-      metadataNamespace = databaseConfig.getSystemNamespaceName();
-    }
+    metadataNamespace = databaseConfig.getSystemNamespaceName();
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
       logger.warn(
           "The configuration property \""
               + DatabaseConfig.SCAN_FETCH_SIZE
-              + "\" is not applicable to Blob storage and will be ignored.");
+              + "\" is not applicable to Blob Storage and will be ignored.");
     }
 
     parallelUploadBlockSizeInBytes =
