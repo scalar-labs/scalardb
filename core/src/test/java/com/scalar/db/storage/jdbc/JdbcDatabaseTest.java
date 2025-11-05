@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -9,15 +10,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
+import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.io.IOException;
 import java.sql.Connection;
@@ -25,9 +34,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -39,6 +50,8 @@ public class JdbcDatabaseTest {
   @Mock private DatabaseConfig databaseConfig;
   @Mock private BasicDataSource dataSource;
   @Mock private BasicDataSource tableMetadataDataSource;
+  @Mock private TableMetadataManager tableMetadataManager;
+  @Mock private VirtualTableInfoManager virtualTableInfoManager;
   @Mock private JdbcService jdbcService;
 
   @Mock private ResultInterpreter resultInterpreter;
@@ -59,9 +72,11 @@ public class JdbcDatabaseTest {
     jdbcDatabase =
         new JdbcDatabase(
             databaseConfig,
+            RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
             dataSource,
             tableMetadataDataSource,
-            RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
+            tableMetadataManager,
+            virtualTableInfoManager,
             jdbcService);
   }
 
@@ -503,5 +518,700 @@ public class JdbcDatabaseTest {
     verify(jdbcService, never()).mutate(any(), any());
     verify(connection, never()).rollback();
     verify(connection).close();
+  }
+
+  @Test
+  public void
+      put_ForVirtualTableWithInnerJoin_ShouldDivideIntoSourceTablesAndCallJdbcServiceWithBothPuts()
+          throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .intValue("left_col2", 100)
+            .textValue("right_col1", "right_val1")
+            .intValue("right_col2", 200)
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    Put expectedLeftPut =
+        Put.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .intValue("left_col2", 100)
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedRightPut =
+        Put.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("right_col1", "right_val1")
+            .intValue("right_col2", 200)
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftPut);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightPut);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      put_ForVirtualTableWithPutIfExistsAndInnerJoin_ShouldApplyConditionToBothSourceTables()
+          throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "right_val1")
+            .condition(ConditionBuilder.putIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    Put expectedLeftPut =
+        Put.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .condition(ConditionBuilder.putIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedRightPut =
+        Put.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("right_col1", "right_val1")
+            .condition(ConditionBuilder.putIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftPut);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightPut);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      put_ForVirtualTableWithPutIfExistsAndLeftOuterJoin_ShouldApplyConditionToLeftSourceTableOnly()
+          throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.LEFT_OUTER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "right_val1")
+            .condition(ConditionBuilder.putIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    Put expectedLeftPut =
+        Put.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .condition(ConditionBuilder.putIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedRightPut =
+        Put.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("right_col1", "right_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftPut);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightPut);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void put_ForVirtualTableWithPutIf_ShouldDivideConditionsBasedOnColumns() throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "right_val1")
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column("left_col1").isEqualToText("check_val"))
+                    .and(ConditionBuilder.column("right_col1").isEqualToText("check_val2"))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    Put expectedLeftPut =
+        Put.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column("left_col1").isEqualToText("check_val"))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedRightPut =
+        Put.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("right_col1", "right_val1")
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column("right_col1").isEqualToText("check_val2"))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftPut);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightPut);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      delete_ForVirtualTableWithDeleteIfExistsAndInnerJoin_ShouldApplyConditionToBothSourceTables()
+          throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.delete(delete);
+
+    // Assert
+    Delete expectedLeftDelete =
+        Delete.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Delete expectedRightDelete =
+        Delete.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftDelete);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightDelete);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      delete_ForVirtualTableWithDeleteIfExistsAndLeftOuterJoin_ShouldApplyConditionToLeftSourceTableOnly()
+          throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.LEFT_OUTER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.delete(delete);
+
+    // Assert
+    Delete expectedLeftDelete =
+        Delete.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(ConditionBuilder.deleteIfExists())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Delete expectedRightDelete =
+        Delete.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftDelete);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightDelete);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void delete_ForVirtualTableWithDeleteIf_ShouldDivideConditionsBasedOnColumns()
+      throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column("left_col1").isEqualToText("check_val"))
+                    .and(ConditionBuilder.column("right_col1").isEqualToText("check_val2"))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.delete(delete);
+
+    // Assert
+    Delete expectedLeftDelete =
+        Delete.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column("left_col1").isEqualToText("check_val"))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Delete expectedRightDelete =
+        Delete.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column("right_col1").isEqualToText("check_val2"))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    assertThat(mutations).hasSize(2);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftDelete);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightDelete);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void mutate_ForVirtualTableWithPutAndDelete_ShouldDivideIntoSourceTables()
+      throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "right_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val2"))
+            .clusteringKey(Key.ofText("ck1", "ck_val2"))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.mutate(Arrays.asList(put, delete));
+
+    // Assert
+    Put expectedLeftPut =
+        Put.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedRightPut =
+        Put.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("right_col1", "right_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Delete expectedLeftDelete =
+        Delete.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val2"))
+            .clusteringKey(Key.ofText("ck1", "ck_val2"))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Delete expectedRightDelete =
+        Delete.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val2"))
+            .clusteringKey(Key.ofText("ck1", "ck_val2"))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    // 2 Puts (from Put divided) + 2 Deletes (from Delete divided) = 4 mutations
+    assertThat(mutations).hasSize(4);
+    assertThat(mutations.get(0)).isEqualTo(expectedLeftPut);
+    assertThat(mutations.get(1)).isEqualTo(expectedRightPut);
+    assertThat(mutations.get(2)).isEqualTo(expectedLeftDelete);
+    assertThat(mutations.get(3)).isEqualTo(expectedRightDelete);
+
+    verify(connection).close();
+  }
+
+  @Test
+  public void mutate_ForMixOfRegularTableAndVirtualTable_ShouldHandleBothCorrectly()
+      throws Exception {
+    // Arrange
+    VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(virtualTableInfo);
+    when(virtualTableInfoManager.getVirtualTableInfo("regular_ns", "regular_table"))
+        .thenReturn(null);
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(createLeftSourceTableMetadata());
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(createRightSourceTableMetadata());
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+
+    // Regular table put
+    Put regularPut =
+        Put.newBuilder()
+            .namespace("regular_ns")
+            .table("regular_table")
+            .partitionKey(Key.ofText("pk1", "regular_val"))
+            .clusteringKey(Key.ofText("ck1", "regular_ck"))
+            .textValue("col1", "value1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Virtual table put
+    Put virtualPut =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "right_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    // Act
+    jdbcDatabase.mutate(Arrays.asList(regularPut, virtualPut));
+
+    // Assert
+    Put expectedRegularPut =
+        Put.newBuilder()
+            .namespace("regular_ns")
+            .table("regular_table")
+            .partitionKey(Key.ofText("pk1", "regular_val"))
+            .clusteringKey(Key.ofText("ck1", "regular_ck"))
+            .textValue("col1", "value1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedLeftPut =
+        Put.newBuilder()
+            .namespace("left_ns")
+            .table("left_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("left_col1", "left_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    Put expectedRightPut =
+        Put.newBuilder()
+            .namespace("right_ns")
+            .table("right_table")
+            .partitionKey(Key.ofText("pk1", "val1"))
+            .clusteringKey(Key.ofText("ck1", "ck_val1"))
+            .textValue("right_col1", "right_val1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+
+    List<Mutation> mutations = mutationsCaptor.getValue();
+    // 1 regular Put + 2 virtual Puts (from virtual Put divided) = 3 mutations
+    assertThat(mutations).hasSize(3);
+    assertThat(mutations.get(0)).isEqualTo(expectedRegularPut);
+    assertThat(mutations.get(1)).isEqualTo(expectedLeftPut);
+    assertThat(mutations.get(2)).isEqualTo(expectedRightPut);
+
+    verify(connection).close();
+  }
+
+  private VirtualTableInfo createVirtualTableInfo(VirtualTableJoinType joinType) {
+    return new VirtualTableInfo() {
+      @Override
+      public String getNamespaceName() {
+        return NAMESPACE;
+      }
+
+      @Override
+      public String getTableName() {
+        return TABLE;
+      }
+
+      @Override
+      public String getLeftSourceNamespaceName() {
+        return "left_ns";
+      }
+
+      @Override
+      public String getLeftSourceTableName() {
+        return "left_table";
+      }
+
+      @Override
+      public String getRightSourceNamespaceName() {
+        return "right_ns";
+      }
+
+      @Override
+      public String getRightSourceTableName() {
+        return "right_table";
+      }
+
+      @Override
+      public VirtualTableJoinType getJoinType() {
+        return joinType;
+      }
+    };
+  }
+
+  private TableMetadata createLeftSourceTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addColumn("pk1", DataType.TEXT)
+        .addColumn("ck1", DataType.TEXT)
+        .addColumn("ck2", DataType.INT)
+        .addColumn("left_col1", DataType.TEXT)
+        .addColumn("left_col2", DataType.INT)
+        .addColumn("left_col3", DataType.BIGINT)
+        .addPartitionKey("pk1")
+        .addClusteringKey("ck1")
+        .addClusteringKey("ck2")
+        .build();
+  }
+
+  private TableMetadata createRightSourceTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addColumn("pk1", DataType.TEXT)
+        .addColumn("ck1", DataType.TEXT)
+        .addColumn("ck2", DataType.INT)
+        .addColumn("right_col1", DataType.TEXT)
+        .addColumn("right_col2", DataType.INT)
+        .addColumn("right_col3", DataType.DOUBLE)
+        .addPartitionKey("pk1")
+        .addClusteringKey("ck1")
+        .addClusteringKey("ck2")
+        .build();
   }
 }

@@ -72,7 +72,11 @@ class RdbEngineSqlite extends AbstractRdbEngine {
     // Error code: SQLITE_ERROR (1)
     // Message: SQL error or missing database (no such table: XXX)
 
-    return e.getErrorCode() == 1 && e.getMessage().contains("no such table:");
+    // Error code: SQLITE_SCHEMA (17)
+    // Message: The database schema changed (no such table: XXX)
+
+    return (e.getErrorCode() == 1 || e.getErrorCode() == 17)
+        && e.getMessage().contains("no such table:");
   }
 
   @Override

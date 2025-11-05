@@ -4,12 +4,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.scalar.db.api.Admin;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
-import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
-import com.scalar.db.util.ThrowableFunction;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -17,68 +16,68 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
-/** A class that manages and caches table metadata */
+/** A class that manages and caches virtual table information */
 @ThreadSafe
-public class TableMetadataManager {
+public class VirtualTableInfoManager {
 
-  private final LoadingCache<TableKey, Optional<TableMetadata>> tableMetadataCache;
+  private final LoadingCache<TableKey, Optional<VirtualTableInfo>> virtualTableInfoCache;
 
-  public TableMetadataManager(Admin admin, long cacheExpirationTimeSecs) {
-    this(
-        key -> Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table)),
-        cacheExpirationTimeSecs);
-  }
-
-  public TableMetadataManager(
-      ThrowableFunction<TableKey, Optional<TableMetadata>, Exception> getTableMetadataFunc,
-      long cacheExpirationTimeSecs) {
+  public VirtualTableInfoManager(DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
     if (cacheExpirationTimeSecs >= 0) {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
-    tableMetadataCache =
+    virtualTableInfoCache =
         builder.build(
-            new CacheLoader<TableKey, Optional<TableMetadata>>() {
+            new CacheLoader<TableKey, Optional<VirtualTableInfo>>() {
               @Nonnull
               @Override
-              public Optional<TableMetadata> load(@Nonnull TableKey key) throws Exception {
-                return getTableMetadataFunc.apply(key);
+              public Optional<VirtualTableInfo> load(@Nonnull TableKey key) throws Exception {
+                return admin.getVirtualTableInfo(key.namespace, key.table);
               }
             });
   }
 
   /**
-   * Returns a table metadata corresponding to the specified operation.
+   * Returns virtual table information corresponding to the specified operation.
    *
    * @param operation an operation
-   * @return a table metadata. null if the table is not found.
+   * @return the virtual table information or null if the table is not a virtual table
    * @throws ExecutionException if the operation fails
+   * @throws IllegalArgumentException if the table does not exist
    */
   @Nullable
-  public TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
+  public VirtualTableInfo getVirtualTableInfo(Operation operation) throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME.buildMessage(operation));
     }
-    return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
+    return getVirtualTableInfo(operation.forNamespace().get(), operation.forTable().get());
   }
 
   /**
-   * Returns a table metadata corresponding to the specified namespace and table.
+   * Returns virtual table information corresponding to the specified namespace and table.
    *
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
-   * @return a table metadata. null if the table is not found.
+   * @return the virtual table information or null if the table is not a virtual table
    * @throws ExecutionException if the operation fails
+   * @throws IllegalArgumentException if the table does not exist
    */
   @Nullable
-  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+  public VirtualTableInfo getVirtualTableInfo(String namespace, String table)
+      throws ExecutionException {
     try {
       TableKey key = new TableKey(namespace, table);
-      return tableMetadataCache.get(key).orElse(null);
-    } catch (java.util.concurrent.ExecutionException e) {
+      return virtualTableInfoCache.get(key).orElse(null);
+    } catch (java.util.concurrent.ExecutionException
+        | com.google.common.util.concurrent.UncheckedExecutionException e) {
+      if (e.getCause() instanceof RuntimeException) {
+        throw (RuntimeException) e.getCause();
+      }
+
       throw new ExecutionException(
-          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(
+          CoreError.GETTING_VIRTUAL_TABLE_INFO_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)),
           e.getCause());
     }
