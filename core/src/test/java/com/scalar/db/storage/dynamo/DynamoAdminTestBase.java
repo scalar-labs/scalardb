@@ -1257,18 +1257,13 @@ public abstract class DynamoAdminTestBase {
     // Arrange Act
     Throwable thrown1 =
         catchThrowable(
-            () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
-    Throwable thrown2 =
-        catchThrowable(() -> admin.addRawColumnToTable(NAMESPACE, TABLE, "c1", DataType.INT));
-    Throwable thrown3 =
-        catchThrowable(
             () ->
                 admin.importTable(
                     NAMESPACE, TABLE, Collections.emptyMap(), Collections.emptyMap()));
-    Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(NAMESPACE, TABLE, "c1"));
-    Throwable thrown5 = catchThrowable(() -> admin.renameColumn(NAMESPACE, TABLE, "c1", "c2"));
-    Throwable thrown6 = catchThrowable(() -> admin.renameTable(NAMESPACE, TABLE, "new_table"));
-    Throwable thrown7 =
+    Throwable thrown2 = catchThrowable(() -> admin.dropColumnFromTable(NAMESPACE, TABLE, "c1"));
+    Throwable thrown3 = catchThrowable(() -> admin.renameColumn(NAMESPACE, TABLE, "c1", "c2"));
+    Throwable thrown4 = catchThrowable(() -> admin.renameTable(NAMESPACE, TABLE, "new_table"));
+    Throwable thrown5 =
         catchThrowable(() -> admin.alterColumnType(NAMESPACE, TABLE, "c1", DataType.INT));
 
     // Assert
@@ -1277,8 +1272,6 @@ public abstract class DynamoAdminTestBase {
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown6).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown7).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

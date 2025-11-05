@@ -425,20 +425,6 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(
-      String namespace, String table, Map<String, DataType> overrideColumnsType)
-      throws ExecutionException {
-    try {
-      return admin.getImportTableMetadata(namespace, table, overrideColumnsType);
-    } catch (ExecutionException e) {
-      throw new ExecutionException(
-          CoreError.GETTING_IMPORT_TABLE_METADATA_FAILED.buildMessage(
-              ScalarDbUtils.getFullTableName(namespace, table)),
-          e);
-    }
-  }
-
-  @Override
   public void importTable(
       String namespace,
       String table,
@@ -458,20 +444,6 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
       throw new ExecutionException(
           CoreError.IMPORTING_TABLE_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)),
-          e);
-    }
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
-      throws ExecutionException {
-    try {
-      admin.addRawColumnToTable(namespace, table, columnName, columnType);
-    } catch (ExecutionException e) {
-      throw new ExecutionException(
-          CoreError.ADDING_RAW_COLUMN_TO_TABLE_FAILED.buildMessage(
-              ScalarDbUtils.getFullTableName(namespace, table), columnName, columnType),
           e);
     }
   }

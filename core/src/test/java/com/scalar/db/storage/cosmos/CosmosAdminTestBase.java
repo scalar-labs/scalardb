@@ -929,19 +929,14 @@ public abstract class CosmosAdminTestBase {
     // Act
     Throwable thrown1 =
         catchThrowable(
-            () -> admin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
-    Throwable thrown2 =
-        catchThrowable(() -> admin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown3 =
-        catchThrowable(
             () ->
                 admin.importTable(
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
-    Throwable thrown4 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
-    Throwable thrown5 =
+    Throwable thrown2 = catchThrowable(() -> admin.dropColumnFromTable(namespace, table, column));
+    Throwable thrown3 =
         catchThrowable(() -> admin.renameColumn(namespace, table, column, "newCol"));
-    Throwable thrown6 = catchThrowable(() -> admin.renameTable(namespace, table, "newTable"));
-    Throwable thrown7 =
+    Throwable thrown4 = catchThrowable(() -> admin.renameTable(namespace, table, "newTable"));
+    Throwable thrown5 =
         catchThrowable(() -> admin.alterColumnType(namespace, table, column, DataType.INT));
 
     // Assert
@@ -950,8 +945,6 @@ public abstract class CosmosAdminTestBase {
     assertThat(thrown3).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown4).isInstanceOf(UnsupportedOperationException.class);
     assertThat(thrown5).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown6).isInstanceOf(UnsupportedOperationException.class);
-    assertThat(thrown7).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

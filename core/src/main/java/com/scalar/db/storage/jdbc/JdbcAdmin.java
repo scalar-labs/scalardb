@@ -89,6 +89,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
+    rdbEngine.throwIfInvalidNamespaceName(namespace);
+
     String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.createNamespaceSqls(fullNamespace));
@@ -101,9 +103,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    if (!rdbEngine.isValidTableName(table)) {
-      throw new ExecutionException("Table name is not acceptable: " + table);
-    }
+    rdbEngine.throwIfInvalidTableName(table);
 
     try (Connection connection = dataSource.getConnection()) {
       // Create the metadata schema and table first if they do not exist
@@ -157,7 +157,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void addTableMetadata(
+  @VisibleForTesting
+  void addTableMetadata(
       Connection connection,
       String namespace,
       String table,
@@ -465,17 +466,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  @Override
-  public TableMetadata getImportTableMetadata(
+  @VisibleForTesting
+  TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean primaryKeyExists = false;
-
-    if (!rdbEngine.isImportable()) {
-      throw new UnsupportedOperationException(
-          CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
-    }
 
     try (Connection connection = dataSource.getConnection()) {
       rdbEngine.setConnectionToReadOnly(connection, true);
@@ -530,10 +526,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Map<String, String> options,
       Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
-    TableMetadata tableMetadata = getImportTableMetadata(namespace, table, overrideColumnsType);
+    rdbEngine.throwIfImportNotSupported();
 
-    // add ScalarDB metadata
-    repairTable(namespace, table, tableMetadata, options);
+    try (Connection connection = dataSource.getConnection()) {
+      TableMetadata tableMetadata = getImportTableMetadata(namespace, table, overrideColumnsType);
+      addTableMetadata(connection, namespace, table, tableMetadata, true);
+    } catch (SQLException | ExecutionException e) {
+      throw new ExecutionException(
+          String.format("Importing the %s table failed", getFullTableName(namespace, table)), e);
+    }
   }
 
   private String getSelectColumnsStatement() {
@@ -770,6 +771,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    rdbEngine.throwIfInvalidNamespaceName(table);
+
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
         throw new IllegalArgumentException(
@@ -947,33 +950,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           String.format(
               "Renaming the %s table to %s failed",
               getFullTableName(namespace, oldTableName), getFullTableName(namespace, newTableName)),
-          e);
-    }
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
-      throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
-      }
-
-      String addNewColumnStatement =
-          "ALTER TABLE "
-              + encloseFullTableName(namespace, table)
-              + " ADD "
-              + enclose(columnName)
-              + " "
-              + rdbEngine.getDataTypeForEngine(columnType);
-
-      execute(connection, addNewColumnStatement);
-    } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format(
-              "Adding the new column %s to the %s.%s table failed", columnName, namespace, table),
           e);
     }
   }

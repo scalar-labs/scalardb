@@ -218,20 +218,6 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(
-      String namespace, String table, Map<String, DataType> overrideColumnsType)
-      throws ExecutionException {
-    return getAdmin(namespace, table).getImportTableMetadata(namespace, table, overrideColumnsType);
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
-      throws ExecutionException {
-    getAdmin(namespace, table).addRawColumnToTable(namespace, table, columnName, columnType);
-  }
-
-  @Override
   public void importTable(
       String namespace,
       String table,
