@@ -11,6 +11,12 @@ import picocli.CommandLine;
 public class ExportCommandOptions {
 
   protected static final String DEFAULT_CONFIG_FILE_NAME = "scalardb.properties";
+  public static final String START_INCLUSIVE_OPTION = "--start-inclusive";
+  public static final String START_INCLUSIVE_OPTION_SHORT = "-si";
+  public static final String DEPRECATED_START_EXCLUSIVE_OPTION = "--start-exclusive";
+  public static final String END_INCLUSIVE_OPTION = "--end-inclusive";
+  public static final String END_INCLUSIVE_OPTION_SHORT = "-ei";
+  public static final String DEPRECATED_END_EXCLUSIVE_OPTION = "--end-exclusive";
 
   @CommandLine.Option(
       names = {"--config", "-c"},
@@ -88,6 +94,14 @@ public class ExportCommandOptions {
   // TODO: test that -si false, works
   protected boolean scanStartInclusive;
 
+  // Deprecated option - kept for backward compatibility
+  @CommandLine.Option(
+      names = {DEPRECATED_START_EXCLUSIVE_OPTION},
+      description = "Deprecated: Use --start-inclusive instead (inverted logic)",
+      hidden = true)
+  @Deprecated
+  protected Boolean startExclusiveDeprecated;
+
   @CommandLine.Option(
       names = {"--end-key", "-ek"},
       paramLabel = "<KEY=VALUE>",
@@ -100,6 +114,14 @@ public class ExportCommandOptions {
       description = "Make the end key inclusive (default: true)",
       defaultValue = "true")
   protected boolean scanEndInclusive;
+
+  // Deprecated option - kept for backward compatibility
+  @CommandLine.Option(
+      names = {DEPRECATED_END_EXCLUSIVE_OPTION},
+      description = "Deprecated: Use --end-inclusive instead (inverted logic)",
+      hidden = true)
+  @Deprecated
+  protected Boolean endExclusiveDeprecated;
 
   @CommandLine.Option(
       names = {"--sort-by", "-s"},
@@ -152,4 +174,23 @@ public class ExportCommandOptions {
       paramLabel = "<MODE>",
       defaultValue = "STORAGE")
   protected ScalarDbMode scalarDbMode;
+
+  /**
+   * Applies deprecated option values if they are set.
+   *
+   * <p>This method is called AFTER validateDeprecatedOptions(), so we are guaranteed that both the
+   * deprecated and new options were not specified together. If we reach this point, only the
+   * deprecated option was provided by the user.
+   */
+  public void applyDeprecatedOptions() {
+    // If the deprecated option is set, use its value (inverted logic)
+    if (startExclusiveDeprecated != null) {
+      scanStartInclusive = !startExclusiveDeprecated;
+    }
+
+    // If the deprecated option is set, use its value (inverted logic)
+    if (endExclusiveDeprecated != null) {
+      scanEndInclusive = !endExclusiveDeprecated;
+    }
+  }
 }

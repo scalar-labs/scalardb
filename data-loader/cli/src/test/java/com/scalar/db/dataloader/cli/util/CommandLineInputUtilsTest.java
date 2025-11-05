@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.dataloader.core.DataLoaderError;
 import java.io.File;
@@ -242,5 +243,128 @@ class CommandLineInputUtilsTest {
       writer.write(content);
     }
     return file;
+  }
+
+  public void validateDeprecatedOptionPair_onlyDeprecatedSpecified_shouldNotThrowException() {
+    // Arrange
+    CommandLine commandLine = mock(CommandLine.class);
+    CommandLine.ParseResult parseResult = mock(CommandLine.ParseResult.class);
+    when(commandLine.getParseResult()).thenReturn(parseResult);
+    when(parseResult.hasMatchedOption("--old-option")).thenReturn(true);
+    when(parseResult.hasMatchedOption("--new-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("-n")).thenReturn(false);
+
+    // Act & Assert - No exception should be thrown
+    assertDoesNotThrow(
+        () ->
+            CommandLineInputUtils.validateDeprecatedOptionPair(
+                commandLine, "--old-option", "--new-option", "-n"));
+  }
+
+  @Test
+  public void validateDeprecatedOptionPair_onlyNewOptionSpecified_shouldNotThrowException() {
+    // Arrange
+    CommandLine commandLine = mock(CommandLine.class);
+    CommandLine.ParseResult parseResult = mock(CommandLine.ParseResult.class);
+    when(commandLine.getParseResult()).thenReturn(parseResult);
+    when(parseResult.hasMatchedOption("--old-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("--new-option")).thenReturn(true);
+    when(parseResult.hasMatchedOption("-n")).thenReturn(false);
+
+    // Act & Assert - No exception should be thrown
+    assertDoesNotThrow(
+        () ->
+            CommandLineInputUtils.validateDeprecatedOptionPair(
+                commandLine, "--old-option", "--new-option", "-n"));
+  }
+
+  @Test
+  public void
+      validateDeprecatedOptionPair_onlyNewOptionShortFormSpecified_shouldNotThrowException() {
+    // Arrange
+    CommandLine commandLine = mock(CommandLine.class);
+    CommandLine.ParseResult parseResult = mock(CommandLine.ParseResult.class);
+    when(commandLine.getParseResult()).thenReturn(parseResult);
+    when(parseResult.hasMatchedOption("--old-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("--new-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("-n")).thenReturn(true);
+
+    // Act & Assert - No exception should be thrown
+    assertDoesNotThrow(
+        () ->
+            CommandLineInputUtils.validateDeprecatedOptionPair(
+                commandLine, "--old-option", "--new-option", "-n"));
+  }
+
+  @Test
+  public void validateDeprecatedOptionPair_neitherSpecified_shouldNotThrowException() {
+    // Arrange
+    CommandLine commandLine = mock(CommandLine.class);
+    CommandLine.ParseResult parseResult = mock(CommandLine.ParseResult.class);
+    when(commandLine.getParseResult()).thenReturn(parseResult);
+    when(parseResult.hasMatchedOption("--old-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("--new-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("-n")).thenReturn(false);
+
+    // Act & Assert - No exception should be thrown
+    assertDoesNotThrow(
+        () ->
+            CommandLineInputUtils.validateDeprecatedOptionPair(
+                commandLine, "--old-option", "--new-option", "-n"));
+  }
+
+  @Test
+  public void validateDeprecatedOptionPair_bothSpecified_shouldThrowException() {
+    // Arrange
+    CommandLine commandLine = mock(CommandLine.class);
+    CommandLine.ParseResult parseResult = mock(CommandLine.ParseResult.class);
+    when(commandLine.getParseResult()).thenReturn(parseResult);
+    when(parseResult.hasMatchedOption("--old-option")).thenReturn(true);
+    when(parseResult.hasMatchedOption("--new-option")).thenReturn(true);
+    when(parseResult.hasMatchedOption("-n")).thenReturn(false);
+
+    // Act & Assert
+    CommandLine.ParameterException exception =
+        assertThrows(
+            CommandLine.ParameterException.class,
+            () ->
+                CommandLineInputUtils.validateDeprecatedOptionPair(
+                    commandLine, "--old-option", "--new-option", "-n"));
+
+    // Verify the exception message contains the error message
+    assertTrue(
+        exception
+            .getMessage()
+            .contains(
+                DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
+                    "--old-option", "--new-option", "--new-option")));
+  }
+
+  @Test
+  public void
+      validateDeprecatedOptionPair_deprecatedAndNewShortFormSpecified_shouldThrowException() {
+    // Arrange
+    CommandLine commandLine = mock(CommandLine.class);
+    CommandLine.ParseResult parseResult = mock(CommandLine.ParseResult.class);
+    when(commandLine.getParseResult()).thenReturn(parseResult);
+    when(parseResult.hasMatchedOption("--old-option")).thenReturn(true);
+    when(parseResult.hasMatchedOption("--new-option")).thenReturn(false);
+    when(parseResult.hasMatchedOption("-n")).thenReturn(true);
+
+    // Act & Assert
+    CommandLine.ParameterException exception =
+        assertThrows(
+            CommandLine.ParameterException.class,
+            () ->
+                CommandLineInputUtils.validateDeprecatedOptionPair(
+                    commandLine, "--old-option", "--new-option", "-n"));
+
+    // Verify the exception message contains the error message
+    assertTrue(
+        exception
+            .getMessage()
+            .contains(
+                DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
+                    "--old-option", "--new-option", "--new-option")));
   }
 }

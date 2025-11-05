@@ -10,9 +10,11 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
@@ -395,6 +397,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
           return null;
         },
         false);
+  }
+
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations)
+      throws CrudException, UnknownTransactionStatusException {
+    boolean readOnly = operations.stream().allMatch(o -> o instanceof Selection);
+    return executeTransaction(t -> t.batch(operations), readOnly);
   }
 
   private <R> R executeTransaction(

@@ -514,7 +514,7 @@ public class JdbcAdminImportTestUtils {
     columns.put("col17", "NCLOB(512)");
     columns.put("col18", "BINARY(5)");
     columns.put("col19", "VARBINARY(512)");
-    columns.put("col20", "BLOB(1024)");
+    columns.put("col20", "BLOB(2G)");
     columns.put("col21", "CHAR(5) FOR BIT DATA");
     columns.put("col22", "VARCHAR(512) FOR BIT DATA");
     columns.put("col23", "DATE");
@@ -634,6 +634,13 @@ public class JdbcAdminImportTestUtils {
               namespace,
               UNSUPPORTED_DATA_TYPES_MYSQL.stream()
                   .filter(type -> !type.equalsIgnoreCase("JSON"))
+                  .collect(Collectors.toList())));
+    } else if (isTidb()) {
+      data.addAll(
+          prepareCreateNonImportableTableSql(
+              namespace,
+              UNSUPPORTED_DATA_TYPES_MYSQL.stream()
+                  .filter(type -> !type.equalsIgnoreCase("GEOMETRY"))
                   .collect(Collectors.toList())));
     } else {
       data.addAll(prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_MYSQL));
@@ -880,7 +887,16 @@ public class JdbcAdminImportTestUtils {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
     } catch (SQLException e) {
-      throw new RuntimeException("Get database product version failed");
+      throw new RuntimeException("Get database product version failed", e);
+    }
+  }
+
+  boolean isTidb() {
+    try (Connection connection = dataSource.getConnection()) {
+      String version = connection.getMetaData().getDatabaseProductVersion();
+      return version.contains("TiDB");
+    } catch (SQLException e) {
+      throw new RuntimeException("Get database product version failed", e);
     }
   }
 
