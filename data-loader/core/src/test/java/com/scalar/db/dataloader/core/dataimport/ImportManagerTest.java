@@ -7,11 +7,11 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedReader;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,8 +23,8 @@ public class ImportManagerTest {
   private ImportManager importManager;
   private ImportEventListener listener1;
   private ImportEventListener listener2;
-  private DistributedStorage distributedStorage;
   private DistributedTransactionManager distributedTransactionManager;
+  private SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
 
   @BeforeEach
   void setUp() {
@@ -35,8 +35,8 @@ public class ImportManagerTest {
 
     listener1 = mock(ImportEventListener.class);
     listener2 = mock(ImportEventListener.class);
-    distributedStorage = mock(DistributedStorage.class);
     distributedTransactionManager = mock(DistributedTransactionManager.class);
+    singleCrudOperationTransactionManager = mock(SingleCrudOperationTransactionManager.class);
 
     importManager =
         new ImportManager(
@@ -45,7 +45,7 @@ public class ImportManagerTest {
             options,
             processorFactory,
             ScalarDbMode.STORAGE,
-            distributedStorage,
+            singleCrudOperationTransactionManager,
             null); // Only one resource present
     importManager.addListener(listener1);
     importManager.addListener(listener2);
@@ -57,7 +57,7 @@ public class ImportManagerTest {
 
     verify(listener1).onAllDataChunksCompleted();
     verify(listener2).onAllDataChunksCompleted();
-    verify(distributedStorage).close();
+    verify(singleCrudOperationTransactionManager).close();
   }
 
   @Test
@@ -69,7 +69,7 @@ public class ImportManagerTest {
 
     assertTrue(thrown.getMessage().contains("Error during completion"));
     assertEquals("Listener1 failed", thrown.getCause().getMessage());
-    verify(distributedStorage).close();
+    verify(singleCrudOperationTransactionManager).close();
   }
 
   @Test
@@ -90,7 +90,9 @@ public class ImportManagerTest {
 
   @Test
   void closeResources_shouldThrowIfResourceCloseFails() {
-    doThrow(new RuntimeException("Close failed")).when(distributedStorage).close();
+    doThrow(new RuntimeException("Close failed"))
+        .when(singleCrudOperationTransactionManager)
+        .close();
 
     RuntimeException ex =
         assertThrows(RuntimeException.class, () -> importManager.closeResources());

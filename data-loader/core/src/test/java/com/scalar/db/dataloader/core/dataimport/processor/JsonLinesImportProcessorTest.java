@@ -3,7 +3,6 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
@@ -17,6 +16,7 @@ import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
@@ -32,7 +32,7 @@ class JsonLinesImportProcessorTest {
   @Mock TableColumnDataTypes tableColumnDataTypes;
 
   ScalarDbDao dao;
-  @Mock DistributedStorage distributedStorage;
+  SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
   DistributedTransactionManager distributedTransactionManager;
   JsonLinesImportProcessor jsonLinesImportProcessor;
 
@@ -40,6 +40,7 @@ class JsonLinesImportProcessorTest {
   void setup() throws ScalarDbDaoException, TransactionException {
     dao = Mockito.mock(ScalarDbDao.class);
     distributedTransactionManager = mock(DistributedTransactionManager.class);
+    singleCrudOperationTransactionManager = mock(SingleCrudOperationTransactionManager.class);
     DistributedTransaction distributedTransaction = mock(DistributedTransaction.class);
     when(distributedTransactionManager.start()).thenReturn(distributedTransaction);
     tableMetadataByTableName = new HashMap<>();
@@ -65,7 +66,7 @@ class JsonLinesImportProcessorTest {
                 "table",
                 UnitTestUtils.getPartitionKey(1),
                 UnitTestUtils.getClusteringKey(),
-                distributedStorage))
+                singleCrudOperationTransactionManager))
         .thenReturn(UnitTestUtils.getResult(1));
     Mockito.when(
             dao.get(
@@ -84,7 +85,7 @@ class JsonLinesImportProcessorTest {
             .scalarDbMode(ScalarDbMode.STORAGE)
             .importOptions(importOptions)
             .dao(dao)
-            .distributedStorage(distributedStorage)
+            .singleCrudOperationTransactionManager(singleCrudOperationTransactionManager)
             .distributedTransactionManager(distributedTransactionManager)
             .tableColumnDataTypes(tableColumnDataTypes)
             .tableMetadataByTableName(tableMetadataByTableName)
@@ -103,7 +104,7 @@ class JsonLinesImportProcessorTest {
             .scalarDbMode(ScalarDbMode.TRANSACTION)
             .importOptions(importOptions)
             .dao(dao)
-            .distributedStorage(distributedStorage)
+            .singleCrudOperationTransactionManager(singleCrudOperationTransactionManager)
             .distributedTransactionManager(distributedTransactionManager)
             .tableColumnDataTypes(tableColumnDataTypes)
             .tableMetadataByTableName(tableMetadataByTableName)

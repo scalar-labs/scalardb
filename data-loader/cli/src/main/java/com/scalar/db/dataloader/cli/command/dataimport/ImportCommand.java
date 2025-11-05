@@ -5,6 +5,7 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -27,6 +28,7 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -52,6 +54,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    //    CommandLineInputUtils.isSingleCrudOperation(configFilePath);
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
@@ -156,8 +159,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               null,
               scalarDbTransactionManager.getDistributedTransactionManager());
     } else {
+      DatabaseConfig databaseConfig = new DatabaseConfig(configFile);
       ScalarDbStorageManager scalarDbStorageManager =
-          new ScalarDbStorageManager(StorageFactory.create(configFile));
+          new ScalarDbStorageManager(new SingleCrudOperationTransactionManager(databaseConfig));
       importManager =
           new ImportManager(
               tableMetadataMap,
@@ -165,7 +169,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               importOptions,
               importProcessorFactory,
               ScalarDbMode.STORAGE,
-              scalarDbStorageManager.getDistributedStorage(),
+              scalarDbStorageManager.getSingleCrudOperationTransactionManager(),
               null);
     }
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {

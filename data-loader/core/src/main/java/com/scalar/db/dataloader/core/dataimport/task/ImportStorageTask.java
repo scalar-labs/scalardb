@@ -1,84 +1,86 @@
 package com.scalar.db.dataloader.core.dataimport.task;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Result;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * An import task that interacts with a {@link DistributedStorage} for data retrieval and storage
- * operations.
+ * An import task that performs data retrieval and storage operations using a {@link
+ * SingleCrudOperationTransactionManager}.
  *
  * <p>This class extends {@link ImportTask} and provides concrete implementations for fetching and
- * storing records using a {@link DistributedStorage} instance. It acts as a bridge between the
- * import process and the underlying distributed storage system.
+ * saving records through the associated DAO using the {@link
+ * SingleCrudOperationTransactionManager}. It serves as a bridge between the data import process and
+ * the underlying single CRUD operation layer of ScalarDB.
  *
- * <p>The task handles both read and write operations:
+ * <p>The task handles two types of operations:
  *
  * <ul>
- *   <li>Reading existing records using partition and clustering keys
- *   <li>Storing new or updated records with their associated columns
+ *   <li>Reading existing records using partition and clustering keys.
+ *   <li>Writing or updating records with their corresponding columns.
  * </ul>
  *
- * <p>All storage operations are performed through the provided {@link DistributedStorage} instance,
- * which must be properly initialized before creating this task.
+ * <p>All operations are executed via the configured DAO, which internally uses the provided {@link
+ * SingleCrudOperationTransactionManager} instance.
  */
 public class ImportStorageTask extends ImportTask {
 
-  private final DistributedStorage storage;
+  private final SingleCrudOperationTransactionManager manager;
 
   /**
-   * Constructs an {@code ImportStorageTask} with the specified parameters and storage.
+   * Constructs an {@code ImportStorageTask} with the specified parameters and {@link
+   * SingleCrudOperationTransactionManager}.
    *
-   * @param params the import task parameters containing configuration and DAO objects
-   * @param storage the distributed storage instance to be used for data operations
-   * @throws NullPointerException if either params or storage is null
+   * @param params the import task parameters containing configuration and DAO instances
+   * @param manager the {@code SingleCrudOperationTransactionManager} used for data operations
+   * @throws NullPointerException if {@code params} or {@code manager} is {@code null}
    */
-  public ImportStorageTask(ImportTaskParams params, DistributedStorage storage) {
+  public ImportStorageTask(ImportTaskParams params, SingleCrudOperationTransactionManager manager) {
     super(params);
-    this.storage = storage;
+    this.manager = manager;
   }
 
   /**
-   * Retrieves a data record from the distributed storage using the specified keys.
+   * Retrieves a data record using the provided keys.
    *
-   * <p>This method attempts to fetch a single record from the specified table using both partition
-   * and clustering keys. The operation is performed through the configured DAO using the associated
-   * storage instance.
+   * <p>This method attempts to fetch a single record from the specified table using the given
+   * partition and clustering keys. The operation is performed through the configured DAO using the
+   * associated {@link SingleCrudOperationTransactionManager}.
    *
    * @param namespace the namespace of the table to query
    * @param tableName the name of the table to query
    * @param partitionKey the partition key identifying the record's partition
-   * @param clusteringKey the clustering key for further record identification within the partition
-   * @return an {@link Optional} containing the {@link Result} if the record exists, otherwise an
+   * @param clusteringKey the clustering key identifying the record within the partition
+   * @return an {@link Optional} containing the {@link Result} if the record exists; otherwise, an
    *     empty {@link Optional}
    * @throws ScalarDbDaoException if an error occurs during the retrieval operation, such as
-   *     connection issues or invalid table/namespace
+   *     connectivity issues or invalid schema references
    */
   @Override
   protected Optional<Result> getDataRecord(
       String namespace, String tableName, Key partitionKey, Key clusteringKey)
       throws ScalarDbDaoException {
-    return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.storage);
+    return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.manager);
   }
 
   /**
-   * Saves a record into the distributed storage with the specified keys and columns.
+   * Saves or updates a record in the specified table using the provided keys and column values.
    *
-   * <p>This method writes or updates a record in the specified table using the provided keys and
-   * column values. The operation is performed through the configured DAO using the associated
-   * storage instance.
+   * <p>This method inserts or updates a record in the target table using the {@link
+   * SingleCrudOperationTransactionManager}. It is typically invoked during the data import process
+   * to persist new or modified records.
    *
    * @param namespace the namespace of the target table
    * @param tableName the name of the target table
-   * @param partitionKey the partition key determining where the record will be stored
-   * @param clusteringKey the clustering key for organizing records within the partition
-   * @param columns the list of columns containing the record's data to be saved
+   * @param partitionKey the partition key identifying where the record is stored
+   * @param clusteringKey the clustering key specifying the record's ordering within the partition
+   * @param columns the list of columns representing the record data to save
    * @throws ScalarDbDaoException if an error occurs during the save operation, such as connection
-   *     issues, invalid data types, or constraint violations
+   *     issues or constraint violations
    */
   @Override
   protected void saveRecord(
@@ -88,6 +90,6 @@ public class ImportStorageTask extends ImportTask {
       Key clusteringKey,
       List<Column<?>> columns)
       throws ScalarDbDaoException {
-    params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.storage);
+    params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.manager);
   }
 }
