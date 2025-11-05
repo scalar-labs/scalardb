@@ -934,12 +934,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addColumn("c8", DataType.BLOB)
               .addColumn("c9", DataType.DATE)
               .addColumn("c10", DataType.TIME)
+              .addColumn("c11", DataType.TIMESTAMPTZ)
               .addPartitionKey("c1")
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn("c11", DataType.TIMESTAMP)
-            .addColumn("c12", DataType.TIMESTAMPTZ);
+        currentTableMetadataBuilder.addColumn("c12", DataType.TIMESTAMP);
       }
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, TABLE4, currentTableMetadata, options);
@@ -953,8 +952,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.dropColumnFromTable(namespace1, TABLE4, "c8");
       admin.dropColumnFromTable(namespace1, TABLE4, "c9");
       admin.dropColumnFromTable(namespace1, TABLE4, "c10");
+      admin.dropColumnFromTable(namespace1, TABLE4, "c11");
       if (isTimestampTypeSupported()) {
-        admin.dropColumnFromTable(namespace1, TABLE4, "c11");
         admin.dropColumnFromTable(namespace1, TABLE4, "c12");
       }
 
@@ -1200,12 +1199,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addColumn("c8", DataType.BLOB)
               .addColumn("c9", DataType.DATE)
               .addColumn("c10", DataType.TIME)
+              .addColumn("c11", DataType.TIMESTAMPTZ)
               .addPartitionKey("c1")
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
-        currentTableMetadataBuilder
-            .addColumn("c11", DataType.TIMESTAMP)
-            .addColumn("c12", DataType.TIMESTAMPTZ);
+        currentTableMetadataBuilder.addColumn("c12", DataType.TIMESTAMP);
       }
       TableMetadata currentTableMetadata = currentTableMetadataBuilder.build();
       admin.createTable(namespace1, table, currentTableMetadata, options);
@@ -1222,10 +1220,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")));
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
+              .timestampTZValue("c11", Instant.now());
       if (isTimestampTypeSupported()) {
-        insert.timestampValue("c11", LocalDateTime.now(ZoneOffset.UTC));
-        insert.timestampTZValue("c12", Instant.now());
+        insert.timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
       }
       transactionalInsert(insert.build());
 
@@ -1238,8 +1236,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.alterColumnType(namespace1, table, "c8", DataType.TEXT);
       admin.alterColumnType(namespace1, table, "c9", DataType.TEXT);
       admin.alterColumnType(namespace1, table, "c10", DataType.TEXT);
+      admin.alterColumnType(namespace1, table, "c11", DataType.TEXT);
       if (isTimestampTypeSupported()) {
-        admin.alterColumnType(namespace1, table, "c11", DataType.TEXT);
         admin.alterColumnType(namespace1, table, "c12", DataType.TEXT);
       }
 
@@ -1256,12 +1254,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addColumn("c8", DataType.TEXT)
               .addColumn("c9", DataType.TEXT)
               .addColumn("c10", DataType.TEXT)
+              .addColumn("c11", DataType.TEXT)
               .addPartitionKey("c1")
               .addClusteringKey("c2", Scan.Ordering.Order.ASC);
       if (isTimestampTypeSupported()) {
-        expectedTableMetadataBuilder
-            .addColumn("c11", DataType.TEXT)
-            .addColumn("c12", DataType.TEXT);
+        expectedTableMetadataBuilder.addColumn("c12", DataType.TEXT);
       }
       TableMetadata expectedTableMetadata = expectedTableMetadataBuilder.build();
       assertThat(admin.getTableMetadata(namespace1, table)).isEqualTo(expectedTableMetadata);
@@ -1461,6 +1458,36 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
       admin.dropTable(namespace1, newTableName, true);
+    }
+  }
+
+  @Test
+  public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly()
+      throws ExecutionException {
+    String newTableName = "new" + TABLE4;
+    try {
+      // Arrange
+      admin.createNamespace(namespace3);
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn("c1", DataType.INT)
+              .addColumn("c2", DataType.INT)
+              .addPartitionKey("c1")
+              .build();
+      admin.createTable(namespace3, TABLE4, tableMetadata, options);
+
+      // Act
+      admin.renameTable(namespace3, TABLE4, newTableName);
+
+      // Assert
+      assertThat(admin.tableExists(namespace3, TABLE4)).isFalse();
+      assertThat(admin.tableExists(namespace3, newTableName)).isTrue();
+      assertThat(admin.getTableMetadata(namespace3, newTableName)).isEqualTo(tableMetadata);
+    } finally {
+      admin.dropTable(namespace3, TABLE4, true);
+      admin.dropTable(namespace3, newTableName, true);
+      admin.dropNamespace(namespace3, true);
     }
   }
 

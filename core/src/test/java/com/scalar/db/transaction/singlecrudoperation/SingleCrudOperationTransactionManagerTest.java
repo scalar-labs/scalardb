@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -31,6 +32,7 @@ import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -744,5 +746,371 @@ public class SingleCrudOperationTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> transactionManager.delete(delete))
         .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void mutate_WithPut_ShouldCallStorageProperly() throws Exception {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+    Put putWithLinearizableConsistency =
+        Put.newBuilder(put).consistency(Consistency.LINEARIZABLE).build();
+
+    // Act
+    transactionManager.mutate(Collections.singletonList(put));
+
+    // Assert
+    verify(storage).put(putWithLinearizableConsistency);
+  }
+
+  @Test
+  public void mutate_WithInsert_ShouldCallStorageProperly() throws Exception {
+    // Arrange
+    Insert insert =
+        Insert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    transactionManager.mutate(Collections.singletonList(insert));
+
+    // Assert
+    verify(storage)
+        .put(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("id", 0))
+                .intValue("col", 0)
+                .condition(ConditionBuilder.putIfNotExists())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void mutate_WithUpsert_ShouldCallStorageProperly() throws Exception {
+    // Arrange
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    transactionManager.mutate(Collections.singletonList(upsert));
+
+    // Assert
+    verify(storage)
+        .put(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("id", 0))
+                .intValue("col", 0)
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void mutate_WithUpdate_ShouldCallStorageProperly() throws Exception {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    transactionManager.mutate(Collections.singletonList(update));
+
+    // Assert
+    verify(storage)
+        .put(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("id", 0))
+                .intValue("col", 0)
+                .condition(ConditionBuilder.putIfExists())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void mutate_WithDelete_ShouldCallStorageProperly() throws Exception {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+    Delete deleteWithLinearizableConsistency =
+        Delete.newBuilder(delete).consistency(Consistency.LINEARIZABLE).build();
+
+    // Act
+    transactionManager.mutate(Collections.singletonList(delete));
+
+    // Assert
+    verify(storage).delete(deleteWithLinearizableConsistency);
+  }
+
+  @Test
+  public void mutate_EmptyMutations_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.mutate(Collections.emptyList()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void mutate_MultipleMutations_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    Put put1 =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 1))
+            .intValue("col", 1)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.mutate(Arrays.asList(put1, put2)))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void batch_WithGetOperation_ShouldReturnBatchResult() throws Exception {
+    // Arrange
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+    Get getWithLinearizableConsistency =
+        Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build();
+
+    Result result = mock(Result.class);
+    when(storage.get(getWithLinearizableConsistency)).thenReturn(Optional.of(result));
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(get));
+
+    // Assert
+    verify(storage).get(getWithLinearizableConsistency);
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
+    assertThat(batchResults.get(0).getGetResult()).isEqualTo(Optional.of(result));
+  }
+
+  @Test
+  public void batch_WithScanOperation_ShouldReturnBatchResult() throws Exception {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+    Scan scanWithLinearizableConsistency =
+        Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build();
+
+    List<Result> results = Arrays.asList(mock(Result.class), mock(Result.class));
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.all()).thenReturn(results);
+    when(storage.scan(scanWithLinearizableConsistency)).thenReturn(scanner);
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(scan));
+
+    // Assert
+    verify(storage).scan(scanWithLinearizableConsistency);
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.SCAN);
+    assertThat(batchResults.get(0).getScanResult()).isEqualTo(results);
+  }
+
+  @Test
+  public void batch_WithPutOperation_ShouldReturnEmptyBatchResult() throws Exception {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+    Put putWithLinearizableConsistency =
+        Put.newBuilder(put).consistency(Consistency.LINEARIZABLE).build();
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(put));
+
+    // Assert
+    verify(storage).put(putWithLinearizableConsistency);
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.PUT);
+    // Empty batch result should throw IllegalStateException when accessing results
+    assertThatThrownBy(() -> batchResults.get(0).getGetResult())
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> batchResults.get(0).getScanResult())
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void batch_WithInsertOperation_ShouldReturnEmptyBatchResult() throws Exception {
+    // Arrange
+    Insert insert =
+        Insert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(insert));
+
+    // Assert
+    verify(storage)
+        .put(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("id", 0))
+                .intValue("col", 0)
+                .condition(ConditionBuilder.putIfNotExists())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.INSERT);
+    assertThatThrownBy(() -> batchResults.get(0).getGetResult())
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> batchResults.get(0).getScanResult())
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void batch_WithUpsertOperation_ShouldReturnEmptyBatchResult() throws Exception {
+    // Arrange
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(upsert));
+
+    // Assert
+    verify(storage)
+        .put(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("id", 0))
+                .intValue("col", 0)
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
+    assertThatThrownBy(() -> batchResults.get(0).getGetResult())
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> batchResults.get(0).getScanResult())
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void batch_WithUpdateOperation_ShouldReturnEmptyBatchResult() throws Exception {
+    // Arrange
+    Update update =
+        Update.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("id", 0))
+            .intValue("col", 0)
+            .build();
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(update));
+
+    // Assert
+    verify(storage)
+        .put(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("id", 0))
+                .intValue("col", 0)
+                .condition(ConditionBuilder.putIfExists())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
+    assertThatThrownBy(() -> batchResults.get(0).getGetResult())
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> batchResults.get(0).getScanResult())
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void batch_WithDeleteOperation_ShouldReturnEmptyBatchResult() throws Exception {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+    Delete deleteWithLinearizableConsistency =
+        Delete.newBuilder(delete).consistency(Consistency.LINEARIZABLE).build();
+
+    // Act
+    List<CrudOperable.BatchResult> batchResults =
+        transactionManager.batch(Collections.singletonList(delete));
+
+    // Assert
+    verify(storage).delete(deleteWithLinearizableConsistency);
+    assertThat(batchResults).hasSize(1);
+    assertThat(batchResults.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+    assertThatThrownBy(() -> batchResults.get(0).getGetResult())
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> batchResults.get(0).getScanResult())
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void batch_EmptyOperations_ShouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.batch(Collections.emptyList()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void batch_MultipleOperations_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    Get get1 =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 0)).build();
+    Get get2 =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("id", 1)).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.batch(Arrays.asList(get1, get2)))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }
