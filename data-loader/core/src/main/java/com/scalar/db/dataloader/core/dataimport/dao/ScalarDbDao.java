@@ -485,13 +485,14 @@ public class ScalarDbDao {
       @Nullable List<Scan.Ordering> sortOrders,
       @Nullable List<String> projectionColumns,
       int limit,
-      DistributedTransactionManager transaction) {
+      DistributedTransactionManager transaction)
+      throws ScalarDbDaoException {
     Scan scan =
         createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
     try {
       return transaction.getScanner(scan);
     } catch (CrudException e) {
-      throw new RuntimeException(e);
+      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
