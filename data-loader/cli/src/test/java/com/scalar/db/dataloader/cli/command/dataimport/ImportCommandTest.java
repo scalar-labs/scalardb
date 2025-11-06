@@ -158,20 +158,7 @@ public class ImportCommandTest {
     Files.createFile(importFile);
 
     // Simulate command line parsing with both deprecated and new options
-    String[] args = {
-      "--config",
-      configFile.toString(),
-      "--file",
-      importFile.toString(),
-      "--namespace",
-      "sample",
-      "--table",
-      "table",
-      "--log-success",
-      "--enable-log-success",
-      "--max-threads",
-      "16"
-    };
+    String[] args = {"--file", importFile.toString(), "--log-success", "--enable-log-success"};
     ImportCommand command = new ImportCommand();
     CommandLine cmd = new CommandLine(command);
     // Parse args - this will trigger our validation
@@ -198,19 +185,7 @@ public class ImportCommandTest {
     Files.createFile(importFile);
 
     // Simulate command line parsing with only deprecated option
-    String[] args = {
-      "--config",
-      configFile.toString(),
-      "--file",
-      importFile.toString(),
-      "--namespace",
-      "sample",
-      "--table",
-      "table",
-      "--max-threads",
-      "12",
-      "--log-success"
-    };
+    String[] args = {"--file", importFile.toString(), "--log-success"};
     ImportCommand command = new ImportCommand();
     CommandLine cmd = new CommandLine(command);
     cmd.parseArgs(args);
