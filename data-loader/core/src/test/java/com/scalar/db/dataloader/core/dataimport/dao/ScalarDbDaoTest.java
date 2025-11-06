@@ -16,14 +16,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.ScanRange;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
@@ -39,13 +36,11 @@ class ScalarDbDaoTest {
   private static final int TEST_VALUE_INT_MIN = 1;
   private ScalarDbDao dao;
   private DistributedTransactionManager manager;
-  private DistributedStorage distributedStorage;
   private SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
 
   @BeforeEach
   void setUp() {
     this.dao = new ScalarDbDao();
-    this.distributedStorage = mock(DistributedStorage.class);
     this.manager = mock(DistributedTransactionManager.class);
     this.singleCrudOperationTransactionManager = mock(SingleCrudOperationTransactionManager.class);
   }
@@ -229,32 +224,6 @@ class ScalarDbDaoTest {
     result =
         this.dao.createScanner(
             TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, singleCrudOperationTransactionManager);
-    // Assert
-    assertNotNull(result);
-    assertEquals(mockScanner, result);
-  }
-
-  @Test
-  void createScanner_withStorage_ShouldCreateScannerObject()
-      throws CrudException, ExecutionException, ScalarDbDaoException {
-    // Create Scan Object
-    Scanner mockScanner = mock(Scanner.class);
-    when(distributedStorage.scan(any())).thenReturn(mockScanner);
-    Scanner result =
-        this.dao.createScanner(
-            TEST_NAMESPACE,
-            TEST_TABLE_NAME,
-            null,
-            new ScanRange(null, null, false, false),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            0,
-            distributedStorage);
-    // Assert
-    assertNotNull(result);
-    assertEquals(mockScanner, result);
-
-    result = this.dao.createScanner(TEST_NAMESPACE, TEST_TABLE_NAME, null, 0, distributedStorage);
     // Assert
     assertNotNull(result);
     assertEquals(mockScanner, result);

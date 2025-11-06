@@ -1,9 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -17,6 +15,7 @@ import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -38,26 +37,26 @@ import org.slf4j.LoggerFactory;
 public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
-  private final DistributedStorage distributedStorage;
+  private final SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
   private final DistributedTransactionManager distributedTransactionManager;
   private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
 
   /**
-   * Constructs an {@code ExportManager} that uses a {@link DistributedStorage} instance for
-   * non-transactional data export operations.
+   * Constructs an {@code ExportManager} that uses a {@link SingleCrudOperationTransactionManager}
+   * instance for non-transactional data export operations.
    *
-   * @param distributedStorage the {@link DistributedStorage} used to read data directly from
-   *     storage
+   * @param singleCrudOperationTransactionManager the {@link SingleCrudOperationTransactionManager}
+   *     used to execute single CRUD operations for reading data during export
    * @param dao the {@link ScalarDbDao} used to perform data operations
    * @param producerTaskFactory the factory for creating producer tasks to format the exported data
    */
   public ExportManager(
-      DistributedStorage distributedStorage,
+      SingleCrudOperationTransactionManager singleCrudOperationTransactionManager,
       ScalarDbDao dao,
       ProducerTaskFactory producerTaskFactory) {
-    this.distributedStorage = distributedStorage;
+    this.singleCrudOperationTransactionManager = singleCrudOperationTransactionManager;
     this.distributedTransactionManager = null;
     this.dao = dao;
     this.producerTaskFactory = producerTaskFactory;
@@ -76,7 +75,7 @@ public abstract class ExportManager {
       DistributedTransactionManager distributedTransactionManager,
       ScalarDbDao dao,
       ProducerTaskFactory producerTaskFactory) {
-    this.distributedStorage = null;
+    this.singleCrudOperationTransactionManager = null;
     this.distributedTransactionManager = distributedTransactionManager;
     this.dao = dao;
     this.producerTaskFactory = producerTaskFactory;
@@ -132,7 +131,8 @@ public abstract class ExportManager {
         Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
 
         if (exportOptions.getScalarDbMode() == ScalarDbMode.STORAGE) {
-          try (Scanner scanner = createScannerWithStorage(exportOptions, dao, distributedStorage)) {
+          try (TransactionManagerCrudOperable.Scanner scanner =
+              createScannerWithStorage(exportOptions, dao, singleCrudOperationTransactionManager)) {
             submitTasks(
                 scanner.iterator(),
                 executorService,
@@ -338,23 +338,30 @@ public abstract class ExportManager {
   }
 
   /**
-   * Creates a ScalarDB {@link Scanner} using the {@link DistributedStorage} interface based on the
-   * scan configuration provided in {@link ExportOptions}.
+   * Creates a ScalarDB {@link TransactionManagerCrudOperable.Scanner} using the {@link
+   * SingleCrudOperationTransactionManager} interface based on the scan configuration provided in
+   * {@link ExportOptions}.
+   *
+   * <p>This method constructs a scanner for reading data directly from ScalarDB using single CRUD
+   * operations managed by the given transaction manager.
    *
    * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
-   * performed. Otherwise, a partition-specific scan is performed using the provided partition key,
-   * optional scan range, and sort orders.
+   * performed. Otherwise, a partition-specific scan is executed using the provided partition key,
+   * optional scan range, sort orders, and projection columns.
    *
-   * @param exportOptions Options containing configuration for the export operation, including
-   *     namespace, table name, projection columns, limit, and scan parameters
-   * @param dao The {@link ScalarDbDao} used to construct the scan operation
-   * @param storage The {@link DistributedStorage} instance used to execute the scan
-   * @return A {@link Scanner} instance for reading data from ScalarDB using storage-level
-   *     operations
-   * @throws ScalarDbDaoException If an error occurs while creating the scanner
+   * @param exportOptions the {@link ExportOptions} containing configuration for the export
+   *     operation, including namespace, table name, projection columns, limit, scan range,
+   *     partition key, and sort orders
+   * @param dao the {@link ScalarDbDao} used to construct the scan operation for the specified table
+   * @param manager the {@link SingleCrudOperationTransactionManager} used to execute the scan
+   *     operations at the single CRUD level
+   * @return a {@link TransactionManagerCrudOperable.Scanner} instance for reading data from
+   *     ScalarDB using the provided transaction manager
+   * @throws ScalarDbDaoException if an error occurs while creating the scanner or performing the
+   *     scan setup
    */
-  private Scanner createScannerWithStorage(
-      ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
+  private TransactionManagerCrudOperable.Scanner createScannerWithStorage(
+      ExportOptions exportOptions, ScalarDbDao dao, SingleCrudOperationTransactionManager manager)
       throws ScalarDbDaoException {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
     if (isScanAll) {
@@ -363,7 +370,7 @@ public abstract class ExportManager {
           exportOptions.getTableName(),
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
-          storage);
+          manager);
     } else {
       return dao.createScanner(
           exportOptions.getNamespace(),
@@ -373,7 +380,7 @@ public abstract class ExportManager {
           exportOptions.getSortOrders(),
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
-          storage);
+          manager);
     }
   }
 
@@ -430,8 +437,8 @@ public abstract class ExportManager {
   /** Close resources properly once the process is completed */
   public void closeResources() {
     try {
-      if (distributedStorage != null) {
-        distributedStorage.close();
+      if (singleCrudOperationTransactionManager != null) {
+        singleCrudOperationTransactionManager.close();
       } else if (distributedTransactionManager != null) {
         distributedTransactionManager.close();
       }

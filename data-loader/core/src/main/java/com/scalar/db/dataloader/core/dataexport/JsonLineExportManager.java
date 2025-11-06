@@ -1,10 +1,10 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.IOException;
 import java.io.Writer;
 
@@ -13,22 +13,24 @@ import java.io.Writer;
  */
 public class JsonLineExportManager extends ExportManager {
   /**
-   * Constructs a {@code JsonLineExportManager} for exporting data using a {@link
-   * DistributedStorage} instance.
+   * Constructs a {@code CsvExportManager} for exporting data using a {@link
+   * SingleCrudOperationTransactionManager}.
    *
-   * <p>This constructor is used when exporting data in non-transactional (storage) mode.
+   * <p>This constructor is used when exporting data in non-transactional (single CRUD) mode, where
+   * data is read directly through the {@link SingleCrudOperationTransactionManager} without
+   * distributed transactions.
    *
-   * @param distributedStorage the {@link DistributedStorage} used to read data directly from
-   *     storage
+   * @param singleCrudOperationTransactionManager the {@link SingleCrudOperationTransactionManager}
+   *     used to execute single CRUD read operations during the export process
    * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for exporting data
    * @param producerTaskFactory the factory used to create producer tasks for generating
    *     CSV-formatted output
    */
   public JsonLineExportManager(
-      DistributedStorage distributedStorage,
+      SingleCrudOperationTransactionManager singleCrudOperationTransactionManager,
       ScalarDbDao dao,
       ProducerTaskFactory producerTaskFactory) {
-    super(distributedStorage, dao, producerTaskFactory);
+    super(singleCrudOperationTransactionManager, dao, producerTaskFactory);
   }
 
   /**

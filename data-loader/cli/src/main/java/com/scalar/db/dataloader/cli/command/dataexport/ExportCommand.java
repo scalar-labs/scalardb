@@ -5,9 +5,9 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.cli.util.FileUtils;
@@ -30,9 +30,10 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -188,8 +189,12 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
     if (scalarDbMode.equals(ScalarDbMode.STORAGE)) {
-      DistributedStorage storage = StorageFactory.create(scalarDbPropertiesFilePath).getStorage();
-      return createExportManagerWithStorage(storage, scalarDbDao, fileFormat, taskFactory);
+      File configFile = new File(scalarDbPropertiesFilePath);
+      DatabaseConfig databaseConfig = new DatabaseConfig(configFile);
+      SingleCrudOperationTransactionManager singleCrudOperationTransactionManager =
+          new SingleCrudOperationTransactionManager(databaseConfig);
+      return createExportManagerWithStorage(
+          singleCrudOperationTransactionManager, scalarDbDao, fileFormat, taskFactory);
     } else {
       DistributedTransactionManager distributedTransactionManager =
           TransactionFactory.create(scalarDbPropertiesFilePath).getTransactionManager();
@@ -225,26 +230,26 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   /**
-   * Returns an {@link ExportManager} that uses {@link DistributedStorage}.
+   * Returns an {@link ExportManager} that uses {@link SingleCrudOperationTransactionManager}.
    *
-   * @param storage distributed storage object
+   * @param manager SingleCrudOperationTransactionManager object
    * @param scalarDbDao The DAO for accessing ScalarDB.
    * @param fileFormat The output file format (CSV, JSON, JSONL).
    * @param taskFactory Producer task factory object
    * @return A configured {@link ExportManager}.
    */
   private ExportManager createExportManagerWithStorage(
-      DistributedStorage storage,
+      SingleCrudOperationTransactionManager manager,
       ScalarDbDao scalarDbDao,
       FileFormat fileFormat,
       ProducerTaskFactory taskFactory) {
     switch (fileFormat) {
       case JSON:
-        return new JsonExportManager(storage, scalarDbDao, taskFactory);
+        return new JsonExportManager(manager, scalarDbDao, taskFactory);
       case JSONL:
-        return new JsonLineExportManager(storage, scalarDbDao, taskFactory);
+        return new JsonLineExportManager(manager, scalarDbDao, taskFactory);
       case CSV:
-        return new CsvExportManager(storage, scalarDbDao, taskFactory);
+        return new CsvExportManager(manager, scalarDbDao, taskFactory);
       default:
         throw new AssertionError("Invalid file format" + fileFormat);
     }

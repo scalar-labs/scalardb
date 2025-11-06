@@ -204,6 +204,6 @@ class ExportCommandTest {
     exportCommand.outputFileName = "sample.json";
     exportCommand.outputFormat = FileFormat.JSON;
     exportCommand.scalarDbMode = ScalarDbMode.TRANSACTION;
-    Assertions.assertEquals(1, exportCommand.call());
+    assertEquals(1, exportCommand.call());
   }
 }

@@ -2,11 +2,9 @@ package com.scalar.db.dataloader.core.dataexport;
 
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.common.ResultImpl;
@@ -21,6 +19,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +39,7 @@ import org.mockito.Spy;
 public class JsonExportManagerTest {
 
   TableMetadata mockData;
-  DistributedStorage storage;
+  SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
   DistributedTransactionManager manager;
   DistributedTransaction transaction;
   @Spy ScalarDbDao dao;
@@ -49,7 +48,8 @@ public class JsonExportManagerTest {
 
   @BeforeEach
   void setup() throws TransactionException {
-    storage = Mockito.mock(DistributedStorage.class);
+    singleCrudOperationTransactionManager =
+        Mockito.mock(SingleCrudOperationTransactionManager.class);
     transaction = Mockito.mock(DistributedTransaction.class);
     manager = Mockito.mock(DistributedTransactionManager.class);
     mockData = UnitTestUtils.createTestTableMetadata();
@@ -61,8 +61,10 @@ public class JsonExportManagerTest {
   @Test
   void startExport_givenValidDataWithoutPartitionKey_withStorage_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-    exportManager = new JsonExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager =
+        new JsonExportManager(singleCrudOperationTransactionManager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.json";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -80,7 +82,7 @@ public class JsonExportManagerTest {
                 exportOptions.getTableName(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                singleCrudOperationTransactionManager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -100,8 +102,10 @@ public class JsonExportManagerTest {
   @Test
   void startExport_givenPartitionKey_withStorage_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-    exportManager = new JsonExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager =
+        new JsonExportManager(singleCrudOperationTransactionManager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.json";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -126,7 +130,7 @@ public class JsonExportManagerTest {
                 exportOptions.getSortOrders(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                singleCrudOperationTransactionManager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =

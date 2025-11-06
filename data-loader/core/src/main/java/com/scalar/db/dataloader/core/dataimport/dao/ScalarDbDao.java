@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport.dao;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
@@ -10,16 +9,13 @@ import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -28,36 +24,6 @@ import javax.annotation.Nullable;
 
 /** The generic DAO that is used to scan ScalarDB data */
 public class ScalarDbDao {
-
-  /**
-   * Retrieve record from ScalarDB instance in storage mode
-   *
-   * @param namespace Namespace name
-   * @param table Table name
-   * @param partitionKey Partition key
-   * @param clusteringKey Optional clustering key for get
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode.
-   * @return Optional get result
-   * @throws ScalarDbDaoException if something goes wrong while reading the data
-   */
-  public Optional<Result> get(
-      String namespace,
-      String table,
-      Key partitionKey,
-      Key clusteringKey,
-      DistributedStorage storage)
-      throws ScalarDbDaoException {
-
-    // Retrieving the key data for logging
-    String loggingKey = keysToString(partitionKey, clusteringKey);
-
-    try {
-      Get get = createGetWith(namespace, table, partitionKey, clusteringKey);
-      return storage.get(get);
-    } catch (ExecutionException e) {
-      throw new ScalarDbDaoException("error GET " + loggingKey, e);
-    }
-  }
 
   /**
    * Retrieve record from ScalarDB instance in storage mode
@@ -176,71 +142,6 @@ public class ScalarDbDao {
   }
 
   /**
-   * Save record in ScalarDB instance
-   *
-   * @param namespace Namespace name
-   * @param table Table name
-   * @param partitionKey Partition key
-   * @param clusteringKey Optional clustering key
-   * @param columns List of column values to be inserted or updated
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @throws ScalarDbDaoException if something goes wrong while executing the transaction
-   */
-  public void put(
-      String namespace,
-      String table,
-      Key partitionKey,
-      Key clusteringKey,
-      List<Column<?>> columns,
-      DistributedStorage storage)
-      throws ScalarDbDaoException {
-    Put put = createPutWith(namespace, table, partitionKey, clusteringKey, columns);
-    try {
-      storage.put(put);
-    } catch (ExecutionException e) {
-      throw new ScalarDbDaoException(
-          DataLoaderError.ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Scan a ScalarDB table
-   *
-   * @param namespace ScalarDB namespace
-   * @param table ScalarDB table name
-   * @param partitionKey Partition key used in ScalarDB scan
-   * @param range Optional range to set ScalarDB scan start and end values
-   * @param sorts Optional scan clustering key sorting values
-   * @param projections List of column projection to use during scan
-   * @param limit Scan limit value
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @return List of ScalarDB scan results
-   * @throws ScalarDbDaoException if scan fails
-   */
-  public List<Result> scan(
-      String namespace,
-      String table,
-      Key partitionKey,
-      ScanRange range,
-      List<Scan.Ordering> sorts,
-      List<String> projections,
-      int limit,
-      DistributedStorage storage)
-      throws ScalarDbDaoException {
-    // Create scan
-    Scan scan = createScan(namespace, table, partitionKey, range, sorts, projections, limit);
-
-    // scan data
-    try {
-      try (Scanner scanner = storage.scan(scan)) {
-        return scanner.all();
-      }
-    } catch (ExecutionException | IOException e) {
-      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
    * Scan a ScalarDB table
    *
    * @param namespace ScalarDB namespace
@@ -324,33 +225,6 @@ public class ScalarDbDao {
    * @param table ScalarDB table name
    * @param projectionColumns List of column projection to use during scan
    * @param limit Scan limit value
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @return ScalarDB Scanner object
-   * @throws ScalarDbDaoException if scan fails
-   */
-  public Scanner createScanner(
-      String namespace,
-      String table,
-      List<String> projectionColumns,
-      int limit,
-      DistributedStorage storage)
-      throws ScalarDbDaoException {
-    Scan scan =
-        createScan(namespace, table, null, null, new ArrayList<>(), projectionColumns, limit);
-    try {
-      return storage.scan(scan);
-    } catch (ExecutionException e) {
-      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Create a ScalarDB scanner instance
-   *
-   * @param namespace ScalarDB namespace
-   * @param table ScalarDB table name
-   * @param projectionColumns List of column projection to use during scan
-   * @param limit Scan limit value
    * @param transaction Distributed transaction object
    * @return ScalarDB Scanner object
    * @throws ScalarDbDaoException if scan fails
@@ -394,39 +268,6 @@ public class ScalarDbDao {
     try {
       return manager.getScanner(scan);
     } catch (CrudException e) {
-      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Create a ScalarDB scanner instance
-   *
-   * @param namespace ScalarDB namespace
-   * @param table ScalarDB table name
-   * @param partitionKey Partition key used in ScalarDB scan
-   * @param scanRange Optional range to set ScalarDB scan start and end values
-   * @param sortOrders Optional scan clustering key sorting values
-   * @param projectionColumns List of column projection to use during scan
-   * @param limit Scan limit value
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @return ScalarDB Scanner object
-   * @throws ScalarDbDaoException if scan fails
-   */
-  public Scanner createScanner(
-      String namespace,
-      String table,
-      @Nullable Key partitionKey,
-      @Nullable ScanRange scanRange,
-      @Nullable List<Scan.Ordering> sortOrders,
-      @Nullable List<String> projectionColumns,
-      int limit,
-      DistributedStorage storage)
-      throws ScalarDbDaoException {
-    Scan scan =
-        createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
-    try {
-      return storage.scan(scan);
-    } catch (ExecutionException e) {
       throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
