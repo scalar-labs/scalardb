@@ -889,6 +889,24 @@ public enum CoreError implements ScalarDbError {
       "Object Storage does not support the feature for altering column types",
       "",
       ""),
+  OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0256",
+      "Cross-partition scan with ordering is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0257",
+      "The value of the column %s in the primary key contains an illegal character. ",
+      "",
+      ""),
+  OBJECT_STORAGE_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BLOB_TYPE(
+      Category.USER_ERROR,
+      "0258",
+      "Object Storage supports only EQ, NE, IS_NULL, and IS_NOT_NULL operations for the BLOB type in conditions. Mutation: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1014,6 +1032,12 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0026",
       "A conflict occurred when committing records. Details: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0027",
+      "A transaction conflict occurred in the mutation. Details: %s",
       "",
       ""),
 
@@ -1197,6 +1221,10 @@ public enum CoreError implements ScalarDbError {
       ""),
   JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
       Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0064", "An error occurred in the selection. Details: %s", "", ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION(
+      Category.INTERNAL_ERROR, "0065", "An error occurred in the mutation. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category
