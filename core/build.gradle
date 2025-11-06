@@ -174,7 +174,9 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
     // The Java connector library used to establish simply a secure connection to AlloyDB on GCP
-    implementation("com.google.cloud:alloydb-jdbc-connector:${alloyDbJdbcConnectorVersion}")
+    implementation("com.google.cloud:alloydb-jdbc-connector:${alloyDbJdbcConnectorVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
