@@ -15,6 +15,6 @@ public interface ObjectStorageProvider extends DistributedStorageProvider {
 
   @Override
   default DistributedStorageAdmin createDistributedStorageAdmin(DatabaseConfig config) {
-    return new CommonDistributedStorageAdmin(new ObjectStorageAdmin(config), config);
+    return new CommonDistributedStorageAdmin(new ObjectStorageAdmin(config), true);
   }
 }

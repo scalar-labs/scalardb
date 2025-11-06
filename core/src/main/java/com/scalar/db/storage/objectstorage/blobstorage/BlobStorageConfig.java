@@ -2,6 +2,7 @@ package com.scalar.db.storage.objectstorage.blobstorage;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
+import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 public class BlobStorageConfig implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "blob-storage";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
+  public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
   public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
       PREFIX + "parallel_upload_block_size_in_bytes";
@@ -58,7 +60,7 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-    metadataNamespace = databaseConfig.getSystemNamespaceName();
+    metadataNamespace = getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
       logger.warn(

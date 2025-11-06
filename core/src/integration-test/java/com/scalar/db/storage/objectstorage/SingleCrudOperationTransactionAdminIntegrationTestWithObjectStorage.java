@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -10,6 +11,12 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
   @Override
   protected Properties getProps(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    return ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties))
+        .getMetadataNamespace();
   }
 
   @Override
@@ -124,9 +131,4 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
   @Override
   @Disabled("Object Storage does not support renaming tables")
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
-
-  @Override
-  @Disabled("The ScalarDB environment does not need to be upgraded with Object Storage")
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }

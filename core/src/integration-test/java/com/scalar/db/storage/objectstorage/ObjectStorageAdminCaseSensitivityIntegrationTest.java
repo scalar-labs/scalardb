@@ -1,6 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageAdminCaseSensitivityIntegrationTestBase;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
@@ -12,6 +13,12 @@ public class ObjectStorageAdminCaseSensitivityIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected String getSystemNamespaceName(Properties properties) {
+    return ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties))
+        .getMetadataNamespace();
   }
 
   @Override
@@ -145,9 +152,4 @@ public class ObjectStorageAdminCaseSensitivityIntegrationTest
   @Override
   @Disabled("Object Storage does not support renaming tables")
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
-
-  @Override
-  @Disabled("The ScalarDB environment does not need to be upgraded with Object Storage")
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }

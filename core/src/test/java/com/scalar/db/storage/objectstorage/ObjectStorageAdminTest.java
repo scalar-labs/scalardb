@@ -165,12 +165,13 @@ public class ObjectStorageAdminTest {
     Set<String> actualNamespaces = admin.getNamespaceNames();
 
     // Assert
-    assertThat(actualNamespaces).containsExactlyInAnyOrder("ns1", "ns2");
+    assertThat(actualNamespaces).containsExactlyInAnyOrder("ns1", "ns2", METADATA_NAMESPACE);
   }
 
   @Test
-  public void getNamespaceNames_NamespaceMetadataTableDoesNotExist_ShouldReturnEmptySet()
-      throws Exception {
+  public void
+      getNamespaceNames_NamespaceMetadataTableDoesNotExist_ShouldOnlyReturnMetadataNamespace()
+          throws Exception {
     // Arrange
     when(wrapper.get(
             ObjectStorageUtils.getObjectKey(
@@ -181,7 +182,7 @@ public class ObjectStorageAdminTest {
     Set<String> actualNamespaces = admin.getNamespaceNames();
 
     // Assert
-    assertThat(actualNamespaces).isEmpty();
+    assertThat(actualNamespaces).containsExactly(METADATA_NAMESPACE);
   }
 
   @Test
@@ -526,34 +527,6 @@ public class ObjectStorageAdminTest {
   }
 
   @Test
-  public void repairNamespace_ShouldUpsertNamespaceMetadata() throws Exception {
-    // Arrange
-    String namespace = "ns";
-    Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
-    String serializedMetadata = Serializer.serialize(metadataTable);
-    ObjectStorageWrapperResponse response =
-        new ObjectStorageWrapperResponse(serializedMetadata, "version1");
-    String expectedObjectKey =
-        ObjectStorageUtils.getObjectKey(
-            METADATA_NAMESPACE, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE);
-
-    when(wrapper.get(expectedObjectKey)).thenReturn(Optional.of(response));
-
-    // Act
-    admin.repairNamespace(namespace, Collections.emptyMap());
-
-    // Assert
-    verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
-
-    Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
-    assertThat(insertedMetadata).containsKey(namespace);
-    assertThat(insertedMetadata.get(namespace).getName()).isEqualTo(namespace);
-  }
-
-  @Test
   public void repairTable_ShouldUpsertTableMetadata() throws Exception {
     // Arrange
     String namespace = "ns";
@@ -596,13 +569,5 @@ public class ObjectStorageAdminTest {
         .containsEntry("c1", "int")
         .containsEntry("c2", "text")
         .containsEntry("c3", "bigint");
-  }
-
-  @Test
-  public void upgrade_ShouldDoNothing() {
-    // Arrange
-
-    // Act Assert
-    assertThatCode(() -> admin.upgrade(Collections.emptyMap())).doesNotThrowAnyException();
   }
 }

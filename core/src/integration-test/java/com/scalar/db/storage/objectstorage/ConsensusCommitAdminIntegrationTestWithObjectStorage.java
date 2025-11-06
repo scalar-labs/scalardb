@@ -1,7 +1,9 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
-import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
@@ -14,8 +16,16 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   }
 
   @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new ObjectStorageAdminTestUtils(getProperties(testName));
+  protected String getSystemNamespaceName(Properties properties) {
+    return ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties))
+        .getMetadataNamespace();
+  }
+
+  @Override
+  protected String getCoordinatorNamespaceName(String testName) {
+    return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
+        .getCoordinatorNamespace()
+        .orElse(Coordinator.NAMESPACE);
   }
 
   @Override
@@ -130,9 +140,4 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   @Override
   @Disabled("Object Storage does not support renaming tables")
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
-
-  @Override
-  @Disabled("The ScalarDB environment does not need to be upgraded with Object Storage")
-  public void
-      upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }

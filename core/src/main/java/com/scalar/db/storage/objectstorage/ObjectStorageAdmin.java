@@ -14,6 +14,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -230,29 +231,6 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void repairNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    try {
-      // Upsert the namespace metadata
-      Map<String, String> readVersionMap = new HashMap<>();
-      Map<String, ObjectStorageNamespaceMetadata> metadataTable =
-          getNamespaceMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            NAMESPACE_METADATA_TABLE,
-            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace)));
-      } else {
-        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
-        updateMetadataTable(
-            NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
-      }
-    } catch (Exception e) {
-      throw new ExecutionException(
-          String.format("Failed to repair the namespace %s", namespace), e);
-    }
-  }
-
-  @Override
   public void importTable(
       String namespace,
       String table,
@@ -346,15 +324,12 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
     try {
-      return getNamespaceMetadataTable().keySet();
+      Set<String> namespaceNames = new HashSet<>(getNamespaceMetadataTable().keySet());
+      namespaceNames.add(metadataNamespace);
+      return namespaceNames;
     } catch (Exception e) {
       throw new ExecutionException("Failed to get the namespace names", e);
     }
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    // Currently, nothing needs to be upgraded. Do nothing.
   }
 
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable()

@@ -28,7 +28,7 @@ public class BlobStorageConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
-    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(BlobStorageConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
     props.setProperty(
         BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
         ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);

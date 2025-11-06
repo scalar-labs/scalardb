@@ -22,24 +22,8 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
   }
 
   @Override
-  public void dropNamespacesTable() {
-    // Object Storage does not have a concept of table
-  }
-
-  @Override
   public void dropMetadataTable() {
     // Object Storage does not have a concept of table
-  }
-
-  @Override
-  public void truncateNamespacesTable() throws Exception {
-    try {
-      wrapper.delete(
-          ObjectStorageUtils.getObjectKey(
-              metadataNamespace, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE));
-    } catch (PreconditionFailedException e) {
-      // The namespace metadata table object does not exist, so do nothing
-    }
   }
 
   @Override
@@ -101,11 +85,6 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     } else {
       wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
     }
-  }
-
-  @Override
-  public void dropNamespace(String namespace) {
-    // Object Storage does not have a concept of namespace
   }
 
   @Override

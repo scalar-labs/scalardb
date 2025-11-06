@@ -37,7 +37,7 @@ public class ObjectStorageEnv {
 
     // Add testName as a metadata namespace suffix
     properties.setProperty(
-        DatabaseConfig.SYSTEM_NAMESPACE_NAME,
+        BlobStorageConfig.TABLE_METADATA_NAMESPACE,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
     return properties;
