@@ -145,7 +145,7 @@ public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIn
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
 
   @Override
-  @Disabled("ScalarDB environment does not need to be upgraded with Object Storage")
+  @Disabled("The ScalarDB environment does not need to be upgraded with Object Storage")
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }
