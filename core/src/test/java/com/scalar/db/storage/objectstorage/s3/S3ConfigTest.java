@@ -1,10 +1,9 @@
-package com.scalar.db.storage.objectstorage;
+package com.scalar.db.storage.objectstorage.s3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.objectstorage.s3.S3Config;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 

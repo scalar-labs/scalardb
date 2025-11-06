@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage.s3;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.storage.objectstorage.ConflictOccurredException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
@@ -14,7 +15,6 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -32,13 +32,18 @@ public class S3Wrapper implements ObjectStorageWrapper {
   private final String bucket;
 
   public S3Wrapper(S3Config config) {
-    S3ClientBuilder builder = S3Client.builder();
     this.client =
-        builder
+        S3Client.builder()
             .credentialsProvider(DefaultCredentialsProvider.builder().build())
             .region(Region.of(config.getRegion()))
             .forcePathStyle(true)
             .build();
+    this.bucket = config.getBucket();
+  }
+
+  @VisibleForTesting
+  S3Wrapper(S3Config config, S3Client client) {
+    this.client = client;
     this.bucket = config.getBucket();
   }
 
