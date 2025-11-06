@@ -27,8 +27,9 @@ public class ObjectStorageWrapperIntegrationTest {
   private static final String TEST_OBJECT1 = "test-object1";
   private static final String TEST_OBJECT2 = "test-object2";
   private static final String TEST_OBJECT3 = "test-object3";
+  private static final int BLOB_STORAGE_LIST_MAX_KEYS = 5000;
 
-  protected ObjectStorageWrapper wrapper;
+  private ObjectStorageWrapper wrapper;
 
   @BeforeAll
   public void beforeAll() throws ObjectStorageWrapperException {
@@ -251,8 +252,8 @@ public class ObjectStorageWrapperIntegrationTest {
   @Test
   public void getKeys_WithPrefixForTheNumberOfObjectsExceedingTheListLimit_ShouldReturnAllKeys()
       throws Exception {
-    String prefix = "large-prefix-";
-    int numberOfObjects = 5001;
+    String prefix = "prefix-";
+    int numberOfObjects = BLOB_STORAGE_LIST_MAX_KEYS + 1;
     try {
       // Arrange
       for (int i = 0; i < numberOfObjects; i++) {
@@ -301,6 +302,35 @@ public class ObjectStorageWrapperIntegrationTest {
     // Assert
     Set<String> keys = wrapper.getKeys(TEST_KEY_PREFIX);
     assertThat(keys).containsExactlyInAnyOrder(TEST_KEY1, TEST_KEY2, TEST_KEY3);
+  }
+
+  @Test
+  public void
+      deleteByPrefix_WithPrefixForTheNumberOfObjectsExceedingTheListLimit_ShouldDeleteAllObjects()
+          throws Exception {
+    String prefix = "prefix-";
+    int numberOfObjects = BLOB_STORAGE_LIST_MAX_KEYS + 1;
+    try {
+      // Arrange
+      for (int i = 0; i < numberOfObjects; i++) {
+        wrapper.insert(prefix + i, "object-" + i);
+      }
+
+      // Act
+      wrapper.deleteByPrefix(prefix);
+
+      // Assert
+      Set<String> keys = wrapper.getKeys(prefix);
+      assertThat(keys).isEmpty();
+    } finally {
+      for (int i = 0; i < numberOfObjects; i++) {
+        try {
+          wrapper.delete(prefix + i);
+        } catch (PreconditionFailedException e) {
+          // The object may have already been deleted, so do nothing
+        }
+      }
+    }
   }
 
   @Test
