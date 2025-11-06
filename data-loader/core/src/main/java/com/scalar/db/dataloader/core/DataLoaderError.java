@@ -208,8 +208,8 @@ public enum DataLoaderError implements ScalarDbError {
       Category.USER_ERROR, "0054", "Data chunk size must be greater than 0", "", ""),
   INVALID_TRANSACTION_SIZE(
       Category.USER_ERROR, "0055", "Transaction size must be greater than 0", "", ""),
-  INVALID_MAX_THREADS(
-      Category.USER_ERROR, "0056", "Number of max threads must be greater than 0", "", ""),
+  INVALID_THREAD_COUNT(
+      Category.USER_ERROR, "0056", "Number of threads must be greater than 0", "", ""),
   DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED(
       Category.USER_ERROR,
       "0057",

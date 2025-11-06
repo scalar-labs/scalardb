@@ -65,12 +65,12 @@ public abstract class ImportProcessor {
   public void process(int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
     ExecutorService dataChunkReaderExecutor = Executors.newSingleThreadExecutor();
     ExecutorService dataChunkProcessorExecutor =
-        Executors.newFixedThreadPool(params.getImportOptions().getMaxThreads());
+        Executors.newFixedThreadPool(params.getImportOptions().getThreadCount());
     BlockingQueue<ImportDataChunk> dataChunkQueue =
         new LinkedBlockingQueue<>(params.getImportOptions().getDataChunkQueueSize());
 
     // Semaphore controls concurrent task submissions, small buffer to be two times of threads
-    Semaphore taskSemaphore = new Semaphore(params.getImportOptions().getMaxThreads() * 2);
+    Semaphore taskSemaphore = new Semaphore(params.getImportOptions().getThreadCount() * 2);
     // Phaser tracks task completion (start with 1 for the main thread)
     Phaser phaser = new Phaser(1);
 

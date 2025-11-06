@@ -61,7 +61,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
     validatePositiveValue(
         spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
-    validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+    validatePositiveValue(spec.commandLine(), threadCount, DataLoaderError.INVALID_THREAD_COUNT);
     validatePositiveValue(
         spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
@@ -282,10 +282,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    */
   private void validateDeprecatedOptions() {
     validateDeprecatedOptionPair(
-        spec.commandLine(),
-        DEPRECATED_THREADS_OPTION,
-        MAX_THREADS_OPTION,
-        MAX_THREADS_OPTION_SHORT);
+        spec.commandLine(), DEPRECATED_MAX_THREADS_OPTION, THREADS_OPTION, null);
   }
 
   /**
@@ -308,7 +305,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .namespace(namespace)
             .dataChunkSize(dataChunkSize)
             .transactionBatchSize(transactionSize)
-            .maxThreads(maxThreads)
+            .threadCount(threadCount)
             .dataChunkQueueSize(dataChunkQueueSize)
             .tableName(tableName);
 

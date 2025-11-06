@@ -170,9 +170,9 @@ class CommandLineInputUtilsTest {
             CommandLine.ParameterException.class,
             () ->
                 CommandLineInputUtils.validatePositiveValue(
-                    commandLine, negativeValue, DataLoaderError.INVALID_MAX_THREADS));
+                    commandLine, negativeValue, DataLoaderError.INVALID_THREAD_COUNT));
     assertTrue(
-        exception1.getMessage().contains(DataLoaderError.INVALID_MAX_THREADS.buildMessage()));
+        exception1.getMessage().contains(DataLoaderError.INVALID_THREAD_COUNT.buildMessage()));
 
     // Act & Assert for DATA_LOADER_INVALID_DATA_CHUNK_QUEUE_SIZE
     CommandLine.ParameterException exception2 =

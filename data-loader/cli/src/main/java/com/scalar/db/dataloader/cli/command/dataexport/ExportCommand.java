@@ -61,7 +61,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
-      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      validatePositiveValue(spec.commandLine(), threadCount, DataLoaderError.INVALID_THREAD_COUNT);
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
@@ -126,6 +126,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         DEPRECATED_END_EXCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(), DEPRECATED_MAX_THREADS_OPTION, THREADS_OPTION, null);
   }
 
   private String getScalarDbPropertiesFilePath() {
@@ -170,7 +172,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             .includeTransactionMetadata(includeTransactionMetadata)
             .delimiter(delimiter)
             .limit(limit)
-            .maxThreadCount(maxThreads)
+            .maxThreadCount(threadCount)
             .dataChunkSize(dataChunkSize)
             .prettyPrintJson(prettyPrintJson)
             .scanRange(scanRange);

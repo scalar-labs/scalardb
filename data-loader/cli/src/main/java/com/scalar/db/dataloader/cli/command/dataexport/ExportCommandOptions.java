@@ -16,6 +16,8 @@ public class ExportCommandOptions {
   public static final String END_INCLUSIVE_OPTION = "--end-inclusive";
   public static final String END_INCLUSIVE_OPTION_SHORT = "-ei";
   public static final String DEPRECATED_END_EXCLUSIVE_OPTION = "--end-exclusive";
+  public static final String THREADS_OPTION = "--threads";
+  public static final String DEPRECATED_MAX_THREADS_OPTION = "--max-threads";
 
   @CommandLine.Option(
       names = {"--config", "-c"},
@@ -73,11 +75,20 @@ public class ExportCommandOptions {
   protected boolean includeTransactionMetadata;
 
   @CommandLine.Option(
-      names = {"--max-threads", "-mt"},
-      paramLabel = "<MAX_THREADS>",
+      names = {"--threads"},
+      paramLabel = "<THREADS>",
       description =
-          "Maximum number of threads to use for parallel processing (default: number of available processors)")
-  protected int maxThreads;
+          "Number of threads to use for parallel processing (default: number of available processors)")
+  protected int threadCount;
+
+  // Deprecated option - kept for backward compatibility
+  @CommandLine.Option(
+      names = {DEPRECATED_MAX_THREADS_OPTION, "-mt"},
+      paramLabel = "<MAX_THREADS>",
+      description = "Deprecated: Use --threads instead",
+      hidden = true)
+  @Deprecated
+  protected Integer maxThreadsDeprecated;
 
   @CommandLine.Option(
       names = {"--start-key", "-sk"},
@@ -183,6 +194,11 @@ public class ExportCommandOptions {
     // If the deprecated option is set, use its value (inverted logic)
     if (endExclusiveDeprecated != null) {
       scanEndInclusive = !endExclusiveDeprecated;
+    }
+
+    // If the deprecated option is set, use its value
+    if (maxThreadsDeprecated != null) {
+      threadCount = maxThreadsDeprecated;
     }
   }
 }

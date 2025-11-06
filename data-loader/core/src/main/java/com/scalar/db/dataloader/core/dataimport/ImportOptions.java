@@ -34,7 +34,7 @@ public class ImportOptions {
   private final ControlFile controlFile;
   private final String namespace;
   private final String tableName;
-  private final int maxThreads;
+  private final int threadCount;
   private final String customHeaderRow;
   private final int dataChunkQueueSize;
 }

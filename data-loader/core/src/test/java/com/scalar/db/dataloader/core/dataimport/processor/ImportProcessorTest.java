@@ -76,7 +76,7 @@ class ImportProcessorTest {
     tableMetadataByTableName = new HashMap<>();
     tableMetadataByTableName.put("namespace.table", UnitTestUtils.createTestTableMetadata());
 
-    when(importOptions.getMaxThreads()).thenReturn(2);
+    when(importOptions.getThreadCount()).thenReturn(2);
     when(importOptions.getDataChunkQueueSize()).thenReturn(10);
     when(params.getImportOptions()).thenReturn(importOptions);
   }
@@ -147,8 +147,8 @@ class ImportProcessorTest {
   @Test
   void process_withMultipleDataChunks_shouldUseThreadPool() {
     // Arrange
-    final int maxThreads = 4;
-    when(importOptions.getMaxThreads()).thenReturn(maxThreads);
+    final int threadCount = 4;
+    when(importOptions.getThreadCount()).thenReturn(threadCount);
     when(params.getDao()).thenReturn(dao);
     when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
@@ -173,10 +173,10 @@ class ImportProcessorTest {
     processor.process(2, 1, reader);
 
     // Assert
-    // Verify that multiple threads were used but not more than maxThreads
+    // Verify that multiple threads were used but not more than threadCount
     assertTrue(processor.getMaxConcurrentThreads().get() > 1, "Should use multiple threads");
     assertTrue(
-        processor.getMaxConcurrentThreads().get() <= maxThreads, "Should not exceed max threads");
+        processor.getMaxConcurrentThreads().get() <= threadCount, "Should not exceed max threads");
 
     // Verify that all data chunks were processed
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -202,8 +202,8 @@ class ImportProcessorTest {
   @Test
   void process_withLargeNumberOfTasks_shouldWaitForAllTasksToComplete() {
     // Arrange
-    final int maxThreads = 2;
-    when(importOptions.getMaxThreads()).thenReturn(maxThreads);
+    final int threadCount = 2;
+    when(importOptions.getThreadCount()).thenReturn(threadCount);
     when(params.getDao()).thenReturn(dao);
     when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);

@@ -44,7 +44,7 @@ class ExportCommandTest {
   void call_withBlankScalarDBConfigurationFile_shouldThrowException() {
     exportCommand.configFilePath = "";
     exportCommand.dataChunkSize = 100;
-    exportCommand.maxThreads = 4;
+    exportCommand.threadCount = 4;
     exportCommand.namespace = "scalar";
     exportCommand.table = "asset";
     exportCommand.outputDirectory = "";
@@ -62,7 +62,7 @@ class ExportCommandTest {
   void call_withInvalidScalarDBConfigurationFile_shouldReturnOne() throws Exception {
     exportCommand.configFilePath = "scalardb.properties";
     exportCommand.dataChunkSize = 100;
-    exportCommand.maxThreads = 4;
+    exportCommand.threadCount = 4;
     exportCommand.namespace = "scalar";
     exportCommand.table = "asset";
     exportCommand.outputDirectory = "";
@@ -189,5 +189,95 @@ class ExportCommandTest {
     // Verify the value was applied with inverted logic
     // end-exclusive=false should become end-inclusive=true
     assertEquals(true, command.scanEndInclusive);
+  }
+
+  @Test
+  void call_withBothThreadsAndMaxThreads_shouldThrowException() {
+    assertBothDeprecatedAndNewOptionsThrowException(
+        "--max-threads=8", "--threads=16", "--max-threads", "--threads");
+  }
+
+  @Test
+  void call_withOnlyDeprecatedMaxThreads_shouldApplyValue() {
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--max-threads",
+      "12"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(12, command.maxThreadsDeprecated);
+
+    // Apply deprecated options
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied to threadCount
+    assertEquals(12, command.threadCount);
+  }
+
+  @Test
+  void call_withOnlyThreads_shouldUseValue() {
+    // Simulate command line parsing with only new --threads option
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--threads",
+      "20"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the value was set to threadCount
+    assertEquals(20, command.threadCount);
+
+    // Verify the deprecated value was not set
+    assertEquals(null, command.maxThreadsDeprecated);
+  }
+
+  @Test
+  void call_withDeprecatedShortOption_shouldApplyValue() {
+    // Simulate command line parsing with deprecated short option -mt
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "-mt",
+      "15"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(15, command.maxThreadsDeprecated);
+
+    // Apply deprecated options
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied to threadCount
+    assertEquals(15, command.threadCount);
   }
 }
