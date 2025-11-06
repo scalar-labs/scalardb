@@ -15,8 +15,8 @@ import java.util.Set;
 
 @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 public class NamespaceMetadataService {
-  @VisibleForTesting public static final String NAMESPACES_TABLE = "namespaces";
-  @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
+  @VisibleForTesting public static final String TABLE_NAME = "namespaces";
+  @VisibleForTesting static final String COL_NAMESPACE_NAME = "namespace_name";
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
@@ -27,21 +27,21 @@ public class NamespaceMetadataService {
   }
 
   void createNamespacesTableIfNotExists(Connection connection) throws SQLException {
-    if (tableExistsInternal(connection, metadataSchema, NAMESPACES_TABLE)) {
+    if (tableExistsInternal(connection, metadataSchema, TABLE_NAME)) {
       return;
     }
 
     createSchemaIfNotExists(connection, metadataSchema);
     String createTableStatement =
         "CREATE TABLE "
-            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+            + encloseFullTableName(metadataSchema, TABLE_NAME)
             + "("
-            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + enclose(COL_NAMESPACE_NAME)
             + " "
             + getTextType(128, true)
             + ", "
             + "PRIMARY KEY ("
-            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + enclose(COL_NAMESPACE_NAME)
             + "))";
     createTable(connection, createTableStatement, true);
 
@@ -51,21 +51,20 @@ public class NamespaceMetadataService {
 
   void deleteNamespacesTableIfEmpty(Connection connection) throws SQLException {
     if (isNamespacesTableEmpty(connection)) {
-      deleteTable(connection, encloseFullTableName(metadataSchema, NAMESPACES_TABLE));
+      deleteTable(connection, encloseFullTableName(metadataSchema, TABLE_NAME));
       deleteMetadataSchema(connection);
     }
   }
 
   private boolean isNamespacesTableEmpty(Connection connection) throws SQLException {
-    String selectAllTables =
-        "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
+    String selectAllTables = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
 
     Set<String> namespaces = new HashSet<>();
     try (Statement statement = connection.createStatement();
         ResultSet results = statement.executeQuery(selectAllTables)) {
       int count = 0;
       while (results.next()) {
-        namespaces.add(results.getString(NAMESPACE_COL_NAMESPACE_NAME));
+        namespaces.add(results.getString(COL_NAMESPACE_NAME));
         // Only need to fetch the first two rows
         if (count++ == 2) {
           break;
@@ -83,7 +82,7 @@ public class NamespaceMetadataService {
 
   void insertIntoNamespacesTable(Connection connection, String namespaceName) throws SQLException {
     String insertStatement =
-        "INSERT INTO " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE) + " VALUES (?)";
+        "INSERT INTO " + encloseFullTableName(metadataSchema, TABLE_NAME) + " VALUES (?)";
     try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement)) {
       preparedStatement.setString(1, namespaceName);
       preparedStatement.execute();
@@ -104,9 +103,9 @@ public class NamespaceMetadataService {
   void deleteFromNamespacesTable(Connection connection, String namespaceName) throws SQLException {
     String deleteStatement =
         "DELETE FROM "
-            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+            + encloseFullTableName(metadataSchema, TABLE_NAME)
             + " WHERE "
-            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + enclose(COL_NAMESPACE_NAME)
             + " = ?";
     try (PreparedStatement preparedStatement = connection.prepareStatement(deleteStatement)) {
       preparedStatement.setString(1, namespaceName);
@@ -117,9 +116,9 @@ public class NamespaceMetadataService {
   boolean namespaceExists(Connection connection, String namespace) throws SQLException {
     String selectQuery =
         "SELECT 1 FROM "
-            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
+            + encloseFullTableName(metadataSchema, TABLE_NAME)
             + " WHERE "
-            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
+            + enclose(COL_NAMESPACE_NAME)
             + " = ?";
     try {
       try (PreparedStatement statement = connection.prepareStatement(selectQuery)) {
@@ -140,13 +139,12 @@ public class NamespaceMetadataService {
 
   Set<String> getNamespaceNames(Connection connection) throws SQLException {
     try {
-      String selectQuery =
-          "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
+      String selectQuery = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
       Set<String> namespaces = new HashSet<>();
       try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
           ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
-          namespaces.add(resultSet.getString(NAMESPACE_COL_NAMESPACE_NAME));
+          namespaces.add(resultSet.getString(COL_NAMESPACE_NAME));
         }
         return namespaces;
       }

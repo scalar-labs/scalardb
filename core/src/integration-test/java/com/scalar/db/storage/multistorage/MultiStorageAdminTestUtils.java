@@ -63,7 +63,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     execute(
         "DROP TABLE "
             + rdbEngine.encloseFullTableName(
-                jdbcMetadataSchema, NamespaceMetadataService.NAMESPACES_TABLE));
+                jdbcMetadataSchema, NamespaceMetadataService.TABLE_NAME));
   }
 
   @Override
@@ -73,8 +73,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     execute(
         "DROP TABLE "
-            + rdbEngine.encloseFullTableName(
-                jdbcMetadataSchema, TableMetadataService.METADATA_TABLE));
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME));
   }
 
   @Override
@@ -89,7 +88,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
     // for JDBC
     String truncateTableStatement =
-        rdbEngine.truncateTableSql(jdbcMetadataSchema, NamespaceMetadataService.NAMESPACES_TABLE);
+        rdbEngine.truncateTableSql(jdbcMetadataSchema, NamespaceMetadataService.TABLE_NAME);
     execute(truncateTableStatement);
   }
 
@@ -100,8 +99,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String truncateTableStatement =
         "TRUNCATE TABLE "
-            + rdbEngine.encloseFullTableName(
-                jdbcMetadataSchema, TableMetadataService.METADATA_TABLE);
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME);
     execute(truncateTableStatement);
   }
 
@@ -113,8 +111,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String insertCorruptedMetadataStatement =
         "INSERT INTO "
-            + rdbEngine.encloseFullTableName(
-                jdbcMetadataSchema, TableMetadataService.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME)
             + " VALUES ('"
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
@@ -128,10 +125,9 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String deleteMetadataStatement =
         "DELETE FROM "
-            + rdbEngine.encloseFullTableName(
-                jdbcMetadataSchema, TableMetadataService.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME)
             + " WHERE "
-            + rdbEngine.enclose(TableMetadataService.METADATA_COL_FULL_TABLE_NAME)
+            + rdbEngine.enclose(TableMetadataService.COL_FULL_TABLE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =

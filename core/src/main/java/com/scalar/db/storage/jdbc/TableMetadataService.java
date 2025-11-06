@@ -21,14 +21,14 @@ import javax.annotation.Nullable;
 
 @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
 public class TableMetadataService {
-  @VisibleForTesting public static final String METADATA_TABLE = "metadata";
-  @VisibleForTesting public static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
-  @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
-  @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
-  @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
-  @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
-  @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
-  @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
+  @VisibleForTesting public static final String TABLE_NAME = "metadata";
+  @VisibleForTesting public static final String COL_FULL_TABLE_NAME = "full_table_name";
+  @VisibleForTesting static final String COL_COLUMN_NAME = "column_name";
+  @VisibleForTesting static final String COL_DATA_TYPE = "data_type";
+  @VisibleForTesting static final String COL_KEY_TYPE = "key_type";
+  @VisibleForTesting static final String COL_CLUSTERING_ORDER = "clustering_order";
+  @VisibleForTesting static final String COL_INDEXED = "indexed";
+  @VisibleForTesting static final String COL_ORDINAL_POSITION = "ordinal_position";
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
@@ -66,38 +66,38 @@ public class TableMetadataService {
   void createTableMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE)
+            + encloseFullTableName(metadataSchema, TABLE_NAME)
             + "("
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + " "
             + getTextType(128, true)
             + ","
-            + enclose(METADATA_COL_COLUMN_NAME)
+            + enclose(COL_COLUMN_NAME)
             + " "
             + getTextType(128, true)
             + ","
-            + enclose(METADATA_COL_DATA_TYPE)
+            + enclose(COL_DATA_TYPE)
             + " "
             + getTextType(20, false)
             + " NOT NULL,"
-            + enclose(METADATA_COL_KEY_TYPE)
+            + enclose(COL_KEY_TYPE)
             + " "
             + getTextType(20, false)
             + ","
-            + enclose(METADATA_COL_CLUSTERING_ORDER)
+            + enclose(COL_CLUSTERING_ORDER)
             + " "
             + getTextType(10, false)
             + ","
-            + enclose(METADATA_COL_INDEXED)
+            + enclose(COL_INDEXED)
             + " "
             + getBooleanType()
             + " NOT NULL,"
-            + enclose(METADATA_COL_ORDINAL_POSITION)
+            + enclose(COL_ORDINAL_POSITION)
             + " INTEGER NOT NULL,"
             + "PRIMARY KEY ("
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + ", "
-            + enclose(METADATA_COL_COLUMN_NAME)
+            + enclose(COL_COLUMN_NAME)
             + "))";
 
     createTable(connection, createTableStatement, true);
@@ -144,7 +144,7 @@ public class TableMetadataService {
 
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
-        encloseFullTableName(metadataSchema, METADATA_TABLE),
+        encloseFullTableName(metadataSchema, TABLE_NAME),
         getFullTableName(schema, table),
         columnName,
         dataType.toString(),
@@ -172,9 +172,9 @@ public class TableMetadataService {
 
   private String getDeleteTableMetadataStatement(String schema, String table) {
     return "DELETE FROM "
-        + encloseFullTableName(metadataSchema, METADATA_TABLE)
+        + encloseFullTableName(metadataSchema, TABLE_NAME)
         + " WHERE "
-        + enclose(METADATA_COL_FULL_TABLE_NAME)
+        + enclose(COL_FULL_TABLE_NAME)
         + " = '"
         + getFullTableName(schema, table)
         + "'";
@@ -182,16 +182,16 @@ public class TableMetadataService {
 
   private void deleteMetadataTableIfEmpty(Connection connection) throws SQLException {
     if (isMetadataTableEmpty(connection)) {
-      deleteTable(connection, encloseFullTableName(metadataSchema, METADATA_TABLE));
+      deleteTable(connection, encloseFullTableName(metadataSchema, TABLE_NAME));
     }
   }
 
   private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
     String selectAllTables =
         "SELECT DISTINCT "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + " FROM "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE);
+            + encloseFullTableName(metadataSchema, TABLE_NAME);
     try (Statement statement = connection.createStatement();
         ResultSet results = statement.executeQuery(selectAllTables)) {
       return !results.next();
@@ -212,16 +212,16 @@ public class TableMetadataService {
           while (resultSet.next()) {
             tableExists = true;
 
-            String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
-            DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
+            String columnName = resultSet.getString(COL_COLUMN_NAME);
+            DataType dataType = DataType.valueOf(resultSet.getString(COL_DATA_TYPE));
             builder.addColumn(columnName, dataType);
 
-            boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
+            boolean indexed = resultSet.getBoolean(COL_INDEXED);
             if (indexed) {
               builder.addSecondaryIndex(columnName);
             }
 
-            String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
+            String keyType = resultSet.getString(COL_KEY_TYPE);
             if (keyType == null) {
               continue;
             }
@@ -232,7 +232,7 @@ public class TableMetadataService {
                 break;
               case CLUSTERING:
                 Scan.Ordering.Order clusteringOrder =
-                    Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
+                    Scan.Ordering.Order.valueOf(resultSet.getString(COL_CLUSTERING_ORDER));
                 builder.addClusteringKey(columnName, clusteringOrder);
                 break;
               default:
@@ -259,21 +259,21 @@ public class TableMetadataService {
 
   private String getSelectColumnsStatement() {
     return "SELECT "
-        + enclose(METADATA_COL_COLUMN_NAME)
+        + enclose(COL_COLUMN_NAME)
         + ","
-        + enclose(METADATA_COL_DATA_TYPE)
+        + enclose(COL_DATA_TYPE)
         + ","
-        + enclose(METADATA_COL_KEY_TYPE)
+        + enclose(COL_KEY_TYPE)
         + ","
-        + enclose(METADATA_COL_CLUSTERING_ORDER)
+        + enclose(COL_CLUSTERING_ORDER)
         + ","
-        + enclose(METADATA_COL_INDEXED)
+        + enclose(COL_INDEXED)
         + " FROM "
-        + encloseFullTableName(metadataSchema, METADATA_TABLE)
+        + encloseFullTableName(metadataSchema, TABLE_NAME)
         + " WHERE "
-        + enclose(METADATA_COL_FULL_TABLE_NAME)
+        + enclose(COL_FULL_TABLE_NAME)
         + "=? ORDER BY "
-        + enclose(METADATA_COL_ORDINAL_POSITION)
+        + enclose(COL_ORDINAL_POSITION)
         + " ASC";
   }
 
@@ -282,17 +282,17 @@ public class TableMetadataService {
       throws SQLException {
     String updateStatement =
         "UPDATE "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE)
+            + encloseFullTableName(metadataSchema, TABLE_NAME)
             + " SET "
-            + enclose(METADATA_COL_INDEXED)
+            + enclose(COL_INDEXED)
             + "="
             + computeBooleanValue(indexed)
             + " WHERE "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + "='"
             + getFullTableName(schema, table)
             + "' AND "
-            + enclose(METADATA_COL_COLUMN_NAME)
+            + enclose(COL_COLUMN_NAME)
             + "='"
             + columnName
             + "'";
@@ -302,11 +302,11 @@ public class TableMetadataService {
   Set<String> getNamespaceTableNames(Connection connection, String namespace) throws SQLException {
     String selectTablesOfNamespaceStatement =
         "SELECT DISTINCT "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + " FROM "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE)
+            + encloseFullTableName(metadataSchema, TABLE_NAME)
             + " WHERE "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + " LIKE ?";
     try {
       try (PreparedStatement preparedStatement =
@@ -316,8 +316,7 @@ public class TableMetadataService {
         try (ResultSet results = preparedStatement.executeQuery()) {
           Set<String> tableNames = new HashSet<>();
           while (results.next()) {
-            String tableName =
-                results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
+            String tableName = results.getString(COL_FULL_TABLE_NAME).substring(prefix.length());
             tableNames.add(tableName);
           }
           return tableNames;
@@ -335,20 +334,20 @@ public class TableMetadataService {
   }
 
   Set<String> getNamespaceNamesOfExistingTables(Connection connection) throws SQLException {
-    if (!tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
+    if (!tableExistsInternal(connection, metadataSchema, TABLE_NAME)) {
       return Collections.emptySet();
     }
 
     String selectAllTableNames =
         "SELECT DISTINCT "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + enclose(COL_FULL_TABLE_NAME)
             + " FROM "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE);
+            + encloseFullTableName(metadataSchema, TABLE_NAME);
     try (Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
       Set<String> namespaceOfExistingTables = new HashSet<>();
       while (rs.next()) {
-        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
+        String fullTableName = rs.getString(COL_FULL_TABLE_NAME);
         String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
         namespaceOfExistingTables.add(namespaceName);
       }

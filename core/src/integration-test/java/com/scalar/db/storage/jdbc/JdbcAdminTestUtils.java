@@ -31,26 +31,25 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void dropNamespacesTable() throws Exception {
     execute(
         "DROP TABLE "
-            + rdbEngine.encloseFullTableName(
-                metadataSchema, NamespaceMetadataService.NAMESPACES_TABLE));
+            + rdbEngine.encloseFullTableName(metadataSchema, NamespaceMetadataService.TABLE_NAME));
   }
 
   @Override
   public void dropMetadataTable() throws Exception {
-    dropTable(metadataSchema, TableMetadataService.METADATA_TABLE);
+    dropTable(metadataSchema, TableMetadataService.TABLE_NAME);
   }
 
   @Override
   public void truncateNamespacesTable() throws Exception {
     String truncateTableStatement =
-        rdbEngine.truncateTableSql(metadataSchema, NamespaceMetadataService.NAMESPACES_TABLE);
+        rdbEngine.truncateTableSql(metadataSchema, NamespaceMetadataService.TABLE_NAME);
     execute(truncateTableStatement);
   }
 
   @Override
   public void truncateMetadataTable() throws Exception {
     String truncateTableStatement =
-        rdbEngine.truncateTableSql(metadataSchema, TableMetadataService.METADATA_TABLE);
+        rdbEngine.truncateTableSql(metadataSchema, TableMetadataService.TABLE_NAME);
     execute(truncateTableStatement);
   }
 
@@ -59,7 +58,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void corruptMetadata(String namespace, String table) throws Exception {
     String insertCorruptedMetadataStatement =
         "INSERT INTO "
-            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " VALUES ('"
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
@@ -70,9 +69,9 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void deleteMetadata(String namespace, String table) throws Exception {
     String deleteMetadataStatement =
         "DELETE FROM "
-            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " WHERE "
-            + rdbEngine.enclose(TableMetadataService.METADATA_COL_FULL_TABLE_NAME)
+            + rdbEngine.enclose(TableMetadataService.COL_FULL_TABLE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =

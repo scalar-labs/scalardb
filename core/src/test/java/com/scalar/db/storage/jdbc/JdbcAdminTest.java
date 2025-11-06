@@ -4358,7 +4358,7 @@ public class JdbcAdminTest {
         .prepareStatement(
             "INSERT INTO "
                 + rdbEngineStrategy.encloseFullTableName(
-                    METADATA_SCHEMA, NamespaceMetadataService.NAMESPACES_TABLE)
+                    METADATA_SCHEMA, NamespaceMetadataService.TABLE_NAME)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();
@@ -4383,7 +4383,7 @@ public class JdbcAdminTest {
         .prepareStatement(
             "INSERT INTO "
                 + rdbEngineStrategy.encloseFullTableName(
-                    METADATA_SCHEMA, NamespaceMetadataService.NAMESPACES_TABLE)
+                    METADATA_SCHEMA, NamespaceMetadataService.TABLE_NAME)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();
@@ -4602,7 +4602,7 @@ public class JdbcAdminTest {
         .prepareStatement(
             "INSERT INTO "
                 + rdbEngineStrategy.encloseFullTableName(
-                    METADATA_SCHEMA, NamespaceMetadataService.NAMESPACES_TABLE)
+                    METADATA_SCHEMA, NamespaceMetadataService.TABLE_NAME)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
     verify(insertStatement).execute();
@@ -4824,16 +4824,12 @@ public class JdbcAdminTest {
       }
       SelectAllFromMetadataTableResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(TableMetadataService.METADATA_COL_COLUMN_NAME))
-          .thenReturn(currentRow.columnName);
-      when(mock.getString(TableMetadataService.METADATA_COL_DATA_TYPE))
-          .thenReturn(currentRow.dataType);
-      when(mock.getString(TableMetadataService.METADATA_COL_KEY_TYPE))
-          .thenReturn(currentRow.keyType);
-      when(mock.getString(TableMetadataService.METADATA_COL_CLUSTERING_ORDER))
+      when(mock.getString(TableMetadataService.COL_COLUMN_NAME)).thenReturn(currentRow.columnName);
+      when(mock.getString(TableMetadataService.COL_DATA_TYPE)).thenReturn(currentRow.dataType);
+      when(mock.getString(TableMetadataService.COL_KEY_TYPE)).thenReturn(currentRow.keyType);
+      when(mock.getString(TableMetadataService.COL_CLUSTERING_ORDER))
           .thenReturn(currentRow.clusteringOrder);
-      when(mock.getBoolean(TableMetadataService.METADATA_COL_INDEXED))
-          .thenReturn(currentRow.indexed);
+      when(mock.getBoolean(TableMetadataService.COL_INDEXED)).thenReturn(currentRow.indexed);
       return true;
     }
 
@@ -4881,7 +4877,7 @@ public class JdbcAdminTest {
       }
       SelectFullTableNameFromMetadataTableResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(TableMetadataService.METADATA_COL_FULL_TABLE_NAME))
+      when(mock.getString(TableMetadataService.COL_FULL_TABLE_NAME))
           .thenReturn(currentRow.fullTableName);
       return true;
     }
@@ -4917,7 +4913,7 @@ public class JdbcAdminTest {
       }
       SelectNamespaceNameFromNamespaceTableResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(NamespaceMetadataService.NAMESPACE_COL_NAMESPACE_NAME))
+      when(mock.getString(NamespaceMetadataService.COL_NAMESPACE_NAME))
           .thenReturn(currentRow.namespaceName);
       return true;
     }
