@@ -30,7 +30,7 @@ public class PartitionIdentifier {
 
   @Override
   public int hashCode() {
-    return (namespaceName + tableName + partitionName).hashCode();
+    return java.util.Objects.hash(namespaceName, tableName, partitionName);
   }
 
   @Override

@@ -898,7 +898,7 @@ public enum CoreError implements ScalarDbError {
   OBJECT_STORAGE_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
       Category.USER_ERROR,
       "0257",
-      "The value of the column %s in the primary key contains an illegal character. ",
+      "The value of the column %s in the primary key contains an illegal character.",
       "",
       ""),
   OBJECT_STORAGE_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BLOB_TYPE(

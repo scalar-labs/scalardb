@@ -3,7 +3,6 @@ package com.scalar.db.storage.objectstorage;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
@@ -50,17 +49,6 @@ public class ObjectStorageMutationTest {
         .build();
   }
 
-  private Delete prepareDelete() {
-    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
-    return Delete.newBuilder()
-        .namespace(ANY_NAMESPACE_NAME)
-        .table(ANY_TABLE_NAME)
-        .partitionKey(partitionKey)
-        .clusteringKey(clusteringKey)
-        .build();
-  }
-
   @Test
   public void makeRecord_PutGiven_ShouldReturnWithValues() {
     // Arrange
@@ -97,18 +85,5 @@ public class ObjectStorageMutationTest {
     Assertions.assertThat(actual.getValues().containsKey(ANY_NAME_3)).isTrue();
     Assertions.assertThat(actual.getValues().get(ANY_NAME_3)).isNull();
     Assertions.assertThat(actual.getValues().get(ANY_NAME_4)).isEqualTo(ANY_INT_2);
-  }
-
-  @Test
-  public void makeRecord_DeleteGiven_ShouldReturnEmpty() {
-    // Arrange
-    Delete delete = prepareDelete();
-    ObjectStorageMutation objectStorageMutation = new ObjectStorageMutation(delete, metadata);
-
-    // Act
-    ObjectStorageRecord actual = objectStorageMutation.makeRecord();
-
-    // Assert
-    assertThat(actual.getId()).isEqualTo("");
   }
 }

@@ -7,6 +7,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -22,9 +23,9 @@ public class ObjectStorageMutation extends ObjectStorageOperation {
     Mutation mutation = (Mutation) getOperation();
 
     if (mutation instanceof Delete) {
-      return new ObjectStorageRecord();
+      throw new IllegalStateException("Delete mutation should not make a new record.");
     }
-    Put put = (Put) mutation;
+    Put put = (Put) getOperation();
 
     return ObjectStorageRecord.newBuilder()
         .id(getRecordId())
@@ -40,13 +41,18 @@ public class ObjectStorageMutation extends ObjectStorageOperation {
     Mutation mutation = (Mutation) getOperation();
 
     if (mutation instanceof Delete) {
-      return new ObjectStorageRecord();
+      throw new IllegalStateException("Delete mutation should not make a new record.");
     }
     Put put = (Put) mutation;
 
-    ObjectStorageRecord newRecord = new ObjectStorageRecord(existingRecord);
-    toMapForPut(put).forEach((k, v) -> newRecord.getValues().put(k, v));
-    return newRecord;
+    Map<String, Object> newValues = new HashMap<>(existingRecord.getValues());
+    newValues.putAll(toMapForPut(put));
+    return ObjectStorageRecord.newBuilder()
+        .id(existingRecord.getId())
+        .partitionKey(existingRecord.getPartitionKey())
+        .clusteringKey(existingRecord.getClusteringKey())
+        .values(newValues)
+        .build();
   }
 
   private Map<String, Object> toMap(Collection<Column<?>> columns) {

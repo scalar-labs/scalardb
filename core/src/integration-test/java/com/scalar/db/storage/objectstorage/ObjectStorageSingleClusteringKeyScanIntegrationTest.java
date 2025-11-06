@@ -1,7 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
-import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,21 +24,5 @@ public class ObjectStorageSingleClusteringKeyScanIntegrationTest
       clusteringKeyTypes.add(dataType);
     }
     return clusteringKeyTypes;
-  }
-
-  @Override
-  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
-    if (dataType == DataType.TEXT) {
-      return ObjectStorageTestUtils.getMinTextValue(columnName);
-    }
-    return super.getColumnWithMinValue(columnName, dataType);
-  }
-
-  @Override
-  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
-    if (dataType == DataType.TEXT) {
-      return ObjectStorageTestUtils.getMaxTextValue(columnName);
-    }
-    return super.getColumnWithMaxValue(columnName, dataType);
   }
 }

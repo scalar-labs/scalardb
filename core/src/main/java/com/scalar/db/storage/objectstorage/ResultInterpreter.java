@@ -5,6 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.io.Column;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +19,7 @@ public class ResultInterpreter {
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ResultInterpreter(List<String> projections, TableMetadata metadata) {
-    this.projections = Objects.requireNonNull(projections);
+    this.projections = Collections.unmodifiableList(Objects.requireNonNull(projections));
     this.metadata = Objects.requireNonNull(metadata);
   }
 

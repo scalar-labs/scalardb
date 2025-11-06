@@ -79,13 +79,15 @@ public class ObjectStorage extends AbstractDistributedStorage {
             new FilterableScanner(
                 get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
       }
-      Optional<Result> ret = scanner.one();
-      if (!scanner.one().isPresent()) {
-        return ret;
-      } else {
+      Optional<Result> result = scanner.one();
+      if (!result.isPresent()) {
+        return Optional.empty();
+      }
+      if (scanner.one().isPresent()) {
         throw new IllegalArgumentException(
             CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
       }
+      return result;
     } finally {
       if (scanner != null) {
         try {
