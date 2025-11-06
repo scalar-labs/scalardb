@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,7 +55,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
-    //    CommandLineInputUtils.isSingleCrudOperation(configFilePath);
+    validateDeprecatedOptions();
+    applyDeprecatedOptions();
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
@@ -274,6 +276,19 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       throw new ParameterException(
           spec.commandLine(), DataLoaderError.INVALID_CONTROL_FILE.buildMessage(controlFilePath));
     }
+  }
+
+  /**
+   * Validates that deprecated and new options are not both specified.
+   *
+   * @throws ParameterException if both old and new options are specified
+   */
+  private void validateDeprecatedOptions() {
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
   }
 
   /**

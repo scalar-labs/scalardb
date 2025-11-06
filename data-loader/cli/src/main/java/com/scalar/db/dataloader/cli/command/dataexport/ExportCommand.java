@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -51,6 +52,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    validateDeprecatedOptions();
+    applyDeprecatedOptions();
     String scalarDbPropertiesFilePath = getScalarDbPropertiesFilePath();
 
     try {
@@ -105,6 +108,24 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       return 1;
     }
     return 0;
+  }
+
+  /**
+   * Validates that deprecated and new options are not both specified.
+   *
+   * @throws CommandLine.ParameterException if both old and new options are specified
+   */
+  private void validateDeprecatedOptions() {
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_START_EXCLUSIVE_OPTION,
+        START_INCLUSIVE_OPTION,
+        START_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_END_EXCLUSIVE_OPTION,
+        END_INCLUSIVE_OPTION,
+        END_INCLUSIVE_OPTION_SHORT);
   }
 
   private String getScalarDbPropertiesFilePath() {
