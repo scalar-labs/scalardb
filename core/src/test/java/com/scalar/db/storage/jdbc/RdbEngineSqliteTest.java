@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -121,12 +123,26 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isValidNamespaceOrTableName_True() {
-    assertTrue(rdbEngine.isValidNamespaceOrTableName("a_b"));
+  void throwIfInvalidNamespaceName_ShouldNotThrowAnyException() {
+    assertThatCode(() -> rdbEngine.throwIfInvalidNamespaceName("a-b")).doesNotThrowAnyException();
   }
 
   @Test
-  void isValidNamespaceOrTableName_False_WhenContainsNamespaceSeparator() {
-    assertFalse(rdbEngine.isValidNamespaceOrTableName("a$b"));
+  void
+      throwIfInvalidNamespaceName_WhenContainsNamespaceSeparator_ShouldThrowIllegalArgumentException() {
+    assertThatThrownBy(() -> rdbEngine.throwIfInvalidNamespaceName("a$b"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void throwIfInvalidTableName_ShouldNotThrowAnyException() {
+    assertThatCode(() -> rdbEngine.throwIfInvalidTableName("a-b")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void
+      throwIfInvalidTableName_WhenContainsNamespaceSeparator_ShouldThrowIllegalArgumentException() {
+    assertThatThrownBy(() -> rdbEngine.throwIfInvalidTableName("a$b"))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

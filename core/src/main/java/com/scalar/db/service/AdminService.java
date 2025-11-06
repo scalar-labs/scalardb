@@ -121,20 +121,6 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(
-      String namespace, String table, Map<String, DataType> overrideColumnsType)
-      throws ExecutionException {
-    return admin.getImportTableMetadata(namespace, table, overrideColumnsType);
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
-      throws ExecutionException {
-    admin.addRawColumnToTable(namespace, table, columnName, columnType);
-  }
-
-  @Override
   public void importTable(
       String namespace,
       String table,
