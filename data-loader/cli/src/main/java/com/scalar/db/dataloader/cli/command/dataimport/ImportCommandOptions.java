@@ -9,6 +9,9 @@ import picocli.CommandLine;
 public class ImportCommandOptions {
 
   public static final String FILE_OPTION_NAME_LONG_FORMAT = "--file";
+  public static final String MAX_THREADS_OPTION = "--max-threads";
+  public static final String MAX_THREADS_OPTION_SHORT = "-mt";
+  public static final String DEPRECATED_THREADS_OPTION = "--threads";
 
   @CommandLine.Option(
       names = {"--mode", "-m"},
@@ -38,6 +41,15 @@ public class ImportCommandOptions {
           "Maximum number of threads to use for parallel processing (default: number of available processors)",
       defaultValue = "16")
   protected int maxThreads;
+
+  // Deprecated option - kept for backward compatibility
+  @CommandLine.Option(
+      names = {DEPRECATED_THREADS_OPTION},
+      paramLabel = "<THREADS>",
+      description = "Deprecated: Use --max-threads instead",
+      hidden = true)
+  @Deprecated
+  protected Integer threadsDeprecated;
 
   @CommandLine.Option(
       names = {"--namespace", "-ns"},
@@ -158,4 +170,18 @@ public class ImportCommandOptions {
       description = "Maximum number of data chunks that can be kept at a time for processing",
       defaultValue = "256")
   protected int dataChunkQueueSize;
+
+  /**
+   * Applies deprecated option values if they are set.
+   *
+   * <p>This method is called AFTER validateDeprecatedOptions(), so we are guaranteed that both the
+   * deprecated and new options were not specified together. If we reach this point, only the
+   * deprecated option was provided by the user.
+   */
+  public void applyDeprecatedOptions() {
+    // If the deprecated option is set, use its value
+    if (threadsDeprecated != null) {
+      maxThreads = threadsDeprecated;
+    }
+  }
 }
