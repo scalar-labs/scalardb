@@ -128,7 +128,7 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
 
   @Override
-  @Disabled("There is nothing that needs to be upgraded with Object Storage")
+  @Disabled("The ScalarDB environment does not need to be upgraded with Object Storage")
   public void
       upgrade_WhenMetadataTableExistsButNotNamespacesTable_ShouldCreateNamespacesTableAndImportExistingNamespaces() {}
 }
