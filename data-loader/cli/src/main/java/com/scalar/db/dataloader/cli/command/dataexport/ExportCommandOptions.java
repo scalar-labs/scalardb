@@ -201,4 +201,18 @@ public class ExportCommandOptions {
       threadCount = maxThreadsDeprecated;
     }
   }
+
+  /**
+   * Resolves default values for options.
+   *
+   * <p>This method is called AFTER applyDeprecatedOptions() to resolve any default values that
+   * depend on runtime information. For threadCount, a value of 0 indicates that the number of
+   * available processors should be used.
+   */
+  public void resolveDefaults() {
+    // Resolve threadCount: 0 means use available processors
+    if (threadCount == 0) {
+      threadCount = Runtime.getRuntime().availableProcessors();
+    }
+  }
 }

@@ -55,6 +55,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateDeprecatedOptions();
     applyDeprecatedOptions();
+    resolveDefaults();
+
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(

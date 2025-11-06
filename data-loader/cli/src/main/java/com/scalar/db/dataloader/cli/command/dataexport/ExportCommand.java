@@ -54,6 +54,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateDeprecatedOptions();
     applyDeprecatedOptions();
+    resolveDefaults();
+
     String scalarDbPropertiesFilePath = getScalarDbPropertiesFilePath();
 
     try {
@@ -172,7 +174,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             .includeTransactionMetadata(includeTransactionMetadata)
             .delimiter(delimiter)
             .limit(limit)
-            .maxThreadCount(threadCount)
+            .threadCount(threadCount)
             .dataChunkSize(dataChunkSize)
             .prettyPrintJson(prettyPrintJson)
             .scanRange(scanRange);

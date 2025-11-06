@@ -21,7 +21,7 @@ public class ExportOptions {
   private final FileFormat outputFileFormat;
   private final ScanRange scanRange;
   private final int limit;
-  private final int maxThreadCount;
+  private final int threadCount;
   private final boolean prettyPrintJson;
 
   @Builder.Default private final int dataChunkSize = 200;
