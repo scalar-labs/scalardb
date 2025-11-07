@@ -62,10 +62,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
       // Only validate the argument when provided by the user, if not set a default
-      if (maxThreads != null) {
-        validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      if (threadCount != null) {
+        validatePositiveValue(spec.commandLine(), threadCount, DataLoaderError.INVALID_MAX_THREADS);
       } else {
-        maxThreads = Runtime.getRuntime().availableProcessors();
+        threadCount = Runtime.getRuntime().availableProcessors();
       }
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
@@ -132,10 +132,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         END_INCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION_SHORT);
     validateDeprecatedOptionPair(
-        spec.commandLine(),
-        DEPRECATED_THREADS_OPTION,
-        MAX_THREADS_OPTION,
-        MAX_THREADS_OPTION_SHORT);
+        spec.commandLine(), DEPRECATED_MAX_THREADS_OPTION, THREADS_OPTION, THREADS_OPTION_SHORT);
   }
 
   private String getScalarDbPropertiesFilePath() {
@@ -180,7 +177,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             .includeTransactionMetadata(includeTransactionMetadata)
             .delimiter(delimiter)
             .limit(limit)
-            .maxThreadCount(maxThreads)
+            .threadCount(threadCount)
             .dataChunkSize(dataChunkSize)
             .prettyPrintJson(prettyPrintJson)
             .scanRange(scanRange);

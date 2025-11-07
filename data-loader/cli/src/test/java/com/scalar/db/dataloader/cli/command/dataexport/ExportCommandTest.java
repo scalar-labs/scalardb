@@ -44,7 +44,7 @@ class ExportCommandTest {
   void call_withBlankScalarDBConfigurationFile_shouldThrowException() {
     exportCommand.configFilePath = "";
     exportCommand.dataChunkSize = 100;
-    exportCommand.maxThreads = 4;
+    exportCommand.threadCount = 4;
     exportCommand.namespace = "scalar";
     exportCommand.table = "asset";
     exportCommand.outputDirectory = "";
@@ -62,7 +62,7 @@ class ExportCommandTest {
   void call_withInvalidScalarDBConfigurationFile_shouldReturnOne() throws Exception {
     exportCommand.configFilePath = "scalardb.properties";
     exportCommand.dataChunkSize = 100;
-    exportCommand.maxThreads = 4;
+    exportCommand.threadCount = 4;
     exportCommand.namespace = "scalar";
     exportCommand.table = "asset";
     exportCommand.outputDirectory = "";
@@ -192,7 +192,7 @@ class ExportCommandTest {
   }
 
   @Test
-  void call_withOnlyDeprecatedThreads_shouldApplyValue() {
+  void call_withOnlyDeprecatedMaxThreads_shouldApplyValue() {
     // Simulate command line parsing with only deprecated option
     String[] args = {
       "--config",
@@ -203,7 +203,7 @@ class ExportCommandTest {
       "asset",
       "--format",
       "JSON",
-      "--threads",
+      "--max-threads",
       "12"
     };
     ExportCommand command = new ExportCommand();
@@ -211,18 +211,18 @@ class ExportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the deprecated value was parsed
-    assertEquals(12, command.threadsDeprecated);
+    assertEquals(12, command.maxThreadsDeprecated);
 
     // Apply deprecated options (this is what the command does after validation)
     command.applyDeprecatedOptions();
 
-    // Verify the value was applied to maxThreads
-    assertEquals(12, command.maxThreads);
+    // Verify the value was applied to threadCount
+    assertEquals(12, command.threadCount);
   }
 
   @Test
-  void call_withMaxThreadsSpecified_shouldUseSpecifiedValue() {
-    // Simulate command line parsing with --max-threads
+  void call_withThreadsSpecified_shouldUseSpecifiedValue() {
+    // Simulate command line parsing with --threads
     String[] args = {
       "--config",
       "scalardb.properties",
@@ -232,7 +232,7 @@ class ExportCommandTest {
       "asset",
       "--format",
       "JSON",
-      "--max-threads",
+      "--threads",
       "8"
     };
     ExportCommand command = new ExportCommand();
@@ -240,12 +240,12 @@ class ExportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the value was parsed
-    assertEquals(8, command.maxThreads);
+    assertEquals(8, command.threadCount);
   }
 
   @Test
-  void call_withoutMaxThreads_shouldDefaultToAvailableProcessors() {
-    // Simulate command line parsing without --max-threads
+  void call_withoutThreads_shouldDefaultToAvailableProcessors() {
+    // Simulate command line parsing without --threads
     String[] args = {
       "--config",
       "scalardb.properties",
@@ -260,17 +260,17 @@ class ExportCommandTest {
     CommandLine cmd = new CommandLine(command);
     cmd.parseArgs(args);
 
-    // Verify maxThreads is null before validation
-    assertEquals(null, command.maxThreads);
+    // Verify threadCount is null before validation
+    assertEquals(null, command.threadCount);
 
     // Simulate what happens in call() after validation
     command.spec = cmd.getCommandSpec();
     command.applyDeprecatedOptions();
-    if (command.maxThreads == null) {
-      command.maxThreads = Runtime.getRuntime().availableProcessors();
+    if (command.threadCount == null) {
+      command.threadCount = Runtime.getRuntime().availableProcessors();
     }
 
     // Verify it was set to available processors
-    assertEquals(Runtime.getRuntime().availableProcessors(), command.maxThreads);
+    assertEquals(Runtime.getRuntime().availableProcessors(), command.threadCount);
   }
 }

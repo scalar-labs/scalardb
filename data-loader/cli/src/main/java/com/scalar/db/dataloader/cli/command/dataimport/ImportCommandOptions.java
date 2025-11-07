@@ -9,9 +9,9 @@ import picocli.CommandLine;
 public class ImportCommandOptions {
 
   public static final String FILE_OPTION_NAME_LONG_FORMAT = "--file";
-  public static final String MAX_THREADS_OPTION = "--max-threads";
-  public static final String MAX_THREADS_OPTION_SHORT = "-mt";
-  public static final String DEPRECATED_THREADS_OPTION = "--threads";
+  public static final String THREADS_OPTION = "--threads";
+  public static final String THREADS_OPTION_SHORT = "-mt";
+  public static final String DEPRECATED_MAX_THREADS_OPTION = "--max-threads";
 
   @CommandLine.Option(
       names = {"--mode", "-m"},
@@ -35,20 +35,20 @@ public class ImportCommandOptions {
   protected String sourceFilePath;
 
   @CommandLine.Option(
-      names = {"--max-threads", "-mt"},
-      paramLabel = "<MAX_THREADS>",
+      names = {"--threads", "-mt"},
+      paramLabel = "<THREADS>",
       description =
-          "Maximum number of threads to use for parallel processing (default: number of available processors)")
-  protected Integer maxThreads;
+          "Number of threads to use for parallel processing (default: number of available processors)")
+  protected Integer threadCount;
 
   // Deprecated option - kept for backward compatibility
   @CommandLine.Option(
-      names = {DEPRECATED_THREADS_OPTION},
-      paramLabel = "<THREADS>",
-      description = "Deprecated: Use --max-threads instead",
+      names = {DEPRECATED_MAX_THREADS_OPTION},
+      paramLabel = "<MAX_THREADS>",
+      description = "Deprecated: Use --threads instead",
       hidden = true)
   @Deprecated
-  protected Integer threadsDeprecated;
+  protected Integer maxThreadsDeprecated;
 
   @CommandLine.Option(
       names = {"--namespace", "-ns"},
@@ -179,8 +179,8 @@ public class ImportCommandOptions {
    */
   public void applyDeprecatedOptions() {
     // If the deprecated option is set, use its value
-    if (threadsDeprecated != null) {
-      maxThreads = threadsDeprecated;
+    if (maxThreadsDeprecated != null) {
+      threadCount = maxThreadsDeprecated;
     }
   }
 }

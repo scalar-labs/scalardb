@@ -142,7 +142,7 @@ public class JsonExportManagerTest {
 
     // Verify the default was applied
     Assertions.assertEquals(
-        Runtime.getRuntime().availableProcessors(), exportOptions.getMaxThreadCount());
+        Runtime.getRuntime().availableProcessors(), exportOptions.getThreadCount());
   }
 
   @Test
@@ -152,10 +152,10 @@ public class JsonExportManagerTest {
         ExportOptions.builder("namespace", "table", null, FileFormat.JSON)
             .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
-            .maxThreadCount(8)
+            .threadCount(8)
             .build();
 
     // Verify the explicit value was used
-    Assertions.assertEquals(8, exportOptions.getMaxThreadCount());
+    Assertions.assertEquals(8, exportOptions.getThreadCount());
   }
 }

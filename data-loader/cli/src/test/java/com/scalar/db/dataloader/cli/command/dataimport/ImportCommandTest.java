@@ -57,7 +57,7 @@ public class ImportCommandTest {
     importCommand.importMode = ImportMode.UPSERT;
     importCommand.dataChunkSize = 100;
     importCommand.transactionSize = 10;
-    importCommand.maxThreads = 4;
+    importCommand.threadCount = 4;
     importCommand.dataChunkQueueSize = 64;
     assertThrows(IllegalArgumentException.class, () -> importCommand.call());
   }
@@ -113,7 +113,7 @@ public class ImportCommandTest {
         thrown
             .getMessage()
             .contains(
-                "Cannot specify both deprecated option '--threads' and new option '--max-threads'"));
+                "Cannot specify both deprecated option '--max-threads' and new option '--threads'"));
   }
 
   @Test
@@ -133,7 +133,7 @@ public class ImportCommandTest {
       "sample",
       "--table",
       "table",
-      "--threads",
+      "--max-threads",
       "12"
     };
     ImportCommand command = new ImportCommand();
@@ -141,18 +141,18 @@ public class ImportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the deprecated value was parsed
-    assertEquals(12, command.threadsDeprecated);
+    assertEquals(12, command.maxThreadsDeprecated);
 
     // Apply deprecated options (this is what the command does after validation)
     command.applyDeprecatedOptions();
 
-    // Verify the value was applied to maxThreads
-    assertEquals(12, command.maxThreads);
+    // Verify the value was applied to threadCount
+    assertEquals(12, command.threadCount);
   }
 
   @Test
-  void call_withMaxThreadsSpecified_shouldUseSpecifiedValue() {
-    // Simulate command line parsing with --max-threads
+  void call_withThreadsSpecified_shouldUseSpecifiedValue() {
+    // Simulate command line parsing with --threads
     String[] args = {
       "--config",
       "scalardb.properties",
@@ -162,7 +162,7 @@ public class ImportCommandTest {
       "scalar",
       "--table",
       "asset",
-      "--max-threads",
+      "--threads",
       "8"
     };
     ImportCommand command = new ImportCommand();
@@ -170,12 +170,12 @@ public class ImportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the value was parsed
-    assertEquals(8, command.maxThreads);
+    assertEquals(8, command.threadCount);
   }
 
   @Test
-  void call_withoutMaxThreads_shouldDefaultToAvailableProcessors() {
-    // Simulate command line parsing without --max-threads
+  void call_withoutThreads_shouldDefaultToAvailableProcessors() {
+    // Simulate command line parsing without --threads
     String[] args = {
       "--config", "scalardb.properties",
       "--file", "import.json",
@@ -186,17 +186,17 @@ public class ImportCommandTest {
     CommandLine cmd = new CommandLine(command);
     cmd.parseArgs(args);
 
-    // Verify maxThreads is null before validation
-    assertEquals(null, command.maxThreads);
+    // Verify threadCount is null before validation
+    assertEquals(null, command.threadCount);
 
     // Simulate what happens in call() after validation
     command.spec = cmd.getCommandSpec();
     command.applyDeprecatedOptions();
-    if (command.maxThreads == null) {
-      command.maxThreads = Runtime.getRuntime().availableProcessors();
+    if (command.threadCount == null) {
+      command.threadCount = Runtime.getRuntime().availableProcessors();
     }
 
     // Verify it was set to available processors
-    assertEquals(Runtime.getRuntime().availableProcessors(), command.maxThreads);
+    assertEquals(Runtime.getRuntime().availableProcessors(), command.threadCount);
   }
 }

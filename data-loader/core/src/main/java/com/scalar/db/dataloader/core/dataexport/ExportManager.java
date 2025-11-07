@@ -78,7 +78,7 @@ public abstract class ExportManager {
       processHeader(exportOptions, tableMetadata, writer);
 
       ExecutorService executorService =
-          Executors.newFixedThreadPool(exportOptions.getMaxThreadCount());
+          Executors.newFixedThreadPool(exportOptions.getThreadCount());
 
       BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;

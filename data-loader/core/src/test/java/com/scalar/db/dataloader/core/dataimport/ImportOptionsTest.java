@@ -20,7 +20,7 @@ public class ImportOptionsTest {
             .build();
 
     // Verify the default was applied
-    assertEquals(Runtime.getRuntime().availableProcessors(), importOptions.getMaxThreads());
+    assertEquals(Runtime.getRuntime().availableProcessors(), importOptions.getThreadCount());
   }
 
   @Test
@@ -32,11 +32,11 @@ public class ImportOptionsTest {
             .tableName("test_table")
             .dataChunkSize(100)
             .transactionBatchSize(10)
-            .maxThreads(8)
+            .threadCount(8)
             .dataChunkQueueSize(64)
             .build();
 
     // Verify the explicit value was used
-    assertEquals(8, importOptions.getMaxThreads());
+    assertEquals(8, importOptions.getThreadCount());
   }
 }

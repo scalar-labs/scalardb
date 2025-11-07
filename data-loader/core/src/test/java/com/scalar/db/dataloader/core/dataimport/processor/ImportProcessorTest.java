@@ -76,7 +76,7 @@ class ImportProcessorTest {
     tableMetadataByTableName = new HashMap<>();
     tableMetadataByTableName.put("namespace.table", UnitTestUtils.createTestTableMetadata());
 
-    when(importOptions.getMaxThreads()).thenReturn(2);
+    when(importOptions.getThreadCount()).thenReturn(2);
     when(importOptions.getDataChunkQueueSize()).thenReturn(10);
     when(params.getImportOptions()).thenReturn(importOptions);
   }
@@ -148,7 +148,7 @@ class ImportProcessorTest {
   void process_withMultipleDataChunks_shouldUseThreadPool() {
     // Arrange
     final int maxThreads = 4;
-    when(importOptions.getMaxThreads()).thenReturn(maxThreads);
+    when(importOptions.getThreadCount()).thenReturn(maxThreads);
     when(params.getDao()).thenReturn(dao);
     when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
@@ -203,7 +203,7 @@ class ImportProcessorTest {
   void process_withLargeNumberOfTasks_shouldWaitForAllTasksToComplete() {
     // Arrange
     final int maxThreads = 2;
-    when(importOptions.getMaxThreads()).thenReturn(maxThreads);
+    when(importOptions.getThreadCount()).thenReturn(maxThreads);
     when(params.getDao()).thenReturn(dao);
     when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);

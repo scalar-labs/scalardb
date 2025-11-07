@@ -62,10 +62,10 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     validatePositiveValue(
         spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
     // Only validate the argument when provided by the user, if not set a default
-    if (maxThreads != null) {
-      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+    if (threadCount != null) {
+      validatePositiveValue(spec.commandLine(), threadCount, DataLoaderError.INVALID_MAX_THREADS);
     } else {
-      maxThreads = Runtime.getRuntime().availableProcessors();
+      threadCount = Runtime.getRuntime().availableProcessors();
     }
     validatePositiveValue(
         spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
@@ -287,10 +287,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    */
   private void validateDeprecatedOptions() {
     validateDeprecatedOptionPair(
-        spec.commandLine(),
-        DEPRECATED_THREADS_OPTION,
-        MAX_THREADS_OPTION,
-        MAX_THREADS_OPTION_SHORT);
+        spec.commandLine(), DEPRECATED_MAX_THREADS_OPTION, THREADS_OPTION, THREADS_OPTION_SHORT);
   }
 
   /**
@@ -313,7 +310,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .namespace(namespace)
             .dataChunkSize(dataChunkSize)
             .transactionBatchSize(transactionSize)
-            .maxThreads(maxThreads)
+            .threadCount(threadCount)
             .dataChunkQueueSize(dataChunkQueueSize)
             .tableName(tableName);
 

@@ -34,7 +34,7 @@ public class ImportOptions {
   private final ControlFile controlFile;
   private final String namespace;
   private final String tableName;
-  @Builder.Default private final int maxThreads = Runtime.getRuntime().availableProcessors();
+  @Builder.Default private final int threadCount = Runtime.getRuntime().availableProcessors();
   private final String customHeaderRow;
   private final int dataChunkQueueSize;
 }

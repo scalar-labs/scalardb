@@ -55,7 +55,7 @@ class JsonLinesImportProcessorTest {
             .transactionBatchSize(1)
             .dataChunkSize(5)
             .tableName("table")
-            .maxThreads(8)
+            .threadCount(8)
             .dataChunkQueueSize(256)
             .logMode(LogMode.SINGLE_FILE)
             .build();

@@ -24,7 +24,7 @@ public class ExportOptions {
   private final boolean prettyPrintJson;
 
   @Builder.Default private final int dataChunkSize = 200;
-  @Builder.Default private final int maxThreadCount = Runtime.getRuntime().availableProcessors();
+  @Builder.Default private final int threadCount = Runtime.getRuntime().availableProcessors();
   @Builder.Default private final String delimiter = ";";
   @Builder.Default private final boolean excludeHeaderRow = false;
   @Builder.Default private final boolean includeTransactionMetadata = false;
