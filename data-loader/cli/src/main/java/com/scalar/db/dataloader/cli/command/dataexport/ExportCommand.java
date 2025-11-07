@@ -131,6 +131,11 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         DEPRECATED_END_EXCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
   }
 
   private String getScalarDbPropertiesFilePath() {
