@@ -429,18 +429,18 @@ public class ObjectStorageOperationCheckerTest {
                 operationChecker.check(
                     buildPutWithCondition(putIf(column(COL4).isNotNullBlob()).build())))
         .doesNotThrowAnyException();
-    assertThatThrownBy(
+    assertThatCode(
             () ->
                 operationChecker.check(
                     buildPutWithCondition(
                         putIf(column(COL4).isGreaterThanBlob(new byte[] {1, 2, 3})).build())))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
+        .doesNotThrowAnyException();
+    assertThatCode(
             () ->
                 operationChecker.check(
                     buildPutWithCondition(
                         putIf(column(COL4).isLessThanOrEqualToBlob(new byte[] {1, 2, 3})).build())))
-        .isInstanceOf(IllegalArgumentException.class);
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -523,19 +523,19 @@ public class ObjectStorageOperationCheckerTest {
                 operationChecker.check(
                     buildDeleteWithCondition(deleteIf(column(COL4).isNotNullBlob()).build())))
         .doesNotThrowAnyException();
-    assertThatThrownBy(
+    assertThatCode(
             () ->
                 operationChecker.check(
                     buildDeleteWithCondition(
                         deleteIf(column(COL4).isGreaterThanBlob(new byte[] {1, 2, 3})).build())))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
+        .doesNotThrowAnyException();
+    assertThatCode(
             () ->
                 operationChecker.check(
                     buildDeleteWithCondition(
                         deleteIf(column(COL4).isLessThanOrEqualToBlob(new byte[] {1, 2, 3}))
                             .build())))
-        .isInstanceOf(IllegalArgumentException.class);
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -652,15 +652,15 @@ public class ObjectStorageOperationCheckerTest {
                     Arrays.asList(
                         buildPutWithCondition(putIf(column(COL4).isNotNullBlob()).build()), put)))
         .doesNotThrowAnyException();
-    assertThatThrownBy(
+    assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
                         buildPutWithCondition(
                             putIf(column(COL4).isGreaterThanBlob(new byte[] {1, 2, 3})).build()),
                         put)))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
+        .doesNotThrowAnyException();
+    assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
@@ -668,7 +668,7 @@ public class ObjectStorageOperationCheckerTest {
                             putIf(column(COL4).isLessThanOrEqualToBlob(new byte[] {1, 2, 3}))
                                 .build()),
                         put)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -788,15 +788,15 @@ public class ObjectStorageOperationCheckerTest {
                         buildDeleteWithCondition(deleteIf(column(COL4).isNotNullBlob()).build()),
                         delete)))
         .doesNotThrowAnyException();
-    assertThatThrownBy(
+    assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
                         buildDeleteWithCondition(
                             deleteIf(column(COL4).isGreaterThanBlob(new byte[] {1, 2, 3})).build()),
                         delete)))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
+        .doesNotThrowAnyException();
+    assertThatCode(
             () ->
                 operationChecker.check(
                     Arrays.asList(
@@ -804,7 +804,7 @@ public class ObjectStorageOperationCheckerTest {
                             deleteIf(column(COL4).isLessThanOrEqualToBlob(new byte[] {1, 2, 3}))
                                 .build()),
                         delete)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .doesNotThrowAnyException();
   }
 
   private Put buildPutWithCondition(MutationCondition condition) {
