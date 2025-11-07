@@ -889,12 +889,6 @@ public enum CoreError implements ScalarDbError {
       "Object Storage does not support the feature for altering column types",
       "",
       ""),
-  OBJECT_STORAGE_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
-      Category.USER_ERROR,
-      "0256",
-      "The BLOB type is not supported for clustering keys in Object Storage. Column: %s",
-      "",
-      ""),
 
   //
   // Errors for the concurrency error category
