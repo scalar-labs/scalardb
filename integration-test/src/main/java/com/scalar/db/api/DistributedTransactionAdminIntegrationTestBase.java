@@ -246,11 +246,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     assertThat(tableMetadata.getClusteringOrder(COL_NAME15)).isNull();
 
     Set<String> expectedSecondaryIndexNames = getTableMetadata().getSecondaryIndexNames();
-    assertThat(tableMetadata.getSecondaryIndexNames().size())
-        .isEqualTo(expectedSecondaryIndexNames.size());
-    for (String indexName : expectedSecondaryIndexNames) {
-      assertThat(tableMetadata.getSecondaryIndexNames().contains(indexName)).isTrue();
-    }
+    assertThat(tableMetadata.getSecondaryIndexNames())
+        .containsExactlyInAnyOrderElementsOf(expectedSecondaryIndexNames);
   }
 
   @Test
