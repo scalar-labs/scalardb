@@ -87,6 +87,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
+      checkMetadata(metadata);
       // Insert the table metadata
       String tableMetadataKey = getTableMetadataKey(namespace, table);
       Map<String, String> readVersionMap = new HashMap<>();
@@ -268,6 +269,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
+      checkMetadata(metadata);
       // Upsert the table metadata
       String tableMetadataKey = getTableMetadataKey(namespace, table);
       Map<String, String> readVersionMap = new HashMap<>();
@@ -469,5 +471,20 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       throw new IllegalArgumentException("Invalid table metadata key: " + tableMetadataKey);
     }
     return parts.get(1);
+  }
+
+  private void checkMetadata(TableMetadata metadata) {
+    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+      if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
+        throw new IllegalArgumentException(
+            CoreError.COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(
+                clusteringKeyName));
+      }
+    }
+    Set<String> secondaryIndexNames = metadata.getSecondaryIndexNames();
+    if (!secondaryIndexNames.isEmpty()) {
+      throw new IllegalArgumentException(
+          CoreError.OBJECT_STORAGE_INDEX_NOT_SUPPORTED.buildMessage());
+    }
   }
 }

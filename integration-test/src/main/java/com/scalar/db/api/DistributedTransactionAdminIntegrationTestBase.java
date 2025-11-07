@@ -112,6 +112,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected abstract Properties getProperties(String testName);
 
+  protected TableMetadata getTableMetadata() {
+    return TABLE_METADATA;
+  }
+
   protected String getNamespaceBaseName() {
     return NAMESPACE_BASE_NAME;
   }
@@ -121,7 +125,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     for (String namespace : Arrays.asList(namespace1, namespace2)) {
       admin.createNamespace(namespace, true, options);
       for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-        admin.createTable(namespace, table, TABLE_METADATA, true, options);
+        admin.createTable(namespace, table, getTableMetadata(), true, options);
       }
     }
     admin.createCoordinatorTables(true, options);
@@ -241,9 +245,12 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     assertThat(tableMetadata.getClusteringOrder(COL_NAME14)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME15)).isNull();
 
-    assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME6)).isTrue();
+    Set<String> expectedSecondaryIndexNames = getTableMetadata().getSecondaryIndexNames();
+    assertThat(tableMetadata.getSecondaryIndexNames().size())
+        .isEqualTo(expectedSecondaryIndexNames.size());
+    for (String indexName : expectedSecondaryIndexNames) {
+      assertThat(tableMetadata.getSecondaryIndexNames().contains(indexName)).isTrue();
+    }
   }
 
   @Test
@@ -323,7 +330,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     try {
       // Arrange
       admin.createNamespace(namespace3, getCreationOptions());
-      admin.createTable(namespace3, TABLE1, TABLE_METADATA, getCreationOptions());
+      admin.createTable(namespace3, TABLE1, getTableMetadata(), getCreationOptions());
 
       // Act Assert
       assertThatThrownBy(() -> admin.dropNamespace(namespace3))
@@ -350,7 +357,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       Map<String, String> options = getCreationOptions();
 
       // Act
-      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+      admin.createTable(namespace1, TABLE4, getTableMetadata(), options);
 
       // Assert
       assertThat(admin.tableExists(namespace1, TABLE4)).isTrue();
@@ -365,7 +372,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(
-            () -> admin.createTable(namespace1, TABLE1, TABLE_METADATA, getCreationOptions()))
+            () -> admin.createTable(namespace1, TABLE1, getTableMetadata(), getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -375,7 +382,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
     // Act Assert
     assertThatThrownBy(
-            () -> admin.createTable(namespace3, TABLE1, TABLE_METADATA, getCreationOptions()))
+            () -> admin.createTable(namespace3, TABLE1, getTableMetadata(), getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -385,7 +392,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
     // Act Assert
     assertThatCode(
-            () -> admin.createTable(namespace1, TABLE1, TABLE_METADATA, true, getCreationOptions()))
+            () ->
+                admin.createTable(
+                    namespace1, TABLE1, getTableMetadata(), true, getCreationOptions()))
         .doesNotThrowAnyException();
   }
 
@@ -394,7 +403,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      admin.createTable(namespace1, TABLE4, TABLE_METADATA, options);
+      admin.createTable(namespace1, TABLE4, getTableMetadata(), options);
 
       // Act
       admin.dropTable(namespace1, TABLE4);
@@ -433,7 +442,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     try {
       // Arrange
       Map<String, String> options = getCreationOptions();
-      admin.createTable(namespace1, table, TABLE_METADATA, true, options);
+      admin.createTable(namespace1, table, getTableMetadata(), true, options);
       Key partitionKey = Key.of(COL_NAME2, "aaa", COL_NAME1, 1);
       Key clusteringKey = Key.of(COL_NAME4, 2, COL_NAME3, "bbb");
       transactionalInsert(

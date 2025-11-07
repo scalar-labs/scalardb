@@ -330,9 +330,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     assertThat(tableMetadata.getClusteringOrder(getColumnName14())).isNull();
     assertThat(tableMetadata.getClusteringOrder(getColumnName15())).isNull();
 
-    assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(getColumnName5())).isTrue();
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(getColumnName6())).isTrue();
+    Set<String> expectedSecondaryIndexNames = getTableMetadata().getSecondaryIndexNames();
+    assertThat(tableMetadata.getSecondaryIndexNames().size())
+        .isEqualTo(expectedSecondaryIndexNames.size());
+    for (String indexName : expectedSecondaryIndexNames) {
+      assertThat(tableMetadata.getSecondaryIndexNames().contains(indexName)).isTrue();
+    }
   }
 
   @Test
