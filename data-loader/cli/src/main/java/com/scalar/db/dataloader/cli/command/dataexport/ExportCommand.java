@@ -61,7 +61,11 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
-      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      if (maxThreads != null) {
+        validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      } else {
+        maxThreads = Runtime.getRuntime().availableProcessors();
+      }
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
