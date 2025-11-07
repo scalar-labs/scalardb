@@ -61,6 +61,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
     validatePositiveValue(
         spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
+    // Only validate the argument when provided by the user, if not set a default
     if (maxThreads != null) {
       validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
     } else {

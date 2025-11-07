@@ -61,6 +61,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
+      // Only validate the argument when provided by the user, if not set a default
       if (maxThreads != null) {
         validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
       } else {
