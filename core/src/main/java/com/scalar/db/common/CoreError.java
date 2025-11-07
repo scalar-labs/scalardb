@@ -377,16 +377,16 @@ public enum CoreError implements ScalarDbError {
       ""),
   MULTI_STORAGE_STORAGE_NOT_FOUND(
       Category.USER_ERROR, "0084", "Storage not found. Storage: %s", "", ""),
-  JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0085", "The namespace name is not acceptable. Namespace: %s", "", ""),
-  JDBC_TABLE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0086", "The table name is not acceptable. Table: %s", "", ""),
-  JDBC_IMPORT_NOT_SUPPORTED(
+  JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
-      "0087",
-      "Importing tables is not allowed in the RDB engine. RDB engine: %s",
+      "0085",
+      "The namespace name is not acceptable in SQLite. Namespace: %s",
       "",
       ""),
+  JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0086", "The table name is not acceptable in SQLite. Table: %s", "", ""),
+  JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0087", "Importing tables is not allowed in SQLite", "", ""),
   JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
       Category.USER_ERROR, "0088", "The %s table must have a primary key", "", ""),
   JDBC_RDB_ENGINE_NOT_SUPPORTED(
@@ -687,19 +687,27 @@ public enum CoreError implements ScalarDbError {
   COSMOS_DROP_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0217",
-      "Cosmos DB does not support the dropping column feature",
+      "Cosmos DB does not support the feature for dropping columns",
       "",
       ""),
   DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
-      Category.USER_ERROR, "0218", "DynamoDB does not support the dropping column feature", "", ""),
+      Category.USER_ERROR,
+      "0218",
+      "DynamoDB does not support the feature for dropping columns",
+      "",
+      ""),
   COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0219",
-      "Cosmos DB does not support the renaming column feature",
+      "Cosmos DB does not support the feature for renaming columns",
       "",
       ""),
   DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
-      Category.USER_ERROR, "0220", "DynamoDB does not support the renaming column feature", "", ""),
+      Category.USER_ERROR,
+      "0220",
+      "DynamoDB does not support the feature for renaming columns",
+      "",
+      ""),
   CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0221",
@@ -775,25 +783,25 @@ public enum CoreError implements ScalarDbError {
   CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0235",
-      "Cassandra does not support the altering column type feature",
+      "Cassandra does not support the feature for altering column types",
       "",
       ""),
   COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0236",
-      "Cosmos DB does not support the altering column type feature",
+      "Cosmos DB does not support the feature for altering column types",
       "",
       ""),
   DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0237",
-      "DynamoDB does not support the altering column type feature",
+      "DynamoDB does not support the feature for altering column types",
       "",
       ""),
   JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0238",
-      "SQLite does not support the altering column type feature",
+      "SQLite does not support the feature for altering column types",
       "",
       ""),
   JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
@@ -847,6 +855,38 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0249",
       "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0250",
+      "Import-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_INDEX_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0251",
+      "Index-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0252",
+      "Object Storage does not support the feature for dropping columns",
+      "",
+      ""),
+  OBJECT_STORAGE_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0253",
+      "Object Storage does not support the feature for renaming columns",
+      "",
+      ""),
+  OBJECT_STORAGE_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0254", "Renaming tables is not supported in Object Storage", "", ""),
+  OBJECT_STORAGE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0255",
+      "Object Storage does not support the feature for altering column types",
       "",
       ""),
 
