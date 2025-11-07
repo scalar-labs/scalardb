@@ -540,10 +540,11 @@ public class Snapshot {
     // Get set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
+      TableMetadata metadata = getTableMetadata(get);
 
-      if (ScalarDbUtils.isSecondaryIndexSpecified(get, getTableMetadata(get))) {
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
         // For Get with index
-        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue()));
+        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue(), metadata));
       } else {
         // For other Get
 
@@ -552,7 +553,7 @@ public class Snapshot {
           continue;
         }
 
-        tasks.add(() -> validateGetResult(storage, get, entry.getValue()));
+        tasks.add(() -> validateGetResult(storage, get, entry.getValue(), metadata));
       }
     }
 
@@ -589,22 +590,12 @@ public class Snapshot {
       throws ExecutionException, ValidationConflictException {
     Scanner scanner = null;
     try {
-      TableMetadata tableMetadata = getTableMetadata(scan);
+      TableMetadata metadata = getTableMetadata(scan);
 
-      // Only get tx_id and primary key columns because we use only them to compare
-      scan.clearProjections();
-      scan.withProjection(Attribute.ID);
-      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
-
-      if (scan.getLimit() == 0) {
-        scanner = storage.scan(scan);
-      } else {
-        // Get a scanner without the limit if the scan has a limit
-        scanner = storage.scan(Scan.newBuilder(scan).limit(0).build());
-      }
+      scanner = storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata));
 
       // Initialize the iterator for the latest scan results
-      Optional<Result> latestResult = scanner.one();
+      Optional<Result> latestResult = getNextResult(scanner, scan);
 
       // Initialize the iterator for the original scan results
       Iterator<Entry<Key, TransactionResult>> originalResultIterator =
@@ -615,13 +606,13 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult, tableMetadata);
+        Key key = new Key(scan, latestTxResult, metadata);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
 
           // Skip the record of the latest scan results
-          latestResult = scanner.one();
+          latestResult = getNextResult(scanner, scan);
 
           if (originalResultEntry.getKey().equals(key)) {
             // The record is updated by this transaction
@@ -655,7 +646,7 @@ public class Snapshot {
         }
 
         // Proceed to the next record
-        latestResult = scanner.one();
+        latestResult = getNextResult(scanner, scan);
         originalResultEntry = Iterators.getNext(originalResultIterator, null);
       }
 
@@ -694,7 +685,7 @@ public class Snapshot {
           // The record is inserted/deleted by this transaction
 
           // Skip the record
-          latestResult = scanner.one();
+          latestResult = getNextResult(scanner, scan);
         } else {
           // The record is inserted by another transaction
           throwExceptionDueToAntiDependency();
@@ -711,8 +702,30 @@ public class Snapshot {
     }
   }
 
+  private Optional<Result> getNextResult(Scanner scanner, Scan scan) throws ExecutionException {
+    Optional<Result> next = scanner.one();
+    if (!next.isPresent()) {
+      return next;
+    }
+
+    if (!scan.getConjunctions().isEmpty()) {
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
+      next =
+          next.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), scan.getConjunctions()));
+    }
+
+    return next.isPresent() ? next : getNextResult(scanner, scan);
+  }
+
   private void validateGetWithIndexResult(
-      DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
+      DistributedStorage storage,
+      Get get,
+      Optional<TransactionResult> originalResult,
+      TableMetadata metadata)
       throws ExecutionException, ValidationConflictException {
     assert get.forNamespace().isPresent() && get.forTable().isPresent();
 
@@ -733,23 +746,34 @@ public class Snapshot {
             .build();
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    TableMetadata tableMetadata = getTableMetadata(scanWithIndex);
-    originalResult.ifPresent(
-        r -> results.put(new Snapshot.Key(scanWithIndex, r, tableMetadata), r));
+    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false);
   }
 
   private void validateGetResult(
-      DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
+      DistributedStorage storage,
+      Get get,
+      Optional<TransactionResult> originalResult,
+      TableMetadata metadata)
       throws ExecutionException, ValidationConflictException {
-    // Only get the tx_id column because we use only them to compare
-    get.clearProjections();
-    get.withProjection(Attribute.ID);
-
     // Check if a read record is not changed
-    Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
+    Optional<TransactionResult> latestResult =
+        storage
+            .get(ConsensusCommitUtils.prepareGetForStorage(get, metadata))
+            .map(TransactionResult::new);
+
+    if (!get.getConjunctions().isEmpty()) {
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
+      latestResult =
+          latestResult.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), get.getConjunctions()));
+    }
+
     if (isChanged(latestResult, originalResult)) {
       throwExceptionDueToAntiDependency();
     }
