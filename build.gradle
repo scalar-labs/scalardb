@@ -109,7 +109,8 @@ jreleaser {
             def stagingRepositories = ['core/build/staging-deploy',
                                        'integration-test/build/staging-deploy',
                                        'schema-loader/build/staging-deploy',
-                                       'data-loader/core/build/staging-deploy']
+                                       'data-loader/core/build/staging-deploy',
+                                       'data-loader/cli/build/staging-deploy']
             mavenCentral {
                 sonatype {
                     active = 'RELEASE'
