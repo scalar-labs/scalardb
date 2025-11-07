@@ -12,11 +12,6 @@ public class ConsensusCommitIntegrationTestWithObjectStorage
   }
 
   @Override
-  protected boolean isTimestampTypeSupported() {
-    return false;
-  }
-
-  @Override
   @Disabled("Object Storage does not support index-related operations")
   public void get_GetGivenForIndexColumn_ShouldReturnRecords() {}
 

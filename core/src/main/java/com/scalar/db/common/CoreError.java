@@ -901,12 +901,6 @@ public enum CoreError implements ScalarDbError {
       "The value of the column %s in the primary key contains an illegal character.",
       "",
       ""),
-  OBJECT_STORAGE_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BLOB_TYPE(
-      Category.USER_ERROR,
-      "0258",
-      "Object Storage supports only EQ, NE, IS_NULL, and IS_NOT_NULL operations for the BLOB type in conditions. Mutation: %s",
-      "",
-      ""),
 
   //
   // Errors for the concurrency error category

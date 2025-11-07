@@ -1,13 +1,10 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
@@ -18,7 +15,6 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.ColumnVisitor;
-import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
@@ -109,18 +105,12 @@ public class ObjectStorageOperationChecker extends OperationChecker {
   public void check(Put put) throws ExecutionException {
     super.check(put);
     checkPrimaryKey(put);
-
-    TableMetadata metadata = getTableMetadata(put);
-    checkCondition(put, metadata);
   }
 
   @Override
   public void check(Delete delete) throws ExecutionException {
     super.check(delete);
     checkPrimaryKey(delete);
-
-    TableMetadata metadata = getTableMetadata(delete);
-    checkCondition(delete, metadata);
   }
 
   private void checkPrimaryKey(Operation operation) {
@@ -132,23 +122,5 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         .getClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
-  }
-
-  private void checkCondition(Mutation mutation, TableMetadata metadata) {
-    if (!mutation.getCondition().isPresent()) {
-      return;
-    }
-    for (ConditionalExpression expression : mutation.getCondition().get().getExpressions()) {
-      if (metadata.getColumnDataType(expression.getColumn().getName()) == DataType.BLOB) {
-        if (expression.getOperator() != ConditionalExpression.Operator.EQ
-            && expression.getOperator() != ConditionalExpression.Operator.NE
-            && expression.getOperator() != ConditionalExpression.Operator.IS_NULL
-            && expression.getOperator() != ConditionalExpression.Operator.IS_NOT_NULL) {
-          throw new IllegalArgumentException(
-              CoreError.OBJECT_STORAGE_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BLOB_TYPE.buildMessage(
-                  mutation));
-        }
-      }
-    }
   }
 }

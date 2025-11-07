@@ -14,11 +14,6 @@ public class ObjectStorageCrossPartitionScanIntegrationTest
   }
 
   @Override
-  protected int getThreadNum() {
-    return 3;
-  }
-
-  @Override
   protected boolean isParallelDdlSupported() {
     return false;
   }
