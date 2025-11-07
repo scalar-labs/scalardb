@@ -205,12 +205,12 @@ public class SelectStatementHandler extends StatementHandler {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan));
       }
-      boolean rightOrder =
+      boolean isValidOrder =
           ordering.getOrder() != metadata.getClusteringOrder(ordering.getColumnName());
       if (reverse == null) {
-        reverse = rightOrder;
+        reverse = isValidOrder;
       } else {
-        if (reverse != rightOrder) {
+        if (reverse != isValidOrder) {
           throw new IllegalArgumentException(
               CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan));
         }

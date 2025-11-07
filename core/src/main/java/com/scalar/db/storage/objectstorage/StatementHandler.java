@@ -128,7 +128,7 @@ public class StatementHandler {
         throw new ExecutionException(
             String.format(
                 "A condition failed. ConditionalExpression: %s, Column: %s",
-                expectedColumn, actualColumn));
+                expression, actualColumn));
       }
     }
   }
