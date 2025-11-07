@@ -42,9 +42,8 @@ public class ImportCommandOptions {
       names = {"--max-threads", "-mt"},
       paramLabel = "<MAX_THREADS>",
       description =
-          "Maximum number of threads to use for parallel processing (default: number of available processors)",
-      defaultValue = "16")
-  protected int maxThreads;
+          "Maximum number of threads to use for parallel processing (default: number of available processors)")
+  protected Integer maxThreads;
 
   // Deprecated option - kept for backward compatibility
   @CommandLine.Option(

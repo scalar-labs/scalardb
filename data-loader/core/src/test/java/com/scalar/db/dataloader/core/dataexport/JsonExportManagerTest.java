@@ -130,4 +130,32 @@ public class JsonExportManagerTest {
     Assertions.assertTrue(file.exists());
     Assertions.assertTrue(file.delete());
   }
+
+  @Test
+  void exportOptions_withoutMaxThreadCount_shouldUseDefaultAvailableProcessors() {
+    // Create ExportOptions without explicitly setting maxThreadCount
+    ExportOptions exportOptions =
+        ExportOptions.builder("namespace", "table", null, FileFormat.JSON)
+            .sortOrders(Collections.emptyList())
+            .scanRange(new ScanRange(null, null, false, false))
+            .build();
+
+    // Verify the default was applied
+    Assertions.assertEquals(
+        Runtime.getRuntime().availableProcessors(), exportOptions.getMaxThreadCount());
+  }
+
+  @Test
+  void exportOptions_withExplicitMaxThreadCount_shouldUseProvidedValue() {
+    // Create ExportOptions with explicit maxThreadCount
+    ExportOptions exportOptions =
+        ExportOptions.builder("namespace", "table", null, FileFormat.JSON)
+            .sortOrders(Collections.emptyList())
+            .scanRange(new ScanRange(null, null, false, false))
+            .maxThreadCount(8)
+            .build();
+
+    // Verify the explicit value was used
+    Assertions.assertEquals(8, exportOptions.getMaxThreadCount());
+  }
 }

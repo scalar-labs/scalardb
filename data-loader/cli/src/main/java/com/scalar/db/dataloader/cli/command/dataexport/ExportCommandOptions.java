@@ -77,7 +77,7 @@ public class ExportCommandOptions {
       paramLabel = "<MAX_THREADS>",
       description =
           "Maximum number of threads to use for parallel processing (default: number of available processors)")
-  protected int maxThreads;
+  protected Integer maxThreads;
 
   @CommandLine.Option(
       names = {"--start-key", "-sk"},
