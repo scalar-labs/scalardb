@@ -3,7 +3,6 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import com.scalar.db.api.Scan;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import java.util.ArrayList;
 import java.util.List;
 import picocli.CommandLine;
@@ -167,13 +166,6 @@ public class ExportCommandOptions {
       description = "Size of the data chunk to process in a single task (default: 200)",
       defaultValue = "200")
   protected int dataChunkSize;
-
-  @CommandLine.Option(
-      names = {"--mode", "-m"},
-      description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
-      paramLabel = "<MODE>",
-      defaultValue = "STORAGE")
-  protected ScalarDbMode scalarDbMode;
 
   /**
    * Applies deprecated option values if they are set.

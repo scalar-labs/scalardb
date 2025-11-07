@@ -6,7 +6,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
@@ -15,7 +14,6 @@ import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +32,6 @@ import org.mockito.Spy;
 
 public class JsonLineExportManagerTest {
   TableMetadata mockData;
-  SingleCrudOperationTransactionManager singleCrudOperationTransactionManager;
   DistributedTransactionManager manager;
   @Spy ScalarDbDao dao;
   ProducerTaskFactory producerTaskFactory;
@@ -42,101 +39,10 @@ public class JsonLineExportManagerTest {
 
   @BeforeEach
   void setup() {
-    singleCrudOperationTransactionManager =
-        Mockito.mock(SingleCrudOperationTransactionManager.class);
     manager = Mockito.mock(DistributedTransactionManager.class);
     mockData = UnitTestUtils.createTestTableMetadata();
     dao = Mockito.mock(ScalarDbDao.class);
     producerTaskFactory = new ProducerTaskFactory(null, false, true);
-  }
-
-  @Test
-  void startExport_givenValidDataWithoutPartitionKey_withStorage_shouldGenerateOutputFile()
-      throws IOException, ScalarDbDaoException {
-    exportManager =
-        new JsonLineExportManager(singleCrudOperationTransactionManager, dao, producerTaskFactory);
-    TransactionManagerCrudOperable.Scanner scanner =
-        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
-    String filePath = Paths.get("").toAbsolutePath() + "/output.jsonl";
-    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
-    Result result = new ResultImpl(values, mockData);
-    List<Result> results = Collections.singletonList(result);
-
-    ExportOptions exportOptions =
-        ExportOptions.builder("namespace", "table", null, FileFormat.JSONL)
-            .sortOrders(Collections.emptyList())
-            .scanRange(new ScanRange(null, null, false, false))
-            .build();
-
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                singleCrudOperationTransactionManager))
-        .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
-    try (BufferedWriter writer =
-        new BufferedWriter(
-            Files.newBufferedWriter(
-                Paths.get(filePath),
-                Charset.defaultCharset(), // Explicitly use the default charset
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND))) {
-      exportManager.startExport(exportOptions, mockData, writer);
-    }
-    File file = new File(filePath);
-    Assertions.assertTrue(file.exists());
-    Assertions.assertTrue(file.delete());
-  }
-
-  @Test
-  void startExport_givenPartitionKey_withStorage_shouldGenerateOutputFile()
-      throws IOException, ScalarDbDaoException {
-    exportManager =
-        new JsonLineExportManager(singleCrudOperationTransactionManager, dao, producerTaskFactory);
-    TransactionManagerCrudOperable.Scanner scanner =
-        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
-    String filePath = Paths.get("").toAbsolutePath() + "/output.jsonl";
-    Map<String, Column<?>> values = UnitTestUtils.createTestValues();
-    Result result = new ResultImpl(values, mockData);
-    List<Result> results = Collections.singletonList(result);
-
-    ExportOptions exportOptions =
-        ExportOptions.builder(
-                "namespace",
-                "table",
-                Key.newBuilder().add(IntColumn.of("col1", 1)).build(),
-                FileFormat.JSONL)
-            .sortOrders(Collections.emptyList())
-            .scanRange(new ScanRange(null, null, false, false))
-            .build();
-
-    Mockito.when(
-            dao.createScanner(
-                exportOptions.getNamespace(),
-                exportOptions.getTableName(),
-                exportOptions.getScanPartitionKey(),
-                exportOptions.getScanRange(),
-                exportOptions.getSortOrders(),
-                exportOptions.getProjectionColumns(),
-                exportOptions.getLimit(),
-                singleCrudOperationTransactionManager))
-        .thenReturn(scanner);
-    Mockito.when(scanner.iterator()).thenReturn(results.iterator());
-    try (BufferedWriter writer =
-        new BufferedWriter(
-            Files.newBufferedWriter(
-                Paths.get(filePath),
-                Charset.defaultCharset(), // Explicitly use the default charset
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND))) {
-      exportManager.startExport(exportOptions, mockData, writer);
-    }
-    File file = new File(filePath);
-    Assertions.assertTrue(file.exists());
-    Assertions.assertTrue(file.delete());
   }
 
   @Test
@@ -155,7 +61,6 @@ public class JsonLineExportManagerTest {
         ExportOptions.builder("namespace", "table", null, FileFormat.JSONL)
             .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
-            .scalarDbMode(ScalarDbMode.TRANSACTION)
             .build();
 
     Mockito.when(
@@ -199,7 +104,6 @@ public class JsonLineExportManagerTest {
                 FileFormat.JSONL)
             .sortOrders(Collections.emptyList())
             .scanRange(new ScanRange(null, null, false, false))
-            .scalarDbMode(ScalarDbMode.TRANSACTION)
             .build();
 
     Mockito.when(

@@ -7,7 +7,6 @@ import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
 import com.scalar.db.dataloader.cli.util.FileUtils;
@@ -15,7 +14,6 @@ import com.scalar.db.dataloader.cli.util.InvalidFilePathException;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.dataloader.core.dataexport.CsvExportManager;
 import com.scalar.db.dataloader.core.dataexport.ExportManager;
@@ -31,9 +29,7 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -73,7 +69,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =
-          createExportManager(scalarDbMode, scalarDbDao, outputFormat, scalarDbPropertiesFilePath);
+          createExportManager(scalarDbDao, outputFormat, scalarDbPropertiesFilePath);
       TableMetadata tableMetadata = tableMetadataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
@@ -173,7 +169,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   /**
    * Creates an {@link ExportManager} instance based on ScalarDB mode and file format.
    *
-   * @param scalarDbMode The ScalarDB mode (TRANSACTION or STORAGE).
    * @param scalarDbDao The DAO for accessing ScalarDB.
    * @param fileFormat The output file format (CSV, JSON, JSONL).
    * @param scalarDbPropertiesFilePath Path to the ScalarDB properties file.
@@ -181,26 +176,13 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
    * @throws IOException If there is an error reading the properties file.
    */
   private ExportManager createExportManager(
-      ScalarDbMode scalarDbMode,
-      ScalarDbDao scalarDbDao,
-      FileFormat fileFormat,
-      String scalarDbPropertiesFilePath)
+      ScalarDbDao scalarDbDao, FileFormat fileFormat, String scalarDbPropertiesFilePath)
       throws IOException {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
-    if (scalarDbMode.equals(ScalarDbMode.STORAGE)) {
-      File configFile = new File(scalarDbPropertiesFilePath);
-      DatabaseConfig databaseConfig = new DatabaseConfig(configFile);
-      SingleCrudOperationTransactionManager singleCrudOperationTransactionManager =
-          new SingleCrudOperationTransactionManager(databaseConfig);
-      return createExportManagerWithStorage(
-          singleCrudOperationTransactionManager, scalarDbDao, fileFormat, taskFactory);
-    } else {
-      DistributedTransactionManager distributedTransactionManager =
-          TransactionFactory.create(scalarDbPropertiesFilePath).getTransactionManager();
-      return createExportManagerWithTransaction(
-          distributedTransactionManager, scalarDbDao, fileFormat, taskFactory);
-    }
+    DistributedTransactionManager distributedTransactionManager =
+        TransactionFactory.create(scalarDbPropertiesFilePath).getTransactionManager();
+    return createExportManager(distributedTransactionManager, scalarDbDao, fileFormat, taskFactory);
   }
 
   /**
@@ -212,7 +194,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
    * @param taskFactory Producer task factory object
    * @return A configured {@link ExportManager}.
    */
-  private ExportManager createExportManagerWithTransaction(
+  private ExportManager createExportManager(
       DistributedTransactionManager distributedTransactionManager,
       ScalarDbDao scalarDbDao,
       FileFormat fileFormat,
@@ -229,32 +211,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     }
   }
 
-  /**
-   * Returns an {@link ExportManager} that uses {@link SingleCrudOperationTransactionManager}.
-   *
-   * @param manager SingleCrudOperationTransactionManager object
-   * @param scalarDbDao The DAO for accessing ScalarDB.
-   * @param fileFormat The output file format (CSV, JSON, JSONL).
-   * @param taskFactory Producer task factory object
-   * @return A configured {@link ExportManager}.
-   */
-  private ExportManager createExportManagerWithStorage(
-      SingleCrudOperationTransactionManager manager,
-      ScalarDbDao scalarDbDao,
-      FileFormat fileFormat,
-      ProducerTaskFactory taskFactory) {
-    switch (fileFormat) {
-      case JSON:
-        return new JsonExportManager(manager, scalarDbDao, taskFactory);
-      case JSONL:
-        return new JsonLineExportManager(manager, scalarDbDao, taskFactory);
-      case CSV:
-        return new CsvExportManager(manager, scalarDbDao, taskFactory);
-      default:
-        throw new AssertionError("Invalid file format" + fileFormat);
-    }
-  }
-
   private ExportOptions buildExportOptions(Key partitionKey, ScanRange scanRange) {
     ExportOptions.ExportOptionsBuilder builder =
         ExportOptions.builder(namespace, table, partitionKey, outputFormat)
@@ -266,8 +222,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
             .maxThreadCount(maxThreads)
             .dataChunkSize(dataChunkSize)
             .prettyPrintJson(prettyPrintJson)
-            .scanRange(scanRange)
-            .scalarDbMode(scalarDbMode);
+            .scanRange(scanRange);
 
     if (projectionColumns != null) {
       builder.projectionColumns(projectionColumns);

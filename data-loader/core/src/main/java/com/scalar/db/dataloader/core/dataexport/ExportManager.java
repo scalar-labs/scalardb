@@ -5,7 +5,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidationException;
@@ -130,35 +129,36 @@ public abstract class ExportManager {
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
         Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
 
-        if (exportOptions.getScalarDbMode() == ScalarDbMode.STORAGE) {
-          try (TransactionManagerCrudOperable.Scanner scanner =
-              createScannerWithStorage(exportOptions, dao, singleCrudOperationTransactionManager)) {
-            submitTasks(
-                scanner.iterator(),
-                executorService,
-                exportOptions,
-                tableMetadata,
-                dataTypeByColumnName,
-                bufferedWriter,
-                isFirstBatch,
-                exportReport);
-          }
-        } else if (exportOptions.getScalarDbMode() == ScalarDbMode.TRANSACTION
-            && distributedTransactionManager != null) {
+        //        if (exportOptions.getScalarDbMode() == ScalarDbMode.STORAGE) {
+        //          try (TransactionManagerCrudOperable.Scanner scanner =
+        //              createScannerWithStorage(exportOptions, dao,
+        // singleCrudOperationTransactionManager)) {
+        //            submitTasks(
+        //                scanner.iterator(),
+        //                executorService,
+        //                exportOptions,
+        //                tableMetadata,
+        //                dataTypeByColumnName,
+        //                bufferedWriter,
+        //                isFirstBatch,
+        //                exportReport);
+        //          }
+        //        } else if (exportOptions.getScalarDbMode() == ScalarDbMode.TRANSACTION
+        //            && distributedTransactionManager != null) {
 
-          try (TransactionManagerCrudOperable.Scanner scanner =
-              createScannerWithTransaction(exportOptions, dao, distributedTransactionManager)) {
-            submitTasks(
-                scanner.iterator(),
-                executorService,
-                exportOptions,
-                tableMetadata,
-                dataTypeByColumnName,
-                bufferedWriter,
-                isFirstBatch,
-                exportReport);
-          }
+        try (TransactionManagerCrudOperable.Scanner scanner =
+            createScannerWithTransaction(exportOptions, dao, distributedTransactionManager)) {
+          submitTasks(
+              scanner.iterator(),
+              executorService,
+              exportOptions,
+              tableMetadata,
+              dataTypeByColumnName,
+              bufferedWriter,
+              isFirstBatch,
+              exportReport);
         }
+        //        }
 
         shutdownExecutor(executorService);
         processFooter(exportOptions, tableMetadata, bufferedWriter);
@@ -334,53 +334,6 @@ public abstract class ExportManager {
           TableMetadataUtil.populateProjectionsWithMetadata(
               tableMetadata, exportOptions.getProjectionColumns());
       exportOptions.setProjectionColumns(projectionMetadata);
-    }
-  }
-
-  /**
-   * Creates a ScalarDB {@link TransactionManagerCrudOperable.Scanner} using the {@link
-   * SingleCrudOperationTransactionManager} interface based on the scan configuration provided in
-   * {@link ExportOptions}.
-   *
-   * <p>This method constructs a scanner for reading data directly from ScalarDB using single CRUD
-   * operations managed by the given transaction manager.
-   *
-   * <p>If no partition key is specified in the {@code exportOptions}, a full table scan is
-   * performed. Otherwise, a partition-specific scan is executed using the provided partition key,
-   * optional scan range, sort orders, and projection columns.
-   *
-   * @param exportOptions the {@link ExportOptions} containing configuration for the export
-   *     operation, including namespace, table name, projection columns, limit, scan range,
-   *     partition key, and sort orders
-   * @param dao the {@link ScalarDbDao} used to construct the scan operation for the specified table
-   * @param manager the {@link SingleCrudOperationTransactionManager} used to execute the scan
-   *     operations at the single CRUD level
-   * @return a {@link TransactionManagerCrudOperable.Scanner} instance for reading data from
-   *     ScalarDB using the provided transaction manager
-   * @throws ScalarDbDaoException if an error occurs while creating the scanner or performing the
-   *     scan setup
-   */
-  private TransactionManagerCrudOperable.Scanner createScannerWithStorage(
-      ExportOptions exportOptions, ScalarDbDao dao, SingleCrudOperationTransactionManager manager)
-      throws ScalarDbDaoException {
-    boolean isScanAll = exportOptions.getScanPartitionKey() == null;
-    if (isScanAll) {
-      return dao.createScanner(
-          exportOptions.getNamespace(),
-          exportOptions.getTableName(),
-          exportOptions.getProjectionColumns(),
-          exportOptions.getLimit(),
-          manager);
-    } else {
-      return dao.createScanner(
-          exportOptions.getNamespace(),
-          exportOptions.getTableName(),
-          exportOptions.getScanPartitionKey(),
-          exportOptions.getScanRange(),
-          exportOptions.getSortOrders(),
-          exportOptions.getProjectionColumns(),
-          exportOptions.getLimit(),
-          manager);
     }
   }
 
