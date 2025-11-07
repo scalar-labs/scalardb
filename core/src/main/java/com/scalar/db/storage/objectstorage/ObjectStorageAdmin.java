@@ -477,7 +477,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
       if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            CoreError.COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(
+            CoreError.OBJECT_STORAGE_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED.buildMessage(
                 clusteringKeyName));
       }
     }
