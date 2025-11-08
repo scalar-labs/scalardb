@@ -31,9 +31,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CoordinatorGroupCommitterTest {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
-  @Mock private Emittable<String, String, Snapshot> emitter;
-  @Captor private ArgumentCaptor<List<Snapshot>> snapshotsArgumentCaptor;
-  @Captor private ArgumentCaptor<Snapshot> snapshotArgumentCaptor;
+  @Mock private Emittable<String, String, TransactionContext> emitter;
+  @Captor private ArgumentCaptor<List<TransactionContext>> contextsArgumentCaptor;
+  @Captor private ArgumentCaptor<TransactionContext> contextArgumentCaptor;
 
   @Test
   void reserve_GivenArbitraryChildTxId_ShouldReturnFullTxId() throws Exception {
@@ -93,10 +93,10 @@ class CoordinatorGroupCommitterTest {
       String fullTxId3 = groupCommitter.reserve(childTxId3);
       String fullTxId4 = groupCommitter.reserve(childTxId4);
 
-      Snapshot snapshot1 = mock(Snapshot.class);
-      Snapshot snapshot2 = mock(Snapshot.class);
-      Snapshot snapshot3 = mock(Snapshot.class);
-      Snapshot snapshot4 = mock(Snapshot.class);
+      TransactionContext context1 = mock(TransactionContext.class);
+      TransactionContext context2 = mock(TransactionContext.class);
+      TransactionContext context3 = mock(TransactionContext.class);
+      TransactionContext context4 = mock(TransactionContext.class);
 
       // Act
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -104,25 +104,25 @@ class CoordinatorGroupCommitterTest {
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId1, snapshot1);
+                groupCommitter.ready(fullTxId1, context1);
                 return null;
               }));
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId2, snapshot2);
+                groupCommitter.ready(fullTxId2, context2);
                 return null;
               }));
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId3, snapshot3);
+                groupCommitter.ready(fullTxId3, context3);
                 return null;
               }));
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId4, snapshot4);
+                groupCommitter.ready(fullTxId4, context4);
                 return null;
               }));
       executorService.shutdown();
@@ -134,13 +134,13 @@ class CoordinatorGroupCommitterTest {
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId1).parentKey),
-              snapshotsArgumentCaptor.capture());
-      assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot1, snapshot2);
+              contextsArgumentCaptor.capture());
+      assertThat(contextsArgumentCaptor.getValue()).containsOnly(context1, context2);
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId3).parentKey),
-              snapshotsArgumentCaptor.capture());
-      assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot3, snapshot4);
+              contextsArgumentCaptor.capture());
+      assertThat(contextsArgumentCaptor.getValue()).containsOnly(context3, context4);
       verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
@@ -158,8 +158,8 @@ class CoordinatorGroupCommitterTest {
       String fullTxId1 = groupCommitter.reserve(childTxId1);
       String fullTxId2 = groupCommitter.reserve(childTxId2);
 
-      Snapshot snapshot1 = mock(Snapshot.class);
-      Snapshot snapshot2 = mock(Snapshot.class);
+      TransactionContext context1 = mock(TransactionContext.class);
+      TransactionContext context2 = mock(TransactionContext.class);
 
       // Act
       ExecutorService executorService = Executors.newCachedThreadPool();
@@ -167,7 +167,7 @@ class CoordinatorGroupCommitterTest {
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId1, snapshot1);
+                groupCommitter.ready(fullTxId1, context1);
                 return null;
               }));
       // Sleep to trigger some timeouts in the group commit.
@@ -175,7 +175,7 @@ class CoordinatorGroupCommitterTest {
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId2, snapshot2);
+                groupCommitter.ready(fullTxId2, context2);
                 return null;
               }));
       executorService.shutdown();
@@ -187,10 +187,10 @@ class CoordinatorGroupCommitterTest {
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId1).parentKey),
-              snapshotsArgumentCaptor.capture());
-      assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot1);
-      verify(emitter).emitDelayedGroup(eq(fullTxId2), snapshotArgumentCaptor.capture());
-      assertThat(snapshotArgumentCaptor.getValue()).isEqualTo(snapshot2);
+              contextsArgumentCaptor.capture());
+      assertThat(contextsArgumentCaptor.getValue()).containsOnly(context1);
+      verify(emitter).emitDelayedGroup(eq(fullTxId2), contextArgumentCaptor.capture());
+      assertThat(contextArgumentCaptor.getValue()).isEqualTo(context2);
     }
   }
 
@@ -206,14 +206,14 @@ class CoordinatorGroupCommitterTest {
       String fullTxId1 = groupCommitter.reserve(childTxId1);
       String fullTxId2 = groupCommitter.reserve(childTxId2);
 
-      Snapshot snapshot = mock(Snapshot.class);
+      TransactionContext context = mock(TransactionContext.class);
 
       ExecutorService executorService = Executors.newCachedThreadPool();
       List<Future<Void>> futures = new ArrayList<>();
       futures.add(
           executorService.submit(
               () -> {
-                groupCommitter.ready(fullTxId2, snapshot);
+                groupCommitter.ready(fullTxId2, context);
                 return null;
               }));
       executorService.shutdown();
@@ -229,8 +229,8 @@ class CoordinatorGroupCommitterTest {
       verify(emitter)
           .emitNormalGroup(
               eq(keyManipulator.keysFromFullKey(fullTxId2).parentKey),
-              snapshotsArgumentCaptor.capture());
-      assertThat(snapshotsArgumentCaptor.getValue()).containsOnly(snapshot);
+              contextsArgumentCaptor.capture());
+      assertThat(contextsArgumentCaptor.getValue()).containsOnly(context);
       verify(emitter, never()).emitDelayedGroup(any(), any());
     }
   }
