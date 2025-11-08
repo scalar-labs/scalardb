@@ -52,6 +52,9 @@ public final class DynamoEnv {
         DynamoConfig.TABLE_METADATA_NAMESPACE,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return properties;
   }
 

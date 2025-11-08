@@ -61,4 +61,30 @@ public class CommandLineInputUtils {
       throw new CommandLine.ParameterException(commandLine, error.buildMessage());
     }
   }
+
+  /**
+   * Validates that a deprecated option and its replacement are not both specified. If both options
+   * are detected, it throws a {@link picocli.CommandLine.ParameterException} with an appropriate
+   * error message.
+   *
+   * @param commandLine the {@link CommandLine} instance used to provide context for the exception
+   * @param deprecatedOption the deprecated option name
+   * @param newOption the new option name
+   * @param newOptionShort the short form of the new option name
+   * @throws CommandLine.ParameterException if both deprecated and new options are specified
+   */
+  public static void validateDeprecatedOptionPair(
+      CommandLine commandLine, String deprecatedOption, String newOption, String newOptionShort) {
+    boolean hasDeprecated = commandLine.getParseResult().hasMatchedOption(deprecatedOption);
+    boolean hasNew =
+        commandLine.getParseResult().hasMatchedOption(newOption)
+            || commandLine.getParseResult().hasMatchedOption(newOptionShort);
+
+    if (hasDeprecated && hasNew) {
+      throw new CommandLine.ParameterException(
+          commandLine,
+          DataLoaderError.DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED.buildMessage(
+              deprecatedOption, newOption, newOption));
+    }
+  }
 }

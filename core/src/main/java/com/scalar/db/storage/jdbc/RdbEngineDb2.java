@@ -480,4 +480,9 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     }
     return enclose(columnName);
   }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'";
+  }
 }

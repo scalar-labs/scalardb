@@ -1,14 +1,23 @@
 package com.scalar.db.transaction.jdbc;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdminIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
 import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -173,5 +182,30 @@ public class JdbcTransactionAdminIntegrationTest
     // However, the index creation is successful on Db2 hosted on IBM Cloud.
     // So we disable these tests until the issue with the Db2 community edition is resolved.
     return !JdbcTestUtils.isDb2(rdbEngine);
+  }
+
+  @Override
+  protected void transactionalInsert(Insert insert) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      transaction.insert(insert);
+      transaction.commit();
+    }
+  }
+
+  @Override
+  protected List<Result> transactionalScan(Scan scan) throws TransactionException {
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
+    try (DistributedTransactionManager manager = transactionFactory.getTransactionManager()) {
+      DistributedTransaction transaction = manager.start();
+      List<Result> results = transaction.scan(scan);
+      transaction.commit();
+      return results;
+    }
   }
 }

@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -24,6 +25,11 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
         .orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
   }
 
+  @Override
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new JdbcAdminTestUtils(getProperties(testName));
+  }
+
   // Since SQLite doesn't have persistent namespaces, some behaviors around the namespace are
   // different from the other adapters. So disable several tests that check such behaviors.
 
@@ -31,6 +37,12 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   private boolean isSqlite() {
     return JdbcEnv.isSqlite();
   }
+
+  @Test
+  @Override
+  @DisabledIf("isSqlite")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
 
   @Test
   @Override
