@@ -53,9 +53,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryExecutor recoveryExecutor;
+  private final CrudHandler crud;
   protected final CommitHandler commit;
   private final Isolation isolation;
-  private final boolean isIncludeMetadataEnabled;
   private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
@@ -75,9 +75,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    crud =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            config.isIncludeMetadataEnabled(),
+            parallelExecutor);
     commit = createCommitHandler(config);
     isolation = config.getIsolation();
-    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
@@ -96,9 +102,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    crud =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            config.isIncludeMetadataEnabled(),
+            parallelExecutor);
     commit = createCommitHandler(config);
     isolation = config.getIsolation();
-    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
 
@@ -111,9 +123,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryExecutor recoveryExecutor,
+      CrudHandler crud,
       CommitHandler commit,
       Isolation isolation,
-      boolean isIncludeMetadataEnabled,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     super(databaseConfig);
     this.storage = storage;
@@ -124,10 +136,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recoveryExecutor = recoveryExecutor;
+    this.crud = crud;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
     this.isolation = isolation;
-    this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.mutationOperationChecker =
         new ConsensusCommitMutationOperationChecker(tableMetadataManager);
   }
@@ -244,18 +256,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
               + "anomalies");
     }
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
-    CrudHandler crud =
-        new CrudHandler(
-            storage,
-            snapshot,
-            recoveryExecutor,
-            tableMetadataManager,
-            isIncludeMetadataEnabled,
-            parallelExecutor,
-            readOnly,
-            oneOperation);
+    TransactionContext context =
+        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     DistributedTransaction transaction =
-        new ConsensusCommit(crud, commit, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(context, crud, commit, mutationOperationChecker, groupCommitter);
     if (readOnly) {
       transaction = new ReadOnlyDistributedTransaction(transaction);
     }

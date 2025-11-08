@@ -39,7 +39,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.transaction.consensuscommit.Snapshot.ReadWriteSets;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -541,7 +540,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
     LinkedHashMap<Snapshot.Key, TransactionResult> expected =
         Maps.newLinkedHashMap(Collections.singletonMap(key, result));
 
@@ -1128,7 +1127,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID + "x");
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1151,7 +1150,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
@@ -1176,7 +1175,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID);
@@ -1226,7 +1225,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1278,7 +1277,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1304,7 +1303,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1330,8 +1329,8 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
 
@@ -1393,8 +1392,8 @@ public class SnapshotTest {
                     ScalarDbUtils.toColumn(Attribute.toIdValue("id2"))),
                 TABLE_METADATA));
 
-    Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
+    Snapshot.Key key1 = new Snapshot.Key(scan1, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan2, result2, TABLE_METADATA);
 
     snapshot.putIntoScanSet(
         scan1,
@@ -1484,7 +1483,7 @@ public class SnapshotTest {
     Scan scan = prepareScanWithLimit(1);
     TransactionResult result1 = prepareResult(ANY_ID + "x");
     TransactionResult result2 = prepareResult(ANY_ID + "x");
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
@@ -1513,7 +1512,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
     TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
@@ -1544,7 +1543,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
     TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjectionsWithoutLimit =
@@ -1574,8 +1573,8 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_4);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1607,8 +1606,8 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_4);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1639,9 +1638,9 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
     TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    Snapshot.Key key3 = new Snapshot.Key(scan, result3);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA);
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
@@ -1672,9 +1671,9 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
     TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    Snapshot.Key key3 = new Snapshot.Key(scan, result3);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA);
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
@@ -1706,9 +1705,9 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
     TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
-    Snapshot.Key key3 = new Snapshot.Key(scan, result3);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA);
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
@@ -1738,7 +1737,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanWithProjections =
@@ -1767,7 +1766,7 @@ public class SnapshotTest {
     snapshot.putIntoDeleteSet(deleteKey, delete);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act Assert
     Throwable thrown =
@@ -1787,7 +1786,7 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act Assert
     Throwable thrown =
@@ -2020,7 +2019,7 @@ public class SnapshotTest {
             .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act
     Throwable thrown =
@@ -2051,7 +2050,7 @@ public class SnapshotTest {
             .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act Assert
     Throwable thrown =
@@ -2092,7 +2091,7 @@ public class SnapshotTest {
             .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act
     Throwable thrown =
@@ -2136,7 +2135,7 @@ public class SnapshotTest {
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act
     Throwable thrown =
@@ -2160,7 +2159,7 @@ public class SnapshotTest {
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scanAll, result);
+    Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA);
 
     // Act Assert
     Throwable thrown =
@@ -2186,7 +2185,7 @@ public class SnapshotTest {
             .forNamespace(ANY_NAMESPACE_NAME_2)
             .forTable(ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scanAll, result);
+    Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA);
 
     // Act Assert
     Throwable thrown =
@@ -2206,7 +2205,7 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act
     Throwable thrown =
@@ -2226,7 +2225,7 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act
     Throwable thrown =
@@ -2246,7 +2245,7 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
 
     // Act
     Throwable thrown =
@@ -2370,138 +2369,5 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  void getReadWriteSet_ReadSetAndWriteSetGiven_ShouldReturnProperValue() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-
-    Get get1 = prepareGet();
-    TransactionResult result1 = prepareResult("t1");
-    Snapshot.Key readKey1 = new Snapshot.Key(get1);
-    snapshot.putIntoReadSet(readKey1, Optional.of(result1));
-    Get get2 = prepareAnotherGet();
-    TransactionResult result2 = prepareResult("t2");
-    Snapshot.Key readKey2 = new Snapshot.Key(get2);
-    snapshot.putIntoReadSet(readKey2, Optional.of(result2));
-
-    Put put1 = preparePut();
-    Snapshot.Key putKey1 = new Snapshot.Key(put1);
-    snapshot.putIntoWriteSet(putKey1, put1);
-    Put put2 = prepareAnotherPut();
-    Snapshot.Key putKey2 = new Snapshot.Key(put2);
-    snapshot.putIntoWriteSet(putKey2, put2);
-
-    // Act
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    {
-      // The method returns an immutable value, so the following update shouldn't be included.
-      Get delayedGet =
-          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(ANY_NAMESPACE_NAME)
-              .forTable(ANY_TABLE_NAME);
-      TransactionResult delayedResult = prepareResult("t3");
-      snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
-
-      Put delayedPut =
-          new Put(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(ANY_NAMESPACE_NAME)
-              .forTable(ANY_TABLE_NAME)
-              .withValue(ANY_NAME_3, ANY_TEXT_3);
-      snapshot.putIntoWriteSet(new Snapshot.Key(delayedPut), delayedPut);
-    }
-
-    // Assert
-    assertThat(readWriteSets.readSetMap).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry :
-        readWriteSets.readSetMap.entrySet()) {
-      if (entry.getKey().equals(readKey1)) {
-        assertThat(entry.getValue()).isPresent().get().isEqualTo(result1);
-      } else if (entry.getKey().equals(readKey2)) {
-        assertThat(entry.getValue()).isPresent().get().isEqualTo(result2);
-      } else {
-        throw new AssertionError("Unexpected key: " + entry.getKey());
-      }
-    }
-
-    assertThat(readWriteSets.writeSet).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Put> entry : readWriteSets.writeSet) {
-      if (entry.getKey().equals(putKey1)) {
-        assertThat(entry.getValue()).isEqualTo(put1);
-      } else if (entry.getKey().equals(putKey2)) {
-        assertThat(entry.getValue()).isEqualTo(put2);
-      } else {
-        throw new AssertionError("Unexpected key: " + entry.getKey());
-      }
-    }
-  }
-
-  @Test
-  void getReadWriteSet_ReadSetAndDeleteSetGiven_ShouldReturnProperValue() {
-    // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
-
-    Get get1 = prepareGet();
-    TransactionResult result1 = prepareResult("t1");
-    Snapshot.Key readKey1 = new Snapshot.Key(get1);
-    snapshot.putIntoReadSet(readKey1, Optional.of(result1));
-    Get get2 = prepareAnotherGet();
-    TransactionResult result2 = prepareResult("t2");
-    Snapshot.Key readKey2 = new Snapshot.Key(get2);
-    snapshot.putIntoReadSet(readKey2, Optional.of(result2));
-
-    Delete delete1 = prepareDelete();
-    Snapshot.Key deleteKey1 = new Snapshot.Key(delete1);
-    snapshot.putIntoDeleteSet(deleteKey1, delete1);
-    Delete delete2 = prepareAnotherDelete();
-    Snapshot.Key deleteKey2 = new Snapshot.Key(delete2);
-    snapshot.putIntoDeleteSet(deleteKey2, delete2);
-
-    // Act
-    ReadWriteSets readWriteSets = snapshot.getReadWriteSets();
-    {
-      // The method returns an immutable value, so the following update shouldn't be included.
-      Get delayedGet =
-          new Get(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(ANY_NAMESPACE_NAME)
-              .forTable(ANY_TABLE_NAME);
-      TransactionResult delayedResult = prepareResult("t3");
-      snapshot.putIntoReadSet(new Snapshot.Key(delayedGet), Optional.of(delayedResult));
-
-      Delete delayedDelete =
-          new Delete(new Key(ANY_NAME_1, ANY_TEXT_2), new Key(ANY_NAME_2, ANY_TEXT_1))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(ANY_NAMESPACE_NAME)
-              .forTable(ANY_TABLE_NAME);
-      snapshot.putIntoDeleteSet(new Snapshot.Key(delayedDelete), delayedDelete);
-    }
-
-    // Assert
-    assertThat(readWriteSets.readSetMap).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Optional<TransactionResult>> entry :
-        readWriteSets.readSetMap.entrySet()) {
-      if (entry.getKey().equals(readKey1)) {
-        assertThat(entry.getValue()).isPresent().get().isEqualTo(result1);
-      } else if (entry.getKey().equals(readKey2)) {
-        assertThat(entry.getValue()).isPresent().get().isEqualTo(result2);
-      } else {
-        throw new AssertionError("Unexpected key: " + entry.getKey());
-      }
-    }
-
-    assertThat(readWriteSets.deleteSet).size().isEqualTo(2);
-    for (Map.Entry<Snapshot.Key, Delete> entry : readWriteSets.deleteSet) {
-      if (entry.getKey().equals(deleteKey1)) {
-        assertThat(entry.getValue()).isEqualTo(delete1);
-      } else if (entry.getKey().equals(deleteKey2)) {
-        assertThat(entry.getValue()).isEqualTo(delete2);
-      } else {
-        throw new AssertionError("Unexpected key: " + entry.getKey());
-      }
-    }
   }
 }

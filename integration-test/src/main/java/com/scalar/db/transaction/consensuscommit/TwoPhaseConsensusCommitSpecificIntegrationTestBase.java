@@ -425,7 +425,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
 
     // Wait for the recovery to complete
-    ((TwoPhaseConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((TwoPhaseConsensusCommit) transaction).waitForRecoveryCompletion();
 
     assertThat(coordinatorForStorage1.getState(ANY_ID_2).isPresent()).isTrue();
     assertThat(coordinatorForStorage1.getState(ANY_ID_2).get().getState())
@@ -613,7 +613,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
 
     // Wait for the recovery to complete
-    ((TwoPhaseConsensusCommit) transaction).getCrudHandler().waitForRecoveryCompletion();
+    ((TwoPhaseConsensusCommit) transaction).waitForRecoveryCompletion();
 
     assertThat(coordinatorForStorage1.getState(ANY_ID_2).isPresent()).isTrue();
     assertThat(coordinatorForStorage1.getState(ANY_ID_2).get().getState())
