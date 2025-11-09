@@ -78,9 +78,15 @@ public class ConsensusCommitOperationChecker {
     // Additional checks for SERIALIZABLE isolation level
     if (context.isolation == Isolation.SERIALIZABLE) {
       // Don't allow index gets
-      if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata.getTableMetadata())) {
-        throw new IllegalArgumentException(
-            CoreError.CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE.buildMessage());
+      TableMetadata tableMetadata = metadata.getTableMetadata();
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, tableMetadata)) {
+        // If the index column is part of the primary key, it's allowed
+        String indexKeyColumnName = get.getPartitionKey().getColumns().get(0).getName();
+        if (!tableMetadata.getPartitionKeyNames().contains(indexKeyColumnName)
+            && !tableMetadata.getClusteringKeyNames().contains(indexKeyColumnName)) {
+          throw new IllegalArgumentException(
+              CoreError.CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE.buildMessage());
+        }
       }
     }
   }
@@ -137,9 +143,15 @@ public class ConsensusCommitOperationChecker {
     // Additional checks for SERIALIZABLE isolation level
     if (context.isolation == Isolation.SERIALIZABLE) {
       // Don't allow index scans
-      if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata.getTableMetadata())) {
-        throw new IllegalArgumentException(
-            CoreError.CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE.buildMessage());
+      TableMetadata tableMetadata = metadata.getTableMetadata();
+      if (ScalarDbUtils.isSecondaryIndexSpecified(scan, tableMetadata)) {
+        // If the index column is part of the primary key, it's allowed
+        String indexKeyColumnName = scan.getPartitionKey().getColumns().get(0).getName();
+        if (!tableMetadata.getPartitionKeyNames().contains(indexKeyColumnName)
+            && !tableMetadata.getClusteringKeyNames().contains(indexKeyColumnName)) {
+          throw new IllegalArgumentException(
+              CoreError.CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE.buildMessage());
+        }
       }
 
       // If the scan is a cross-partition scan (ScanAll), don't allow conditions on indexed columns

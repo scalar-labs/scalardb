@@ -285,6 +285,48 @@ public class ConsensusCommitOperationCheckerTest {
   }
 
   @Test
+  public void checkForGet_WithIndexKeyUsingPartitionKeyInSerializable_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addPartitionKey("pk")
+            .addSecondaryIndex("pk")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+
+    Get get = Get.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("pk", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(get, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void checkForGet_WithIndexKeyUsingClusteringKeyInSerializable_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("ck")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+
+    Get get = Get.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("ck", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(get, context)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void checkForGet_ValidGet_ShouldNotThrowException() {
     // Arrange
     Get get =
@@ -400,6 +442,50 @@ public class ConsensusCommitOperationCheckerTest {
     // Act Assert
     assertThatThrownBy(() -> checker.check(scan, context))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void checkForScan_WithIndexKeyUsingPartitionKeyInSerializable_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addPartitionKey("pk")
+            .addSecondaryIndex("pk")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("pk", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void checkForScan_WithIndexKeyUsingClusteringKeyInSerializable_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("ck", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addPartitionKey("pk")
+            .addClusteringKey("ck")
+            .addSecondaryIndex("ck")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("ck", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
   }
 
   @Test
