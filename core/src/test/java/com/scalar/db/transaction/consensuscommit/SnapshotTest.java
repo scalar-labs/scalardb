@@ -174,21 +174,25 @@ public class SnapshotTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Get(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Get prepareAnotherGet() {
-    Key partitionKey = new Key(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
-    return new Get(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_5, ANY_TEXT_5);
+    Key clusteringKey = Key.ofText(ANY_NAME_6, ANY_TEXT_6);
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private Get prepareGetWithIndex() {
@@ -201,13 +205,14 @@ public class SnapshotTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    return new Scan(partitionKey)
-        .withStart(clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .start(clusteringKey)
+        .build();
   }
 
   private Scan prepareScanWithLimit(int limit) {
@@ -216,7 +221,6 @@ public class SnapshotTest {
         .table(ANY_TABLE_NAME)
         .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
         .limit(limit)
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
@@ -254,27 +258,18 @@ public class SnapshotTest {
         .clusteringKey(Key.ofText(ANY_NAME_2, clusteringKeyColumnValue))
         .textValue(ANY_NAME_3, ANY_TEXT_3)
         .textValue(ANY_NAME_4, ANY_TEXT_4)
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
-  private Put prepareAnotherPut() {
-    Key partitionKey = new Key(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
-    return new Put(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
-  }
-
   private Put preparePutWithPartitionKeyOnly() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Put(partitionKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME)
-        .withValue(ANY_NAME_3, ANY_TEXT_3)
-        .withValue(ANY_NAME_4, ANY_TEXT_4);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .textValue(ANY_NAME_3, ANY_TEXT_3)
+        .textValue(ANY_NAME_4, ANY_TEXT_4)
+        .build();
   }
 
   private Put preparePutWithIntColumns() {
@@ -289,7 +284,6 @@ public class SnapshotTest {
         .value(IntColumn.of(ANY_NAME_6, ANY_INT_1))
         .value(IntColumn.of(ANY_NAME_7, ANY_INT_1))
         .value(IntColumn.ofNull(ANY_NAME_8))
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
@@ -314,17 +308,18 @@ public class SnapshotTest {
         .table(ANY_TABLE_NAME)
         .partitionKey(Key.ofText(ANY_NAME_1, partitionKeyColumnValue))
         .clusteringKey(Key.ofText(ANY_NAME_2, clusteringKeyColumnValue))
-        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
   private Delete prepareAnotherDelete() {
-    Key partitionKey = new Key(ANY_NAME_5, ANY_TEXT_5);
-    Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
-    return new Delete(partitionKey, clusteringKey)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_NAMESPACE_NAME)
-        .forTable(ANY_TABLE_NAME);
+    Key partitionKey = Key.ofText(ANY_NAME_5, ANY_TEXT_5);
+    Key clusteringKey = Key.ofText(ANY_NAME_6, ANY_TEXT_6);
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(partitionKey)
+        .clusteringKey(clusteringKey)
+        .build();
   }
 
   private void configureBehavior() throws ExecutionException {
@@ -988,14 +983,15 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(txResult));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    Get getWithProjections = prepareAnotherGet().withProjection(Attribute.ID);
-    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
+    Get getForStorage =
+        Get.newBuilder(prepareAnotherGet()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.get(getForStorage)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).get(getWithProjections);
+    verify(storage).get(getForStorage);
   }
 
   @Test
@@ -1010,15 +1006,16 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
-    Get getWithProjections = prepareAnotherGet().withProjection(Attribute.ID);
-    when(storage.get(getWithProjections)).thenReturn(Optional.of(changedTxResult));
+    Get getForStorage =
+        Get.newBuilder(prepareAnotherGet()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.get(getForStorage)).thenReturn(Optional.of(changedTxResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).get(getWithProjections);
+    verify(storage).get(getForStorage);
   }
 
   @Test
@@ -1032,15 +1029,16 @@ public class SnapshotTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
-    Get getWithProjections = prepareAnotherGet().withProjection(Attribute.ID);
-    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
+    Get getForStorage =
+        Get.newBuilder(prepareAnotherGet()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.get(getForStorage)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).get(getWithProjections);
+    verify(storage).get(getForStorage);
   }
 
   @Test
@@ -1052,17 +1050,18 @@ public class SnapshotTest {
     TransactionResult txResult = prepareResult(ANY_ID + "x");
     snapshot.putIntoGetSet(getWithIndex, Optional.of(txResult));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithIndex =
-        prepareScanWithIndex().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScanWithIndex()).consistency(Consistency.LINEARIZABLE).build();
+
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
-    when(storage.scan(scanWithIndex)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithIndex);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1076,21 +1075,22 @@ public class SnapshotTest {
     TransactionResult result2 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_3);
     snapshot.putIntoGetSet(getWithIndex, Optional.of(result1));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithIndex =
-        prepareScanWithIndex().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScanWithIndex()).consistency(Consistency.LINEARIZABLE).build();
+
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithIndex)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithIndex);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1104,20 +1104,21 @@ public class SnapshotTest {
     TransactionResult result2 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_3);
     snapshot.putIntoGetSet(getWithIndex, Optional.of(result1));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithIndex =
-        prepareScanWithIndex().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScanWithIndex()).consistency(Consistency.LINEARIZABLE).build();
+
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithIndex)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithIndex);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1132,15 +1133,15 @@ public class SnapshotTest {
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1156,16 +1157,16 @@ public class SnapshotTest {
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(changedTxResult)).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1181,15 +1182,15 @@ public class SnapshotTest {
     TransactionResult changedTxResult = prepareResult(ANY_ID);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(changedTxResult)).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1204,16 +1205,16 @@ public class SnapshotTest {
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1233,16 +1234,16 @@ public class SnapshotTest {
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1257,15 +1258,15 @@ public class SnapshotTest {
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1285,15 +1286,15 @@ public class SnapshotTest {
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1308,16 +1309,16 @@ public class SnapshotTest {
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1337,16 +1338,16 @@ public class SnapshotTest {
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
-    Scan scanWithProjections =
-        prepareScan().withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScan()).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1356,17 +1357,19 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
 
     Scan scan1 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .build();
     Scan scan2 =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_1))
+            .build();
 
     Result result1 =
         new TransactionResult(
@@ -1406,25 +1409,27 @@ public class SnapshotTest {
 
     Scanner scanner1 = mock(Scanner.class);
     when(scanner1.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
-    Scan scan1WithProjections =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scan1WithProjections)).thenReturn(scanner1);
+    Scan scan1ForStorage =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    when(storage.scan(scan1ForStorage)).thenReturn(scanner1);
 
     Scanner scanner2 = mock(Scanner.class);
     when(scanner2.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
-    Scan scan2WithProjections =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
-            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withProjections(Arrays.asList(Attribute.ID, ANY_NAME_1, ANY_NAME_2));
-    when(storage.scan(scan2WithProjections)).thenReturn(scanner2);
+    Scan scan2ForStorage =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_1))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    when(storage.scan(scan2ForStorage)).thenReturn(scanner2);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
@@ -1442,14 +1447,14 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    Get getWithProjections = Get.newBuilder(get).projection(Attribute.ID).build();
-    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
+    Get getForStorage = Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.get(getForStorage)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).get(getWithProjections);
+    verify(storage).get(getForStorage);
   }
 
   @Test
@@ -1464,15 +1469,15 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    Get getWithProjections = Get.newBuilder(get).projection(Attribute.ID).build();
-    when(storage.get(getWithProjections)).thenReturn(Optional.of(changedResult));
+    Get getForStorage = Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.get(getForStorage)).thenReturn(Optional.of(changedResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).get(getWithProjections);
+    verify(storage).get(getForStorage);
   }
 
   @Test
@@ -1486,20 +1491,20 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjectionsWithoutLimit);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1515,22 +1520,22 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(insertedResult))
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjectionsWithoutLimit);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1546,21 +1551,21 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(insertedResult))
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjectionsWithoutLimit);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1578,22 +1583,22 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.of(insertedResult))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjectionsWithoutLimit);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1611,21 +1616,22 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjectionsWithoutLimit =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
+
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.of(insertedResult))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithProjectionsWithoutLimit)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjectionsWithoutLimit);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1649,16 +1655,17 @@ public class SnapshotTest {
     when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
 
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjections =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
+
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializable(storage))
         .isInstanceOf(ValidationConflictException.class);
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1684,15 +1691,16 @@ public class SnapshotTest {
     when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
 
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjections =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
+
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1718,15 +1726,15 @@ public class SnapshotTest {
     when(scanner.one()).thenReturn(Optional.of(result2)).thenReturn(Optional.empty());
 
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjections =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).limit(0).build();
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1740,20 +1748,19 @@ public class SnapshotTest {
     Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
     snapshot.putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
-    Scan scanWithProjections =
-        Scan.newBuilder(scan).projections(Attribute.ID, ANY_NAME_1, ANY_NAME_2).build();
+    Scan scanForStorage = Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build();
     Scanner scanner = mock(Scanner.class);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
-    when(storage.scan(scanWithProjections)).thenReturn(scanner);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scanWithProjections);
+    verify(storage).scan(scanForStorage);
   }
 
   @Test
@@ -1849,7 +1856,6 @@ public class SnapshotTest {
             .namespace(ANY_NAMESPACE_NAME)
             .table(ANY_TABLE_NAME)
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .consistency(Consistency.LINEARIZABLE)
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_4))
             .build();
 
@@ -2153,11 +2159,8 @@ public class SnapshotTest {
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
-    ScanAll scanAll =
-        new ScanAll()
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+    Scan scanAll =
+        ScanAll.newBuilder().namespace(ANY_NAMESPACE_NAME).table(ANY_TABLE_NAME).all().build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA);
 
@@ -2179,11 +2182,8 @@ public class SnapshotTest {
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
-    ScanAll scanAll =
-        new ScanAll()
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_NAMESPACE_NAME_2)
-            .forTable(ANY_TABLE_NAME_2);
+    Scan scanAll =
+        ScanAll.newBuilder().namespace(ANY_NAMESPACE_NAME_2).table(ANY_TABLE_NAME_2).all().build();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA);
 
