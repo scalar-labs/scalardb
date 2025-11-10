@@ -2,18 +2,12 @@ package com.scalar.db.storage.objectstorage;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,92 +60,17 @@ public class MutateStatementHandler extends StatementHandler {
       String namespaceName, String tableName, String partitionKey, List<Mutation> mutations)
       throws ExecutionException {
     Map<PartitionIdentifier, String> readVersionMap = new HashMap<>();
-    Map<String, ObjectStorageRecord> partition =
+    ObjectStoragePartition partition =
         getPartition(namespaceName, tableName, partitionKey, readVersionMap);
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
-        putInternal(partition, (Put) mutation);
+        partition.applyPut((Put) mutation, metadataManager.getTableMetadata(mutation));
       } else {
         assert mutation instanceof Delete;
-        deleteInternal(partition, (Delete) mutation);
+        partition.applyDelete((Delete) mutation, metadataManager.getTableMetadata(mutation));
       }
     }
     applyPartitionWrite(namespaceName, tableName, partitionKey, partition, readVersionMap);
-  }
-
-  private void putInternal(Map<String, ObjectStorageRecord> partition, Put put)
-      throws ExecutionException {
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(put);
-    ObjectStorageMutation mutation = new ObjectStorageMutation(put, tableMetadata);
-    if (!put.getCondition().isPresent()) {
-      ObjectStorageRecord existingRecord = partition.get(mutation.getRecordId());
-      if (existingRecord == null) {
-        partition.put(mutation.getRecordId(), mutation.makeRecord());
-      } else {
-        partition.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
-      }
-    } else if (put.getCondition().get() instanceof PutIfNotExists) {
-      if (partition.containsKey(mutation.getRecordId())) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
-      }
-      partition.put(mutation.getRecordId(), mutation.makeRecord());
-    } else if (put.getCondition().get() instanceof PutIfExists) {
-      ObjectStorageRecord existingRecord = partition.get(mutation.getRecordId());
-      if (existingRecord == null) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
-      }
-      partition.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
-    } else {
-      assert put.getCondition().get() instanceof PutIf;
-      ObjectStorageRecord existingRecord = partition.get(mutation.getRecordId());
-      if (existingRecord == null) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
-      }
-      try {
-        validateConditions(
-            partition.get(mutation.getRecordId()),
-            put.getCondition().get().getExpressions(),
-            metadataManager.getTableMetadata(mutation.getOperation()));
-      } catch (ExecutionException e) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put), e);
-      }
-      partition.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
-    }
-  }
-
-  private void deleteInternal(Map<String, ObjectStorageRecord> partition, Delete delete)
-      throws ExecutionException {
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(delete);
-    ObjectStorageMutation mutation = new ObjectStorageMutation(delete, tableMetadata);
-    if (!delete.getCondition().isPresent()) {
-      partition.remove(mutation.getRecordId());
-    } else if (delete.getCondition().get() instanceof DeleteIfExists) {
-      if (!partition.containsKey(mutation.getRecordId())) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
-      }
-      partition.remove(mutation.getRecordId());
-    } else {
-      assert delete.getCondition().get() instanceof DeleteIf;
-      if (!partition.containsKey(mutation.getRecordId())) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
-      }
-      try {
-        validateConditions(
-            partition.get(mutation.getRecordId()),
-            delete.getCondition().get().getExpressions(),
-            metadataManager.getTableMetadata(mutation.getOperation()));
-      } catch (ExecutionException e) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete), e);
-      }
-      partition.remove(mutation.getRecordId());
-    }
   }
 
   /**
@@ -168,13 +87,11 @@ public class MutateStatementHandler extends StatementHandler {
       String namespaceName,
       String tableName,
       String partitionKey,
-      Map<String, ObjectStorageRecord> partition,
+      ObjectStoragePartition partition,
       Map<PartitionIdentifier, String> readVersionMap)
       throws ExecutionException {
-    if (readVersionMap.containsKey(
-        PartitionIdentifier.of(namespaceName, tableName, partitionKey))) {
-      String readVersion =
-          readVersionMap.get(PartitionIdentifier.of(namespaceName, tableName, partitionKey));
+    if (readVersionMap.containsKey(partition.getPartitionIdentifier())) {
+      String readVersion = readVersionMap.get(partition.getPartitionIdentifier());
       if (!partition.isEmpty()) {
         updatePartition(namespaceName, tableName, partitionKey, partition, readVersion);
       } else {
@@ -197,7 +114,7 @@ public class MutateStatementHandler extends StatementHandler {
    * @return the partition
    * @throws ExecutionException if a failure occurs during the operation
    */
-  private Map<String, ObjectStorageRecord> getPartition(
+  private ObjectStoragePartition getPartition(
       String namespaceName,
       String tableName,
       String partitionKey,
@@ -207,13 +124,17 @@ public class MutateStatementHandler extends StatementHandler {
     try {
       Optional<ObjectStorageWrapperResponse> response = wrapper.get(objectKey);
       if (!response.isPresent()) {
-        return new HashMap<>();
+        return ObjectStoragePartition.newBuilder()
+            .namespaceName(namespaceName)
+            .tableName(tableName)
+            .partitionKey(partitionKey)
+            .build();
       }
-      readVersionMap.put(
-          PartitionIdentifier.of(namespaceName, tableName, partitionKey),
-          response.get().getVersion());
-      return Serializer.deserialize(
-          response.get().getPayload(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
+      ObjectStoragePartition partition =
+          Serializer.deserialize(
+              response.get().getPayload(), new TypeReference<ObjectStoragePartition>() {});
+      readVersionMap.put(partition.getPartitionIdentifier(), response.get().getVersion());
+      return partition;
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
@@ -231,10 +152,7 @@ public class MutateStatementHandler extends StatementHandler {
    * @throws ExecutionException if a failure occurs during the operation
    */
   private void insertPartition(
-      String namespaceName,
-      String tableName,
-      String partitionKey,
-      Map<String, ObjectStorageRecord> partition)
+      String namespaceName, String tableName, String partitionKey, ObjectStoragePartition partition)
       throws ExecutionException {
     try {
       wrapper.insert(
@@ -264,7 +182,7 @@ public class MutateStatementHandler extends StatementHandler {
       String namespaceName,
       String tableName,
       String partitionKey,
-      Map<String, ObjectStorageRecord> partition,
+      ObjectStoragePartition partition,
       String readVersion)
       throws ExecutionException {
     try {

@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,17 +58,14 @@ public class SelectStatementHandler extends StatementHandler {
   private Scanner executeGet(Get get, TableMetadata metadata) throws ExecutionException {
     ObjectStorageOperation operation = new ObjectStorageOperation(get, metadata);
     operation.checkArgument(Get.class);
-    Optional<ObjectStorageRecord> record =
-        getRecord(
-            getNamespace(get),
-            getTable(get),
-            operation.getConcatenatedPartitionKey(),
-            operation.getRecordId());
-    if (!record.isPresent()) {
+    ObjectStoragePartition partition =
+        getPartition(getNamespace(get), getTable(get), operation.getConcatenatedPartitionKey());
+    if (!partition.getRecord(operation.getRecordId()).isPresent()) {
       return new EmptyScanner();
     }
+    ObjectStorageRecord record = partition.getRecord(operation.getRecordId()).get();
     return new ScannerImpl(
-        Collections.singletonList(record.get()).iterator(),
+        Collections.singletonList(record).iterator(),
         new ResultInterpreter(get.getProjections(), metadata),
         1);
   }
@@ -77,10 +73,9 @@ public class SelectStatementHandler extends StatementHandler {
   private Scanner executeScan(Scan scan, TableMetadata metadata) throws ExecutionException {
     ObjectStorageOperation operation = new ObjectStorageOperation(scan, metadata);
     operation.checkArgument(Scan.class);
-    List<ObjectStorageRecord> records =
-        new ArrayList<>(
-            getRecordsInPartition(
-                getNamespace(scan), getTable(scan), operation.getConcatenatedPartitionKey()));
+    ObjectStoragePartition partition =
+        getPartition(getNamespace(scan), getTable(scan), operation.getConcatenatedPartitionKey());
+    List<ObjectStorageRecord> records = new ArrayList<>(partition.getRecords().values());
 
     records.sort(
         (o1, o2) ->
@@ -136,58 +131,41 @@ public class SelectStatementHandler extends StatementHandler {
         scan.getLimit());
   }
 
-  private Map<String, ObjectStorageRecord> getPartition(
-      String namespace, String table, String partition) throws ObjectStorageWrapperException {
-    Optional<ObjectStorageWrapperResponse> response =
-        wrapper.get(ObjectStorageUtils.getObjectKey(namespace, table, partition));
-    if (!response.isPresent()) {
-      return Collections.emptyMap();
-    }
-    return Serializer.deserialize(
-        response.get().getPayload(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-  }
-
-  private Optional<ObjectStorageRecord> getRecord(
-      String namespace, String table, String partition, String recordId) throws ExecutionException {
+  private ObjectStoragePartition getPartition(
+      String namespaceName, String tableName, String partitionKey) throws ExecutionException {
     try {
-      Map<String, ObjectStorageRecord> recordsInPartition =
-          getPartition(namespace, table, partition);
-      if (recordsInPartition.containsKey(recordId)) {
-        return Optional.of(recordsInPartition.get(recordId));
-      } else {
-        return Optional.empty();
+      Optional<ObjectStorageWrapperResponse> response =
+          wrapper.get(ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey));
+      if (!response.isPresent()) {
+        return ObjectStoragePartition.newBuilder()
+            .namespaceName(namespaceName)
+            .tableName(tableName)
+            .partitionKey(partitionKey)
+            .records(Collections.emptyMap())
+            .build();
       }
-    } catch (Exception e) {
+      return Serializer.deserialize(
+          response.get().getPayload(), new TypeReference<ObjectStoragePartition>() {});
+    } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
   }
 
-  private Set<ObjectStorageRecord> getRecordsInPartition(
-      String namespace, String table, String partition) throws ExecutionException {
-    try {
-      Map<String, ObjectStorageRecord> recordsInPartition =
-          getPartition(namespace, table, partition);
-      return new HashSet<>(recordsInPartition.values());
-    } catch (Exception e) {
-      throw new ExecutionException(
-          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  private Set<ObjectStorageRecord> getRecordsInTable(String namespace, String table)
+  private Set<ObjectStorageRecord> getRecordsInTable(String namespaceName, String tableName)
       throws ExecutionException {
     try {
-      Set<String> partitionNames =
-          wrapper.getKeys(ObjectStorageUtils.getObjectKey(namespace, table, "")).stream()
+      Set<String> partitionKeys =
+          wrapper.getKeys(ObjectStorageUtils.getObjectKey(namespaceName, tableName, "")).stream()
               .map(
                   key ->
                       key.substring(key.lastIndexOf(ObjectStorageUtils.OBJECT_KEY_DELIMITER) + 1))
               .filter(partition -> !partition.isEmpty())
               .collect(Collectors.toSet());
       Set<ObjectStorageRecord> records = new HashSet<>();
-      for (String key : partitionNames) {
-        records.addAll(getRecordsInPartition(namespace, table, key));
+      for (String partitionKey : partitionKeys) {
+        ObjectStoragePartition partition = getPartition(namespaceName, tableName, partitionKey);
+        records.addAll(partition.getRecords().values());
       }
       return records;
     } catch (Exception e) {

@@ -35,7 +35,7 @@ public class StatementHandler {
     return operation.forTable().get();
   }
 
-  protected void validateConditions(
+  protected static void validateConditions(
       ObjectStorageRecord record, List<ConditionalExpression> expressions, TableMetadata metadata)
       throws ExecutionException {
     for (ConditionalExpression expression : expressions) {

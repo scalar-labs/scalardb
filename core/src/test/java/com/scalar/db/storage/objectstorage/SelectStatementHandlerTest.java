@@ -18,7 +18,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -84,11 +83,16 @@ public class SelectStatementHandlerTest {
     return Scan.newBuilder().namespace(ANY_NAMESPACE_NAME).table(ANY_TABLE_NAME).all().build();
   }
 
-  private Map<String, ObjectStorageRecord> createPartitionWithRecord() {
+  private ObjectStoragePartition createPartitionWithRecord() {
     Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
     Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2);
     Map<String, Object> values = Collections.singletonMap(ANY_NAME_3, ANY_TEXT_3);
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    ObjectStoragePartition partition =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_1)
+            .build();
     addRecordToPartition(partition, partitionKey, clusteringKey, values);
     return partition;
   }
@@ -107,13 +111,13 @@ public class SelectStatementHandlerTest {
   }
 
   private void addRecordToPartition(
-      Map<String, ObjectStorageRecord> partition,
+      ObjectStoragePartition partition,
       Map<String, Object> partitionKey,
       Map<String, Object> clusteringKey,
       Map<String, Object> values) {
     ObjectStorageRecord record = createRecord(partitionKey, clusteringKey, values);
     String recordId = buildRecordId(partitionKey, clusteringKey);
-    partition.put(recordId, record);
+    partition.getRecords().put(recordId, record);
   }
 
   private String buildRecordId(
@@ -127,7 +131,7 @@ public class SelectStatementHandlerTest {
   public void handle_GetOperationGiven_ShouldReturnScanner() throws Exception {
     // Arrange
     Get get = prepareGet();
-    Map<String, ObjectStorageRecord> partition = createPartitionWithRecord();
+    ObjectStoragePartition partition = createPartitionWithRecord();
     String serialized = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
@@ -146,7 +150,12 @@ public class SelectStatementHandlerTest {
   public void handle_GetOperationWhenRecordNotFound_ShouldReturnEmptyScanner() throws Exception {
     // Arrange
     Get get = prepareGet();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    ObjectStoragePartition partition =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_1)
+            .build();
     String serialized = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
@@ -204,7 +213,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationGiven_ShouldReturnScanner() throws Exception {
     // Arrange
     Scan scan = prepareScan();
-    Map<String, ObjectStorageRecord> partition = createPartitionWithRecord();
+    ObjectStoragePartition partition = createPartitionWithRecord();
     String serialized = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
@@ -250,7 +259,12 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationWithLimit_ShouldReturnLimitedResults() throws Exception {
     // Arrange
     Scan scan = Scan.newBuilder(prepareScan()).limit(1).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    ObjectStoragePartition partition =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_1)
+            .build();
 
     // Create multiple records
     for (int i = 0; i < 5; i++) {
@@ -284,12 +298,17 @@ public class SelectStatementHandlerTest {
                     ObjectStorageUtils.getObjectKey(
                         ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_2))));
 
-    Map<String, ObjectStorageRecord> partition1 = createPartitionWithRecord();
+    ObjectStoragePartition partition1 = createPartitionWithRecord();
     String serialized1 = Serializer.serialize(partition1);
     ObjectStorageWrapperResponse response1 =
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
-    Map<String, ObjectStorageRecord> partition2 = new HashMap<>();
+    ObjectStoragePartition partition2 =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_2)
+            .build();
     Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
     Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
     addRecordToPartition(partition2, partitionKey2, clusteringKey2, Collections.emptyMap());
@@ -323,12 +342,17 @@ public class SelectStatementHandlerTest {
     when(wrapper.getKeys(anyString()))
         .thenReturn(new HashSet<>(Arrays.asList(objectKey1, objectKey2)));
 
-    Map<String, ObjectStorageRecord> partition1 = createPartitionWithRecord();
+    ObjectStoragePartition partition1 = createPartitionWithRecord();
     String serialized1 = Serializer.serialize(partition1);
     ObjectStorageWrapperResponse response1 =
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
-    Map<String, ObjectStorageRecord> partition2 = new HashMap<>();
+    ObjectStoragePartition partition2 =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_2)
+            .build();
     Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
     Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
     addRecordToPartition(partition2, partitionKey2, clusteringKey2, Collections.emptyMap());
@@ -363,7 +387,12 @@ public class SelectStatementHandlerTest {
     // Arrange
     Scan scan =
         Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, ANY_TEXT_2 + "2")).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    ObjectStoragePartition partition =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_1)
+            .build();
 
     // Create multiple records with different clustering keys
     for (int i = 0; i < 5; i++) {
@@ -391,7 +420,12 @@ public class SelectStatementHandlerTest {
     // Arrange
     Scan scan =
         Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, ANY_TEXT_2 + "2")).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    ObjectStoragePartition partition =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_1)
+            .build();
 
     // Create multiple records with different clustering keys
     for (int i = 0; i < 5; i++) {
@@ -419,7 +453,12 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.ASC);
     Scan scan = Scan.newBuilder(prepareScan()).ordering(Scan.Ordering.desc(ANY_NAME_2)).build();
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
+    ObjectStoragePartition partition =
+        ObjectStoragePartition.newBuilder()
+            .namespaceName(ANY_NAMESPACE_NAME)
+            .tableName(ANY_TABLE_NAME)
+            .partitionKey(ANY_TEXT_1)
+            .build();
 
     // Create multiple records
     for (int i = 0; i < 3; i++) {

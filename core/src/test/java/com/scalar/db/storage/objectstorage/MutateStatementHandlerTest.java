@@ -126,8 +126,9 @@ public class MutateStatementHandlerTest {
   }
 
   private void setupPartitionWithRecord(String recordId) throws ObjectStorageWrapperException {
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(recordId, prepareExistingRecord());
+    Map<String, ObjectStorageRecord> records = new HashMap<>();
+    records.put(recordId, prepareExistingRecord());
+    ObjectStoragePartition partition = ObjectStoragePartition.newBuilder().records(records).build();
     String serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
@@ -136,11 +137,12 @@ public class MutateStatementHandlerTest {
 
   private void setupPartitionWithRecords(String recordId, String... additionalRecordIds)
       throws ObjectStorageWrapperException {
-    Map<String, ObjectStorageRecord> partition = new HashMap<>();
-    partition.put(recordId, prepareExistingRecord());
+    Map<String, ObjectStorageRecord> records = new HashMap<>();
+    records.put(recordId, prepareExistingRecord());
     for (String additionalRecordId : additionalRecordIds) {
-      partition.put(additionalRecordId, prepareExistingRecord());
+      records.put(additionalRecordId, prepareExistingRecord());
     }
+    ObjectStoragePartition partition = ObjectStoragePartition.newBuilder().records(records).build();
     String serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
@@ -420,11 +422,12 @@ public class MutateStatementHandlerTest {
     verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    Map<String, ObjectStorageRecord> insertedPartition =
+    ObjectStoragePartition insertedPartition =
         Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-    assertThat(insertedPartition).containsKey(expectedConcatenatedKey);
-    assertThat(insertedPartition.get(expectedConcatenatedKey).getValues())
+            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    Optional<ObjectStorageRecord> record = insertedPartition.getRecord(expectedConcatenatedKey);
+    assertThat(record).isPresent();
+    assertThat(record.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
   }
@@ -436,11 +439,12 @@ public class MutateStatementHandlerTest {
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    Map<String, ObjectStorageRecord> updatedPartition =
+    ObjectStoragePartition updatedPartition =
         Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-    assertThat(updatedPartition).containsKey(expectedConcatenatedKey);
-    assertThat(updatedPartition.get(expectedConcatenatedKey).getValues())
+            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    Optional<ObjectStorageRecord> record = updatedPartition.getRecord(expectedConcatenatedKey);
+    assertThat(record).isPresent();
+    assertThat(record.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
     assertThat(versionCaptor.getValue()).isEqualTo(VERSION);
@@ -723,11 +727,11 @@ public class MutateStatementHandlerTest {
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    Map<String, ObjectStorageRecord> updatedPartition =
+    ObjectStoragePartition updatedPartition =
         Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-    assertThat(updatedPartition).doesNotContainKey(expectedConcatenatedKey);
-    assertThat(updatedPartition).containsKey(expectedExistingRecordKey);
+            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    assertThat(updatedPartition.getRecord(expectedConcatenatedKey)).isEmpty();
+    assertThat(updatedPartition.getRecord(expectedExistingRecordKey)).isPresent();
   }
 
   private void assert_Delete_WhenNewPartitionIsEmpty_ShouldCallWrapperDelete(
@@ -765,23 +769,27 @@ public class MutateStatementHandlerTest {
     verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    Map<String, ObjectStorageRecord> insertedPartition =
+    ObjectStoragePartition insertedPartition =
         Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-    assertThat(insertedPartition).containsKey(mutation1.getRecordId());
-    assertThat(insertedPartition.get(mutation1.getRecordId()).getValues())
+            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    Optional<ObjectStorageRecord> record1 = insertedPartition.getRecord(mutation1.getRecordId());
+    assertThat(record1).isPresent();
+    assertThat(record1.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
-    assertThat(insertedPartition).containsKey(mutation2.getRecordId());
-    assertThat(insertedPartition.get(mutation2.getRecordId()).getValues())
+    Optional<ObjectStorageRecord> record2 = insertedPartition.getRecord(mutation2.getRecordId());
+    assertThat(record2).isPresent();
+    assertThat(record2.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
-    assertThat(insertedPartition).containsKey(mutation3.getRecordId());
-    assertThat(insertedPartition.get(mutation3.getRecordId()).getValues())
+    Optional<ObjectStorageRecord> record3 = insertedPartition.getRecord(mutation3.getRecordId());
+    assertThat(record3).isPresent();
+    assertThat(record3.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
-    assertThat(insertedPartition).containsKey(mutation4.getRecordId());
-    assertThat(insertedPartition.get(mutation4.getRecordId()).getValues())
+    Optional<ObjectStorageRecord> record4 = insertedPartition.getRecord(mutation4.getRecordId());
+    assertThat(record4).isPresent();
+    assertThat(record4.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
   }
@@ -815,23 +823,27 @@ public class MutateStatementHandlerTest {
     verify(wrapper)
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
-    Map<String, ObjectStorageRecord> updatedPartition =
+    ObjectStoragePartition updatedPartition =
         Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<Map<String, ObjectStorageRecord>>() {});
-    assertThat(updatedPartition).containsKey(mutation1.getRecordId());
-    assertThat(updatedPartition.get(mutation1.getRecordId()).getValues())
+            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    Optional<ObjectStorageRecord> record1 = updatedPartition.getRecord(mutation1.getRecordId());
+    assertThat(record1).isPresent();
+    assertThat(record1.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
-    assertThat(updatedPartition).containsKey(mutation2.getRecordId());
-    assertThat(updatedPartition.get(mutation2.getRecordId()).getValues())
+    Optional<ObjectStorageRecord> record2 = updatedPartition.getRecord(mutation2.getRecordId());
+    assertThat(record2).isPresent();
+    assertThat(record2.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
-    assertThat(updatedPartition).containsKey(mutation3.getRecordId());
-    assertThat(updatedPartition.get(mutation3.getRecordId()).getValues())
+    Optional<ObjectStorageRecord> record3 = updatedPartition.getRecord(mutation3.getRecordId());
+    assertThat(record3).isPresent();
+    assertThat(record3.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
-    assertThat(updatedPartition).containsKey(mutation4.getRecordId());
-    assertThat(updatedPartition.get(mutation4.getRecordId()).getValues())
+    Optional<ObjectStorageRecord> record4 = updatedPartition.getRecord(mutation4.getRecordId());
+    assertThat(record4).isPresent();
+    assertThat(record4.get().getValues())
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
     assertThat(versionCaptor.getValue()).isEqualTo(VERSION);
@@ -881,25 +893,33 @@ public class MutateStatementHandlerTest {
 
     List<String> insertedPayloads = payloadCaptor.getAllValues();
     for (int i = 0; i < insertedPayloads.size(); i++) {
-      Map<String, ObjectStorageRecord> insertedPartition =
+      ObjectStoragePartition insertedPartition =
           Serializer.deserialize(
-              insertedPayloads.get(i), new TypeReference<Map<String, ObjectStorageRecord>>() {});
+              insertedPayloads.get(i), new TypeReference<ObjectStoragePartition>() {});
       if (insertedObjectKeys.get(i).equals(expectedObjectKey1)) {
-        assertThat(insertedPartition).containsKey(mutation1.getRecordId());
-        assertThat(insertedPartition.get(mutation1.getRecordId()).getValues())
+        Optional<ObjectStorageRecord> record1 =
+            insertedPartition.getRecord(mutation1.getRecordId());
+        assertThat(record1).isPresent();
+        assertThat(record1.get().getValues())
             .containsEntry(ANY_NAME_3, ANY_INT_1)
             .containsEntry(ANY_NAME_4, ANY_INT_2);
-        assertThat(insertedPartition).containsKey(mutation2.getRecordId());
-        assertThat(insertedPartition.get(mutation2.getRecordId()).getValues())
+        Optional<ObjectStorageRecord> record2 =
+            insertedPartition.getRecord(mutation2.getRecordId());
+        assertThat(record2).isPresent();
+        assertThat(record2.get().getValues())
             .containsEntry(ANY_NAME_3, ANY_INT_1)
             .containsEntry(ANY_NAME_4, ANY_INT_2);
       } else if (insertedObjectKeys.get(i).equals(expectedObjectKey2)) {
-        assertThat(insertedPartition).containsKey(mutation3.getRecordId());
-        assertThat(insertedPartition.get(mutation3.getRecordId()).getValues())
+        Optional<ObjectStorageRecord> record3 =
+            insertedPartition.getRecord(mutation3.getRecordId());
+        assertThat(record3).isPresent();
+        assertThat(record3.get().getValues())
             .containsEntry(ANY_NAME_3, ANY_INT_1)
             .containsEntry(ANY_NAME_4, ANY_INT_2);
-        assertThat(insertedPartition).containsKey(mutation4.getRecordId());
-        assertThat(insertedPartition.get(mutation4.getRecordId()).getValues())
+        Optional<ObjectStorageRecord> record4 =
+            insertedPartition.getRecord(mutation4.getRecordId());
+        assertThat(record4).isPresent();
+        assertThat(record4.get().getValues())
             .containsEntry(ANY_NAME_3, ANY_INT_1)
             .containsEntry(ANY_NAME_4, ANY_INT_2);
       }

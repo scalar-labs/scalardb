@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Arrays;
@@ -26,16 +25,11 @@ public class StatementHandlerTest {
   private static final String COLUMN_NAME_1 = "col1";
   private static final String COLUMN_NAME_2 = "col2";
 
-  @Mock private ObjectStorageWrapper wrapper;
-  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
-
-  private StatementHandler handler;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    handler = new StatementHandler(wrapper, metadataManager);
     when(metadata.getColumnDataType(anyString())).thenReturn(DataType.INT);
   }
 
@@ -47,7 +41,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -59,7 +53,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -71,7 +65,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -83,7 +77,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -95,7 +89,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -107,7 +101,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -119,7 +113,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -132,7 +126,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -145,7 +139,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -158,7 +152,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -170,7 +164,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -182,7 +176,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -195,7 +189,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -208,7 +202,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -221,7 +215,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -233,7 +227,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -246,7 +240,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -258,7 +252,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -271,7 +265,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Collections.singletonList(condition);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
@@ -288,7 +282,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Arrays.asList(condition1, condition2);
 
     // Act Assert
-    assertThatCode(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatCode(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .doesNotThrowAnyException();
   }
 
@@ -306,7 +300,7 @@ public class StatementHandlerTest {
     List<ConditionalExpression> expressions = Arrays.asList(condition1, condition2);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.validateConditions(record, expressions, metadata))
+    assertThatThrownBy(() -> StatementHandler.validateConditions(record, expressions, metadata))
         .isInstanceOf(ExecutionException.class);
   }
 
