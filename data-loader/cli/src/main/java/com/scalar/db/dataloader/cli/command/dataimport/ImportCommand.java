@@ -160,7 +160,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               scalarDbTransactionManager.getDistributedTransactionManager());
     } else {
       ScalarDbStorageManager scalarDbStorageManager =
-          new ScalarDbStorageManager(StorageFactory.create(configFile));
+          new ScalarDbStorageManager(
+              StorageFactory.create(configFile),
+              TransactionFactory.create(configFile).getTransactionManager());
       importManager =
           new ImportManager(
               tableMetadataMap,
@@ -169,7 +171,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               importProcessorFactory,
               ScalarDbMode.STORAGE,
               scalarDbStorageManager.getDistributedStorage(),
-              null);
+              scalarDbStorageManager.getDistributedTransactionManager());
     }
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));

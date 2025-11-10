@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.service.StorageFactory;
 import javax.annotation.Nullable;
 
@@ -18,15 +19,18 @@ public class ScalarDbStorageManager {
 
   @Nullable private final DistributedStorage storage;
   private final DistributedStorageAdmin storageAdmin;
+  @Nullable private final DistributedTransactionManager distributedTransactionManager;
 
   /**
    * Constructs a {@code ScalarDbStorageManager} using the provided {@link StorageFactory}.
    *
    * @param storageFactory the factory used to create the ScalarDB storage and admin instances
    */
-  public ScalarDbStorageManager(StorageFactory storageFactory) {
+  public ScalarDbStorageManager(
+      StorageFactory storageFactory, DistributedTransactionManager manager) {
     storage = storageFactory.getStorage();
     storageAdmin = storageFactory.getStorageAdmin();
+    distributedTransactionManager = manager;
   }
 
   /**
@@ -45,5 +49,9 @@ public class ScalarDbStorageManager {
    */
   public DistributedStorageAdmin getDistributedStorageAdmin() {
     return storageAdmin;
+  }
+
+  public DistributedTransactionManager getDistributedTransactionManager() {
+    return distributedTransactionManager;
   }
 }
