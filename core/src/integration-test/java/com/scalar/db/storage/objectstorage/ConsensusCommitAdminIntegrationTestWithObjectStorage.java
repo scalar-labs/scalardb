@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
@@ -13,6 +14,14 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   @Override
   protected Properties getProps(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder(TABLE_METADATA)
+        .removeSecondaryIndex(COL_NAME5)
+        .removeSecondaryIndex(COL_NAME6)
+        .build();
   }
 
   @Override
