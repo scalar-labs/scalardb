@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -10,6 +11,14 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
   @Override
   protected Properties getProps(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder(TABLE_METADATA)
+        .removeSecondaryIndex(COL_NAME5)
+        .removeSecondaryIndex(COL_NAME6)
+        .build();
   }
 
   @Override
