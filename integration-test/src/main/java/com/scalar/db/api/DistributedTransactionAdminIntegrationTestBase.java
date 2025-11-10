@@ -12,13 +12,12 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1225,11 +1224,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .doubleValue("c6", 4.0d)
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
-              .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c11", Instant.now());
+              .dateValue("c9", TimeRelatedColumnEncodingUtils.decodeDate(123))
+              .timeValue("c10", TimeRelatedColumnEncodingUtils.decodeTime(2000))
+              .timestampTZValue("c11", TimeRelatedColumnEncodingUtils.decodeTimestampTZ(45));
       if (isTimestampTypeSupported()) {
-        insert.timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
+        insert.timestampValue("c12", TimeRelatedColumnEncodingUtils.decodeTimestamp(67));
       }
       transactionalInsert(insert.build());
 
