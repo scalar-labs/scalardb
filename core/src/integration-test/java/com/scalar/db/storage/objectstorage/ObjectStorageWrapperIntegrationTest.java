@@ -156,7 +156,7 @@ public class ObjectStorageWrapperIntegrationTest {
   }
 
   @Test
-  public void update_WrongVersionGiven_ShouldThrowPreconditionFailedException() throws Exception {
+  public void update_WrongVersionGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     String wrongVersion = "wrong-version";
 
@@ -279,9 +279,16 @@ public class ObjectStorageWrapperIntegrationTest {
 
   @Test
   public void close_ShouldNotThrowException() {
-    // Arrange
+    try {
+      // Arrange
 
-    // Act Assert
-    assertThatCode(() -> wrapper.close()).doesNotThrowAnyException();
+      // Act Assert
+      assertThatCode(() -> wrapper.close()).doesNotThrowAnyException();
+    } finally {
+      Properties properties = getProperties(TEST_NAME);
+      ObjectStorageConfig objectStorageConfig =
+          ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties));
+      wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
+    }
   }
 }
