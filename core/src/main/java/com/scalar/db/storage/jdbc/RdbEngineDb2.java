@@ -24,6 +24,7 @@ import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -172,8 +173,13 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace};
+  public String[] createSchemaSqls(String fullSchema) {
+    return new String[] {"CREATE SCHEMA " + enclose(fullSchema)};
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String fullSchema) {
+    return createSchemaSqls(fullSchema);
   }
 
   @Override
@@ -189,7 +195,11 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     ArrayList<String> sqls = new ArrayList<>();
 
     if (hasDifferentClusteringOrders) {
@@ -218,19 +228,9 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {"CREATE SCHEMA " + enclose(metadataSchema)};
-  }
-
-  @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
     // SQL error code -601: Name already used
     return e.getErrorCode() == -601;
-  }
-
-  @Override
-  public String deleteMetadataSchemaSql(String metadataSchema) {
-    return dropNamespaceSql(metadataSchema);
   }
 
   @Override
@@ -242,6 +242,11 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException {
     throw new ExecutionException("Dropping the schema failed: " + namespace, e);
+  }
+
+  @Override
+  public String namespaceExistsStatement() {
+    return "SELECT 1 FROM syscat.schemata WHERE schemaname = ?";
   }
 
   @Override
@@ -312,6 +317,35 @@ class RdbEngineDb2 extends AbstractRdbEngine {
           + " TO "
           + enclose(newIndexName)
     };
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Even though the "create index if exists ..." syntax does not exist,
+    // only a warning is raised when the index already exists but no error is thrown
+    // so we return false in any case
+    // Raised warning for duplicated index should be checked with
+    // RdbEngineDb2.throwIfDuplicatedIndexWarning()
+    return false;
+  }
+
+  @Override
+  public void throwIfDuplicatedIndexWarning(SQLWarning warning) throws SQLException {
+    assert warning != null;
+    if (warning.getErrorCode() == 605) {
+      // Only a warning is raised when the index already exists but no exception is thrown by the
+      // driver.
+      // To match the behavior of other storages, we throw an exception in this case.
+      //
+      // SQL error code 605: The index name already exists
+      throw new SQLException(
+          warning.getMessage(), warning.getSQLState(), warning.getErrorCode(), warning.getCause());
+    }
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
   }
 
   @Override
@@ -395,11 +429,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
-  }
-
-  @Override
-  public String namespaceExistsStatement() {
-    return "SELECT 1 FROM syscat.schemata WHERE schemaname = ?";
   }
 
   @Override

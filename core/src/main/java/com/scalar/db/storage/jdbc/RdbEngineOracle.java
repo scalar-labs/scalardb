@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RdbEngineOracle extends AbstractRdbEngine {
+class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
@@ -52,11 +52,16 @@ public class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
+  public String[] createSchemaSqls(String fullSchema) {
     return new String[] {
-      "CREATE USER " + fullNamespace + " IDENTIFIED BY \"Oracle1234!@#$\"",
-      "ALTER USER " + fullNamespace + " quota unlimited on USERS",
+      "CREATE USER " + enclose(fullSchema) + " IDENTIFIED BY \"Oracle1234!@#$\"",
+      "ALTER USER " + enclose(fullSchema) + " quota unlimited on USERS",
     };
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String schema) {
+    return createSchemaSqls(schema);
   }
 
   @Override
@@ -72,7 +77,11 @@ public class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     ArrayList<String> sqls = new ArrayList<>();
 
     // Set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
@@ -106,22 +115,9 @@ public class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {
-      "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"Oracle1234!@#$\"",
-      "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS",
-    };
-  }
-
-  @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
     // ORA-01920: user name 'string' conflicts with another user or role name
     return e.getErrorCode() == 1920;
-  }
-
-  @Override
-  public String deleteMetadataSchemaSql(String metadataSchema) {
-    return "DROP USER " + enclose(metadataSchema);
   }
 
   @Override
@@ -240,6 +236,14 @@ public class RdbEngineOracle extends AbstractRdbEngine {
     // ORA-08177: can't serialize access for this transaction
     // ORA-00060: deadlock detected while waiting for resource
     return e.getErrorCode() == 8177 || e.getErrorCode() == 60;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://docs.oracle.com/en/error-help/db/ora-00955/
+    // code : 955
+    // message : name is already used by an existing object
+    return e.getErrorCode() == 955;
   }
 
   @Override
@@ -436,6 +440,11 @@ public class RdbEngineOracle extends AbstractRdbEngine {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? null : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
   }
 
   @Override

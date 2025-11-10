@@ -34,8 +34,13 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace};
+  public String[] createSchemaSqls(String fullSchema) {
+    return new String[] {"CREATE SCHEMA " + enclose(fullSchema)};
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String fullSchema) {
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(fullSchema)};
   }
 
   @Override
@@ -51,7 +56,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     ArrayList<String> sqls = new ArrayList<>();
 
     if (hasDifferentClusteringOrders) {
@@ -60,6 +69,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
+              + (ifNotExists ? "IF NOT EXISTS " : "")
               + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
               + encloseFullTableName(schema, table)
@@ -81,18 +91,8 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
-  }
-
-  @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
     return false;
-  }
-
-  @Override
-  public String deleteMetadataSchemaSql(String metadataSchema) {
-    return "DROP SCHEMA " + enclose(metadataSchema);
   }
 
   @Override
@@ -194,6 +194,12 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     // 40001: serialization_failure
     // 40P01: deadlock_detected
     return e.getSQLState().equals("40001") || e.getSQLState().equals("40P01");
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
+    return false;
   }
 
   @Override
@@ -381,6 +387,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   @Override
   public Driver getDriver() {
     return new org.postgresql.Driver();
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
   }
 
   @Override

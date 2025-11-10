@@ -69,7 +69,9 @@ public interface RdbEngineStrategy {
 
   String computeBooleanValue(boolean value);
 
-  String[] createNamespaceSqls(String fullNamespace);
+  String[] createSchemaSqls(String fullSchema);
+
+  String[] createSchemaIfNotExistsSqls(String fullSchema);
 
   default void throwIfInvalidNamespaceName(String namespaceName) {}
 
@@ -79,15 +81,15 @@ public interface RdbEngineStrategy {
       boolean hasDescClusteringOrder, TableMetadata metadata);
 
   String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata);
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists);
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
-  String[] createMetadataSchemaIfNotExistsSql(String metadataSchema);
-
   boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
-
-  String deleteMetadataSchemaSql(String metadataSchema);
 
   String dropNamespaceSql(String namespace);
 
@@ -189,6 +191,10 @@ public interface RdbEngineStrategy {
   default @Nullable String getEscape(LikeExpression likeExpression) {
     return likeExpression.getEscape();
   }
+
+  boolean isDuplicateIndexError(SQLException e);
+
+  String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
 
   default @Nullable String getCatalogName(String namespace) {
     return null;
@@ -310,8 +316,6 @@ public interface RdbEngineStrategy {
   default void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
       ScanAll scanAll, TableMetadata metadata) {}
 
-  String getTableNamesInNamespaceSql();
-
   /**
    * Throws an exception if one of the conjunctions column is not supported in the underlying
    * storage.
@@ -323,4 +327,6 @@ public interface RdbEngineStrategy {
    */
   default void throwIfConjunctionsColumnNotSupported(
       Set<Conjunction> conjunctions, TableMetadata metadata) {}
+
+  String getTableNamesInNamespaceSql();
 }

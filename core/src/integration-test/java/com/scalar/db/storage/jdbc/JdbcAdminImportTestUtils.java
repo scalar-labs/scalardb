@@ -145,7 +145,7 @@ public class JdbcAdminImportTestUtils {
   }
 
   public void createExistingDatabase(String namespace) throws SQLException {
-    execute(rdbEngine.createNamespaceSqls(rdbEngine.enclose(namespace)));
+    execute(rdbEngine.createSchemaSqls(namespace));
   }
 
   public List<String> getIntCompatibleColumnNamesOnExistingDatabase(String table) {
