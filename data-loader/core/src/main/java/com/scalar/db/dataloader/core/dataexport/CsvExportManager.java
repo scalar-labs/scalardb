@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
@@ -18,13 +19,13 @@ public class CsvExportManager extends ExportManager {
    * Constructs a {@code CsvExportManager} with the specified {@link DistributedStorage}, {@link
    * ScalarDbDao}, and {@link ProducerTaskFactory}.
    *
-   * @param storage the {@code DistributedStorage} instance used to read data from the database
+   * @param manager the {@code DistributedTransactionManager} instance used to read data from the database
    * @param dao the {@code ScalarDbDao} used to execute export-related database operations
    * @param producerTaskFactory the factory used to create producer tasks for exporting data
    */
   public CsvExportManager(
-      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
-    super(storage, dao, producerTaskFactory);
+          DistributedTransactionManager manager, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
+    super(manager, dao, producerTaskFactory);
   }
 
   /**

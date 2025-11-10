@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
@@ -34,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
-  private final DistributedStorage storage;
+  private final DistributedTransactionManager distributedTransactionManager;
   private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();

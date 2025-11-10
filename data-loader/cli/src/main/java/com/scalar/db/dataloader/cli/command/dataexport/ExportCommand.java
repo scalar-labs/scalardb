@@ -6,6 +6,7 @@ import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
@@ -36,6 +37,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+
+import com.scalar.db.service.TransactionFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +67,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
 
       StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
+      TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath)
       TableMetadataService metaDataService =
           new TableMetadataService(storageFactory.getStorageAdmin());
       ScalarDbDao scalarDbDao = new ScalarDbDao();
@@ -146,10 +150,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private ExportManager createExportManager(
-      StorageFactory storageFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
+      TransactionFactory transactionFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
-    DistributedStorage storage = storageFactory.getStorage();
+      DistributedTransactionManager manager = transactionFactory.getTransactionManager();
     switch (fileFormat) {
       case JSON:
         return new JsonExportManager(storage, scalarDbDao, taskFactory);
