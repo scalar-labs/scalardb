@@ -65,7 +65,7 @@ class CsvImportProcessorTest {
                 "table",
                 UnitTestUtils.getPartitionKey(1),
                 UnitTestUtils.getClusteringKey(),
-                distributedStorage))
+                distributedTransactionManager))
         .thenReturn(UnitTestUtils.getResult(1));
     Mockito.when(
             dao.get(

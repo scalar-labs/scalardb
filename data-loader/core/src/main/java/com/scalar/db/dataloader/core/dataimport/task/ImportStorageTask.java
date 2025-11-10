@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.task;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
@@ -28,18 +29,18 @@ import java.util.Optional;
  */
 public class ImportStorageTask extends ImportTask {
 
-  private final DistributedStorage storage;
+  private final DistributedTransactionManager manager;
 
   /**
    * Constructs an {@code ImportStorageTask} with the specified parameters and storage.
    *
    * @param params the import task parameters containing configuration and DAO objects
-   * @param storage the distributed storage instance to be used for data operations
+   * @param manager the distributed transaction manager instance to be used for data operations
    * @throws NullPointerException if either params or storage is null
    */
-  public ImportStorageTask(ImportTaskParams params, DistributedStorage storage) {
+  public ImportStorageTask(ImportTaskParams params, DistributedTransactionManager manager) {
     super(params);
-    this.storage = storage;
+    this.manager = manager;
   }
 
   /**
@@ -62,7 +63,7 @@ public class ImportStorageTask extends ImportTask {
   protected Optional<Result> getDataRecord(
       String namespace, String tableName, Key partitionKey, Key clusteringKey)
       throws ScalarDbDaoException {
-    return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.storage);
+    return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.manager);
   }
 
   /**
@@ -88,6 +89,6 @@ public class ImportStorageTask extends ImportTask {
       Key clusteringKey,
       List<Column<?>> columns)
       throws ScalarDbDaoException {
-    params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.storage);
+    params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.manager);
   }
 }

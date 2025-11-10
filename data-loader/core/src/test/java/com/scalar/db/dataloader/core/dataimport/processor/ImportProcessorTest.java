@@ -87,7 +87,7 @@ class ImportProcessorTest {
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
     when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
+    when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
 
     TestImportProcessor processor = new TestImportProcessor(params);
@@ -150,7 +150,7 @@ class ImportProcessorTest {
     final int maxThreads = 4;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
+    when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
@@ -205,7 +205,7 @@ class ImportProcessorTest {
     final int maxThreads = 2;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
+    when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
@@ -235,7 +235,7 @@ class ImportProcessorTest {
     // Arrange
     when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
+    when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 

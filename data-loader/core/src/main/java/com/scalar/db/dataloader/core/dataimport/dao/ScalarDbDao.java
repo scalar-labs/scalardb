@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
@@ -14,6 +15,7 @@ import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.io.IOException;
@@ -33,7 +35,7 @@ public class ScalarDbDao {
    * @param table Table name
    * @param partitionKey Partition key
    * @param clusteringKey Optional clustering key for get
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode.
+   * @param manager DistributedTransactionManager for ScalarDB connection that is running in storage mode.
    * @return Optional get result
    * @throws ScalarDbDaoException if something goes wrong while reading the data
    */
@@ -42,7 +44,7 @@ public class ScalarDbDao {
       String table,
       Key partitionKey,
       Key clusteringKey,
-      DistributedStorage storage)
+      DistributedTransactionManager manager)
       throws ScalarDbDaoException {
 
     // Retrieving the key data for logging
@@ -50,8 +52,8 @@ public class ScalarDbDao {
 
     try {
       Get get = createGetWith(namespace, table, partitionKey, clusteringKey);
-      return storage.get(get);
-    } catch (ExecutionException e) {
+      return manager.get(get);
+    } catch (CrudException | UnknownTransactionStatusException e) {
       throw new ScalarDbDaoException("error GET " + loggingKey, e);
     }
   }
@@ -122,7 +124,7 @@ public class ScalarDbDao {
    * @param partitionKey Partition key
    * @param clusteringKey Optional clustering key
    * @param columns List of column values to be inserted or updated
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
+   * @param manager DistributedTransactionManager for ScalarDB connection that is running in storage mode
    * @throws ScalarDbDaoException if something goes wrong while executing the transaction
    */
   public void put(
@@ -131,12 +133,12 @@ public class ScalarDbDao {
       Key partitionKey,
       Key clusteringKey,
       List<Column<?>> columns,
-      DistributedStorage storage)
+      DistributedTransactionManager manager)
       throws ScalarDbDaoException {
     Put put = createPutWith(namespace, table, partitionKey, clusteringKey, columns);
     try {
-      storage.put(put);
-    } catch (ExecutionException e) {
+      manager.put(put);
+    } catch (CrudException | UnknownTransactionStatusException e) {
       throw new ScalarDbDaoException(
           DataLoaderError.ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
     }
