@@ -2,11 +2,7 @@ plugins {
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
     id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
-    id 'application'
-}
-
-application {
-    mainClass = 'com.scalar.db.dataloader.cli.DataLoaderCli'
+    id 'maven-publish'
 }
 
 base {
@@ -34,10 +30,9 @@ javadoc {
 
 // Build a fat jar
 shadowJar {
-    mustRunAfter distZip, distTar
     archiveClassifier.set("")
     manifest {
-        attributes 'Main-Class': 'com.scalar.db.dataloader.DataLoaderCli'
+        attributes 'Main-Class': 'com.scalar.db.dataloader.cli.DataLoaderCli'
     }
     mergeServiceFiles()
 }
@@ -79,4 +74,58 @@ task docker(type: Exec) {
     dependsOn copyFilesToDockerBuildContextDir
     workingDir 'build/docker'
     commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-data-loader-cli:${project.version}", "."
+}
+
+// for archiving and uploading to maven central
+if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
+        project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') }) {
+    // not to publish the fat jar to maven central
+    shadowJar.enabled = false
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'scalardb-data-loader-cli'
+            from components.java
+            pom {
+                name = 'ScalarDB Data Loader CLI'
+                description = 'CLI application for exporting data from and importing data into ScalarDB'
+                url = 'https://github.com/scalar-labs/scalardb'
+                licenses {
+                    license {
+                        name = 'Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'hiroyuki'
+                        name = 'Hiroyuki Yamada'
+                        email = 'hiroyuki.yamada@scalar-labs.com'
+                    }
+                    developer {
+                        id = 'brfrn169'
+                        name = 'Toshihiro Suzuki'
+                        email = 'brfrn169@gmail.com'
+                    }
+                    developer {
+                        id = 'Torch3333'
+                        name = 'Vincent Guilpain'
+                        email = 'vincent.guilpain@scalar-labs.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/scalar-labs/scalardb.git'
+                    developerConnection = 'scm:git:https://github.com/scalar-labs/scalardb.git'
+                    url = 'https://github.com/scalar-labs/scalardb'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('staging-deploy')
+        }
+    }
 }
