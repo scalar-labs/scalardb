@@ -1,10 +1,10 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
@@ -87,7 +87,7 @@ public abstract class ExportManager {
       BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
-      try (Scanner scanner = createScanner(exportOptions, dao, storage)) {
+      try (Scanner scanner = createScanner(exportOptions, dao, distributedTransactionManager)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -217,12 +217,12 @@ public abstract class ExportManager {
    *
    * @param exportOptions export options
    * @param dao ScalarDB dao object
-   * @param storage distributed storage object
+   * @param manager DistributedTransactionManager object
    * @return created scanner
    * @throws ScalarDbDaoException throws if any issue occurs in creating scanner object
    */
-  private Scanner createScanner(
-      ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
+  private TransactionManagerCrudOperable.Scanner createScanner(
+      ExportOptions exportOptions, ScalarDbDao dao, DistributedTransactionManager manager)
       throws ScalarDbDaoException {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
     if (isScanAll) {
@@ -231,7 +231,7 @@ public abstract class ExportManager {
           exportOptions.getTableName(),
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
-          storage);
+          manager);
     } else {
       return dao.createScanner(
           exportOptions.getNamespace(),
@@ -241,7 +241,7 @@ public abstract class ExportManager {
           exportOptions.getSortOrders(),
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
-          storage);
+          manager);
     }
   }
 }

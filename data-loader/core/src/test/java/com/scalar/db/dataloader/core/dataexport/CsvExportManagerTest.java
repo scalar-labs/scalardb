@@ -1,9 +1,9 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScanRange;
@@ -33,14 +33,14 @@ import org.mockito.Spy;
 
 public class CsvExportManagerTest {
   TableMetadata mockData;
-  DistributedStorage storage;
+  DistributedTransactionManager manager;
   @Spy ScalarDbDao dao;
   ProducerTaskFactory producerTaskFactory;
   ExportManager exportManager;
 
   @BeforeEach
   void setup() {
-    storage = Mockito.mock(DistributedStorage.class);
+    manager = Mockito.mock(DistributedTransactionManager.class);
     mockData = UnitTestUtils.createTestTableMetadata();
     dao = Mockito.mock(ScalarDbDao.class);
     producerTaskFactory = new ProducerTaskFactory(null, false, true);
@@ -49,8 +49,9 @@ public class CsvExportManagerTest {
   @Test
   void startExport_givenValidDataWithoutPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-    exportManager = new JsonLineExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager = new JsonLineExportManager(manager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -67,7 +68,7 @@ public class CsvExportManagerTest {
                 exportOptions.getTableName(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                manager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -88,8 +89,9 @@ public class CsvExportManagerTest {
   void startExport_givenPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
     producerTaskFactory = new ProducerTaskFactory(",", false, false);
-    exportManager = new CsvExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -114,7 +116,7 @@ public class CsvExportManagerTest {
                 exportOptions.getSortOrders(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                manager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -150,8 +152,9 @@ public class CsvExportManagerTest {
       throws Exception {
     // Arrange
     producerTaskFactory = new ProducerTaskFactory(",", false, false);
-    exportManager = new CsvExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -178,7 +181,7 @@ public class CsvExportManagerTest {
                 exportOptions.getSortOrders(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                manager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =

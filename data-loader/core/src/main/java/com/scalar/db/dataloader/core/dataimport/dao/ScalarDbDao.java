@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
@@ -10,6 +11,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -219,47 +221,63 @@ public class ScalarDbDao {
   }
 
   /**
-   * Create a ScalarDB scanner instance
+   * Creates a {@link TransactionManagerCrudOperable.Scanner} instance for reading data from
+   * ScalarDB.
    *
-   * @param namespace ScalarDB namespace
-   * @param table ScalarDB table name
-   * @param projectionColumns List of column projection to use during scan
-   * @param limit Scan limit value
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @return ScalarDB Scanner object
-   * @throws ScalarDbDaoException if scan fails
+   * <p>This method builds and executes a {@link Scan} operation for the specified table and returns
+   * a scanner that iterates over the retrieved records. It operates in storage mode using a {@link
+   * DistributedTransactionManager}.
+   *
+   * @param namespace the ScalarDB namespace to scan
+   * @param table the ScalarDB table name
+   * @param projectionColumns the list of column names to include in the scan results
+   * @param limit the maximum number of records to retrieve
+   * @param manager the {@link DistributedTransactionManager} used to obtain the ScalarDB scanner in
+   *     storage mode
+   * @return a {@link TransactionManagerCrudOperable.Scanner} instance for iterating over the scan
+   *     results
+   * @throws ScalarDbDaoException if an error occurs while creating or executing the scan
    */
-  public Scanner createScanner(
+  public TransactionManagerCrudOperable.Scanner createScanner(
       String namespace,
       String table,
       List<String> projectionColumns,
       int limit,
-      DistributedStorage storage)
+      DistributedTransactionManager manager)
       throws ScalarDbDaoException {
     Scan scan =
         createScan(namespace, table, null, null, new ArrayList<>(), projectionColumns, limit);
     try {
-      return storage.scan(scan);
-    } catch (ExecutionException e) {
+      return manager.getScanner(scan);
+    } catch (CrudException e) {
       throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
   /**
-   * Create a ScalarDB scanner instance
+   * Creates a {@link TransactionManagerCrudOperable.Scanner} instance for reading data from
+   * ScalarDB.
    *
-   * @param namespace ScalarDB namespace
-   * @param table ScalarDB table name
-   * @param partitionKey Partition key used in ScalarDB scan
-   * @param scanRange Optional range to set ScalarDB scan start and end values
-   * @param sortOrders Optional scan clustering key sorting values
-   * @param projectionColumns List of column projection to use during scan
-   * @param limit Scan limit value
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @return ScalarDB Scanner object
-   * @throws ScalarDbDaoException if scan fails
+   * <p>This method builds and executes a {@link Scan} operation using the provided parameters and
+   * returns a scanner that iterates over the matching records. It is used in storage mode through a
+   * {@link DistributedTransactionManager}.
+   *
+   * @param namespace the ScalarDB namespace to scan
+   * @param table the ScalarDB table name
+   * @param partitionKey the optional {@link Key} representing the partition key for the scan
+   * @param scanRange the optional {@link ScanRange} defining the start and end boundaries for the
+   *     scan
+   * @param sortOrders the optional list of {@link Scan.Ordering} objects defining the clustering
+   *     key sort order
+   * @param projectionColumns the optional list of column names to include in the scan results
+   * @param limit the maximum number of records to retrieve
+   * @param manager the {@link DistributedTransactionManager} used to obtain the ScalarDB scanner in
+   *     storage mode
+   * @return a {@link TransactionManagerCrudOperable.Scanner} instance for iterating over scan
+   *     results
+   * @throws ScalarDbDaoException if an error occurs while creating or executing the scan
    */
-  public Scanner createScanner(
+  public TransactionManagerCrudOperable.Scanner createScanner(
       String namespace,
       String table,
       @Nullable Key partitionKey,
@@ -267,13 +285,13 @@ public class ScalarDbDao {
       @Nullable List<Scan.Ordering> sortOrders,
       @Nullable List<String> projectionColumns,
       int limit,
-      DistributedStorage storage)
+      DistributedTransactionManager manager)
       throws ScalarDbDaoException {
     Scan scan =
         createScan(namespace, table, partitionKey, scanRange, sortOrders, projectionColumns, limit);
     try {
-      return storage.scan(scan);
-    } catch (ExecutionException e) {
+      return manager.getScanner(scan);
+    } catch (CrudException e) {
       throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
