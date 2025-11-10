@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Properties;
@@ -17,6 +18,14 @@ public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
   protected String getSystemNamespaceName(Properties properties) {
     return ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties))
         .getMetadataNamespace();
+  }
+
+  @Override
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder(TABLE_METADATA)
+        .removeSecondaryIndex(COL_NAME5)
+        .removeSecondaryIndex(COL_NAME6)
+        .build();
   }
 
   @Override

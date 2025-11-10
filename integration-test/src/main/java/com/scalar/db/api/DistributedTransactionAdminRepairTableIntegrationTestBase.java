@@ -68,8 +68,6 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
         .addPartitionKey(COL_NAME1)
         .addClusteringKey(COL_NAME4, Scan.Ordering.Order.ASC)
         .addClusteringKey(COL_NAME3, Scan.Ordering.Order.DESC)
-        .addSecondaryIndex(COL_NAME5)
-        .addSecondaryIndex(COL_NAME6)
         .build();
     return builder.build();
   }
