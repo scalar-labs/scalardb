@@ -1,6 +1,9 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -10,6 +13,30 @@ public class ObjectStorageAdminIntegrationTest extends DistributedStorageAdminIn
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addColumn(getColumnName1(), DataType.INT)
+        .addColumn(getColumnName2(), DataType.TEXT)
+        .addColumn(getColumnName3(), DataType.TEXT)
+        .addColumn(getColumnName4(), DataType.INT)
+        .addColumn(getColumnName5(), DataType.INT)
+        .addColumn(getColumnName6(), DataType.TEXT)
+        .addColumn(getColumnName7(), DataType.BIGINT)
+        .addColumn(getColumnName8(), DataType.FLOAT)
+        .addColumn(getColumnName9(), DataType.DOUBLE)
+        .addColumn(getColumnName10(), DataType.BOOLEAN)
+        .addColumn(getColumnName11(), DataType.BLOB)
+        .addColumn(getColumnName12(), DataType.DATE)
+        .addColumn(getColumnName13(), DataType.TIME)
+        .addColumn(getColumnName14(), DataType.TIMESTAMPTZ)
+        .addPartitionKey(getColumnName2())
+        .addPartitionKey(getColumnName1())
+        .addClusteringKey(getColumnName4(), Scan.Ordering.Order.ASC)
+        .addClusteringKey(getColumnName3(), Scan.Ordering.Order.DESC)
+        .build();
   }
 
   @Override
