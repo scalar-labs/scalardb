@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.task;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
@@ -28,7 +29,7 @@ import java.util.Optional;
  */
 public class ImportStorageTask extends ImportTask {
 
-  private final DistributedStorage storage;
+  private final DistributedTransactionManager storage;
 
   /**
    * Constructs an {@code ImportStorageTask} with the specified parameters and storage.
@@ -37,7 +38,7 @@ public class ImportStorageTask extends ImportTask {
    * @param storage the distributed storage instance to be used for data operations
    * @throws NullPointerException if either params or storage is null
    */
-  public ImportStorageTask(ImportTaskParams params, DistributedStorage storage) {
+  public ImportStorageTask(ImportTaskParams params, DistributedTransactionManager storage) {
     super(params);
     this.storage = storage;
   }

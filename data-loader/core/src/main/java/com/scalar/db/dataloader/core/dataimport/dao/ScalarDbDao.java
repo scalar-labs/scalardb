@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.dao;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
@@ -14,6 +15,7 @@ import com.scalar.db.common.error.CoreError;
 import com.scalar.db.dataloader.core.ScanRange;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.io.IOException;
@@ -98,6 +100,38 @@ public class ScalarDbDao {
     }
   }
 
+
+    /**
+     * Retrieve record from ScalarDB instance in transaction mode
+     *
+     * @param namespace Namespace name
+     * @param table Table name
+     * @param partitionKey Partition key
+     * @param clusteringKey Optional clustering key for get
+     * @param transaction ScalarDB transaction instance
+     * @return Optional get result
+     * @throws ScalarDbDaoException if something goes wrong while reading the data
+     */
+    public Optional<Result> get(
+            String namespace,
+            String table,
+            Key partitionKey,
+            Key clusteringKey,
+            DistributedTransactionManager transaction)
+            throws ScalarDbDaoException {
+
+        Get get = createGetWith(namespace, table, partitionKey, clusteringKey);
+        // Retrieving the key data for logging
+        String loggingKey = keysToString(partitionKey, clusteringKey);
+        try {
+            Optional<Result> result = transaction.get(get);
+            logger.info(String.format(GET_COMPLETED_MSG, loggingKey));
+            return result;
+        } catch (CrudException | UnknownTransactionStatusException e) {
+            throw new ScalarDbDaoException("error GET " + loggingKey, e.getCause());
+        }
+    }
+
   /**
    * Save record in ScalarDB instance
    *
@@ -127,6 +161,36 @@ public class ScalarDbDao {
     }
     logger.info(String.format(PUT_COMPLETED_MSG, keysToString(partitionKey, clusteringKey)));
   }
+
+    /**
+     * Save record in ScalarDB instance
+     *
+     * @param namespace Namespace name
+     * @param table Table name
+     * @param partitionKey Partition key
+     * @param clusteringKey Optional clustering key
+     * @param columns List of column values to be inserted or updated
+     * @param transaction ScalarDB transaction instance
+     * @throws ScalarDbDaoException if something goes wrong while executing the transaction
+     */
+    public void put(
+            String namespace,
+            String table,
+            Key partitionKey,
+            Key clusteringKey,
+            List<Column<?>> columns,
+            DistributedTransactionManager transaction)
+            throws ScalarDbDaoException {
+
+        Put put = createPutWith(namespace, table, partitionKey, clusteringKey, columns);
+        try {
+            transaction.put(put);
+        } catch (CrudException | UnknownTransactionStatusException e) {
+            throw new ScalarDbDaoException(
+                    CoreError.DATA_LOADER_ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
+        }
+        logger.info(String.format(PUT_COMPLETED_MSG, keysToString(partitionKey, clusteringKey)));
+    }
 
   /**
    * Save record in ScalarDB instance
