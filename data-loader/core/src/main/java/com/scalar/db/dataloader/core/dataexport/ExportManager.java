@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
-  private final DistributedTransactionManager distributedTransactionManager;
+  private final DistributedTransactionManager manager;
   private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
@@ -89,7 +89,7 @@ public abstract class ExportManager {
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
       try (TransactionManagerCrudOperable.Scanner scanner =
-          createScanner(exportOptions, dao, distributedTransactionManager)) {
+          createScanner(exportOptions, dao, manager)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);

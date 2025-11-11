@@ -224,9 +224,8 @@ public class ScalarDbDao {
    * Creates a {@link TransactionManagerCrudOperable.Scanner} instance for reading data from
    * ScalarDB.
    *
-   * <p>This method builds and executes a {@link Scan} operation for the specified table and returns
-   * a scanner that iterates over the retrieved records. It operates in storage mode using a {@link
-   * DistributedTransactionManager}.
+   * <p>a scanner that iterates over the retrieved records. It performs the scan transactionally
+   * using a {@link DistributedTransactionManager}.
    *
    * @param namespace the ScalarDB namespace to scan
    * @param table the ScalarDB table name
@@ -258,9 +257,8 @@ public class ScalarDbDao {
    * Creates a {@link TransactionManagerCrudOperable.Scanner} instance for reading data from
    * ScalarDB.
    *
-   * <p>This method builds and executes a {@link Scan} operation using the provided parameters and
-   * returns a scanner that iterates over the matching records. It is used in storage mode through a
-   * {@link DistributedTransactionManager}.
+   * <p>returns a scanner that iterates over the matching records. The scan is performed
+   * transactionally through a {@link DistributedTransactionManager}.
    *
    * @param namespace the ScalarDB namespace to scan
    * @param table the ScalarDB table name
