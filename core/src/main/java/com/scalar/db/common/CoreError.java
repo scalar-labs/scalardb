@@ -904,13 +904,13 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0258",
-      "Get operations using an index is not allowed in the SERIALIZABLE isolation level",
+      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0259",
-      "Scan operations using an index is not allowed in the SERIALIZABLE isolation level",
+      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
