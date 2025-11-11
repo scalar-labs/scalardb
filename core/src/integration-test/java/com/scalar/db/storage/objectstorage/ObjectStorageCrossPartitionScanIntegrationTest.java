@@ -25,6 +25,6 @@ public class ObjectStorageCrossPartitionScanIntegrationTest
 
   @Test
   @Override
-  @Disabled("Cross partition scan with ordering is not supported in Object Storages")
+  @Disabled("Cross-partition scan with ordering is not supported in Object Storage")
   public void scan_WithOrderingForNonPrimaryColumns_ShouldReturnProperResult() {}
 }
