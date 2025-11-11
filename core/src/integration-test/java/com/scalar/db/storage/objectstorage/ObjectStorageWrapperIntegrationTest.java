@@ -157,7 +157,7 @@ public class ObjectStorageWrapperIntegrationTest {
   }
 
   @Test
-  public void update_WrongVersionGiven_ShouldThrowPreconditionFailedException() throws Exception {
+  public void update_WrongVersionGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     String wrongVersion = "wrong-version";
 

@@ -4,6 +4,7 @@ import static com.scalar.db.storage.objectstorage.StatementHandler.validateCondi
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -15,12 +16,14 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
+@SuppressFBWarnings("EI_EXPOSE_REP2")
 public class ObjectStoragePartition {
   private final String namespaceName;
   private final String tableName;
@@ -52,7 +55,7 @@ public class ObjectStoragePartition {
   }
 
   public Map<String, ObjectStorageRecord> getRecords() {
-    return records;
+    return Collections.unmodifiableMap(records);
   }
 
   public boolean isEmpty() {
@@ -125,6 +128,11 @@ public class ObjectStoragePartition {
       }
       records.remove(mutation.getRecordId());
     }
+  }
+
+  @VisibleForTesting
+  protected void putRecord(String recordId, ObjectStorageRecord record) {
+    records.put(recordId, record);
   }
 
   public static final class Builder {

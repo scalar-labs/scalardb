@@ -12,6 +12,11 @@ public class ObjectStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
+  protected int getThreadNum() {
+    return 3;
+  }
+
+  @Override
   protected boolean isParallelDdlSupported() {
     return false;
   }

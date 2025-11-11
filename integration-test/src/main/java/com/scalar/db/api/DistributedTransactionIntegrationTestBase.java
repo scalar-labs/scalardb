@@ -110,7 +110,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
     return NAMESPACE_BASE_NAME;
   }
 
-  private void createTables() throws ExecutionException {
+  protected TableMetadata getTableMetadata() {
     TableMetadata.Builder tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -132,11 +132,14 @@ public abstract class DistributedTransactionIntegrationTestBase {
     if (isTimestampTypeSupported()) {
       tableMetadata.addColumn(TIMESTAMP_COL, DataType.TIMESTAMP);
     }
+    return tableMetadata.build();
+  }
 
+  private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createCoordinatorTables(true, options);
     admin.createNamespace(namespace, true, options);
-    admin.createTable(namespace, TABLE, tableMetadata.build(), true, options);
+    admin.createTable(namespace, TABLE, getTableMetadata(), true, options);
   }
 
   protected Map<String, String> getCreationOptions() {

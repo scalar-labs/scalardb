@@ -117,7 +117,7 @@ public class SelectStatementHandlerTest {
       Map<String, Object> values) {
     ObjectStorageRecord record = createRecord(partitionKey, clusteringKey, values);
     String recordId = buildRecordId(partitionKey, clusteringKey);
-    partition.getRecords().put(recordId, record);
+    partition.putRecord(recordId, record);
   }
 
   private String buildRecordId(
