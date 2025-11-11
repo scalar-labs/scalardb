@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.task;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.io.Column;
@@ -9,12 +10,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * An import task that interacts with a {@link DistributedStorage} for data retrieval and storage
+ * An import task that interacts with a {@link DistributedStorage} for data retrieval and manager
  * operations.
  *
  * <p>This class extends {@link ImportTask} and provides concrete implementations for fetching and
  * storing records using a {@link DistributedStorage} instance. It acts as a bridge between the
- * import process and the underlying distributed storage system.
+ * import process and the underlying distributed manager system.
  *
  * <p>The task handles both read and write operations:
  *
@@ -23,31 +24,31 @@ import java.util.Optional;
  *   <li>Storing new or updated records with their associated columns
  * </ul>
  *
- * <p>All storage operations are performed through the provided {@link DistributedStorage} instance,
+ * <p>All manager operations are performed through the provided {@link DistributedStorage} instance,
  * which must be properly initialized before creating this task.
  */
 public class ImportStorageTask extends ImportTask {
 
-  private final DistributedStorage storage;
+  private final DistributedTransactionManager manager;
 
   /**
-   * Constructs an {@code ImportStorageTask} with the specified parameters and storage.
+   * Constructs an {@code ImportStorageTask} with the specified parameters and manager.
    *
    * @param params the import task parameters containing configuration and DAO objects
-   * @param storage the distributed storage instance to be used for data operations
-   * @throws NullPointerException if either params or storage is null
+   * @param manager the distributed manager instance to be used for data operations
+   * @throws NullPointerException if either params or manager is null
    */
-  public ImportStorageTask(ImportTaskParams params, DistributedStorage storage) {
+  public ImportStorageTask(ImportTaskParams params, DistributedTransactionManager manager) {
     super(params);
-    this.storage = storage;
+    this.manager = manager;
   }
 
   /**
-   * Retrieves a data record from the distributed storage using the specified keys.
+   * Retrieves a data record from the distributed manager using the specified keys.
    *
    * <p>This method attempts to fetch a single record from the specified table using both partition
    * and clustering keys. The operation is performed through the configured DAO using the associated
-   * storage instance.
+   * manager instance.
    *
    * @param namespace the namespace of the table to query
    * @param tableName the name of the table to query
@@ -62,15 +63,15 @@ public class ImportStorageTask extends ImportTask {
   protected Optional<Result> getDataRecord(
       String namespace, String tableName, Key partitionKey, Key clusteringKey)
       throws ScalarDbDaoException {
-    return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.storage);
+    return params.getDao().get(namespace, tableName, partitionKey, clusteringKey, this.manager);
   }
 
   /**
-   * Saves a record into the distributed storage with the specified keys and columns.
+   * Saves a record into the distributed manager with the specified keys and columns.
    *
    * <p>This method writes or updates a record in the specified table using the provided keys and
    * column values. The operation is performed through the configured DAO using the associated
-   * storage instance.
+   * manager instance.
    *
    * @param namespace the namespace of the target table
    * @param tableName the name of the target table
@@ -88,6 +89,6 @@ public class ImportStorageTask extends ImportTask {
       Key clusteringKey,
       List<Column<?>> columns)
       throws ScalarDbDaoException {
-    params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.storage);
+    params.getDao().put(namespace, tableName, partitionKey, clusteringKey, columns, this.manager);
   }
 }
