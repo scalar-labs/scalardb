@@ -35,7 +35,8 @@ public class ScalarDbDao {
    * @param table Table name
    * @param partitionKey Partition key
    * @param clusteringKey Optional clustering key for get
-   * @param manager DistributedTransactionManager for ScalarDB connection that is running in storage mode.
+   * @param manager DistributedTransactionManager for ScalarDB connection that is running in storage
+   *     mode.
    * @return Optional get result
    * @throws ScalarDbDaoException if something goes wrong while reading the data
    */
@@ -124,7 +125,8 @@ public class ScalarDbDao {
    * @param partitionKey Partition key
    * @param clusteringKey Optional clustering key
    * @param columns List of column values to be inserted or updated
-   * @param manager DistributedTransactionManager for ScalarDB connection that is running in storage mode
+   * @param manager DistributedTransactionManager for ScalarDB connection that is running in storage
+   *     mode
    * @throws ScalarDbDaoException if something goes wrong while executing the transaction
    */
   public void put(

@@ -26,7 +26,8 @@ public class ScalarDbStorageManager {
    *
    * @param storageFactory the factory used to create the ScalarDB storage and admin instances
    */
-  public ScalarDbStorageManager(StorageFactory storageFactory, DistributedTransactionManager manager) {
+  public ScalarDbStorageManager(
+      StorageFactory storageFactory, DistributedTransactionManager manager) {
     storage = storageFactory.getStorage();
     storageAdmin = storageFactory.getStorageAdmin();
     distributedTransactionManager = manager;
@@ -50,7 +51,7 @@ public class ScalarDbStorageManager {
     return storageAdmin;
   }
 
-  public DistributedTransactionManager getDistributedTransactionManager(){
-      return distributedTransactionManager;
+  public DistributedTransactionManager getDistributedTransactionManager() {
+    return distributedTransactionManager;
   }
 }

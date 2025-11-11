@@ -8,12 +8,10 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbStorageManager;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbTransactionManager;
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
@@ -145,32 +143,16 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       throws IOException {
     File configFile = new File(configFilePath);
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
-    ImportManager importManager;
-    if (scalarDbMode == ScalarDbMode.TRANSACTION) {
-      ScalarDbTransactionManager scalarDbTransactionManager =
-          new ScalarDbTransactionManager(TransactionFactory.create(configFile));
-      importManager =
-          new ImportManager(
-              tableMetadataMap,
-              reader,
-              importOptions,
-              importProcessorFactory,
-              ScalarDbMode.TRANSACTION,
-              null,
-              scalarDbTransactionManager.getDistributedTransactionManager());
-    } else {
-      ScalarDbStorageManager scalarDbStorageManager =
-          new ScalarDbStorageManager(StorageFactory.create(configFile), TransactionFactory.create(configFile).getTransactionManager());
-      importManager =
-          new ImportManager(
-              tableMetadataMap,
-              reader,
-              importOptions,
-              importProcessorFactory,
-              ScalarDbMode.STORAGE,
-              scalarDbStorageManager.getDistributedStorage(),
-              scalarDbStorageManager.getDistributedTransactionManager());
-    }
+    ScalarDbTransactionManager scalarDbTransactionManager =
+              new ScalarDbTransactionManager(TransactionFactory.create(configFile));
+    ImportManager importManager = new ImportManager(
+            tableMetadataMap,
+            reader,
+            importOptions,
+            importProcessorFactory,
+            scalarDbMode,
+            null,
+            scalarDbTransactionManager.getDistributedTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
     } else {

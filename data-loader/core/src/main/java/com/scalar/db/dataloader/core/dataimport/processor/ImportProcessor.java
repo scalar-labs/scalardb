@@ -359,7 +359,7 @@ public abstract class ImportProcessor {
             .tableMetadataByTableName(params.getTableMetadataByTableName())
             .dao(params.getDao())
             .build();
-    ImportTaskResult importRecordResult =
+      ImportTaskResult importRecordResult =
         new ImportStorageTask(taskParams, params.getDistributedTransactionManager()).execute();
 
     ImportTaskResult modifiedTaskResult =
