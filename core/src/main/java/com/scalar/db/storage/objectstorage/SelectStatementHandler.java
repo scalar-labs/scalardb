@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
@@ -137,15 +136,9 @@ public class SelectStatementHandler extends StatementHandler {
       Optional<ObjectStorageWrapperResponse> response =
           wrapper.get(ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey));
       if (!response.isPresent()) {
-        return ObjectStoragePartition.newBuilder()
-            .namespaceName(namespaceName)
-            .tableName(tableName)
-            .partitionKey(partitionKey)
-            .records(Collections.emptyMap())
-            .build();
+        return new ObjectStoragePartition(Collections.emptyMap());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(), new TypeReference<ObjectStoragePartition>() {});
+      return ObjectStoragePartition.deserialize(response.get().getPayload());
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);

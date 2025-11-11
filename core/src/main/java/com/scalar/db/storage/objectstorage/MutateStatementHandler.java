@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
@@ -14,7 +13,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(
@@ -26,198 +24,95 @@ public class MutateStatementHandler extends StatementHandler {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
     ObjectStorageMutation objectStorageMutation =
         new ObjectStorageMutation(mutation, tableMetadata);
-    mutate(
-        getNamespace(mutation),
-        getTable(mutation),
-        objectStorageMutation.getConcatenatedPartitionKey(),
-        Collections.singletonList(mutation));
+    String objectKey =
+        ObjectStoragePartition.getObjectKey(
+            getNamespace(mutation),
+            getTable(mutation),
+            objectStorageMutation.getConcatenatedPartitionKey());
+    mutate(objectKey, Collections.singletonList(mutation));
   }
 
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
-    Map<PartitionIdentifier, List<Mutation>> mutationPerPartition = new HashMap<>();
+    Map<String, List<Mutation>> mutationPerPartition = new HashMap<>();
     for (Mutation mutation : mutations) {
       TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
       ObjectStorageMutation objectStorageMutation =
           new ObjectStorageMutation(mutation, tableMetadata);
       String partitionKey = objectStorageMutation.getConcatenatedPartitionKey();
-      PartitionIdentifier partitionIdentifier =
-          PartitionIdentifier.of(getNamespace(mutation), getTable(mutation), partitionKey);
-      mutationPerPartition
-          .computeIfAbsent(partitionIdentifier, k -> new ArrayList<>())
-          .add(mutation);
+      String objectKey =
+          ObjectStoragePartition.getObjectKey(
+              getNamespace(mutation), getTable(mutation), partitionKey);
+      mutationPerPartition.computeIfAbsent(objectKey, k -> new ArrayList<>()).add(mutation);
     }
-    for (Map.Entry<PartitionIdentifier, List<Mutation>> entry : mutationPerPartition.entrySet()) {
-      PartitionIdentifier partitionIdentifier = entry.getKey();
-      mutate(
-          partitionIdentifier.getNamespaceName(),
-          partitionIdentifier.getTableName(),
-          partitionIdentifier.getPartitionName(),
-          entry.getValue());
+    for (Map.Entry<String, List<Mutation>> entry : mutationPerPartition.entrySet()) {
+      mutate(entry.getKey(), entry.getValue());
     }
   }
 
-  private void mutate(
-      String namespaceName, String tableName, String partitionKey, List<Mutation> mutations)
-      throws ExecutionException {
-    Map<PartitionIdentifier, String> readVersionMap = new HashMap<>();
-    ObjectStoragePartition partition =
-        getPartition(namespaceName, tableName, partitionKey, readVersionMap);
+  private void mutate(String objectKey, List<Mutation> mutations) throws ExecutionException {
+    ObjectStoragePartitionSnapshot snapshot = getPartition(objectKey);
     for (Mutation mutation : mutations) {
+      TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
       if (mutation instanceof Put) {
-        partition.applyPut((Put) mutation, metadataManager.getTableMetadata(mutation));
+        snapshot.applyPut((Put) mutation, tableMetadata);
       } else {
         assert mutation instanceof Delete;
-        partition.applyDelete((Delete) mutation, metadataManager.getTableMetadata(mutation));
+        snapshot.applyDelete((Delete) mutation, tableMetadata);
       }
     }
-    applyPartitionWrite(namespaceName, tableName, partitionKey, partition, readVersionMap);
+    writePartition(snapshot);
   }
 
   /**
-   * Applies the partition write.
+   * Writes a partition to the object storage.
    *
-   * @param namespaceName the namespace name
-   * @param tableName the table name
-   * @param partitionKey the partition key
-   * @param partition the partition to be written
-   * @param readVersionMap the map of read versions
+   * @param snapshot the partition snapshot
    * @throws ExecutionException if a failure occurs during the operation
    */
-  private void applyPartitionWrite(
-      String namespaceName,
-      String tableName,
-      String partitionKey,
-      ObjectStoragePartition partition,
-      Map<PartitionIdentifier, String> readVersionMap)
-      throws ExecutionException {
-    if (readVersionMap.containsKey(partition.getPartitionIdentifier())) {
-      String readVersion = readVersionMap.get(partition.getPartitionIdentifier());
-      if (!partition.isEmpty()) {
-        updatePartition(namespaceName, tableName, partitionKey, partition, readVersion);
+  private void writePartition(ObjectStoragePartitionSnapshot snapshot) throws ExecutionException {
+    try {
+      if (snapshot.getReadVersion().isPresent()) {
+        if (!snapshot.getPartition().isEmpty()) {
+          wrapper.update(
+              snapshot.getObjectKey(),
+              snapshot.getPartition().serialize(),
+              snapshot.getReadVersion().get());
+        } else {
+          wrapper.delete(snapshot.getObjectKey(), snapshot.getReadVersion().get());
+        }
       } else {
-        deletePartition(namespaceName, tableName, partitionKey, readVersion);
+        if (!snapshot.getPartition().isEmpty()) {
+          wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize());
+        }
       }
-    } else {
-      if (!partition.isEmpty()) {
-        insertPartition(namespaceName, tableName, partitionKey, partition);
-      }
+    } catch (PreconditionFailedException e) {
+      throw new RetriableExecutionException(
+          CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
+    } catch (ObjectStorageWrapperException e) {
+      throw new ExecutionException(
+          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
   }
 
   /**
-   * Gets a partition from the object storage.
+   * Gets a partition and its version as a snapshot from the object storage.
    *
-   * @param namespaceName the namespace name
-   * @param tableName the table name
-   * @param partitionKey the partition key
-   * @param readVersionMap the map to store the read version
+   * @param objectKey the object key
    * @return the partition
    * @throws ExecutionException if a failure occurs during the operation
    */
-  private ObjectStoragePartition getPartition(
-      String namespaceName,
-      String tableName,
-      String partitionKey,
-      Map<PartitionIdentifier, String> readVersionMap)
-      throws ExecutionException {
-    String objectKey = ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey);
+  private ObjectStoragePartitionSnapshot getPartition(String objectKey) throws ExecutionException {
     try {
-      Optional<ObjectStorageWrapperResponse> response = wrapper.get(objectKey);
-      if (!response.isPresent()) {
-        return ObjectStoragePartition.newBuilder()
-            .namespaceName(namespaceName)
-            .tableName(tableName)
-            .partitionKey(partitionKey)
-            .build();
-      }
-      ObjectStoragePartition partition =
-          Serializer.deserialize(
-              response.get().getPayload(), new TypeReference<ObjectStoragePartition>() {});
-      readVersionMap.put(partition.getPartitionIdentifier(), response.get().getVersion());
-      return partition;
-    } catch (ObjectStorageWrapperException e) {
-      throw new ExecutionException(
-          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Inserts a partition into the object storage. This method is called after confirming that the
-   * partition does not exist.
-   *
-   * @param namespaceName the namespace name
-   * @param tableName the table name
-   * @param partitionKey the partition key
-   * @param partition the partition to be inserted
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private void insertPartition(
-      String namespaceName, String tableName, String partitionKey, ObjectStoragePartition partition)
-      throws ExecutionException {
-    try {
-      wrapper.insert(
-          ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey),
-          Serializer.serialize(partition));
-    } catch (PreconditionFailedException e) {
-      throw new RetriableExecutionException(
-          CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
-    } catch (ObjectStorageWrapperException e) {
-      throw new ExecutionException(
-          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Updates a partition in the object storage. This method is called after confirming that the
-   * partition exists.
-   *
-   * @param namespaceName the namespace name
-   * @param tableName the table name
-   * @param partitionKey the partition key
-   * @param partition the partition to be updated
-   * @param readVersion the read version
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private void updatePartition(
-      String namespaceName,
-      String tableName,
-      String partitionKey,
-      ObjectStoragePartition partition,
-      String readVersion)
-      throws ExecutionException {
-    try {
-      wrapper.update(
-          ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey),
-          Serializer.serialize(partition),
-          readVersion);
-    } catch (PreconditionFailedException e) {
-      throw new RetriableExecutionException(
-          CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
-    } catch (ObjectStorageWrapperException e) {
-      throw new ExecutionException(
-          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Deletes a partition from the object storage. This method is called after confirming that the
-   * partition exists.
-   *
-   * @param namespaceName the namespace name
-   * @param tableName the table name
-   * @param partitionKey the partition key
-   * @param readVersion the read version
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private void deletePartition(
-      String namespaceName, String tableName, String partitionKey, String readVersion)
-      throws ExecutionException {
-    try {
-      wrapper.delete(
-          ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey), readVersion);
-    } catch (PreconditionFailedException e) {
-      throw new RetriableExecutionException(
-          CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
+      return wrapper
+          .get(objectKey)
+          .map(
+              response ->
+                  new ObjectStoragePartitionSnapshot(
+                      objectKey, response.getPayload(), response.getVersion()))
+          .orElseGet(
+              () ->
+                  new ObjectStoragePartitionSnapshot(
+                      objectKey, new ObjectStoragePartition(null), null));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);

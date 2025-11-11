@@ -402,12 +402,7 @@ public class ObjectStoragePartitionTest {
 
   private ObjectStoragePartition createObjectStoragePartition(
       Map<String, ObjectStorageRecord> records) {
-    return ObjectStoragePartition.newBuilder()
-        .namespaceName(NAMESPACE)
-        .tableName(TABLE)
-        .partitionKey(PARTITION_KEY_VALUE)
-        .records(records)
-        .build();
+    return new ObjectStoragePartition(records);
   }
 
   private ObjectStorageRecord createRecord(String recordId, int value) {

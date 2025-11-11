@@ -4,6 +4,7 @@ import static com.scalar.db.storage.objectstorage.StatementHandler.validateCondi
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -25,37 +26,32 @@ import javax.annotation.Nullable;
 
 @SuppressFBWarnings("EI_EXPOSE_REP2")
 public class ObjectStoragePartition {
-  private final String namespaceName;
-  private final String tableName;
-  private final String partitionKey;
   private final Map<String, ObjectStorageRecord> records;
 
   @JsonCreator
   public ObjectStoragePartition(
-      @JsonProperty("namespaceName") @Nullable String namespaceName,
-      @JsonProperty("tableName") @Nullable String tableName,
-      @JsonProperty("partitionKey") @Nullable String partitionKey,
       @JsonProperty("records") @Nullable Map<String, ObjectStorageRecord> records) {
-    this.namespaceName = namespaceName != null ? namespaceName : "";
-    this.tableName = tableName != null ? tableName : "";
-    this.partitionKey = partitionKey != null ? partitionKey : "";
     this.records = records != null ? records : new HashMap<>();
   }
 
-  public static ObjectStoragePartition.Builder newBuilder() {
-    return new ObjectStoragePartition.Builder();
+  public static ObjectStoragePartition deserialize(String serializedObject) {
+    return Serializer.deserialize(serializedObject, new TypeReference<ObjectStoragePartition>() {});
   }
 
-  public PartitionIdentifier getPartitionIdentifier() {
-    return PartitionIdentifier.of(namespaceName, tableName, partitionKey);
+  public String serialize() {
+    return Serializer.serialize(this);
   }
 
-  public Optional<ObjectStorageRecord> getRecord(String recordId) {
-    return Optional.ofNullable(records.get(recordId));
+  public static String getObjectKey(String namespaceName, String tableName, String partitionKey) {
+    return ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey);
   }
 
   public Map<String, ObjectStorageRecord> getRecords() {
     return Collections.unmodifiableMap(records);
+  }
+
+  public Optional<ObjectStorageRecord> getRecord(String recordId) {
+    return Optional.ofNullable(records.get(recordId));
   }
 
   public boolean isEmpty() {
@@ -133,36 +129,5 @@ public class ObjectStoragePartition {
   @VisibleForTesting
   protected void putRecord(String recordId, ObjectStorageRecord record) {
     records.put(recordId, record);
-  }
-
-  public static final class Builder {
-    private String namespaceName;
-    private String tableName;
-    private String partitionKey;
-    private Map<String, ObjectStorageRecord> records;
-
-    public Builder namespaceName(String namespaceName) {
-      this.namespaceName = namespaceName;
-      return this;
-    }
-
-    public Builder tableName(String tableName) {
-      this.tableName = tableName;
-      return this;
-    }
-
-    public Builder partitionKey(String partitionKey) {
-      this.partitionKey = partitionKey;
-      return this;
-    }
-
-    public Builder records(Map<String, ObjectStorageRecord> records) {
-      this.records = records;
-      return this;
-    }
-
-    public ObjectStoragePartition build() {
-      return new ObjectStoragePartition(namespaceName, tableName, partitionKey, records);
-    }
   }
 }

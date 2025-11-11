@@ -128,7 +128,7 @@ public class MutateStatementHandlerTest {
   private void setupPartitionWithRecord(String recordId) throws ObjectStorageWrapperException {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
     records.put(recordId, prepareExistingRecord());
-    ObjectStoragePartition partition = ObjectStoragePartition.newBuilder().records(records).build();
+    ObjectStoragePartition partition = new ObjectStoragePartition(records);
     String serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
@@ -142,7 +142,7 @@ public class MutateStatementHandlerTest {
     for (String additionalRecordId : additionalRecordIds) {
       records.put(additionalRecordId, prepareExistingRecord());
     }
-    ObjectStoragePartition partition = ObjectStoragePartition.newBuilder().records(records).build();
+    ObjectStoragePartition partition = new ObjectStoragePartition(records);
     String serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
