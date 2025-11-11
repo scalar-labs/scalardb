@@ -2,6 +2,7 @@ package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Optional;
  * Iterator that streams records from partitions in a lazy manner, loading partitions on-demand
  * instead of loading all records into memory at once.
  */
+@SuppressFBWarnings("EI_EXPOSE_REP2")
 public class StreamingRecordIterator implements Iterator<ObjectStorageRecord> {
   private final ObjectStorageWrapper wrapper;
   private final String namespaceName;

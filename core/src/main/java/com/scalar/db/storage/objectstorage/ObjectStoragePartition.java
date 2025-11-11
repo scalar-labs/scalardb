@@ -61,11 +61,11 @@ public class ObjectStoragePartition {
   public void applyPut(Put put, TableMetadata tableMetadata) throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(put, tableMetadata);
     if (!put.getCondition().isPresent()) {
-      if (!records.containsKey(mutation.getRecordId())) {
+      ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
+      if (existingRecord == null) {
         records.put(mutation.getRecordId(), mutation.makeRecord());
       } else {
-        records.compute(
-            mutation.getRecordId(), (id, existingRecord) -> mutation.makeRecord(existingRecord));
+        records.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
       }
     } else if (put.getCondition().get() instanceof PutIfNotExists) {
       if (records.containsKey(mutation.getRecordId())) {
@@ -74,12 +74,12 @@ public class ObjectStoragePartition {
       }
       records.put(mutation.getRecordId(), mutation.makeRecord());
     } else if (put.getCondition().get() instanceof PutIfExists) {
-      if (!records.containsKey(mutation.getRecordId())) {
+      ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
+      if (existingRecord == null) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
-      records.compute(
-          mutation.getRecordId(), (id, existingRecord) -> mutation.makeRecord(existingRecord));
+      records.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
     } else {
       assert put.getCondition().get() instanceof PutIf;
       if (!records.containsKey(mutation.getRecordId())) {
