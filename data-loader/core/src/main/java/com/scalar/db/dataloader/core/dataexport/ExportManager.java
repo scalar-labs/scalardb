@@ -120,7 +120,7 @@ public abstract class ExportManager {
           | IOException
           | UnknownTransactionStatusException
           | CrudException e) {
-        logger.error("Error during export: {}", e.getMessage());
+        logger.error("Error during export: ", e);
       } finally {
         bufferedWriter.flush();
       }

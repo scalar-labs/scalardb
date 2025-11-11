@@ -49,7 +49,7 @@ public class CsvExportManagerTest {
   @Test
   void startExport_givenValidDataWithoutPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-    exportManager = new JsonLineExportManager(manager, dao, producerTaskFactory);
+    exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
     TransactionManagerCrudOperable.Scanner scanner =
         Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.csv";
