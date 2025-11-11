@@ -6,6 +6,7 @@ import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
@@ -126,8 +127,7 @@ public class StatementHandler {
       }
       if (validationFailed) {
         throw new ExecutionException(
-            String.format(
-                "A condition failed. ConditionalExpression: %s, Column: %s",
+            CoreError.OBJECT_STORAGE_CONDITION_NOT_SATISFIED.buildMessage(
                 expression, actualColumn));
       }
     }

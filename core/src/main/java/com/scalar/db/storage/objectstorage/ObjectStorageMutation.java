@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
@@ -22,9 +21,7 @@ public class ObjectStorageMutation extends ObjectStorageOperation {
   public ObjectStorageRecord makeRecord() {
     Mutation mutation = (Mutation) getOperation();
 
-    if (mutation instanceof Delete) {
-      throw new IllegalStateException("Delete mutation should not make a new record.");
-    }
+    assert mutation instanceof Put;
     Put put = (Put) getOperation();
 
     return ObjectStorageRecord.newBuilder()
@@ -40,9 +37,7 @@ public class ObjectStorageMutation extends ObjectStorageOperation {
   public ObjectStorageRecord makeRecord(ObjectStorageRecord existingRecord) {
     Mutation mutation = (Mutation) getOperation();
 
-    if (mutation instanceof Delete) {
-      throw new IllegalStateException("Delete mutation should not make a new record.");
-    }
+    assert mutation instanceof Put;
     Put put = (Put) mutation;
 
     Map<String, Object> newValues = new HashMap<>(existingRecord.getValues());

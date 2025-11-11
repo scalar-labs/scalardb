@@ -1,13 +1,9 @@
 package com.scalar.db.storage.objectstorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Operation;
-import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -33,17 +29,6 @@ public class ObjectStorageOperationTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-  }
-
-  @Test
-  public void checkArgument_WrongOperationGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Operation operation = mock(Put.class);
-    ObjectStorageOperation objectStorageOperation = new ObjectStorageOperation(operation, metadata);
-
-    // Act Assert
-    assertThatThrownBy(() -> objectStorageOperation.checkArgument(Get.class))
-        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

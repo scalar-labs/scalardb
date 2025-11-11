@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.google.common.base.Joiner;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
@@ -57,21 +56,5 @@ public class ObjectStorageOperation {
           getConcatenatedClusteringKey());
     }
     return getConcatenatedPartitionKey();
-  }
-
-  @SafeVarargs
-  public final void checkArgument(Class<? extends Operation>... expected) {
-    for (Class<? extends Operation> e : expected) {
-      if (e.isInstance(operation)) {
-        return;
-      }
-    }
-    throw new IllegalArgumentException(
-        Joiner.on(" ")
-            .join(
-                new String[] {
-                  operation.getClass().toString(), "is passed where something like",
-                  expected[0].toString(), "is expected"
-                }));
   }
 }

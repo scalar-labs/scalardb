@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,7 +22,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -742,9 +740,8 @@ public class MutateStatementHandlerTest {
   }
 
   @Test
-  public void
-      handle_MultipleMutationsForSinglePartitionGiven_WhenPartitionDoesNotExist_ShouldCallWrapperInsert()
-          throws Exception {
+  public void handle_MultipleMutationsGiven_WhenPartitionDoesNotExist_ShouldCallWrapperInsert()
+      throws Exception {
     // Arrange
     Put put1 = preparePut();
     Put put2 = Put.newBuilder(preparePut()).clusteringKey(Key.ofText(ANY_NAME_2, "put2")).build();
@@ -795,9 +792,8 @@ public class MutateStatementHandlerTest {
   }
 
   @Test
-  public void
-      handle_MultipleMutationsForSinglePartitionGiven_WhenPartitionExists_ShouldCallWrapperUpdate()
-          throws Exception {
+  public void handle_MultipleMutationsGiven_WhenPartitionExists_ShouldCallWrapperUpdate()
+      throws Exception {
     // Arrange
     Put put1 = preparePut();
     Put put2 = Put.newBuilder(preparePut()).clusteringKey(Key.ofText(ANY_NAME_2, "put2")).build();
@@ -847,82 +843,5 @@ public class MutateStatementHandlerTest {
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
     assertThat(versionCaptor.getValue()).isEqualTo(VERSION);
-  }
-
-  @Test
-  public void
-      handle_MultipleMutationsForDifferentPartitionGiven_WhenPartitionDoesNotExist_ShouldCallWrapperInsert()
-          throws Exception {
-    // Arrange
-    Put put1 = preparePut();
-    Put put2 = Put.newBuilder(preparePut()).clusteringKey(Key.ofText(ANY_NAME_2, "put2")).build();
-    Put put3 =
-        Put.newBuilder(preparePut())
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
-            .clusteringKey(Key.ofText(ANY_NAME_2, "put3"))
-            .build();
-    Put put4 =
-        Put.newBuilder(preparePut())
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
-            .clusteringKey(Key.ofText(ANY_NAME_2, "put4"))
-            .build();
-    ObjectStorageMutation mutation1 = new ObjectStorageMutation(put1, metadata);
-    ObjectStorageMutation mutation2 = new ObjectStorageMutation(put2, metadata);
-    ObjectStorageMutation mutation3 = new ObjectStorageMutation(put3, metadata);
-    ObjectStorageMutation mutation4 = new ObjectStorageMutation(put4, metadata);
-    String expectedObjectKey1 =
-        ObjectStorageUtils.getObjectKey(
-            ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation1.getConcatenatedPartitionKey());
-    String expectedObjectKey2 =
-        ObjectStorageUtils.getObjectKey(
-            ANY_NAMESPACE_NAME, ANY_TABLE_NAME, mutation3.getConcatenatedPartitionKey());
-    setupNonExistentPartition();
-
-    // Act
-    handler.handle(Arrays.asList(put1, put2, put3, put4));
-
-    // Assert
-    verify(wrapper, times(2)).get(objectKeyCaptor.capture());
-    List<String> capturedObjectKeys = objectKeyCaptor.getAllValues();
-    assertThat(capturedObjectKeys)
-        .containsExactlyInAnyOrder(expectedObjectKey1, expectedObjectKey2);
-    verify(wrapper, times(2)).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
-    List<String> insertedObjectKeys = objectKeyCaptor.getAllValues().subList(2, 4);
-    assertThat(insertedObjectKeys)
-        .containsExactlyInAnyOrder(expectedObjectKey1, expectedObjectKey2);
-
-    List<String> insertedPayloads = payloadCaptor.getAllValues();
-    for (int i = 0; i < insertedPayloads.size(); i++) {
-      ObjectStoragePartition insertedPartition =
-          Serializer.deserialize(
-              insertedPayloads.get(i), new TypeReference<ObjectStoragePartition>() {});
-      if (insertedObjectKeys.get(i).equals(expectedObjectKey1)) {
-        Optional<ObjectStorageRecord> record1 =
-            insertedPartition.getRecord(mutation1.getRecordId());
-        assertThat(record1).isPresent();
-        assertThat(record1.get().getValues())
-            .containsEntry(ANY_NAME_3, ANY_INT_1)
-            .containsEntry(ANY_NAME_4, ANY_INT_2);
-        Optional<ObjectStorageRecord> record2 =
-            insertedPartition.getRecord(mutation2.getRecordId());
-        assertThat(record2).isPresent();
-        assertThat(record2.get().getValues())
-            .containsEntry(ANY_NAME_3, ANY_INT_1)
-            .containsEntry(ANY_NAME_4, ANY_INT_2);
-      } else if (insertedObjectKeys.get(i).equals(expectedObjectKey2)) {
-        Optional<ObjectStorageRecord> record3 =
-            insertedPartition.getRecord(mutation3.getRecordId());
-        assertThat(record3).isPresent();
-        assertThat(record3.get().getValues())
-            .containsEntry(ANY_NAME_3, ANY_INT_1)
-            .containsEntry(ANY_NAME_4, ANY_INT_2);
-        Optional<ObjectStorageRecord> record4 =
-            insertedPartition.getRecord(mutation4.getRecordId());
-        assertThat(record4).isPresent();
-        assertThat(record4.get().getValues())
-            .containsEntry(ANY_NAME_3, ANY_INT_1)
-            .containsEntry(ANY_NAME_4, ANY_INT_2);
-      }
-    }
   }
 }

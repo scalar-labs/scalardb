@@ -16,11 +16,10 @@ import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -35,19 +34,15 @@ public class SelectStatementHandler extends StatementHandler {
   @Nonnull
   public Scanner handle(Selection selection) throws ExecutionException {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(selection);
+    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
+      throw new UnsupportedOperationException(
+          CoreError.OBJECT_STORAGE_INDEX_NOT_SUPPORTED.buildMessage());
+    }
     if (selection instanceof Get) {
-      if (ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
-        throw new UnsupportedOperationException(
-            CoreError.OBJECT_STORAGE_INDEX_NOT_SUPPORTED.buildMessage());
-      } else {
-        return executeGet((Get) selection, tableMetadata);
-      }
+      return executeGet((Get) selection, tableMetadata);
     } else {
       if (selection instanceof ScanAll) {
         return executeScanAll((ScanAll) selection, tableMetadata);
-      } else if (ScalarDbUtils.isSecondaryIndexSpecified(selection, tableMetadata)) {
-        throw new UnsupportedOperationException(
-            CoreError.OBJECT_STORAGE_INDEX_NOT_SUPPORTED.buildMessage());
       } else {
         return executeScan((Scan) selection, tableMetadata);
       }
@@ -56,7 +51,6 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Scanner executeGet(Get get, TableMetadata metadata) throws ExecutionException {
     ObjectStorageOperation operation = new ObjectStorageOperation(get, metadata);
-    operation.checkArgument(Get.class);
     ObjectStoragePartition partition =
         getPartition(getNamespace(get), getTable(get), operation.getConcatenatedPartitionKey());
     if (!partition.getRecord(operation.getRecordId()).isPresent()) {
@@ -71,18 +65,17 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Scanner executeScan(Scan scan, TableMetadata metadata) throws ExecutionException {
     ObjectStorageOperation operation = new ObjectStorageOperation(scan, metadata);
-    operation.checkArgument(Scan.class);
     ObjectStoragePartition partition =
         getPartition(getNamespace(scan), getTable(scan), operation.getConcatenatedPartitionKey());
     List<ObjectStorageRecord> records = new ArrayList<>(partition.getRecords().values());
 
-    records.sort(
-        (o1, o2) ->
-            new ClusteringKeyComparator(metadata)
-                .compare(o1.getClusteringKey(), o2.getClusteringKey()));
+    ClusteringKeyComparator clusteringKeyComparator = new ClusteringKeyComparator(metadata);
+    Comparator<ObjectStorageRecord> cmp =
+        Comparator.comparing(ObjectStorageRecord::getClusteringKey, clusteringKeyComparator);
     if (isReverseOrder(scan, metadata)) {
-      Collections.reverse(records);
+      cmp = cmp.reversed();
     }
+    records.sort(cmp);
 
     // If the scan is for DESC clustering order, use the end clustering key as a start key and the
     // start clustering key as an end key
@@ -118,16 +111,16 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private Scanner executeScanAll(ScanAll scan, TableMetadata metadata) throws ExecutionException {
-    ObjectStorageOperation operation = new ObjectStorageOperation(scan, metadata);
-    operation.checkArgument(ScanAll.class);
-    Set<ObjectStorageRecord> records = getRecordsInTable(getNamespace(scan), getTable(scan));
-    if (scan.getLimit() > 0) {
-      records = records.stream().limit(scan.getLimit()).collect(Collectors.toSet());
+    try {
+      List<String> partitionKeys = getPartitionKeysInTable(getNamespace(scan), getTable(scan));
+      StreamingRecordIterator iterator =
+          new StreamingRecordIterator(wrapper, getNamespace(scan), getTable(scan), partitionKeys);
+      return new ScannerImpl(
+          iterator, new ResultInterpreter(scan.getProjections(), metadata), scan.getLimit());
+    } catch (Exception e) {
+      throw new ExecutionException(
+          CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }
-    return new ScannerImpl(
-        records.iterator(),
-        new ResultInterpreter(scan.getProjections(), metadata),
-        scan.getLimit());
   }
 
   private ObjectStoragePartition getPartition(
@@ -145,22 +138,13 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private Set<ObjectStorageRecord> getRecordsInTable(String namespaceName, String tableName)
+  private List<String> getPartitionKeysInTable(String namespaceName, String tableName)
       throws ExecutionException {
     try {
-      Set<String> partitionKeys =
-          wrapper.getKeys(ObjectStorageUtils.getObjectKey(namespaceName, tableName, "")).stream()
-              .map(
-                  key ->
-                      key.substring(key.lastIndexOf(ObjectStorageUtils.OBJECT_KEY_DELIMITER) + 1))
-              .filter(partition -> !partition.isEmpty())
-              .collect(Collectors.toSet());
-      Set<ObjectStorageRecord> records = new HashSet<>();
-      for (String partitionKey : partitionKeys) {
-        ObjectStoragePartition partition = getPartition(namespaceName, tableName, partitionKey);
-        records.addAll(partition.getRecords().values());
-      }
-      return records;
+      return wrapper.getKeys(ObjectStorageUtils.getObjectKey(namespaceName, tableName, "")).stream()
+          .map(key -> key.substring(key.lastIndexOf(ObjectStorageUtils.OBJECT_KEY_DELIMITER) + 1))
+          .filter(partition -> !partition.isEmpty())
+          .collect(Collectors.toList());
     } catch (Exception e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);

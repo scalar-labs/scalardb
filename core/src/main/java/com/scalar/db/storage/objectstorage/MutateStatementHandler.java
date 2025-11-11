@@ -8,11 +8,8 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(
@@ -33,23 +30,19 @@ public class MutateStatementHandler extends StatementHandler {
   }
 
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
-    Map<String, List<Mutation>> mutationPerPartition = new HashMap<>();
-    for (Mutation mutation : mutations) {
-      TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
-      ObjectStorageMutation objectStorageMutation =
-          new ObjectStorageMutation(mutation, tableMetadata);
-      String partitionKey = objectStorageMutation.getConcatenatedPartitionKey();
-      String objectKey =
-          ObjectStoragePartition.getObjectKey(
-              getNamespace(mutation), getTable(mutation), partitionKey);
-      mutationPerPartition.computeIfAbsent(objectKey, k -> new ArrayList<>()).add(mutation);
-    }
-    for (Map.Entry<String, List<Mutation>> entry : mutationPerPartition.entrySet()) {
-      mutate(entry.getKey(), entry.getValue());
-    }
+    // mutations assumed to be for the same partition
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));
+    ObjectStorageMutation objectStorageMutation =
+        new ObjectStorageMutation(mutations.get(0), tableMetadata);
+    String partitionKey = objectStorageMutation.getConcatenatedPartitionKey();
+    String objectKey =
+        ObjectStoragePartition.getObjectKey(
+            getNamespace(mutations.get(0)), getTable(mutations.get(0)), partitionKey);
+    mutate(objectKey, mutations);
   }
 
-  private void mutate(String objectKey, List<Mutation> mutations) throws ExecutionException {
+  private void mutate(String objectKey, List<? extends Mutation> mutations)
+      throws ExecutionException {
     ObjectStoragePartitionSnapshot snapshot = getPartition(objectKey);
     for (Mutation mutation : mutations) {
       TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
