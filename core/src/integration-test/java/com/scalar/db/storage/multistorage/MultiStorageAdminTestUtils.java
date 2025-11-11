@@ -6,13 +6,12 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.ClusterManager;
-import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
-import com.scalar.db.storage.jdbc.RdbEngineOracle;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import com.scalar.db.storage.jdbc.TableMetadataService;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -52,14 +51,9 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     execute(
         "DROP TABLE "
-            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE));
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME));
 
-    String dropNamespaceStatement;
-    if (rdbEngine instanceof RdbEngineOracle) {
-      dropNamespaceStatement = "DROP USER " + rdbEngine.enclose(jdbcMetadataSchema);
-    } else {
-      dropNamespaceStatement = "DROP SCHEMA " + rdbEngine.enclose(jdbcMetadataSchema);
-    }
+    String dropNamespaceStatement = rdbEngine.dropNamespaceSql(jdbcMetadataSchema);
     execute(dropNamespaceStatement);
   }
 
@@ -70,7 +64,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String truncateTableStatement =
         "TRUNCATE TABLE "
-            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE);
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME);
     execute(truncateTableStatement);
   }
 
@@ -82,7 +76,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String insertCorruptedMetadataStatement =
         "INSERT INTO "
-            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME)
             + " VALUES ('"
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
@@ -96,9 +90,9 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
     // for JDBC
     String deleteMetadataStatement =
         "DELETE FROM "
-            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, JdbcAdmin.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(jdbcMetadataSchema, TableMetadataService.TABLE_NAME)
             + " WHERE "
-            + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
+            + rdbEngine.enclose(TableMetadataService.COL_FULL_TABLE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =

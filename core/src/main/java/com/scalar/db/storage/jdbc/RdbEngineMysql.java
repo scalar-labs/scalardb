@@ -46,8 +46,13 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace};
+  public String[] createSchemaSqls(String fullSchema) {
+    return new String[] {"CREATE SCHEMA " + enclose(fullSchema)};
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String schema) {
+    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(schema)};
   }
 
   @Override
@@ -74,7 +79,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     // do nothing
     return new String[] {};
   }
@@ -85,18 +94,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {"CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema)};
-  }
-
-  @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
     return false;
-  }
-
-  @Override
-  public String deleteMetadataSchemaSql(String metadataSchema) {
-    return "DROP SCHEMA " + enclose(metadataSchema);
   }
 
   @Override
@@ -233,6 +232,14 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // Message: Lock wait timeout exceeded; try restarting transaction
 
     return e.getErrorCode() == 1213 || e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
+    // Error number: 1061; Symbol: ER_DUP_KEYNAME; SQLSTATE: 42000
+    // Message: Duplicate key name '%s'
+    return e.getErrorCode() == 1061;
   }
 
   @Override
@@ -446,6 +453,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? "\\" : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
   }
 
   @Nullable

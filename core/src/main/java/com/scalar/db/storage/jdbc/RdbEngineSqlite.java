@@ -38,7 +38,7 @@ import org.sqlite.SQLiteException;
  * native SQLite library in JAR</a>, we should assure the real error messages in
  * RdbEngineStrategyTest.
  */
-public class RdbEngineSqlite extends AbstractRdbEngine {
+class RdbEngineSqlite extends AbstractRdbEngine {
   private static final String NAMESPACE_SEPARATOR = "$";
   private final RdbEngineTimeTypeSqlite timeTypeEngine;
 
@@ -84,6 +84,12 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
     // Message: A table in the database is locked (database table is locked)
 
     return e.getErrorCode() == 5 || e.getErrorCode() == 6;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
+    return false;
   }
 
   @Override
@@ -182,10 +188,16 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    // In SQLite storage, namespace will be added to table names as prefix along with underscore
+  public String[] createSchemaSqls(String fullSchema) {
+    // Do nothing, In SQLite storage, namespace will be added to table names as prefix along with
+    // underscore
     // separator.
     return new String[0];
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String fullSchema) {
+    return createSchemaSqls(fullSchema);
   }
 
   /**
@@ -205,7 +217,11 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     // do nothing
     return new String[] {};
   }
@@ -216,22 +232,9 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    // Do nothing. Namespace is just a table prefix in the SQLite implementation.
-    return new String[0];
-  }
-
-  @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
     // Namespace is never created
     return false;
-  }
-
-  @Override
-  public String deleteMetadataSchemaSql(String metadataSchema) {
-    // Do nothing. Metadata schema is just a prefix to the metadata table in the SQLite
-    // implementation.
-    return null;
   }
 
   @Override
@@ -334,6 +337,11 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   public String getEscape(LikeExpression likeExpression) {
     String escape = likeExpression.getEscape();
     return escape.isEmpty() ? null : escape;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS");
   }
 
   @Override

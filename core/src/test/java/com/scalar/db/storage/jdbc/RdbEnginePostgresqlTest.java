@@ -25,7 +25,8 @@ class RdbEnginePostgresqlTest {
 
     // Act
     String[] sqls =
-        rdbEngine.createTableInternalSqlsAfterCreateTable(false, "myschema", "mytable", metadata);
+        rdbEngine.createTableInternalSqlsAfterCreateTable(
+            false, "myschema", "mytable", metadata, false);
 
     // Assert
     assertThat(sqls).hasSize(0);
@@ -47,7 +48,8 @@ class RdbEnginePostgresqlTest {
 
     // Act
     String[] sqls =
-        rdbEngine.createTableInternalSqlsAfterCreateTable(true, "myschema", "mytable", metadata);
+        rdbEngine.createTableInternalSqlsAfterCreateTable(
+            true, "myschema", "mytable", metadata, false);
 
     // Assert
     assertThat(sqls).hasSize(1);

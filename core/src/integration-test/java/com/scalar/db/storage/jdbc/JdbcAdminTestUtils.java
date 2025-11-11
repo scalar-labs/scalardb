@@ -31,7 +31,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public void dropMetadataTable() throws SQLException {
     execute(
-        "DROP TABLE " + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE));
+        "DROP TABLE "
+            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME));
 
     String dropNamespaceStatement = rdbEngine.dropNamespaceSql(metadataSchema);
     execute(dropNamespaceStatement);
@@ -40,7 +41,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public void truncateMetadataTable() throws Exception {
     String truncateTableStatement =
-        rdbEngine.truncateTableSql(metadataSchema, JdbcAdmin.METADATA_TABLE);
+        rdbEngine.truncateTableSql(metadataSchema, TableMetadataService.TABLE_NAME);
     execute(truncateTableStatement);
   }
 
@@ -49,7 +50,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void corruptMetadata(String namespace, String table) throws Exception {
     String insertCorruptedMetadataStatement =
         "INSERT INTO "
-            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " VALUES ('"
             + getFullTableName(namespace, table)
             + "','corrupted','corrupted','corrupted','corrupted','0','0')";
@@ -60,9 +61,9 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void deleteMetadata(String namespace, String table) throws Exception {
     String deleteMetadataStatement =
         "DELETE FROM "
-            + rdbEngine.encloseFullTableName(metadataSchema, JdbcAdmin.METADATA_TABLE)
+            + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " WHERE "
-            + rdbEngine.enclose(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME)
+            + rdbEngine.enclose(TableMetadataService.COL_FULL_TABLE_NAME)
             + " = ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =

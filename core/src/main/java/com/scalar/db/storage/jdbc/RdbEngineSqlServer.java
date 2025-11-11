@@ -32,8 +32,13 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createNamespaceSqls(String fullNamespace) {
-    return new String[] {"CREATE SCHEMA " + fullNamespace};
+  public String[] createSchemaSqls(String fullSchema) {
+    return new String[] {"CREATE SCHEMA " + enclose(fullSchema)};
+  }
+
+  @Override
+  public String[] createSchemaIfNotExistsSqls(String fullSchema) {
+    return createSchemaSqls(fullSchema);
   }
 
   @Override
@@ -60,7 +65,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders, String schema, String table, TableMetadata metadata) {
+      boolean hasDifferentClusteringOrders,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists) {
     // do nothing
     return new String[0];
   }
@@ -71,19 +80,9 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] createMetadataSchemaIfNotExistsSql(String metadataSchema) {
-    return new String[] {"CREATE SCHEMA " + enclose(metadataSchema)};
-  }
-
-  @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
     // 2714: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
-  }
-
-  @Override
-  public String deleteMetadataSchemaSql(String metadataSchema) {
-    return "DROP SCHEMA " + enclose(metadataSchema);
   }
 
   @Override
@@ -194,6 +193,15 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and
     // has been chosen as the deadlock victim. Rerun the transaction.
     return e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors-1000-to-1999?view=sql-server-ver16
+    // Error code: 1913
+    // Message: The operation failed because an index or statistics with name '%.*ls' already exists
+    // on %S_MSG '%.*ls'.
+    return e.getErrorCode() == 1913;
   }
 
   @Override
@@ -410,6 +418,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     return escape.isEmpty() ? "\\" : escape;
   }
 
+  @Override
   public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
     return createIndexSql;
   }
