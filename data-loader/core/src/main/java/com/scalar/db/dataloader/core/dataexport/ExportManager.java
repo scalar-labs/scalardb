@@ -2,7 +2,6 @@ package com.scalar.db.dataloader.core.dataexport;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -13,6 +12,8 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidato
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -87,7 +88,8 @@ public abstract class ExportManager {
       BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
-      try (Scanner scanner = createScanner(exportOptions, dao, distributedTransactionManager)) {
+      try (TransactionManagerCrudOperable.Scanner scanner =
+          createScanner(exportOptions, dao, distributedTransactionManager)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -114,7 +116,10 @@ public abstract class ExportManager {
           // TODO: handle this
         }
         processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException | IOException e) {
+      } catch (InterruptedException
+          | IOException
+          | UnknownTransactionStatusException
+          | CrudException e) {
         logger.error("Error during export: {}", e.getMessage());
       } finally {
         bufferedWriter.flush();
