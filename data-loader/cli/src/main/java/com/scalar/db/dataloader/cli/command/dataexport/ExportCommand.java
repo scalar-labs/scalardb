@@ -28,7 +28,6 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
@@ -64,10 +63,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
       validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
 
-      StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
       TableMetadataService metaDataService =
-          new TableMetadataService(storageFactory.getStorageAdmin());
+          new TableMetadataService(transactionFactory.getTransactionAdmin());
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =

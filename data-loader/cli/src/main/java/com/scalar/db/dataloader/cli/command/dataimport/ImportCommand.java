@@ -4,7 +4,7 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDe
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -107,9 +107,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       ControlFile controlFile, String namespace, String tableName)
       throws IOException, TableMetadataException {
     File configFile = new File(configFilePath);
-    StorageFactory storageFactory = StorageFactory.create(configFile);
-    try (DistributedStorageAdmin storageAdmin = storageFactory.getStorageAdmin()) {
-      TableMetadataService tableMetadataService = new TableMetadataService(storageAdmin);
+    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+    try (DistributedTransactionAdmin transactionAdmin = transactionFactory.getTransactionAdmin()) {
+      TableMetadataService tableMetadataService = new TableMetadataService(transactionAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
       if (controlFile != null) {
         for (ControlFileTable table : controlFile.getTables()) {
