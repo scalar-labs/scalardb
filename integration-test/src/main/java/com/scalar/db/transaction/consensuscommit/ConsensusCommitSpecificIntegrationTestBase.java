@@ -4221,8 +4221,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void scanWithIndex_PutWithOverlappedIndexKeyAndNonOverlappedConjunctionsGivenBefore_ShouldScan(
-      Isolation isolation) throws TransactionException {
+  public void
+      scanWithIndex_PutWithOverlappedIndexKeyAndNonOverlappedConjunctionsGivenBefore_ShouldScan(
+          Isolation isolation) throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
@@ -4246,7 +4247,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scanWithIndex_OverlappingPutWithNonIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
           Isolation isolation) throws TransactionException {
     // Arrange
@@ -4269,7 +4270,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scanWithIndex_NonOverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
           Isolation isolation) throws TransactionException {
     // Arrange
@@ -4290,8 +4291,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void scanWithIndex_OverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
-      Isolation isolation) throws TransactionException {
+  public void
+      scanWithIndex_OverlappingPutWithIndexedColumnGivenBefore_ShouldThrowIllegalArgumentException(
+          Isolation isolation) throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     populateRecord(manager, namespace1, TABLE_1);
@@ -4310,7 +4312,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scanWithIndex_OverlappingPutWithIndexedColumnAndConjunctionsGivenBefore_ShouldThrowIllegalArgumentException(
           Isolation isolation) throws TransactionException {
     // Arrange
@@ -5447,7 +5449,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void scan_ScanWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -5513,7 +5515,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       scan_ScanWithIndexGiven_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
@@ -5590,8 +5592,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void scan_ScanWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
+  public void
+      scan_ScanWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
@@ -5665,7 +5668,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       scan_ScanWithIndexGiven_RecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
@@ -5741,8 +5744,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void scan_ScanWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
+  public void
+      scan_ScanWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
@@ -5815,7 +5819,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void scan_ScanWithIndexWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
+  public void scan_ScanWithIndexWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -5882,7 +5886,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void get_GetWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
+  public void get_GetWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -5914,7 +5918,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       get_GetWithIndexGiven_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
@@ -5957,8 +5961,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void get_GetWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
+  public void
+      get_GetWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.insert(
@@ -5998,7 +6003,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       get_GetWithIndexGiven_RecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
@@ -6040,8 +6045,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void get_GetWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
+  public void
+      get_GetWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.insert(
@@ -6297,8 +6303,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void get_GetWithIndexGiven_NoRecordsInIndexRange_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
+  public void
+      get_GetWithIndexGiven_NoRecordsInIndexRange_WithSerializable_ShouldNotThrowAnyException()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
 
@@ -6318,7 +6325,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByMyself_WithSerializable_ShouldNotThrowAnyException()
           throws TransactionException {
     // Arrange
@@ -6360,7 +6367,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
@@ -6404,7 +6411,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByMyself_WithSerializable_ShouldNotThrowAnyException()
           throws TransactionException {
     // Arrange
@@ -6435,7 +6442,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void
+  public void
       get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
           throws TransactionException {
     // Arrange
@@ -6469,7 +6476,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
+  public void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -6524,7 +6531,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation)
+  public void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -6753,7 +6760,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Act Assert
     DistributedTransaction transaction = begin(manager, readOnly);
     Optional<Result> actual =
-        manager.get(
+        transaction.get(
             Get.newBuilder()
                 .namespace(namespace1)
                 .table(TABLE_1)

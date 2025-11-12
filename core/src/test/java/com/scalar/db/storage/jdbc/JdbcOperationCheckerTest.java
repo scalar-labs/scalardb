@@ -7,7 +7,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Sets;
-import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
@@ -30,7 +29,6 @@ public class JdbcOperationCheckerTest {
   @Mock private StorageInfoProvider storageInfoProvider;
   @Mock private RdbEngineStrategy rdbEngine;
   @Mock private ScanAll scanAll;
-  @Mock private Scan scan;
   @Mock private Selection selection;
   @Mock private TableMetadata tableMetadata;
   private JdbcOperationChecker operationChecker;
