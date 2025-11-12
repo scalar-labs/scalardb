@@ -404,7 +404,7 @@ public interface AuthAdmin {
     boolean isSuperuser();
   }
 
-  /** Represents a role. */
+  /** Represents a role, including its granted member roles. */
   interface Role {
     /** Returns the role name. */
     String getName();
