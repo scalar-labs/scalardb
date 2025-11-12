@@ -13,6 +13,10 @@ public class ImportCommandOptions {
   public static final String MAX_THREADS_OPTION_SHORT = "-mt";
   public static final String DEPRECATED_THREADS_OPTION = "--threads";
 
+  public static final String ENABLE_LOG_SUCCESS_RECORDS_OPTION = "--enable-log-success";
+  public static final String ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT = "-ls";
+  public static final String DEPRECATED_LOG_SUCCESS_RECORDS_OPTION = "--log-success";
+
   @CommandLine.Option(
       names = {"--mode", "-m"},
       description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
@@ -69,11 +73,22 @@ public class ImportCommandOptions {
       description = "Path to the JSON control file for data mapping")
   protected String controlFilePath;
 
+  /**
+   * @deprecated As of release 3.6.2. Will be removed in release 4.0.0. Use --enable-log-success
+   *     instead
+   */
+  @Deprecated
   @CommandLine.Option(
-      names = {"--log-success", "-ls"},
+      names = {"--log-success"},
+      description = "Deprecated: Use --enable-log-success",
+      hidden = true)
+  protected boolean logSuccessRecordsDeprecated;
+
+  @CommandLine.Option(
+      names = {"--enable-log-success", "-ls"},
       description = "Enable logging of successfully processed records (default: false)",
       defaultValue = "false")
-  protected boolean logSuccessRecords;
+  protected boolean enableLogSuccessRecords;
 
   @CommandLine.Option(
       names = {"--log-dir", "-ld"},
@@ -182,6 +197,9 @@ public class ImportCommandOptions {
     // If the deprecated option is set, use its value
     if (threadsDeprecated != null) {
       maxThreads = threadsDeprecated;
+    }
+    if (logSuccessRecordsDeprecated) {
+      enableLogSuccessRecords = true;
     }
   }
 }
