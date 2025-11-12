@@ -199,4 +199,34 @@ public class ImportCommandTest {
     // Verify the value was applied to enable-log-success
     assertTrue(command.enableLogSuccessRecords);
   }
+
+  @Test
+  void call_withEnableLogSuccess_shouldSetToTrueWithoutValue() throws Exception {
+    Path importFile = tempDir.resolve("import.json");
+    Files.createFile(importFile);
+
+    // Simulate command line parsing with the new flag without providing true/false value
+    String[] args = {"--file", importFile.toString(), "--enable-log-success"};
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the flag was parsed correctly without requiring a value
+    assertTrue(command.enableLogSuccessRecords);
+  }
+
+  @Test
+  void call_withEnableLogSuccessShortForm_shouldSetToTrueWithoutValue() throws Exception {
+    Path importFile = tempDir.resolve("import.json");
+    Files.createFile(importFile);
+
+    // Simulate command line parsing with the short form flag without providing true/false value
+    String[] args = {"--file", importFile.toString(), "-ls"};
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the short form flag was parsed correctly without requiring a value
+    assertTrue(command.enableLogSuccessRecords);
+  }
 }
