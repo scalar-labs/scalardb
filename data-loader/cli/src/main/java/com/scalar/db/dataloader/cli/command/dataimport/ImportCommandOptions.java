@@ -73,12 +73,15 @@ public class ImportCommandOptions {
       description = "Path to the JSON control file for data mapping")
   protected String controlFilePath;
 
-  // Deprecated option - kept for backward compatibility
+  /**
+   * @deprecated As of release 3.6.2. Will be removed in release 4.0.0. Use --enable-log-success
+   *     instead
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--log-success"},
       description = "Deprecated: Use --enable-log-success",
       hidden = true)
-  @Deprecated
   protected boolean logSuccessRecordsDeprecated;
 
   @CommandLine.Option(
