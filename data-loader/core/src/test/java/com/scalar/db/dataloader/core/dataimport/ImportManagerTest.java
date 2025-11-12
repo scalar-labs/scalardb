@@ -45,8 +45,7 @@ public class ImportManagerTest {
             options,
             processorFactory,
             ScalarDbMode.STORAGE,
-            distributedStorage,
-            null); // Only one resource present
+            distributedTransactionManager);
     importManager.addListener(listener1);
     importManager.addListener(listener2);
   }
@@ -57,7 +56,7 @@ public class ImportManagerTest {
 
     verify(listener1).onAllDataChunksCompleted();
     verify(listener2).onAllDataChunksCompleted();
-    verify(distributedStorage).close();
+    verify(distributedTransactionManager).close();
   }
 
   @Test
@@ -69,7 +68,7 @@ public class ImportManagerTest {
 
     assertTrue(thrown.getMessage().contains("Error during completion"));
     assertEquals("Listener1 failed", thrown.getCause().getMessage());
-    verify(distributedStorage).close();
+    verify(distributedTransactionManager).close();
   }
 
   @Test
@@ -81,7 +80,6 @@ public class ImportManagerTest {
             mock(ImportOptions.class),
             mock(ImportProcessorFactory.class),
             ScalarDbMode.TRANSACTION,
-            null,
             distributedTransactionManager);
 
     managerWithTx.closeResources();
@@ -90,7 +88,7 @@ public class ImportManagerTest {
 
   @Test
   void closeResources_shouldThrowIfResourceCloseFails() {
-    doThrow(new RuntimeException("Close failed")).when(distributedStorage).close();
+    doThrow(new RuntimeException("Close failed")).when(distributedTransactionManager).close();
 
     RuntimeException ex =
         assertThrows(RuntimeException.class, () -> importManager.closeResources());
