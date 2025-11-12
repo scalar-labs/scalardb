@@ -8,7 +8,6 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
@@ -148,7 +147,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             reader,
             importOptions,
             importProcessorFactory,
-            ScalarDbMode.TRANSACTION,
+            scalarDbMode,
             TransactionFactory.create(configFile).getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
