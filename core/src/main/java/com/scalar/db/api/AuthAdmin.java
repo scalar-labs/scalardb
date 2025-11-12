@@ -198,23 +198,23 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieves a list of {@link RoleDetail}s.
+   * Retrieves a list of {@link Role}s.
    *
-   * @return a list of {@link RoleDetail}s
+   * @return a list of {@link Role}s
    * @throws ExecutionException if the operation fails
    */
-  default List<RoleDetail> getRoles() throws ExecutionException {
+  default List<Role> getRoles() throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
-   * Retrieves a list of {@link UserRoleDetail}s for the given user.
+   * Retrieves a list of {@link RoleForUser}s for the given user.
    *
    * @param username the username
-   * @return a list of {@link UserRoleDetail}s for the given user
+   * @return a list of {@link RoleForUser}s for the given user
    * @throws ExecutionException if the operation fails
    */
-  default List<UserRoleDetail> getRolesForUser(String username) throws ExecutionException {
+  default List<RoleForUser> getRolesForUser(String username) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
@@ -258,13 +258,13 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieves a list of {@link UserRole}s for the given role.
+   * Retrieves a list of {@link GranteeUser}s for the given role.
    *
    * @param roleName the role name
-   * @return a list of {@link UserRole}s for the given role
+   * @return a list of {@link GranteeUser}s for the given role
    * @throws ExecutionException if the operation fails
    */
-  default List<UserRole> getUsersForRole(String roleName) throws ExecutionException {
+  default List<GranteeUser> getGranteeUsersForRole(String roleName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
@@ -406,21 +406,18 @@ public interface AuthAdmin {
 
   /** Represents a role. */
   interface Role {
+    /** Returns the role name. */
     String getName();
-  }
 
-  /** Represents a role with its hierarchy information. */
-  interface RoleDetail {
-    Role getRole();
-
-    List<RoleHierarchy> getRoleHierarchies();
+    /** Returns the member roles granted to the role. */
+    List<MemberRole> getMemberRoles();
   }
 
   /**
    * Represents a role detail for a specific user, including whether the user has admin option for
    * this role.
    */
-  interface UserRoleDetail extends RoleDetail {
+  interface RoleForUser extends Role {
     /**
      * Returns whether the user has admin option for this role. This is distinct from the admin
      * option in role hierarchies, which applies to role-to-role grants.
@@ -429,21 +426,18 @@ public interface AuthAdmin {
   }
 
   /** Represents a user-role assignment. */
-  interface UserRole {
-    String getUsername();
+  interface GranteeUser {
+    /** Returns the username. */
+    String getName();
 
-    String getRoleName();
-
+    /** Returns whether admin option is granted for this assignment. */
     boolean hasAdminOption();
   }
 
   /** Represents a role hierarchy (role-to-role assignment). */
-  interface RoleHierarchy {
-    /** Returns the role name. */
-    String getRoleName();
-
+  interface MemberRole {
     /** Returns the member role name granted to the role. */
-    String getMemberRoleName();
+    String getName();
 
     /** Returns whether admin option is granted for this hierarchy. */
     boolean hasAdminOption();
