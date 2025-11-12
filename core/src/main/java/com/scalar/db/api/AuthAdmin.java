@@ -414,7 +414,7 @@ public interface AuthAdmin {
   }
 
   /**
-   * Represents a role detail for a specific user, including whether the user has admin option for
+   * Represents a role granted to a specific user, including whether the user has admin option for
    * this role.
    */
   interface RoleForUser extends Role {
