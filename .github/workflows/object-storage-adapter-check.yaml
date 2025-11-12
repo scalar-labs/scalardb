@@ -50,6 +50,15 @@ jobs:
     name: S3 integration test (${{ matrix.mode.label }})
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
     steps:
       - uses: actions/checkout@v5
 
