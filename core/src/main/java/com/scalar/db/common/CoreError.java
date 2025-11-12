@@ -901,12 +901,6 @@ public enum CoreError implements ScalarDbError {
       "The value of the column %s in the primary key contains an illegal character.",
       "",
       ""),
-  OBJECT_STORAGE_CONDITION_NOT_SATISFIED(
-      Category.USER_ERROR,
-      "0258",
-      "The specified condition is not satisfied. Conditional expression: '%s', Targeting column(s): '%s'",
-      "",
-      ""),
 
   //
   // Errors for the concurrency error category

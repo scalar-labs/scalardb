@@ -1,11 +1,11 @@
 package com.scalar.db.storage.objectstorage;
 
-import static com.scalar.db.storage.objectstorage.StatementHandler.validateConditions;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Ordering;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -15,11 +15,12 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.Column;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -38,12 +39,12 @@ public class ObjectStoragePartition {
     return Serializer.deserialize(serializedObject, new TypeReference<ObjectStoragePartition>() {});
   }
 
-  public String serialize() {
-    return Serializer.serialize(this);
-  }
-
   public static String getObjectKey(String namespaceName, String tableName, String partitionKey) {
     return ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey);
+  }
+
+  public String serialize() {
+    return Serializer.serialize(this);
   }
 
   public Map<String, ObjectStorageRecord> getRecords() {
@@ -87,14 +88,13 @@ public class ObjectStoragePartition {
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
-      try {
-        validateConditions(
-            existingRecord, put.getCondition().get().getExpressions(), tableMetadata);
-      } catch (ExecutionException e) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put), e);
+      if (areConditionsMet(
+          existingRecord, put.getCondition().get().getExpressions(), tableMetadata)) {
+        records.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
+        return;
       }
-      records.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
+      throw new NoMutationException(
+          CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
     }
   }
 
@@ -115,19 +115,96 @@ public class ObjectStoragePartition {
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
-      try {
-        validateConditions(
-            existingRecord, delete.getCondition().get().getExpressions(), tableMetadata);
-      } catch (ExecutionException e) {
-        throw new NoMutationException(
-            CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete), e);
+      if (areConditionsMet(
+          existingRecord, delete.getCondition().get().getExpressions(), tableMetadata)) {
+        records.remove(mutation.getRecordId());
+        return;
       }
-      records.remove(mutation.getRecordId());
+      throw new NoMutationException(
+          CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
     }
   }
 
   @VisibleForTesting
   protected void putRecord(String recordId, ObjectStorageRecord record) {
     records.put(recordId, record);
+  }
+
+  @VisibleForTesting
+  protected boolean areConditionsMet(
+      ObjectStorageRecord record, List<ConditionalExpression> expressions, TableMetadata metadata) {
+    for (ConditionalExpression expression : expressions) {
+      Column<?> expectedColumn = expression.getColumn();
+      Column<?> actualColumn =
+          ColumnValueMapper.convert(
+              record.getValues().get(expectedColumn.getName()),
+              expectedColumn.getName(),
+              metadata.getColumnDataType(expectedColumn.getName()));
+      switch (expression.getOperator()) {
+        case EQ:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          if (Ordering.natural().compare(actualColumn, expectedColumn) != 0) {
+            return false;
+          }
+          break;
+        case NE:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          if (Ordering.natural().compare(actualColumn, expectedColumn) == 0) {
+            return false;
+          }
+          break;
+        case GT:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          if (Ordering.natural().compare(actualColumn, expectedColumn) <= 0) {
+            return false;
+          }
+          break;
+        case GTE:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          if (Ordering.natural().compare(actualColumn, expectedColumn) < 0) {
+            return false;
+          }
+          break;
+        case LT:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          if (Ordering.natural().compare(actualColumn, expectedColumn) >= 0) {
+            return false;
+          }
+          break;
+        case LTE:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          if (Ordering.natural().compare(actualColumn, expectedColumn) > 0) {
+            return false;
+          }
+          break;
+        case IS_NULL:
+          if (!actualColumn.hasNullValue()) {
+            return false;
+          }
+          break;
+        case IS_NOT_NULL:
+          if (actualColumn.hasNullValue()) {
+            return false;
+          }
+          break;
+        case LIKE:
+        case NOT_LIKE:
+        default:
+          throw new AssertionError("Unsupported operator");
+      }
+    }
+    return true;
   }
 }

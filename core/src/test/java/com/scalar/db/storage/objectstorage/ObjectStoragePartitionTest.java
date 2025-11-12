@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
@@ -436,6 +437,324 @@ public class ObjectStoragePartitionTest {
         .partitionKey(Key.ofText(PARTITION_KEY_NAME, PARTITION_KEY_VALUE))
         .clusteringKey(
             Key.ofText(CLUSTERING_KEY_NAME, ObjectStoragePartitionTest.CLUSTERING_KEY_VALUE))
+        .build();
+  }
+
+  @Test
+  public void areConditionsMet_WithEqConditionAndSameValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithEqConditionAndDifferentValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isEqualToInt(INT_VALUE_2);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithEqConditionAndNullValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTestWithNull();
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithNeConditionAndDifferentValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isNotEqualToInt(INT_VALUE_2);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithNeConditionAndSameValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isNotEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithGtConditionAndGreaterValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_2);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isGreaterThanInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithGtConditionAndSameValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isGreaterThanInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithGteConditionAndGreaterValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_2);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isGreaterThanOrEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithGteConditionAndSameValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isGreaterThanOrEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithGteConditionAndSmallerValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isGreaterThanOrEqualToInt(INT_VALUE_2);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithLtConditionAndSmallerValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isLessThanInt(INT_VALUE_2);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithLtConditionAndSameValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isLessThanInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithLteConditionAndSmallerValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isLessThanOrEqualToInt(INT_VALUE_2);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithLteConditionAndSameValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isLessThanOrEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithLteConditionAndGreaterValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_2);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isLessThanOrEqualToInt(INT_VALUE_1);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithIsNullConditionAndNullValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTestWithNull();
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isNullInt();
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithIsNullConditionAndNonNullValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isNullInt();
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void areConditionsMet_WithIsNotNullConditionAndNonNullValue_ShouldReturnTrue() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isNotNullInt();
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithIsNotNullConditionAndNullValue_ShouldReturnFalse() {
+    // Arrange
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTestWithNull();
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isNotNullInt();
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(record, Collections.singletonList(condition), metadata);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  private ObjectStorageRecord createRecordForConditionTest(int value) {
+    return ObjectStorageRecord.newBuilder()
+        .id(RECORD_ID_1)
+        .partitionKey(new HashMap<>())
+        .clusteringKey(new HashMap<>())
+        .values(Collections.singletonMap(COLUMN_NAME_1, value))
+        .build();
+  }
+
+  private ObjectStorageRecord createRecordForConditionTestWithNull() {
+    return ObjectStorageRecord.newBuilder()
+        .id(RECORD_ID_1)
+        .partitionKey(new HashMap<>())
+        .clusteringKey(new HashMap<>())
+        .values(Collections.singletonMap(COLUMN_NAME_1, null))
         .build();
   }
 }
