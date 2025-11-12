@@ -406,10 +406,18 @@ public interface AuthAdmin {
 
   /** Represents a role, including its granted member roles. */
   interface Role {
-    /** Returns the role name. */
+    /**
+     * Returns the role name.
+     *
+     * @return the role name
+     */
     String getName();
 
-    /** Returns the member roles granted to the role. */
+    /**
+     * Returns the member roles granted to the role.
+     *
+     * @return the member roles granted to the role
+     */
     List<MemberRole> getMemberRoles();
   }
 
@@ -421,25 +429,43 @@ public interface AuthAdmin {
     /**
      * Returns whether the user has admin option for this role. This is distinct from the admin
      * option in role hierarchies, which applies to role-to-role grants.
+     *
+     * @return whether the user has admin option for this role
      */
     boolean hasAdminOptionOnUser();
   }
 
   /** Represents a user-role assignment. */
   interface GranteeUser {
-    /** Returns the username. */
+    /**
+     * Returns the username.
+     *
+     * @return the username
+     */
     String getName();
 
-    /** Returns whether admin option is granted for this assignment. */
+    /**
+     * Returns whether admin option is granted for this assignment.
+     *
+     * @return whether admin option is granted for this assignment
+     */
     boolean hasAdminOption();
   }
 
   /** Represents a role hierarchy (role-to-role assignment). */
   interface MemberRole {
-    /** Returns the member role name granted to the role. */
+    /**
+     * Returns the member role name granted to the role.
+     *
+     * @return the member role name granted to the role
+     */
     String getName();
 
-    /** Returns whether admin option is granted for this hierarchy. */
+    /**
+     * Returns whether admin option is granted for this hierarchy.
+     *
+     * @return whether admin option is granted for this hierarchy
+     */
     boolean hasAdminOption();
   }
 
