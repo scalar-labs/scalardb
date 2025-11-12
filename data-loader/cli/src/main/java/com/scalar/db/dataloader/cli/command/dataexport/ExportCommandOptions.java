@@ -16,6 +16,9 @@ public class ExportCommandOptions {
   public static final String END_INCLUSIVE_OPTION = "--end-inclusive";
   public static final String END_INCLUSIVE_OPTION_SHORT = "-ei";
   public static final String DEPRECATED_END_EXCLUSIVE_OPTION = "--end-exclusive";
+  public static final String MAX_THREADS_OPTION = "--max-threads";
+  public static final String MAX_THREADS_OPTION_SHORT = "-mt";
+  public static final String DEPRECATED_THREADS_OPTION = "--threads";
 
   @CommandLine.Option(
       names = {"--config", "-c"},
@@ -77,7 +80,18 @@ public class ExportCommandOptions {
       paramLabel = "<MAX_THREADS>",
       description =
           "Maximum number of threads to use for parallel processing (default: number of available processors)")
-  protected int maxThreads;
+  protected Integer maxThreads;
+
+  /**
+   * @deprecated As of release 3.6.2. Will be removed in release 4.0.0. Use --max-threads instead
+   */
+  @Deprecated
+  @CommandLine.Option(
+      names = {DEPRECATED_THREADS_OPTION},
+      paramLabel = "<THREADS>",
+      description = "Deprecated: Use --max-threads instead",
+      hidden = true)
+  protected Integer threadsDeprecated;
 
   @CommandLine.Option(
       names = {"--start-key", "-sk"},
@@ -183,6 +197,11 @@ public class ExportCommandOptions {
     // If the deprecated option is set, use its value (inverted logic)
     if (endExclusiveDeprecated != null) {
       scanEndInclusive = !endExclusiveDeprecated;
+    }
+
+    // If the deprecated option is set, use its value
+    if (threadsDeprecated != null) {
+      maxThreads = threadsDeprecated;
     }
   }
 }
