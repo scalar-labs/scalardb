@@ -64,14 +64,17 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
 
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
-      TableMetadataService metaDataService =
-          new TableMetadataService(transactionFactory.getTransactionAdmin());
+      TableMetadata tableMetadata;
+      try (com.scalar.db.api.DistributedTransactionAdmin admin =
+          transactionFactory.getTransactionAdmin()) {
+        TableMetadataService metaDataService = new TableMetadataService(admin);
+        tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      }
+
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =
           createExportManager(transactionFactory, scalarDbDao, outputFormat);
-
-      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
           partitionKeyValue != null ? getKeysFromList(partitionKeyValue, tableMetadata) : null;
