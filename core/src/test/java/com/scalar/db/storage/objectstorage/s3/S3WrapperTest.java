@@ -8,11 +8,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.storage.objectstorage.ConflictOccurredException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -303,7 +305,7 @@ public class S3WrapperTest {
   }
 
   @Test
-  public void update_S3ExceptionWith409Thrown_ShouldThrowPreconditionFailedException() {
+  public void update_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
     failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
@@ -312,7 +314,7 @@ public class S3WrapperTest {
 
     // Act & Assert
     assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
-        .isInstanceOf(PreconditionFailedException.class);
+        .isInstanceOf(ConflictOccurredException.class);
   }
 
   @Test
@@ -413,7 +415,7 @@ public class S3WrapperTest {
   }
 
   @Test
-  public void delete_WithVersion_S3ExceptionWith409Thrown_ShouldThrowPreconditionFailedException() {
+  public void delete_WithVersion_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
     failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
@@ -421,7 +423,7 @@ public class S3WrapperTest {
 
     // Act & Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
-        .isInstanceOf(PreconditionFailedException.class);
+        .isInstanceOf(ConflictOccurredException.class);
   }
 
   @Test
@@ -481,14 +483,27 @@ public class S3WrapperTest {
     // Assert
     ArgumentCaptor<DeleteObjectsRequest> requestCaptor =
         ArgumentCaptor.forClass(DeleteObjectsRequest.class);
-    verify(client).deleteObjects(requestCaptor.capture());
+    verify(client, org.mockito.Mockito.times(2)).deleteObjects(requestCaptor.capture());
 
-    DeleteObjectsRequest capturedRequest = requestCaptor.getValue();
-    assertThat(capturedRequest.bucket()).isEqualTo(BUCKET);
-    assertThat(capturedRequest.delete().objects()).hasSize(3);
-    assertThat(capturedRequest.delete().objects())
+    // Verify that all objects were deleted across the two calls
+    List<DeleteObjectsRequest> capturedRequests = requestCaptor.getAllValues();
+    assertThat(capturedRequests).hasSize(2);
+
+    // First page: should delete object1 and object2
+    DeleteObjectsRequest firstRequest = capturedRequests.get(0);
+    assertThat(firstRequest.bucket()).isEqualTo(BUCKET);
+    assertThat(firstRequest.delete().objects()).hasSize(2);
+    assertThat(firstRequest.delete().objects())
         .extracting(ObjectIdentifier::key)
-        .containsExactlyInAnyOrder(objectKey1, objectKey2, objectKey3);
+        .containsExactlyInAnyOrder(objectKey1, objectKey2);
+
+    // Second page: should delete object3
+    DeleteObjectsRequest secondRequest = capturedRequests.get(1);
+    assertThat(secondRequest.bucket()).isEqualTo(BUCKET);
+    assertThat(secondRequest.delete().objects()).hasSize(1);
+    assertThat(secondRequest.delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey3);
   }
 
   @Test
