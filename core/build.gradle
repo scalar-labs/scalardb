@@ -154,7 +154,7 @@ dependencies {
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
-    implementation "com.datastax.cassandra:cassandra-driver-core:${cassandraDriverVersion}"
+    implementation "org.apache.cassandra:cassandra-driver-core:${cassandraDriverVersion}"
     implementation "com.azure:azure-cosmos:${azureCosmosVersion}"
     implementation "org.jooq:jooq:${jooqVersion}"
     implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
