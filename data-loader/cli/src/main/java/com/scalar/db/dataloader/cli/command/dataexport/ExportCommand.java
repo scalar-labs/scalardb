@@ -5,6 +5,7 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
@@ -65,8 +66,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
       TableMetadata tableMetadata;
-      try (com.scalar.db.api.DistributedTransactionAdmin admin =
-          transactionFactory.getTransactionAdmin()) {
+      try (DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin()) {
         TableMetadataService metaDataService = new TableMetadataService(admin);
         tableMetadata = metaDataService.getTableMetadata(namespace, table);
       }
