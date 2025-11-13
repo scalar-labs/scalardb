@@ -160,7 +160,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
                   + DEPRECATED_INCLUDE_METADATA_OPTION
                   + " option is deprecated and no longer has any effect. "
                   + "Use the 'scalar.db.consensus_commit.include_metadata.enabled' configuration property "
-                  + "in your ScalarDB properties file to control whether transaction metadata is included in full scans.|@");
+                  + "in your ScalarDB properties file to control whether transaction metadata is included in read operations.|@");
 
       logger.warn(warning);
     }

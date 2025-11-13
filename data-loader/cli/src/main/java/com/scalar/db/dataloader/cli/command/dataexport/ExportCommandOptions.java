@@ -79,7 +79,7 @@ public class ExportCommandOptions {
   @CommandLine.Option(
       names = {"--include-metadata", "-m"},
       description =
-          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in full scans.",
+          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in read operations.",
       defaultValue = "false",
       hidden = true)
   protected boolean includeTransactionMetadata;
