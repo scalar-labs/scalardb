@@ -73,7 +73,7 @@ public class ExportCommandOptions {
 
   /**
    * @deprecated As of release 3.17.0 This option is no longer used and will be removed in release
-   *     4.0.0. The option is not fully removed as users who might already have there scripts or
+   *     4.0.0. The option is not fully removed as users who might already have their scripts or
    *     commands pre-set might pass the argument and when passed if not supported, picocli will
    *     throw an error. We want to avoid that and instead just show a warning.
    */
