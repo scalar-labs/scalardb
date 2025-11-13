@@ -157,8 +157,8 @@ public class ObjectStorageTableMetadata {
     }
   }
 
-  public static ObjectStorageTableMetadata.Builder newBuilder() {
-    return new ObjectStorageTableMetadata.Builder();
+  public static Builder newBuilder() {
+    return new Builder();
   }
 
   public static final class Builder {
@@ -170,27 +170,27 @@ public class ObjectStorageTableMetadata {
 
     private Builder() {}
 
-    public ObjectStorageTableMetadata.Builder partitionKeyNames(LinkedHashSet<String> val) {
+    public Builder partitionKeyNames(LinkedHashSet<String> val) {
       partitionKeyNames = val;
       return this;
     }
 
-    public ObjectStorageTableMetadata.Builder clusteringKeyNames(LinkedHashSet<String> val) {
+    public Builder clusteringKeyNames(LinkedHashSet<String> val) {
       clusteringKeyNames = val;
       return this;
     }
 
-    public ObjectStorageTableMetadata.Builder clusteringOrders(Map<String, String> val) {
+    public Builder clusteringOrders(Map<String, String> val) {
       clusteringOrders = val;
       return this;
     }
 
-    public ObjectStorageTableMetadata.Builder secondaryIndexNames(Set<String> val) {
+    public Builder secondaryIndexNames(Set<String> val) {
       secondaryIndexNames = val;
       return this;
     }
 
-    public ObjectStorageTableMetadata.Builder columns(Map<String, String> val) {
+    public Builder columns(Map<String, String> val) {
       columns = val;
       return this;
     }
