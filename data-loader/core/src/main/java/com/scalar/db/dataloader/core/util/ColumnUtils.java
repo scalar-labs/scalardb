@@ -83,6 +83,9 @@ public final class ColumnUtils {
       DataType dataType, ColumnInfo columnInfo, @Nullable String value)
       throws ColumnParsingException {
     String columnName = columnInfo.getColumnName();
+    if (value != null && !dataType.equals(DataType.TEXT) && value.equals("null")) {
+      value = null;
+    }
     try {
       switch (dataType) {
         case BOOLEAN:
