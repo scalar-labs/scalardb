@@ -76,7 +76,6 @@ public abstract class ExportManager {
     try {
       validateExportOptions(exportOptions, tableMetadata);
       Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
-      handleTransactionMetadata(exportOptions, tableMetadata);
       processHeader(exportOptions, tableMetadata, writer);
 
       ExecutorService executorService =
@@ -196,21 +195,6 @@ public abstract class ExportManager {
   private void validateExportOptions(ExportOptions exportOptions, TableMetadata tableMetadata)
       throws ExportOptionsValidationException {
     ExportOptionsValidator.validate(exportOptions, tableMetadata);
-  }
-
-  /**
-   * To update projection columns of export options if include metadata options is enabled
-   *
-   * @param exportOptions export options
-   * @param tableMetadata metadata of the table
-   */
-  private void handleTransactionMetadata(ExportOptions exportOptions, TableMetadata tableMetadata) {
-    if (!exportOptions.getProjectionColumns().isEmpty()) {
-      List<String> projectionMetadata =
-          TableMetadataUtil.populateProjectionsWithMetadata(
-              tableMetadata, exportOptions.getProjectionColumns());
-      exportOptions.setProjectionColumns(projectionMetadata);
-    }
   }
 
   /**
