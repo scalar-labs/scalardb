@@ -145,11 +145,10 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   /** Warns about deprecated options that are no longer used and have been completely ignored. */
   private void warnAboutIgnoredDeprecatedOptions() {
+    CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
     boolean hasIncludeMetadata =
-        spec.commandLine().getParseResult().hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION)
-            || spec.commandLine()
-                .getParseResult()
-                .hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION_SHORT);
+        parseResult.hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION)
+            || parseResult.hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION_SHORT);
 
     if (hasIncludeMetadata) {
       // Use picocli's ANSI support for colored warning output
