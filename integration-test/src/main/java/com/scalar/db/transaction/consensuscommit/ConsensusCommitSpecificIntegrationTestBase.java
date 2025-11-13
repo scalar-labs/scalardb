@@ -5457,7 +5457,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -5514,7 +5514,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
+  public void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -5761,7 +5761,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(value = Isolation.class, mode = EnumSource.Mode.EXCLUDE, names = "SERIALIZABLE")
-  void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
+  public void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -5816,7 +5816,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(value = Isolation.class, mode = EnumSource.Mode.EXCLUDE, names = "SERIALIZABLE")
-  void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation)
+  public void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
