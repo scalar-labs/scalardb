@@ -91,6 +91,12 @@ public class JdbcAdminCaseSensitivityIntegrationTest
 
   @Test
   @Override
+  @DisabledIf("isSqlite")
+  public void
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
+
+  @Test
+  @Override
   @DisabledIf("isDb2")
   public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
       throws ExecutionException {
@@ -611,6 +617,6 @@ public class JdbcAdminCaseSensitivityIntegrationTest
 
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
-    return !JdbcTestUtils.isDb2(rdbEngine);
+    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
   }
 }

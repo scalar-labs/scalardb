@@ -1,5 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,13 +53,20 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    validateDeprecatedOptions();
+    applyDeprecatedOptions();
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
         spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
     validatePositiveValue(
         spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
-    validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+    // Only validate the argument when provided by the user, if not set a default
+    if (maxThreads != null) {
+      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+    } else {
+      maxThreads = Runtime.getRuntime().availableProcessors();
+    }
     validatePositiveValue(
         spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
@@ -273,6 +281,24 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   }
 
   /**
+   * Validates that deprecated and new options are not both specified.
+   *
+   * @throws ParameterException if both old and new options are specified
+   */
+  private void validateDeprecatedOptions() {
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_LOG_SUCCESS_RECORDS_OPTION,
+        ENABLE_LOG_SUCCESS_RECORDS_OPTION,
+        ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT);
+  }
+
+  /**
    * Generate import options object from provided cli parameter data
    *
    * @param controlFile control file
@@ -287,7 +313,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .controlFile(controlFile)
             .controlFileValidationLevel(controlFileValidation)
             .logRawRecord(logRawRecord)
-            .logSuccessRecords(logSuccessRecords)
+            .logSuccessRecords(enableLogSuccessRecords)
             .ignoreNullValues(ignoreNullValues)
             .namespace(namespace)
             .dataChunkSize(dataChunkSize)

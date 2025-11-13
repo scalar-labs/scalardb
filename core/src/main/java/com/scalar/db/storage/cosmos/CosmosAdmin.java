@@ -344,10 +344,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try {
+      Set<String> remainingTables = getRawTableNames(namespace);
+      if (!remainingTables.isEmpty()) {
+        throw new IllegalArgumentException(
+            CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
+                namespace, remainingTables));
+      }
       client.getDatabase(namespace).delete();
       getNamespacesContainer()
           .deleteItem(new CosmosNamespace(namespace), new CosmosItemRequestOptions());
       deleteMetadataDatabaseIfEmpty();
+    } catch (IllegalArgumentException e) {
+      throw e;
     } catch (RuntimeException e) {
       throw new ExecutionException(String.format("Deleting the %s database failed", namespace), e);
     }
@@ -675,18 +683,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getImportTableMetadata(
-      String namespace, String table, Map<String, DataType> overrideColumnsType) {
-    throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
-  }
-
-  @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType) {
-    throw new UnsupportedOperationException(CoreError.COSMOS_IMPORT_NOT_SUPPORTED.buildMessage());
-  }
-
-  @Override
   public void importTable(
       String namespace,
       String table,
@@ -784,5 +780,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public StorageInfo getStorageInfo(String namespace) {
     return STORAGE_INFO;
+  }
+
+  private Set<String> getRawTableNames(String namespace) {
+    return client.getDatabase(namespace).readAllContainers().stream()
+        .map(CosmosContainerProperties::getId)
+        .collect(Collectors.toSet());
   }
 }
