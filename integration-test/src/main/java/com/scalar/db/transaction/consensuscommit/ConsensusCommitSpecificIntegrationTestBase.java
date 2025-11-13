@@ -89,10 +89,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
   private static final String TABLE_1 = "test_table1";
   private static final String TABLE_2 = "test_table2";
-  private static final String ACCOUNT_ID = "account_id";
-  private static final String ACCOUNT_TYPE = "account_type";
-  private static final String BALANCE = "balance";
-  private static final String SOME_COLUMN = "some_column";
+  protected static final String ACCOUNT_ID = "account_id";
+  protected static final String ACCOUNT_TYPE = "account_type";
+  protected static final String BALANCE = "balance";
+  protected static final String SOME_COLUMN = "some_column";
   private static final int INITIAL_BALANCE = 1000;
   private static final int NEW_BALANCE = 2000;
   private static final int NUM_ACCOUNTS = 4;
@@ -148,23 +148,25 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     return NAMESPACE_2;
   }
 
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addColumn(ACCOUNT_ID, DataType.INT)
+        .addColumn(ACCOUNT_TYPE, DataType.INT)
+        .addColumn(BALANCE, DataType.INT)
+        .addColumn(SOME_COLUMN, DataType.TEXT)
+        .addPartitionKey(ACCOUNT_ID)
+        .addClusteringKey(ACCOUNT_TYPE)
+        .addSecondaryIndex(BALANCE)
+        .build();
+  }
+
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     consensusCommitAdmin.createCoordinatorTables(true, options);
-    TableMetadata tableMetadata =
-        TableMetadata.newBuilder()
-            .addColumn(ACCOUNT_ID, DataType.INT)
-            .addColumn(ACCOUNT_TYPE, DataType.INT)
-            .addColumn(BALANCE, DataType.INT)
-            .addColumn(SOME_COLUMN, DataType.TEXT)
-            .addPartitionKey(ACCOUNT_ID)
-            .addClusteringKey(ACCOUNT_TYPE)
-            .addSecondaryIndex(BALANCE)
-            .build();
     consensusCommitAdmin.createNamespace(namespace1, true, options);
-    consensusCommitAdmin.createTable(namespace1, TABLE_1, tableMetadata, true, options);
+    consensusCommitAdmin.createTable(namespace1, TABLE_1, getTableMetadata(), true, options);
     consensusCommitAdmin.createNamespace(namespace2, true, options);
-    consensusCommitAdmin.createTable(namespace2, TABLE_2, tableMetadata, true, options);
+    consensusCommitAdmin.createTable(namespace2, TABLE_2, getTableMetadata(), true, options);
   }
 
   protected Map<String, String> getCreationOptions() {
