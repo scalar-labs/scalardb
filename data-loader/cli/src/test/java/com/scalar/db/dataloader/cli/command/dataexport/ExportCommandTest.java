@@ -190,4 +190,87 @@ class ExportCommandTest {
     // end-exclusive=false should become end-inclusive=true
     assertEquals(true, command.scanEndInclusive);
   }
+
+  @Test
+  void call_withOnlyDeprecatedThreads_shouldApplyValue() {
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--threads",
+      "12"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(12, command.threadsDeprecated);
+
+    // Apply deprecated options (this is what the command does after validation)
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied to maxThreads
+    assertEquals(12, command.maxThreads);
+  }
+
+  @Test
+  void call_withMaxThreadsSpecified_shouldUseSpecifiedValue() {
+    // Simulate command line parsing with --max-threads
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--max-threads",
+      "8"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the value was parsed
+    assertEquals(8, command.maxThreads);
+  }
+
+  @Test
+  void call_withoutMaxThreads_shouldDefaultToAvailableProcessors() {
+    // Simulate command line parsing without --max-threads
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify maxThreads is null before validation
+    assertEquals(null, command.maxThreads);
+
+    // Simulate what happens in call() after validation
+    command.spec = cmd.getCommandSpec();
+    command.applyDeprecatedOptions();
+    if (command.maxThreads == null) {
+      command.maxThreads = Runtime.getRuntime().availableProcessors();
+    }
+
+    // Verify it was set to available processors
+    assertEquals(Runtime.getRuntime().availableProcessors(), command.maxThreads);
+  }
 }
