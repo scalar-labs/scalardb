@@ -258,13 +258,13 @@ public interface AuthAdmin {
   }
 
   /**
-   * Retrieves a list of {@link GranteeUser}s for the given role.
+   * Retrieves a list of {@link GranteeUserRef}s for the given role.
    *
    * @param roleName the role name
-   * @return a list of {@link GranteeUser}s for the given role
+   * @return a list of {@link GranteeUserRef}s for the given role
    * @throws ExecutionException if the operation fails
    */
-  default List<GranteeUser> getGranteeUsersForRole(String roleName) throws ExecutionException {
+  default List<GranteeUserRef> getGranteeUsersForRole(String roleName) throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
@@ -399,12 +399,22 @@ public interface AuthAdmin {
 
   /** Represents a user. */
   interface User {
+    /**
+     * Returns the username.
+     *
+     * @return the username
+     */
     String getName();
 
+    /**
+     * Returns whether the user is a superuser.
+     *
+     * @return whether the user is a superuser
+     */
     boolean isSuperuser();
   }
 
-  /** Represents a role, including its granted member roles. */
+  /** Represents a role, including its granted roles. */
   interface Role {
     /**
      * Returns the role name.
@@ -414,11 +424,11 @@ public interface AuthAdmin {
     String getName();
 
     /**
-     * Returns the member roles granted to the role.
+     * Returns the roles granted to the role.
      *
-     * @return the member roles granted to the role
+     * @return the roles granted to the role
      */
-    List<MemberRole> getMemberRoles();
+    List<GrantedRoleRef> getGrantedRoles();
   }
 
   /**
@@ -435,8 +445,8 @@ public interface AuthAdmin {
     boolean hasAdminOptionOnUser();
   }
 
-  /** Represents a user-role assignment. */
-  interface GranteeUser {
+  /** A reference to a grantee user of a role. */
+  interface GranteeUserRef {
     /**
      * Returns the username.
      *
@@ -452,19 +462,19 @@ public interface AuthAdmin {
     boolean hasAdminOption();
   }
 
-  /** Represents a role hierarchy (role-to-role assignment). */
-  interface MemberRole {
+  /** A reference to a granted role. */
+  interface GrantedRoleRef {
     /**
-     * Returns the member role name granted to the role.
+     * Returns the granted role name.
      *
-     * @return the member role name granted to the role
+     * @return the granted role name
      */
     String getName();
 
     /**
-     * Returns whether admin option is granted for this hierarchy.
+     * Returns whether admin option is granted for this role grant.
      *
-     * @return whether admin option is granted for this hierarchy
+     * @return whether admin option is granted for this role grant
      */
     boolean hasAdminOption();
   }

@@ -421,7 +421,7 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public List<GranteeUser> getGranteeUsersForRole(String roleName) throws ExecutionException {
+  public List<GranteeUserRef> getGranteeUsersForRole(String roleName) throws ExecutionException {
     return distributedTransactionAdmin.getGranteeUsersForRole(roleName);
   }
 
