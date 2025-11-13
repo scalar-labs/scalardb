@@ -59,80 +59,11 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
-  public void scan_ScanWithIndexGiven_WithSerializable_ShouldNotThrowAnyException() {}
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException() {}
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
-  public void
-      scan_ScanWithIndexGiven_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      scan_ScanWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      scan_ScanWithIndexGiven_RecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      scan_ScanWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void scan_ScanWithIndexWithLimitGiven_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void get_GetWithIndexGiven_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_RecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByMyself_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByMyself_WithSerializable_ShouldNotThrowAnyException() {}
-
-  @Override
-  @Disabled("Object Storage does not support index-related operations")
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException() {}
+  public void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException() {}
 
   @Override
   @Disabled("Object Storage does not support index-related operations")

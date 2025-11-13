@@ -4489,10 +4489,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act
     Throwable thrown = catchThrowable(() -> transaction.scan(scan));
-    transaction.commit();
 
     // Assert
-    assertThat(thrown).doesNotThrowAnyException();
+    if (isolation == Isolation.SERIALIZABLE) {
+      // Index scans are not allowed in SERIALIZABLE isolation
+      assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+      transaction.rollback();
+    } else {
+      assertThat(thrown).doesNotThrowAnyException();
+      transaction.commit();
+    }
   }
 
   @ParameterizedTest
@@ -5699,7 +5705,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -5743,400 +5749,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act Assert
     DistributedTransaction transaction = manager.begin();
-    List<Result> results =
-        transaction.scan(
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(results).hasSize(5);
-
-    Set<Integer> expectedIds = Sets.newHashSet(0, 1, 2, 3, 4);
-    for (Result result : results) {
-      expectedIds.remove(result.getInt(ACCOUNT_ID));
-      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-    }
-    assertThat(expectedIds).isEmpty();
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
+    // Index scans are not allowed in SERIALIZABLE isolation
+    assertThatThrownBy(
+            () ->
+                transaction.scan(
+                    Scan.newBuilder()
+                        .namespace(namespace1)
+                        .table(TABLE_1)
+                        .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void
-      scan_ScanWithIndexGiven_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    List<Result> results =
-        transaction.scan(
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(results).hasSize(5);
-
-    Set<Integer> expectedIds = Sets.newHashSet(0, 1, 2, 3, 4);
-    for (Result result : results) {
-      expectedIds.remove(result.getInt(ACCOUNT_ID));
-      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-    }
-    assertThat(expectedIds).isEmpty();
-
-    // The record is updated by another transaction
-    manager.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 100)
-            .build());
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      scan_ScanWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    List<Result> results =
-        transaction.scan(
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(results).hasSize(5);
-
-    Set<Integer> expectedIds = Sets.newHashSet(0, 1, 2, 3, 4);
-    for (Result result : results) {
-      expectedIds.remove(result.getInt(ACCOUNT_ID));
-      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-    }
-    assertThat(expectedIds).isEmpty();
-
-    transaction.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 100)
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      scan_ScanWithIndexGiven_RecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    List<Result> results =
-        transaction.scan(
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(results).hasSize(5);
-
-    Set<Integer> expectedIds = Sets.newHashSet(0, 1, 2, 3, 4);
-    for (Result result : results) {
-      expectedIds.remove(result.getInt(ACCOUNT_ID));
-      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-    }
-    assertThat(expectedIds).isEmpty();
-
-    // The record is deleted by another transaction
-    manager.delete(
-        Delete.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .build());
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      scan_ScanWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    List<Result> results =
-        transaction.scan(
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(results).hasSize(5);
-
-    Set<Integer> expectedIds = Sets.newHashSet(0, 1, 2, 3, 4);
-    for (Result result : results) {
-      expectedIds.remove(result.getInt(ACCOUNT_ID));
-      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-    }
-    assertThat(expectedIds).isEmpty();
-
-    transaction.delete(
-        Delete.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void scan_ScanWithIndexWithLimitGiven_WithSerializable_ShouldNotThrowAnyException()
-      throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.mutate(
-        Arrays.asList(
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 2))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 3))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build(),
-            Insert.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .partitionKey(Key.ofInt(ACCOUNT_ID, 4))
-                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-                .intValue(BALANCE, INITIAL_BALANCE)
-                .build()));
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    List<Result> results =
-        transaction.scan(
-            Scan.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .limit(3)
-                .build());
-
-    assertThat(results).hasSize(3);
-
-    Set<Integer> expectedIds = Sets.newHashSet(0, 1, 2, 3, 4);
-    for (Result result : results) {
-      expectedIds.remove(result.getInt(ACCOUNT_ID));
-      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
-      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-    }
-    assertThat(expectedIds).hasSize(2);
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void get_GetWithIndexGiven_WithSerializable_ShouldNotThrowAnyException()
+  public void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
@@ -6151,188 +5777,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Act Assert
     DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
 
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordUpdatedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    // The record is updated by another transaction
-    manager.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 100)
-            .build());
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordUpdatedByMyself_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    transaction.update(
-        Update.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, 100)
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordDeletedByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    // The record is deleted by another transaction
-    manager.delete(
-        Delete.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .build());
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordDeletedByMyself_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    transaction.delete(
-        Delete.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
+    // Index gets are not allowed in SERIALIZABLE isolation
+    assertThatThrownBy(
+            () ->
+                transaction.get(
+                    Get.newBuilder()
+                        .namespace(namespace1)
+                        .table(TABLE_1)
+                        .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -6552,180 +6007,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
-  @Test
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isEmpty();
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByMyself_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    transaction.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-    manager.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isPresent();
-    assertThat(actual.get().getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(actual.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
-
-    DistributedTransaction another = manager.begin();
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByMyself_WithSerializable_ShouldNotThrowAnyException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isEmpty();
-
-    transaction.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-
-    assertThatCode(transaction::commit).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      get_GetWithIndexGiven_NoRecordsInIndexRange_RecordInsertedIntoIndexRangeByAnotherTransaction_WithSerializable_ShouldThrowCommitConflictException()
-          throws TransactionException {
-    // Arrange
-    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
-
-    // Act Assert
-    DistributedTransaction transaction = manager.begin();
-    Optional<Result> actual =
-        transaction.get(
-            Get.newBuilder()
-                .namespace(namespace1)
-                .table(TABLE_1)
-                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                .build());
-
-    assertThat(actual).isEmpty();
-
-    DistributedTransaction another = manager.begin();
-    another.insert(
-        Insert.newBuilder()
-            .namespace(namespace1)
-            .table(TABLE_1)
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .build());
-    another.commit();
-
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
-  }
-
   @ParameterizedTest
-  @EnumSource(Isolation.class)
+  @EnumSource(value = Isolation.class, mode = EnumSource.Mode.EXCLUDE, names = "SERIALIZABLE")
   public void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {
     // Arrange
@@ -6780,7 +6063,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @ParameterizedTest
-  @EnumSource(Isolation.class)
+  @EnumSource(value = Isolation.class, mode = EnumSource.Mode.EXCLUDE, names = "SERIALIZABLE")
   public void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {
     // Arrange
@@ -8749,6 +8032,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     return new ConsensusCommitManager(
         storage,
         admin,
+        consensusCommitConfig,
         databaseConfig,
         coordinator,
         parallelExecutor,
