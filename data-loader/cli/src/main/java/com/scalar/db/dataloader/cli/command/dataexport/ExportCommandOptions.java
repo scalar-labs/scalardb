@@ -72,14 +72,16 @@ public class ExportCommandOptions {
   protected FileFormat outputFormat;
 
   /**
-   * @deprecated As of release 3.16.2 This option is no longer used and will be removed in release.
-   *     The option is not fully removed as it will break backwards 4.0.0.
+   * @deprecated As of release 3.17.0 This option is no longer used and will be removed in release
+   *     4.0.0. The option is not fully removed as users who might already have there scripts or
+   *     commands pre-set might pass the argument and when passed if not supported, picocli will
+   *     throw an error. We want to avoid that and instead just show a warning.
    */
   @Deprecated
   @CommandLine.Option(
       names = {"--include-metadata", "-m"},
       description =
-          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in read operations.",
+          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in scan operations.",
       defaultValue = "false",
       hidden = true)
   protected boolean includeTransactionMetadata;
