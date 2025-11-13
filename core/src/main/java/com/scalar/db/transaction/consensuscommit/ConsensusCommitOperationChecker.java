@@ -159,7 +159,10 @@ public class ConsensusCommitOperationChecker {
         for (Selection.Conjunction conjunction : scan.getConjunctions()) {
           for (ConditionalExpression condition : conjunction.getConditions()) {
             String column = condition.getColumn().getName();
-            if (metadata.getSecondaryIndexNames().contains(column)) {
+            // If the column is an indexed column but is part of the primary key, it's allowed
+            if (metadata.getSecondaryIndexNames().contains(column)
+                && !tableMetadata.getPartitionKeyNames().contains(column)
+                && !tableMetadata.getClusteringKeyNames().contains(column)) {
               throw new IllegalArgumentException(
                   CoreError
                       .CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE

@@ -495,6 +495,12 @@ public class ConsensusCommitOperationCheckerTest {
     Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
+    // Mock the underlying TableMetadata
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+
     Scan scan =
         ScanAll.newBuilder()
             .namespace("ns")
@@ -517,12 +523,76 @@ public class ConsensusCommitOperationCheckerTest {
     Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
+    // Mock the underlying TableMetadata
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+
     Scan scan =
         ScanAll.newBuilder()
             .namespace("ns")
             .table("tbl")
             .all()
             .where(ConditionBuilder.column("non_idx_col").isEqualToInt(100))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForScan_ScanAllWithConditionOnIndexedPartitionKeyColumnInSerializable_ShouldNotThrowException() {
+    // Arrange
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
+
+    // Mock the underlying TableMetadata - indexed column is also a partition key
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
+    LinkedHashSet<String> partitionKeys = new LinkedHashSet<>();
+    partitionKeys.add("idx_col");
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(partitionKeys);
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column("idx_col").isEqualToInt(100))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForScan_ScanAllWithConditionOnIndexedClusteringKeyColumnInSerializable_ShouldNotThrowException() {
+    // Arrange
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
+
+    // Mock the underlying TableMetadata - indexed column is also a clustering key
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
+    LinkedHashSet<String> clusteringKeys = new LinkedHashSet<>();
+    clusteringKeys.add("idx_col");
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(clusteringKeys);
+
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column("idx_col").isEqualToInt(100))
             .build();
     TransactionContext context =
         new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
