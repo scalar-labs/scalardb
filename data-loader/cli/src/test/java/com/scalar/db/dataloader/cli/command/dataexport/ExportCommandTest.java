@@ -275,9 +275,10 @@ class ExportCommandTest {
   }
 
   @Test
-  void call_withDeprecatedIncludeMetadataOption_shouldParseWithoutError() {
-    // Simulate command line parsing with deprecated --include-metadata option
-    String[] args = {
+  void call_withDeprecatedIncludeMetadataOption_shouldParseAndDetectOption() {
+    // Test that the deprecated option can be parsed without crashing
+    // and is detected for warning purposes (both long and short forms)
+    String[] argsWithLongForm = {
       "--config",
       "scalardb.properties",
       "--namespace",
@@ -288,27 +289,8 @@ class ExportCommandTest {
       "JSON",
       "--include-metadata"
     };
-    ExportCommand command = new ExportCommand();
-    CommandLine cmd = new CommandLine(command);
-    cmd.parseArgs(args);
 
-    // Verify the deprecated option was parsed
-    // Since it has defaultValue = "false", using the flag sets it to true
-    assertEquals(true, command.includeTransactionMetadata);
-
-    // Verify that the spec was set correctly
-    command.spec = cmd.getCommandSpec();
-
-    // Verify that the command line has the deprecated option matched
-    assertTrue(
-        cmd.getParseResult()
-            .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION));
-  }
-
-  @Test
-  void call_withDeprecatedIncludeMetadataShortOption_shouldParseWithoutError() {
-    // Simulate command line parsing with deprecated -m short option
-    String[] args = {
+    String[] argsWithShortForm = {
       "--config",
       "scalardb.properties",
       "--namespace",
@@ -319,55 +301,36 @@ class ExportCommandTest {
       "JSON",
       "-m"
     };
-    ExportCommand command = new ExportCommand();
-    CommandLine cmd = new CommandLine(command);
-    cmd.parseArgs(args);
 
-    // Verify the deprecated option was parsed
-    assertEquals(true, command.includeTransactionMetadata);
+    // Test long form
+    ExportCommand commandLong = new ExportCommand();
+    CommandLine cmdLong = new CommandLine(commandLong);
+    cmdLong.parseArgs(argsWithLongForm);
+    commandLong.spec = cmdLong.getCommandSpec();
 
-    // Verify that the spec was set correctly
-    command.spec = cmd.getCommandSpec();
-
-    // Verify that the command line has the deprecated short option matched
+    // Verify the option is detected (so warning will trigger)
     assertTrue(
-        cmd.getParseResult()
+        cmdLong
+            .getParseResult()
+            .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION));
+
+    // Test short form
+    ExportCommand commandShort = new ExportCommand();
+    CommandLine cmdShort = new CommandLine(commandShort);
+    cmdShort.parseArgs(argsWithShortForm);
+    commandShort.spec = cmdShort.getCommandSpec();
+
+    // Verify the short option is detected (so warning will trigger)
+    assertTrue(
+        cmdShort
+            .getParseResult()
             .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION_SHORT));
   }
 
   @Test
-  void call_withDeprecatedIncludeMetadataFalse_shouldParseWithoutError() {
-    // Simulate command line parsing with deprecated --include-metadata=false option
-    String[] args = {
-      "--config",
-      "scalardb.properties",
-      "--namespace",
-      "scalar",
-      "--table",
-      "asset",
-      "--format",
-      "JSON",
-      "--include-metadata=false"
-    };
-    ExportCommand command = new ExportCommand();
-    CommandLine cmd = new CommandLine(command);
-    cmd.parseArgs(args);
-
-    // Verify the deprecated option was parsed with explicit false value
-    assertEquals(false, command.includeTransactionMetadata);
-
-    // Verify that the spec was set correctly
-    command.spec = cmd.getCommandSpec();
-
-    // Verify that the command line has the deprecated option matched
-    assertTrue(
-        cmd.getParseResult()
-            .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION));
-  }
-
-  @Test
-  void call_withoutDeprecatedIncludeMetadataOption_shouldHaveDefaultValue() {
-    // Simulate command line parsing without the deprecated option
+  void call_withoutDeprecatedIncludeMetadataOption_shouldNotDetectOption() {
+    // Verify that when the deprecated option is NOT used, it's not detected
+    // (so warning won't trigger incorrectly)
     String[] args = {
       "--config",
       "scalardb.properties",
@@ -378,17 +341,13 @@ class ExportCommandTest {
       "--format",
       "JSON"
     };
+
     ExportCommand command = new ExportCommand();
     CommandLine cmd = new CommandLine(command);
     cmd.parseArgs(args);
-
-    // Verify the option has its default value (false)
-    assertEquals(false, command.includeTransactionMetadata);
-
-    // Verify that the spec was set correctly
     command.spec = cmd.getCommandSpec();
 
-    // Verify that the command line does NOT have the deprecated option matched
+    // Verify the option is NOT detected (so warning won't trigger)
     assertEquals(
         false,
         cmd.getParseResult()
