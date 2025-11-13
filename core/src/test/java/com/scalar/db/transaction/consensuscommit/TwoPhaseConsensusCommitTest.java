@@ -61,7 +61,7 @@ public class TwoPhaseConsensusCommitTest {
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
-  @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @Mock private ConsensusCommitOperationChecker operationChecker;
 
   private TwoPhaseConsensusCommit transaction;
 
@@ -71,7 +71,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Arrange
     context = spy(new TransactionContext(ANY_TX_ID, snapshot, Isolation.SNAPSHOT, false, false));
-    transaction = new TwoPhaseConsensusCommit(context, crud, commit, mutationOperationChecker);
+    transaction = new TwoPhaseConsensusCommit(context, crud, commit, operationChecker);
   }
 
   private Get prepareGet() {
@@ -186,7 +186,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud).put(put, context);
-    verify(mutationOperationChecker).check(put);
+    verify(operationChecker).check(put);
   }
 
   @Test
@@ -200,7 +200,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).put(put, context);
-    verify(mutationOperationChecker, times(2)).check(put);
+    verify(operationChecker, times(2)).check(put);
   }
 
   @Test
@@ -214,7 +214,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud).delete(delete, context);
-    verify(mutationOperationChecker).check(delete);
+    verify(operationChecker).check(delete);
   }
 
   @Test
@@ -228,7 +228,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).delete(delete, context);
-    verify(mutationOperationChecker, times(2)).check(delete);
+    verify(operationChecker, times(2)).check(delete);
   }
 
   @Test
@@ -258,7 +258,7 @@ public class TwoPhaseConsensusCommitTest {
             .enableInsertMode()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -288,7 +288,7 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -319,7 +319,7 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -357,7 +357,7 @@ public class TwoPhaseConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -483,8 +483,8 @@ public class TwoPhaseConsensusCommitTest {
     // Assert
     verify(crud).put(put, context);
     verify(crud).delete(delete, context);
-    verify(mutationOperationChecker).check(put);
-    verify(mutationOperationChecker).check(delete);
+    verify(operationChecker).check(put);
+    verify(operationChecker).check(delete);
   }
 
   @Test

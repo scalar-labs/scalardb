@@ -39,7 +39,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private final TransactionContext context;
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  private final ConsensusCommitOperationChecker operationChecker;
   private boolean validated;
   private boolean needRollback;
 
@@ -48,11 +48,11 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       TransactionContext context,
       CrudHandler crud,
       CommitHandler commit,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
+      ConsensusCommitOperationChecker operationChecker) {
     this.context = context;
     this.crud = crud;
     this.commit = commit;
-    this.mutationOperationChecker = mutationOperationChecker;
+    this.operationChecker = operationChecker;
   }
 
   @Override
@@ -62,17 +62,41 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    return crud.get(copyAndSetTargetToIfNot(get), context);
+    get = copyAndSetTargetToIfNot(get);
+
+    try {
+      operationChecker.check(get, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.get(get, context);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    return crud.scan(copyAndSetTargetToIfNot(scan), context);
+    scan = copyAndSetTargetToIfNot(scan);
+
+    try {
+      operationChecker.check(scan, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.scan(scan, context);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    return crud.getScanner(copyAndSetTargetToIfNot(scan), context);
+    scan = copyAndSetTargetToIfNot(scan);
+
+    try {
+      operationChecker.check(scan, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.getScanner(scan, context);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -285,7 +309,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   private void checkMutation(Mutation mutation) throws CrudException {
     try {
-      mutationOperationChecker.check(mutation);
+      operationChecker.check(mutation);
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, getId());
     }

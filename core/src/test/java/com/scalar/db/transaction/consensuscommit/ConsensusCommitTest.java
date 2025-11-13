@@ -57,7 +57,7 @@ public class ConsensusCommitTest {
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
-  @Mock private ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  @Mock private ConsensusCommitOperationChecker operationChecker;
 
   private ConsensusCommit consensus;
 
@@ -67,7 +67,7 @@ public class ConsensusCommitTest {
 
     // Arrange
     context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, false, false));
-    consensus = new ConsensusCommit(context, crud, commit, mutationOperationChecker, null);
+    consensus = new ConsensusCommit(context, crud, commit, operationChecker, null);
   }
 
   private Get prepareGet() {
@@ -183,7 +183,7 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud).put(put, context);
-    verify(mutationOperationChecker).check(put);
+    verify(operationChecker).check(put);
   }
 
   @Test
@@ -198,7 +198,7 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).put(put, context);
-    verify(mutationOperationChecker, times(2)).check(put);
+    verify(operationChecker, times(2)).check(put);
   }
 
   @Test
@@ -213,7 +213,7 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud).delete(delete, context);
-    verify(mutationOperationChecker).check(delete);
+    verify(operationChecker).check(delete);
   }
 
   @Test
@@ -228,7 +228,7 @@ public class ConsensusCommitTest {
 
     // Assert
     verify(crud, times(2)).delete(delete, context);
-    verify(mutationOperationChecker, times(2)).check(delete);
+    verify(operationChecker, times(2)).check(delete);
   }
 
   @Test
@@ -258,7 +258,7 @@ public class ConsensusCommitTest {
             .enableInsertMode()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -288,7 +288,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -319,7 +319,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -357,7 +357,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
     verify(crud).put(expectedPut, context);
-    verify(mutationOperationChecker).check(expectedPut);
+    verify(operationChecker).check(expectedPut);
   }
 
   @Test
@@ -485,8 +485,8 @@ public class ConsensusCommitTest {
     // Assert
     verify(crud).put(put, context);
     verify(crud).delete(delete, context);
-    verify(mutationOperationChecker).check(put);
-    verify(mutationOperationChecker).check(delete);
+    verify(operationChecker).check(put);
+    verify(operationChecker).check(delete);
   }
 
   @Test
@@ -511,7 +511,7 @@ public class ConsensusCommitTest {
     // Arrange
     doNothing().when(commit).commit(any(TransactionContext.class));
     context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, true, false));
-    consensus = new ConsensusCommit(context, crud, commit, mutationOperationChecker, null);
+    consensus = new ConsensusCommit(context, crud, commit, operationChecker, null);
 
     // Act
     consensus.commit();
@@ -599,7 +599,7 @@ public class ConsensusCommitTest {
     // Arrange
     CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
     ConsensusCommit consensusWithGroupCommit =
-        new ConsensusCommit(context, crud, commit, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
 
     // Act
     consensusWithGroupCommit.rollback();
@@ -618,7 +618,7 @@ public class ConsensusCommitTest {
     context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, true, false));
     CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
     ConsensusCommit consensusWithGroupCommit =
-        new ConsensusCommit(context, crud, commit, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
 
     // Act
     consensusWithGroupCommit.rollback();

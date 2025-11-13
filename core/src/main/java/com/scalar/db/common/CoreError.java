@@ -684,6 +684,36 @@ public enum CoreError implements ScalarDbError {
       "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_PROJECTION_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0258",
+      "Specifying transaction metadata columns in the projection is not allowed. Table: %s; Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_ORDERING_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0259",
+      "Specifying transaction metadata columns in the ordering is not allowed. Table: %s; Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0260",
+      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0261",
+      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0262",
+      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

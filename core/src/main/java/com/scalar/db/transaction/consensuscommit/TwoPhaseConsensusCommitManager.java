@@ -59,7 +59,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  private final ConsensusCommitOperationChecker operationChecker;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -92,7 +92,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             new MutationsGrouper(new StorageInfoProvider(admin)),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -124,7 +126,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             new MutationsGrouper(new StorageInfoProvider(admin)),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -151,7 +155,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   private void throwIfGroupCommitIsEnabled() {
@@ -204,7 +210,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(context, crud, commit, mutationOperationChecker);
+        new TwoPhaseConsensusCommit(context, crud, commit, operationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return transaction;
