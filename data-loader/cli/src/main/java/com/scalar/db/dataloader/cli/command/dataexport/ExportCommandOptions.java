@@ -19,6 +19,8 @@ public class ExportCommandOptions {
   public static final String MAX_THREADS_OPTION = "--max-threads";
   public static final String MAX_THREADS_OPTION_SHORT = "-mt";
   public static final String DEPRECATED_THREADS_OPTION = "--threads";
+  public static final String DEPRECATED_INCLUDE_METADATA_OPTION = "--include-metadata";
+  public static final String DEPRECATED_INCLUDE_METADATA_OPTION_SHORT = "-m";
 
   @CommandLine.Option(
       names = {"--config", "-c"},
@@ -70,13 +72,14 @@ public class ExportCommandOptions {
   protected FileFormat outputFormat;
 
   /**
-   * @deprecated As of release 3.16.2 This option is no longer used and will be removed in release
-   *     4.0.0.
+   * @deprecated As of release 3.16.2 This option is no longer used and will be removed in release.
+   *     The option is not fully removed as it will break backwards 4.0.0.
    */
   @Deprecated
   @CommandLine.Option(
       names = {"--include-metadata", "-m"},
-      description = "Deprecated: This option is no longer used",
+      description =
+          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in full scans.",
       defaultValue = "false",
       hidden = true)
   protected boolean includeTransactionMetadata;

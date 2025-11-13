@@ -88,7 +88,7 @@ public class CsvExportManagerTest {
   @Test
   void startExport_givenPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-      producerTaskFactory = new ProducerTaskFactory(",", false);
+    producerTaskFactory = new ProducerTaskFactory(",", false);
     exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
     TransactionManagerCrudOperable.Scanner scanner =
         Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
@@ -152,7 +152,7 @@ public class CsvExportManagerTest {
   private void runExportAndAssertFirstLine(boolean excludeHeader, String expectedFirstLine)
       throws Exception {
     // Arrange
-      producerTaskFactory = new ProducerTaskFactory(",", false);
+    producerTaskFactory = new ProducerTaskFactory(",", false);
     exportManager = new CsvExportManager(manager, dao, producerTaskFactory);
     TransactionManagerCrudOperable.Scanner scanner =
         Mockito.mock(TransactionManagerCrudOperable.Scanner.class);

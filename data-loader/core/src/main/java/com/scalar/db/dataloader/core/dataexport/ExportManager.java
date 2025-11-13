@@ -11,7 +11,6 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidati
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidator;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
