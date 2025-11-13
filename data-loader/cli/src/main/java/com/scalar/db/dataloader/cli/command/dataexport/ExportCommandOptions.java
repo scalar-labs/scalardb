@@ -69,10 +69,16 @@ public class ExportCommandOptions {
       defaultValue = "json")
   protected FileFormat outputFormat;
 
+  /**
+   * @deprecated As of release 3.16.2 This option is no longer used and will be removed in release
+   *     4.0.0.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--include-metadata", "-m"},
-      description = "Include transaction metadata in the exported data (default: false)",
-      defaultValue = "false")
+      description = "Deprecated: This option is no longer used",
+      defaultValue = "false",
+      hidden = true)
   protected boolean includeTransactionMetadata;
 
   @CommandLine.Option(

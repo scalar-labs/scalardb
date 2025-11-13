@@ -162,7 +162,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   private ExportManager createExportManager(
       TransactionFactory transactionFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
     ProducerTaskFactory taskFactory =
-        new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
+        new ProducerTaskFactory(delimiter, prettyPrintJson);
     DistributedTransactionManager manager = transactionFactory.getTransactionManager();
     switch (fileFormat) {
       case JSON:
@@ -181,7 +181,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         ExportOptions.builder(namespace, table, partitionKey, outputFormat)
             .sortOrders(sortOrders)
             .excludeHeaderRow(excludeHeader)
-            .includeTransactionMetadata(includeTransactionMetadata)
             .delimiter(delimiter)
             .limit(limit)
             .maxThreadCount(maxThreads)

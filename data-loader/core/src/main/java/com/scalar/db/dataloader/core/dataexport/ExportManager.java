@@ -205,8 +205,7 @@ public abstract class ExportManager {
    * @param tableMetadata metadata of the table
    */
   private void handleTransactionMetadata(ExportOptions exportOptions, TableMetadata tableMetadata) {
-    if (exportOptions.isIncludeTransactionMetadata()
-        && !exportOptions.getProjectionColumns().isEmpty()) {
+    if (!exportOptions.getProjectionColumns().isEmpty()) {
       List<String> projectionMetadata =
           TableMetadataUtil.populateProjectionsWithMetadata(
               tableMetadata, exportOptions.getProjectionColumns());
