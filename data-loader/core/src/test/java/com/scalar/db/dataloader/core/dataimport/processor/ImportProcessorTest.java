@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
@@ -62,7 +61,6 @@ class ImportProcessorTest {
   @Mock private ImportProcessorParams params;
   @Mock private ImportOptions importOptions;
   @Mock private ScalarDbDao dao;
-  @Mock private DistributedStorage distributedStorage;
   @Mock private DistributedTransactionManager distributedTransactionManager;
   @Mock private DistributedTransaction distributedTransaction;
   @Mock private TableColumnDataTypes tableColumnDataTypes;

@@ -7,7 +7,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -23,7 +22,6 @@ public class ImportManagerTest {
   private ImportManager importManager;
   private ImportEventListener listener1;
   private ImportEventListener listener2;
-  private DistributedStorage distributedStorage;
   private DistributedTransactionManager distributedTransactionManager;
 
   @BeforeEach
@@ -35,7 +33,6 @@ public class ImportManagerTest {
 
     listener1 = mock(ImportEventListener.class);
     listener2 = mock(ImportEventListener.class);
-    distributedStorage = mock(DistributedStorage.class);
     distributedTransactionManager = mock(DistributedTransactionManager.class);
 
     importManager =
