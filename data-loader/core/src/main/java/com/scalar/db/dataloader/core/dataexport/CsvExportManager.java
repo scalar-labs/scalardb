@@ -76,7 +76,7 @@ public class CsvExportManager extends ExportManager {
     Iterator<String> iterator = tableMetadata.getColumnNames().iterator();
     while (iterator.hasNext()) {
       String columnName = iterator.next();
-      if (shouldIgnoreColumn(columnName, projections)) {
+      if (!projections.isEmpty() && !projections.contains(columnName)) {
         continue;
       }
       headerRow.append(columnName);
@@ -87,16 +87,5 @@ public class CsvExportManager extends ExportManager {
     CsvUtil.removeTrailingDelimiter(headerRow, exportOptions.getDelimiter());
     headerRow.append("\n");
     return headerRow.toString();
-  }
-
-  /**
-   * To ignore a column or not based on if it is not included in selected projections
-   *
-   * @param columnName column name
-   * @param projections selected columns for projection
-   * @return true if the column should be ignored, false otherwise
-   */
-  private boolean shouldIgnoreColumn(String columnName, List<String> projections) {
-    return !projections.isEmpty() && !projections.contains(columnName);
   }
 }
