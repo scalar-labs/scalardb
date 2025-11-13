@@ -1941,20 +1941,12 @@ public class JdbcAdminTest {
 
     Connection connection = mock(Connection.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
-    PreparedStatement getInternalTableNamesStatementMock = mock(PreparedStatement.class);
     Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement())
         .thenReturn(selectAllFromNamespaceTablePrepStmt, dropNamespaceTableStmt);
-    // Mock for getInternalTableNames() check - returns empty ResultSet (no tables in metadata
-    // schema)
-    ResultSet emptyInternalTablesResultSet = mock(ResultSet.class);
-    when(emptyInternalTablesResultSet.next()).thenReturn(false);
-    when(getInternalTableNamesStatementMock.executeQuery())
-        .thenReturn(emptyInternalTablesResultSet);
-    when(connection.prepareStatement(anyString()))
-        .thenReturn(deleteFromNamespaceTablePrepStmt, getInternalTableNamesStatementMock);
+    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet1 =
@@ -2107,10 +2099,10 @@ public class JdbcAdminTest {
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStatementMock = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
-    PreparedStatement getInternalTableNamesStatementMock = mock(PreparedStatement.class);
     Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
       PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
+      PreparedStatement getInternalTableNamesStatementMock = mock(PreparedStatement.class);
       when(connection.createStatement())
           .thenReturn(dropNamespaceStatementMock, selectNamespaceStatementMock);
       ResultSet emptyResultSet = mock(ResultSet.class);
@@ -2130,15 +2122,7 @@ public class JdbcAdminTest {
               getInternalTableNamesStatementMock);
     } else {
       when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
-      // Mock for getInternalTableNames() check - returns non-empty ResultSet (namespaces table
-      // exists)
-      ResultSet nonEmptyInternalTablesResultSet = mock(ResultSet.class);
-      when(nonEmptyInternalTablesResultSet.next()).thenReturn(true, false);
-      when(nonEmptyInternalTablesResultSet.getString(1)).thenReturn("namespaces");
-      when(getInternalTableNamesStatementMock.executeQuery())
-          .thenReturn(nonEmptyInternalTablesResultSet);
-      when(connection.prepareStatement(anyString()))
-          .thenReturn(deleteFromNamespaceTableMock, getInternalTableNamesStatementMock);
+      when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
     }
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
