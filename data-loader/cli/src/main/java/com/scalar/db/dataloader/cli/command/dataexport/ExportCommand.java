@@ -62,7 +62,12 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
-      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      // Only validate the argument when provided by the user, if not set a default
+      if (maxThreads != null) {
+        validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      } else {
+        maxThreads = Runtime.getRuntime().availableProcessors();
+      }
 
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
       TableMetadata tableMetadata;
@@ -130,6 +135,11 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         DEPRECATED_END_EXCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
   }
 
   private String getScalarDbPropertiesFilePath() {
