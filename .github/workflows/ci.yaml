@@ -243,6 +243,136 @@ jobs:
           name: cassandra_3.11_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
 
+  integration-test-for-cassandra-4-1:
+    name: Cassandra 4.1 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:4.1
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v5
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestCassandra' task
+        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: cassandra_4.1_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestCassandra
+
+  integration-test-for-cassandra-5-0:
+    name: Cassandra 5.0 integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:5.0
+        env:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+        ports:
+          - 9042:9042
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v5
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestCassandra' task
+        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: cassandra_5.0_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestCassandra
+
   integration-test-for-cosmos:
     name: Cosmos DB integration test (${{ matrix.mode.label }})
     runs-on: windows-latest
