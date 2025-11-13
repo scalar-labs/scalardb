@@ -152,14 +152,14 @@ class ExportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the deprecated value was parsed
-    assertEquals(true, command.startExclusiveDeprecated);
+    assertTrue(command.startExclusiveDeprecated);
 
     // Apply deprecated options (this is what the command does after validation)
     command.applyDeprecatedOptions();
 
     // Verify the value was applied with inverted logic
     // start-exclusive=true should become start-inclusive=false
-    assertEquals(false, command.scanStartInclusive);
+    assertFalse(command.scanStartInclusive);
   }
 
   @Test
@@ -181,14 +181,14 @@ class ExportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the deprecated value was parsed
-    assertEquals(false, command.endExclusiveDeprecated);
+    assertFalse(command.endExclusiveDeprecated);
 
     // Apply deprecated options (this is what the command does after validation)
     command.applyDeprecatedOptions();
 
     // Verify the value was applied with inverted logic
     // end-exclusive=false should become end-inclusive=true
-    assertEquals(true, command.scanEndInclusive);
+    assertTrue(command.scanEndInclusive);
   }
 
   @Test
@@ -348,8 +348,7 @@ class ExportCommandTest {
     command.spec = cmd.getCommandSpec();
 
     // Verify the option is NOT detected (so warning won't trigger)
-    assertEquals(
-        false,
+    assertFalse(
         cmd.getParseResult()
             .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION));
   }
