@@ -31,28 +31,28 @@ public class MutationConditionsValidator {
    *
    * @param put a Put operation
    * @param existingRecord the current value of the record targeted by the mutation, if any
-   * @param context the transaction context
+   * @param transactionId the transaction ID
    * @throws UnsatisfiedConditionException if the condition is not satisfied
    */
   public void checkIfConditionIsSatisfied(
-      Put put, @Nullable TransactionResult existingRecord, TransactionContext context)
+      Put put, @Nullable TransactionResult existingRecord, String transactionId)
       throws UnsatisfiedConditionException {
     assert put.getCondition().isPresent();
     MutationCondition condition = put.getCondition().get();
     boolean recordExists = existingRecord != null;
     if (condition instanceof PutIf) {
       if (recordExists) {
-        validateConditionalExpressions(condition.getExpressions(), existingRecord, context);
+        validateConditionalExpressions(condition.getExpressions(), existingRecord, transactionId);
       } else {
-        throwWhenRecordDoesNotExist(condition, context);
+        throwWhenRecordDoesNotExist(condition, transactionId);
       }
     } else if (condition instanceof PutIfExists) {
       if (!recordExists) {
-        throwWhenRecordDoesNotExist(condition, context);
+        throwWhenRecordDoesNotExist(condition, transactionId);
       }
     } else if (condition instanceof PutIfNotExists) {
       if (recordExists) {
-        throwWhenRecordExists(condition, context);
+        throwWhenRecordExists(condition, transactionId);
       }
     } else {
       throw new AssertionError();
@@ -65,50 +65,50 @@ public class MutationConditionsValidator {
    *
    * @param delete a Delete operation
    * @param existingRecord the current value of the record targeted by the mutation, if any
-   * @param context the transaction context
+   * @param transactionId the transaction ID
    * @throws UnsatisfiedConditionException if the condition is not satisfied
    */
   public void checkIfConditionIsSatisfied(
-      Delete delete, @Nullable TransactionResult existingRecord, TransactionContext context)
+      Delete delete, @Nullable TransactionResult existingRecord, String transactionId)
       throws UnsatisfiedConditionException {
     assert delete.getCondition().isPresent();
     MutationCondition condition = delete.getCondition().get();
     boolean recordExists = existingRecord != null;
     if (condition instanceof DeleteIf) {
       if (recordExists) {
-        validateConditionalExpressions(condition.getExpressions(), existingRecord, context);
+        validateConditionalExpressions(condition.getExpressions(), existingRecord, transactionId);
       } else {
-        throwWhenRecordDoesNotExist(condition, context);
+        throwWhenRecordDoesNotExist(condition, transactionId);
       }
     } else if (condition instanceof DeleteIfExists) {
       if (!recordExists) {
-        throwWhenRecordDoesNotExist(condition, context);
+        throwWhenRecordDoesNotExist(condition, transactionId);
       }
     } else {
       throw new AssertionError();
     }
   }
 
-  private void throwWhenRecordDoesNotExist(MutationCondition condition, TransactionContext context)
+  private void throwWhenRecordDoesNotExist(MutationCondition condition, String transactionId)
       throws UnsatisfiedConditionException {
     throw new UnsatisfiedConditionException(
         CoreError.CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_NOT_EXISTS.buildMessage(
             condition.getClass().getSimpleName()),
-        context.transactionId);
+        transactionId);
   }
 
-  private void throwWhenRecordExists(MutationCondition condition, TransactionContext context)
+  private void throwWhenRecordExists(MutationCondition condition, String transactionId)
       throws UnsatisfiedConditionException {
     throw new UnsatisfiedConditionException(
         CoreError.CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_EXISTS.buildMessage(
             condition.getClass().getSimpleName()),
-        context.transactionId);
+        transactionId);
   }
 
   private void validateConditionalExpressions(
       List<ConditionalExpression> conditionalExpressions,
       TransactionResult existingRecord,
-      TransactionContext context)
+      String transactionId)
       throws UnsatisfiedConditionException {
     for (ConditionalExpression conditionalExpression : conditionalExpressions) {
       if (!shouldMutate(
@@ -118,7 +118,7 @@ public class MutationConditionsValidator {
         throw new UnsatisfiedConditionException(
             CoreError.CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED.buildMessage(
                 conditionalExpression.getColumn().getName()),
-            context.transactionId);
+            transactionId);
       }
     }
   }
