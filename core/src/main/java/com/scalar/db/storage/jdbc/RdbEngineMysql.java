@@ -153,7 +153,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String tableExistsInternalTableCheckSql(String fullTableName) {
+  public String internalTableExistsCheckSql(String fullTableName) {
     return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
   }
 

@@ -351,8 +351,8 @@ public class JdbcAdminTest {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.MYSQL,
         Collections.singletonList("CREATE SCHEMA `my_ns`"),
-        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -365,8 +365,8 @@ public class JdbcAdminTest {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.POSTGRESQL,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -379,8 +379,8 @@ public class JdbcAdminTest {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.SQL_SERVER,
         Collections.singletonList("CREATE SCHEMA [my_ns]"),
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -395,10 +395,10 @@ public class JdbcAdminTest {
         Arrays.asList(
             "CREATE USER \"my_ns\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"my_ns\" quota unlimited on USERS"),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         Arrays.asList(
             "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -411,8 +411,8 @@ public class JdbcAdminTest {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.SQLITE,
         Collections.emptyList(),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         Collections.emptyList(),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -425,8 +425,8 @@ public class JdbcAdminTest {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.DB2,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -436,8 +436,8 @@ public class JdbcAdminTest {
   private void createNamespace_forX_shouldExecuteCreateNamespaceStatement(
       RdbEngine rdbEngine,
       List<String> createSchemaSqls,
-      String namespacesTableExistsSql,
       List<String> createMetadataSchemaSqls,
+      String namespacesTableExistsSql,
       String createNamespacesTableSql,
       String insertNamespaceSql)
       throws SQLException, ExecutionException {
@@ -466,8 +466,8 @@ public class JdbcAdminTest {
     List<Statement> statementsMock =
         ImmutableList.<Statement>builder()
             .addAll(mockedCreateSchemaStatements)
-            .add(mockedNamespacesTableExistsStatement)
             .addAll(mockedCreateMetadataSchemaStatements)
+            .add(mockedNamespacesTableExistsStatement)
             .add(mockedCreateNamespacesTableStatement)
             .build();
     when(connection.createStatement())
@@ -489,10 +489,10 @@ public class JdbcAdminTest {
     for (int i = 0; i < createSchemaSqls.size(); i++) {
       verify(mockedCreateSchemaStatements.get(i)).execute(createSchemaSqls.get(i));
     }
-    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
     for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
       verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
     }
+    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement2).setString(1, namespace);
@@ -1941,12 +1941,20 @@ public class JdbcAdminTest {
 
     Connection connection = mock(Connection.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    PreparedStatement getInternalTableNamesStatementMock = mock(PreparedStatement.class);
     Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement())
         .thenReturn(selectAllFromNamespaceTablePrepStmt, dropNamespaceTableStmt);
-    when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTablePrepStmt);
+    // Mock for getInternalTableNames() check - returns empty ResultSet (no tables in metadata
+    // schema)
+    ResultSet emptyInternalTablesResultSet = mock(ResultSet.class);
+    when(emptyInternalTablesResultSet.next()).thenReturn(false);
+    when(getInternalTableNamesStatementMock.executeQuery())
+        .thenReturn(emptyInternalTablesResultSet);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(deleteFromNamespaceTablePrepStmt, getInternalTableNamesStatementMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet1 =
@@ -1980,6 +1988,7 @@ public class JdbcAdminTest {
     Statement dropNamespaceStmt = mock(Statement.class);
     PreparedStatement isNamespaceEmptyStatementMock = mock(PreparedStatement.class);
     PreparedStatement deleteFromNamespaceTablePrepStmt = mock(PreparedStatement.class);
+    PreparedStatement getInternalTableNamesStatementMock = mock(PreparedStatement.class);
     Statement selectAllFromNamespaceTablePrepStmt = mock(Statement.class);
     Statement dropNamespaceTableStmt = mock(Statement.class);
     Statement dropMetadataSchemaStmt = mock(Statement.class);
@@ -1994,8 +2003,17 @@ public class JdbcAdminTest {
     ResultSet emptyResultSet = mock(ResultSet.class);
     when(emptyResultSet.next()).thenReturn(false);
     when(isNamespaceEmptyStatementMock.executeQuery()).thenReturn(emptyResultSet);
+    // Mock for getInternalTableNames() check - returns empty ResultSet (no tables in metadata
+    // schema)
+    ResultSet emptyInternalTablesResultSet = mock(ResultSet.class);
+    when(emptyInternalTablesResultSet.next()).thenReturn(false);
+    when(getInternalTableNamesStatementMock.executeQuery())
+        .thenReturn(emptyInternalTablesResultSet);
     when(connection.prepareStatement(anyString()))
-        .thenReturn(isNamespaceEmptyStatementMock, deleteFromNamespaceTablePrepStmt);
+        .thenReturn(
+            isNamespaceEmptyStatementMock,
+            deleteFromNamespaceTablePrepStmt,
+            getInternalTableNamesStatementMock);
     when(dataSource.getConnection()).thenReturn(connection);
     // Only the metadata schema is left
     ResultSet resultSet =
@@ -2089,6 +2107,7 @@ public class JdbcAdminTest {
     Connection connection = mock(Connection.class);
     Statement dropNamespaceStatementMock = mock(Statement.class);
     PreparedStatement deleteFromNamespaceTableMock = mock(PreparedStatement.class);
+    PreparedStatement getInternalTableNamesStatementMock = mock(PreparedStatement.class);
     Statement selectNamespaceStatementMock = mock(Statement.class);
     if (rdbEngine != RdbEngine.SQLITE) {
       PreparedStatement getTableNamesPrepStmt = mock(PreparedStatement.class);
@@ -2097,11 +2116,29 @@ public class JdbcAdminTest {
       ResultSet emptyResultSet = mock(ResultSet.class);
       when(emptyResultSet.next()).thenReturn(false);
       when(getTableNamesPrepStmt.executeQuery()).thenReturn(emptyResultSet);
+      // Mock for getInternalTableNames() check - returns non-empty ResultSet (namespaces table
+      // exists)
+      ResultSet nonEmptyInternalTablesResultSet = mock(ResultSet.class);
+      when(nonEmptyInternalTablesResultSet.next()).thenReturn(true, false);
+      when(nonEmptyInternalTablesResultSet.getString(1)).thenReturn("namespaces");
+      when(getInternalTableNamesStatementMock.executeQuery())
+          .thenReturn(nonEmptyInternalTablesResultSet);
       when(connection.prepareStatement(anyString()))
-          .thenReturn(getTableNamesPrepStmt, deleteFromNamespaceTableMock);
+          .thenReturn(
+              getTableNamesPrepStmt,
+              deleteFromNamespaceTableMock,
+              getInternalTableNamesStatementMock);
     } else {
       when(connection.createStatement()).thenReturn(selectNamespaceStatementMock);
-      when(connection.prepareStatement(anyString())).thenReturn(deleteFromNamespaceTableMock);
+      // Mock for getInternalTableNames() check - returns non-empty ResultSet (namespaces table
+      // exists)
+      ResultSet nonEmptyInternalTablesResultSet = mock(ResultSet.class);
+      when(nonEmptyInternalTablesResultSet.next()).thenReturn(true, false);
+      when(nonEmptyInternalTablesResultSet.getString(1)).thenReturn("namespaces");
+      when(getInternalTableNamesStatementMock.executeQuery())
+          .thenReturn(nonEmptyInternalTablesResultSet);
+      when(connection.prepareStatement(anyString()))
+          .thenReturn(deleteFromNamespaceTableMock, getInternalTableNamesStatementMock);
     }
     when(dataSource.getConnection()).thenReturn(connection);
     // Namespaces table contains other namespaces
@@ -3933,6 +3970,8 @@ public class JdbcAdminTest {
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
 
     when(dataSource.getConnection()).thenReturn(connection);
+    Statement mockStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(mockStatement);
     TableMetadata importedTableMetadata = mock(TableMetadata.class);
     doReturn(importedTableMetadata)
         .when(adminSpy)
@@ -4002,8 +4041,8 @@ public class JdbcAdminTest {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.MYSQL,
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `my_ns`"),
-        "SELECT 1 FROM `scalardb`.`namespaces` LIMIT 1",
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
+        "SELECT 1 FROM `scalardb`.`namespaces` LIMIT 1",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -4016,8 +4055,8 @@ public class JdbcAdminTest {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.POSTGRESQL,
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"my_ns\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -4030,8 +4069,8 @@ public class JdbcAdminTest {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.SQL_SERVER,
         Collections.singletonList("CREATE SCHEMA [my_ns]"),
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -4046,10 +4085,10 @@ public class JdbcAdminTest {
         Arrays.asList(
             "CREATE USER \"my_ns\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"my_ns\" quota unlimited on USERS"),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         Arrays.asList(
             "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -4062,8 +4101,8 @@ public class JdbcAdminTest {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.DB2,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -4076,8 +4115,8 @@ public class JdbcAdminTest {
     repairNamespace_forX_shouldWorkProperly(
         RdbEngine.SQLITE,
         Collections.emptyList(),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         Collections.emptyList(),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -4087,8 +4126,8 @@ public class JdbcAdminTest {
   private void repairNamespace_forX_shouldWorkProperly(
       RdbEngine rdbEngine,
       List<String> createSchemaIfNotExistsSqls,
-      String namespacesTableExistsSql,
       List<String> createMetadataSchemaSqls,
+      String namespacesTableExistsSql,
       String createNamespacesTableSql,
       String insertNamespaceSql)
       throws SQLException, ExecutionException {
@@ -4117,8 +4156,8 @@ public class JdbcAdminTest {
     List<Statement> statementsMock =
         ImmutableList.<Statement>builder()
             .addAll(mockedCreateSchemaIfNotExistsStatements)
-            .add(mockedNamespacesTableExistsStatement)
             .addAll(mockedCreateMetadataSchemaStatements)
+            .add(mockedNamespacesTableExistsStatement)
             .add(mockedCreateNamespacesTableStatement)
             .build();
 
@@ -4141,10 +4180,10 @@ public class JdbcAdminTest {
       verify(mockedCreateSchemaIfNotExistsStatements.get(i))
           .execute(createSchemaIfNotExistsSqls.get(i));
     }
-    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
     for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
       verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
     }
+    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement2).setString(1, namespace);
@@ -4172,8 +4211,8 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`metadata` LIMIT 1",
         "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
-        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
+        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -4187,8 +4226,8 @@ public class JdbcAdminTest {
         RdbEngine.POSTGRESQL,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -4202,10 +4241,10 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         ImmutableList.of(
             "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -4219,8 +4258,8 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[metadata]",
         "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         ImmutableList.of("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
+        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -4234,8 +4273,8 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "$metadata\" LIMIT 1",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         Collections.emptyList(),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -4249,8 +4288,8 @@ public class JdbcAdminTest {
         RdbEngine.DB2,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         ImmutableList.of("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
+        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -4261,8 +4300,8 @@ public class JdbcAdminTest {
       RdbEngine rdbEngine,
       String tableMetadataExistStatement,
       String getTableMetadataNamespacesStatement,
-      String namespacesTableExistsStatement,
       List<String> createMetadataNamespaceStatements,
+      String namespacesTableExistsStatement,
       String createNamespaceTableStatement,
       String insertNamespaceStatement)
       throws SQLException, ExecutionException {
@@ -4284,8 +4323,8 @@ public class JdbcAdminTest {
         ImmutableList.<Statement>builder()
             .add(tableMetadataExistsStatementMock)
             .add(getTableMetadataNamespacesStatementMock)
-            .add(namespacesTableExistsStatementMock)
             .addAll(createMetadataNamespaceStatementsMock)
+            .add(namespacesTableExistsStatementMock)
             .add(createNamespaceTableStatementMock)
             .build();
 
@@ -4316,11 +4355,11 @@ public class JdbcAdminTest {
     verify(tableMetadataExistsStatementMock).execute(tableMetadataExistStatement);
     verify(getTableMetadataNamespacesStatementMock)
         .executeQuery(getTableMetadataNamespacesStatement);
-    verify(namespacesTableExistsStatementMock).execute(namespacesTableExistsStatement);
     for (int i = 0; i < createMetadataNamespaceStatementsMock.size(); i++) {
       verify(createMetadataNamespaceStatementsMock.get(i))
           .execute(createMetadataNamespaceStatements.get(i));
     }
+    verify(namespacesTableExistsStatementMock).execute(namespacesTableExistsStatement);
     verify(createNamespaceTableStatementMock).execute(createNamespaceTableStatement);
     verify(connection, times(3)).prepareStatement(insertNamespaceStatement);
     verify(insertNamespacePrepStmt1).setString(1, METADATA_SCHEMA);
@@ -4396,7 +4435,6 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.MYSQL,
         "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
-        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -4410,7 +4448,6 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.POSTGRESQL,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
-        Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -4424,7 +4461,6 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SQL_SERVER,
         "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
-        Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -4438,9 +4474,6 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.ORACLE,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
-        Arrays.asList(
-            "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
-            "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -4454,7 +4487,6 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SQLITE,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
-        Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -4468,7 +4500,6 @@ public class JdbcAdminTest {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.DB2,
         "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
-        Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -4479,7 +4510,6 @@ public class JdbcAdminTest {
       createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
           RdbEngine rdbEngine,
           String namespacesTableExistsSql,
-          List<String> createMetadataSchemaSqls,
           String createNamespacesTableSql,
           String insertNamespaceSql)
           throws SQLException, ExecutionException {
@@ -4492,38 +4522,10 @@ public class JdbcAdminTest {
     when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
         .thenThrow(sqlException);
 
-    List<Statement> mockedCreateMetadataSchemaStatements = new ArrayList<>();
-    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
-      mockedCreateMetadataSchemaStatements.add(mock(Statement.class));
-    }
-
     Statement mockedCreateNamespacesTableStatement = mock(Statement.class);
 
-    if (!mockedCreateMetadataSchemaStatements.isEmpty()) {
-      when(connection.createStatement())
-          .thenReturn(mockedNamespacesTableExistsStatement)
-          .thenReturn(
-              mockedCreateMetadataSchemaStatements.get(0),
-              mockedCreateMetadataSchemaStatements
-                  .subList(1, mockedCreateMetadataSchemaStatements.size())
-                  .toArray(new Statement[0]))
-          .thenReturn(mockedCreateNamespacesTableStatement);
-    } else {
-      when(connection.createStatement())
-          .thenReturn(mockedNamespacesTableExistsStatement)
-          .thenReturn(mockedCreateNamespacesTableStatement);
-    }
-
-    List<Statement> statementsMock =
-        ImmutableList.<Statement>builder()
-            .add(mockedNamespacesTableExistsStatement)
-            .addAll(mockedCreateMetadataSchemaStatements)
-            .add(mockedCreateNamespacesTableStatement)
-            .build();
     when(connection.createStatement())
-        .thenReturn(
-            statementsMock.get(0),
-            statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
+        .thenReturn(mockedNamespacesTableExistsStatement, mockedCreateNamespacesTableStatement);
 
     PreparedStatement mockedInsertNamespaceStatement = mock(PreparedStatement.class);
     when(connection.prepareStatement(insertNamespaceSql))
@@ -4534,9 +4536,6 @@ public class JdbcAdminTest {
 
     // Assert
     verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
-    for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
-      verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
-    }
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement).execute();
