@@ -27,7 +27,6 @@ public class ExportOptions {
   @Builder.Default private final int maxThreadCount = Runtime.getRuntime().availableProcessors();
   @Builder.Default private final String delimiter = ";";
   @Builder.Default private final boolean excludeHeaderRow = false;
-  @Builder.Default private final boolean includeTransactionMetadata = false;
   @Builder.Default private List<String> projectionColumns = Collections.emptyList();
   private List<Scan.Ordering> sortOrders;
 

@@ -42,7 +42,7 @@ public class JsonLineExportManagerTest {
     manager = Mockito.mock(DistributedTransactionManager.class);
     mockData = UnitTestUtils.createTestTableMetadata();
     dao = Mockito.mock(ScalarDbDao.class);
-    producerTaskFactory = new ProducerTaskFactory(null, false, true);
+    producerTaskFactory = new ProducerTaskFactory(null, true);
   }
 
   @Test

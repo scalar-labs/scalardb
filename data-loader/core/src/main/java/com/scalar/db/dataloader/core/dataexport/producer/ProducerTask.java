@@ -33,12 +33,6 @@ public abstract class ProducerTask {
   protected final Map<String, DataType> dataTypeByColumnName;
 
   /**
-   * Flag indicating whether to include internal metadata columns (e.g., transaction metadata) in
-   * the output.
-   */
-  protected final boolean includeMetadata;
-
-  /**
    * A set of column names to include in the exported output. If empty, all columns are included by
    * default.
    */
@@ -47,17 +41,14 @@ public abstract class ProducerTask {
   /**
    * Class constructor
    *
-   * @param includeMetadata Include metadata in the exported data
    * @param projectionColumns List of column name for projection
    * @param tableMetadata Metadata of the ScalarDB table
    * @param columnDataTypes Map of data types for the all columns in a ScalarDB table
    */
   protected ProducerTask(
-      boolean includeMetadata,
       List<String> projectionColumns,
       TableMetadata tableMetadata,
       Map<String, DataType> columnDataTypes) {
-    this.includeMetadata = includeMetadata;
     this.projectedColumnsSet = new HashSet<>(projectionColumns);
     this.tableMetadata = tableMetadata;
     this.dataTypeByColumnName = columnDataTypes;

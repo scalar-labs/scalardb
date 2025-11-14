@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -35,9 +34,6 @@ public class ImportProcessorParams {
 
   /** Data Access Object for ScalarDB operations. */
   ScalarDbDao dao;
-
-  /** Storage interface for non-transactional operations. */
-  DistributedStorage distributedStorage;
 
   /** Transaction manager for handling transactional operations. */
   DistributedTransactionManager distributedTransactionManager;

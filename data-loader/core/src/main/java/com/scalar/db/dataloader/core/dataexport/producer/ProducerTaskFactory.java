@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 public class ProducerTaskFactory {
 
   private final String delimiter;
-  private final boolean includeMetadata;
   private final boolean prettyPrintJson;
 
   /**
@@ -36,21 +35,15 @@ public class ProducerTaskFactory {
       case JSON:
         producerTask =
             new JsonProducerTask(
-                includeMetadata,
-                projectionColumns,
-                tableMetadata,
-                dataTypeByColumnName,
-                prettyPrintJson);
+                projectionColumns, tableMetadata, dataTypeByColumnName, prettyPrintJson);
         break;
       case JSONL:
         producerTask =
-            new JsonLineProducerTask(
-                includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName);
+            new JsonLineProducerTask(projectionColumns, tableMetadata, dataTypeByColumnName);
         break;
       case CSV:
         producerTask =
-            new CsvProducerTask(
-                includeMetadata, projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
+            new CsvProducerTask(projectionColumns, tableMetadata, dataTypeByColumnName, delimiter);
         break;
       default:
         throw new IllegalArgumentException(

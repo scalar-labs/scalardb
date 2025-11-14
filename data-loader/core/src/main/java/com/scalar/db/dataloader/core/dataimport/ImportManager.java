@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -44,7 +43,6 @@ public class ImportManager implements ImportEventListener {
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
   private final ScalarDbMode scalarDbMode;
-  private final DistributedStorage distributedStorage;
   private final DistributedTransactionManager distributedTransactionManager;
 
   /**
@@ -62,7 +60,6 @@ public class ImportManager implements ImportEventListener {
             .tableMetadataByTableName(tableMetadata)
             .dao(new ScalarDbDao())
             .distributedTransactionManager(distributedTransactionManager)
-            .distributedStorage(distributedStorage)
             .tableColumnDataTypes(getTableColumnDataTypes())
             .build();
     ImportProcessor processor = importProcessorFactory.createImportProcessor(params);
@@ -169,9 +166,7 @@ public class ImportManager implements ImportEventListener {
   /** Close resources properly once the process is completed */
   public void closeResources() {
     try {
-      if (distributedStorage != null) {
-        distributedStorage.close();
-      } else if (distributedTransactionManager != null) {
+      if (distributedTransactionManager != null) {
         distributedTransactionManager.close();
       }
     } catch (Throwable e) {

@@ -19,6 +19,8 @@ public class ExportCommandOptions {
   public static final String MAX_THREADS_OPTION = "--max-threads";
   public static final String MAX_THREADS_OPTION_SHORT = "-mt";
   public static final String DEPRECATED_THREADS_OPTION = "--threads";
+  public static final String DEPRECATED_INCLUDE_METADATA_OPTION = "--include-metadata";
+  public static final String DEPRECATED_INCLUDE_METADATA_OPTION_SHORT = "-m";
 
   @CommandLine.Option(
       names = {"--config", "-c"},
@@ -69,10 +71,19 @@ public class ExportCommandOptions {
       defaultValue = "json")
   protected FileFormat outputFormat;
 
+  /**
+   * @deprecated As of release 3.17.0 This option is no longer used and will be removed in release
+   *     4.0.0. The option is not fully removed as users who might already have their scripts or
+   *     commands pre-set might pass the argument and when passed if not supported, picocli will
+   *     throw an error. We want to avoid that and instead just show a warning.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--include-metadata", "-m"},
-      description = "Include transaction metadata in the exported data (default: false)",
-      defaultValue = "false")
+      description =
+          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in scan operations.",
+      defaultValue = "false",
+      hidden = true)
   protected boolean includeTransactionMetadata;
 
   @CommandLine.Option(

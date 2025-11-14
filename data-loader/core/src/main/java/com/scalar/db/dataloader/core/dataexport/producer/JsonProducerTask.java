@@ -7,7 +7,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
 import com.scalar.db.io.DataType;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -30,19 +29,17 @@ public class JsonProducerTask extends ProducerTask {
   /**
    * Class constructor
    *
-   * @param includeMetadata Include metadata in the exported data
    * @param projectionColumns list of columns that is required in export data
    * @param tableMetadata Metadata for a single ScalarDB table
    * @param columnDataTypes Map of data types for the all columns in a ScalarDB table
    * @param prettyPrintJson Json data should be formatted or not
    */
   public JsonProducerTask(
-      boolean includeMetadata,
       List<String> projectionColumns,
       TableMetadata tableMetadata,
       Map<String, DataType> columnDataTypes,
       boolean prettyPrintJson) {
-    super(includeMetadata, projectionColumns, tableMetadata, columnDataTypes);
+    super(projectionColumns, tableMetadata, columnDataTypes);
     this.prettyPrintJson = prettyPrintJson;
   }
 
@@ -84,12 +81,10 @@ public class JsonProducerTask extends ProducerTask {
 
     // Loop through all the columns and to the json object
     for (String columnName : tableColumns) {
-      // Skip the field if it can be ignored based on check
+      // Skip the field if it's not in the projection list (when projections are specified)
       boolean columnNotProjected =
           !projectedColumnsSet.isEmpty() && !projectedColumnsSet.contains(columnName);
-      boolean isMetadataColumn =
-          ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
-      if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
+      if (columnNotProjected) {
         continue;
       }
 

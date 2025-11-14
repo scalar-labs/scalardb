@@ -5,7 +5,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.util.CsvUtil;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Iterator;
@@ -77,8 +76,7 @@ public class CsvExportManager extends ExportManager {
     Iterator<String> iterator = tableMetadata.getColumnNames().iterator();
     while (iterator.hasNext()) {
       String columnName = iterator.next();
-      if (shouldIgnoreColumn(
-          exportOptions.isIncludeTransactionMetadata(), columnName, tableMetadata, projections)) {
+      if (!projections.isEmpty() && !projections.contains(columnName)) {
         continue;
       }
       headerRow.append(columnName);
@@ -89,25 +87,5 @@ public class CsvExportManager extends ExportManager {
     CsvUtil.removeTrailingDelimiter(headerRow, exportOptions.getDelimiter());
     headerRow.append("\n");
     return headerRow.toString();
-  }
-
-  /**
-   * To ignore a column or not based on conditions such as if it is a metadata column or if it is
-   * not include in selected projections
-   *
-   * @param isIncludeTransactionMetadata to include transaction metadata or not
-   * @param columnName column name
-   * @param tableMetadata table metadata
-   * @param projections selected columns for projection
-   * @return ignore the column or not
-   */
-  private boolean shouldIgnoreColumn(
-      boolean isIncludeTransactionMetadata,
-      String columnName,
-      TableMetadata tableMetadata,
-      List<String> projections) {
-    return (!isIncludeTransactionMetadata
-            && ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata))
-        || (!projections.isEmpty() && !projections.contains(columnName));
   }
 }

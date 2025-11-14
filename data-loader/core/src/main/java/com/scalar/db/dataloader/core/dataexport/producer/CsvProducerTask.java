@@ -6,7 +6,6 @@ import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
 import com.scalar.db.io.DataType;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,19 +32,17 @@ public class CsvProducerTask extends ProducerTask {
   /**
    * Class constructor
    *
-   * @param includeMetadata Include metadata in the exported data
    * @param projectColumns list of columns that is required in export data
    * @param tableMetadata Metadata for a single ScalarDB table
    * @param columnDataTypes Map of data types for the all columns in a ScalarDB table
    * @param delimiter Delimiter used in csv content
    */
   public CsvProducerTask(
-      boolean includeMetadata,
       List<String> projectColumns,
       TableMetadata tableMetadata,
       Map<String, DataType> columnDataTypes,
       String delimiter) {
-    super(includeMetadata, projectColumns, tableMetadata, columnDataTypes);
+    super(projectColumns, tableMetadata, columnDataTypes);
     this.delimiter = delimiter;
   }
 
@@ -82,12 +79,10 @@ public class CsvProducerTask extends ProducerTask {
       while (iterator.hasNext()) {
         String columnName = iterator.next();
 
-        // Skip the field if it can be ignored based on check
+        // Skip the field if it's not in the projection list (when projections are specified)
         boolean columnNotProjected =
             !projectedColumnsSet.isEmpty() && !projectedColumnsSet.contains(columnName);
-        boolean isMetadataColumn =
-            ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata);
-        if (columnNotProjected || (!includeMetadata && isMetadataColumn)) {
+        if (columnNotProjected) {
           continue;
         }
 
