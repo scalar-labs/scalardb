@@ -17,6 +17,10 @@ public class ObjectStorageUtils {
     return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table);
   }
 
+  public static String[] parseObjectKey(String objectKey) {
+    return objectKey.split(String.valueOf(OBJECT_KEY_DELIMITER), 3);
+  }
+
   public static ObjectStorageConfig getObjectStorageConfig(DatabaseConfig databaseConfig) {
     if (Objects.equals(databaseConfig.getStorage(), BlobStorageConfig.STORAGE_NAME)) {
       return new BlobStorageConfig(databaseConfig);

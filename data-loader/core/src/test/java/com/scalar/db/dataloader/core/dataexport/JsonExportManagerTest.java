@@ -1,9 +1,9 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScanRange;
@@ -33,14 +33,14 @@ import org.mockito.Spy;
 public class JsonExportManagerTest {
 
   TableMetadata mockData;
-  DistributedStorage storage;
+  DistributedTransactionManager manager;
   @Spy ScalarDbDao dao;
   ProducerTaskFactory producerTaskFactory;
   ExportManager exportManager;
 
   @BeforeEach
   void setup() {
-    storage = Mockito.mock(DistributedStorage.class);
+    manager = Mockito.mock(DistributedTransactionManager.class);
     mockData = UnitTestUtils.createTestTableMetadata();
     dao = Mockito.mock(ScalarDbDao.class);
     producerTaskFactory = new ProducerTaskFactory(null, false, true);
@@ -49,8 +49,9 @@ public class JsonExportManagerTest {
   @Test
   void startExport_givenValidDataWithoutPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-    exportManager = new JsonExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager = new JsonExportManager(manager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.json";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -68,7 +69,7 @@ public class JsonExportManagerTest {
                 exportOptions.getTableName(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                manager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -88,8 +89,9 @@ public class JsonExportManagerTest {
   @Test
   void startExport_givenPartitionKey_shouldGenerateOutputFile()
       throws IOException, ScalarDbDaoException {
-    exportManager = new JsonExportManager(storage, dao, producerTaskFactory);
-    Scanner scanner = Mockito.mock(Scanner.class);
+    exportManager = new JsonExportManager(manager, dao, producerTaskFactory);
+    TransactionManagerCrudOperable.Scanner scanner =
+        Mockito.mock(TransactionManagerCrudOperable.Scanner.class);
     String filePath = Paths.get("").toAbsolutePath() + "/output.json";
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockData);
@@ -114,7 +116,7 @@ public class JsonExportManagerTest {
                 exportOptions.getSortOrders(),
                 exportOptions.getProjectionColumns(),
                 exportOptions.getLimit(),
-                storage))
+                manager))
         .thenReturn(scanner);
     Mockito.when(scanner.iterator()).thenReturn(results.iterator());
     try (BufferedWriter writer =
@@ -129,5 +131,33 @@ public class JsonExportManagerTest {
     File file = new File(filePath);
     Assertions.assertTrue(file.exists());
     Assertions.assertTrue(file.delete());
+  }
+
+  @Test
+  void exportOptions_withoutMaxThreadCount_shouldUseDefaultAvailableProcessors() {
+    // Create ExportOptions without explicitly setting maxThreadCount
+    ExportOptions exportOptions =
+        ExportOptions.builder("namespace", "table", null, FileFormat.JSON)
+            .sortOrders(Collections.emptyList())
+            .scanRange(new ScanRange(null, null, false, false))
+            .build();
+
+    // Verify the default was applied
+    Assertions.assertEquals(
+        Runtime.getRuntime().availableProcessors(), exportOptions.getMaxThreadCount());
+  }
+
+  @Test
+  void exportOptions_withExplicitMaxThreadCount_shouldUseProvidedValue() {
+    // Create ExportOptions with explicit maxThreadCount
+    ExportOptions exportOptions =
+        ExportOptions.builder("namespace", "table", null, FileFormat.JSON)
+            .sortOrders(Collections.emptyList())
+            .scanRange(new ScanRange(null, null, false, false))
+            .maxThreadCount(8)
+            .build();
+
+    // Verify the explicit value was used
+    Assertions.assertEquals(8, exportOptions.getMaxThreadCount());
   }
 }

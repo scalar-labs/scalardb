@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
@@ -14,13 +15,17 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   }
 
   @Override
-  protected AdminTestUtils getAdminTestUtils(String testName) {
-    return new ObjectStorageAdminTestUtils(getProperties(testName));
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder(TABLE_METADATA)
+        .removeSecondaryIndex(COL_NAME5)
+        .removeSecondaryIndex(COL_NAME6)
+        .build();
   }
 
   @Override
-  @Disabled("Temporarily disabled because it includes DML operations")
-  public void truncateTable_ShouldTruncateProperly() {}
+  protected AdminTestUtils getAdminTestUtils(String testName) {
+    return new ObjectStorageAdminTestUtils(getProperties(testName));
+  }
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
