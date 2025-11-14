@@ -105,8 +105,7 @@ public abstract class ExportManager {
                       isFirstBatch,
                       exportReport));
         }
-        processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (IOException | UnknownTransactionStatusException | CrudException e) {
+      } catch (UnknownTransactionStatusException | CrudException e) {
         logger.error("Error during export: ", e);
       } finally {
         executorService.shutdown();
@@ -120,7 +119,18 @@ public abstract class ExportManager {
           Thread.currentThread().interrupt();
           logger.error("Interrupted while waiting for executor termination", e);
         }
-        bufferedWriter.flush();
+        // Process footer after all tasks are complete
+        try {
+          processFooter(exportOptions, tableMetadata, bufferedWriter);
+        } catch (IOException e) {
+          logger.error("Error processing footer", e);
+        }
+        // Flush buffered writer
+        try {
+          bufferedWriter.flush();
+        } catch (IOException e) {
+          logger.error("Error flushing writer", e);
+        }
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
