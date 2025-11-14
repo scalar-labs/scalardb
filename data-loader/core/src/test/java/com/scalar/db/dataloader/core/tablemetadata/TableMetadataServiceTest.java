@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.tablemetadata;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
@@ -17,15 +17,15 @@ import org.mockito.Mockito;
 
 class TableMetadataServiceTest {
 
-  DistributedStorageAdmin storageAdmin;
+  DistributedTransactionAdmin transactionAdmin;
   TableMetadataService tableMetadataService;
 
   @BeforeEach
   void setup() throws ExecutionException {
-    storageAdmin = Mockito.mock(DistributedStorageAdmin.class);
-    Mockito.when(storageAdmin.getTableMetadata("namespace", "table"))
+    transactionAdmin = Mockito.mock(DistributedTransactionAdmin.class);
+    Mockito.when(transactionAdmin.getTableMetadata("namespace", "table"))
         .thenReturn(UnitTestUtils.createTestTableMetadata());
-    tableMetadataService = new TableMetadataService(storageAdmin);
+    tableMetadataService = new TableMetadataService(transactionAdmin);
   }
 
   @Test
