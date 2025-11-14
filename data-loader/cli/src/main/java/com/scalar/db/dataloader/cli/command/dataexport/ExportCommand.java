@@ -5,6 +5,7 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
@@ -28,7 +29,6 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
@@ -69,16 +69,16 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         maxThreads = Runtime.getRuntime().availableProcessors();
       }
 
-      StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
-      TableMetadataService metaDataService =
-          new TableMetadataService(storageFactory.getStorageAdmin());
+      TableMetadata tableMetadata;
+      try (DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin()) {
+        TableMetadataService metaDataService = new TableMetadataService(admin);
+        tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      }
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =
           createExportManager(transactionFactory, scalarDbDao, outputFormat);
-
-      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
 
       Key partitionKey =
           partitionKeyValue != null ? getKeysFromList(partitionKeyValue, tableMetadata) : null;
