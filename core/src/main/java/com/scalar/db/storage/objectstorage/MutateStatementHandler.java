@@ -10,7 +10,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.Collections;
 import java.util.List;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(
       ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {

@@ -20,7 +20,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public static final String NAMESPACE_METADATA_TABLE = "namespaces";
   public static final String TABLE_METADATA_TABLE = "metadata";
@@ -46,6 +48,29 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   ObjectStorageAdmin(ObjectStorageWrapper wrapper, ObjectStorageConfig objectStorageConfig) {
     this.wrapper = wrapper;
     metadataNamespace = objectStorageConfig.getMetadataNamespace();
+  }
+
+  private static String getTableMetadataKey(String namespace, String table) {
+    return String.join(
+        String.valueOf(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER), namespace, table);
+  }
+
+  private static String getNamespaceNameFromTableMetadataKey(String tableMetadataKey) {
+    List<String> parts =
+        Splitter.on(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER).splitToList(tableMetadataKey);
+    if (parts.size() != 2 || parts.get(0).isEmpty()) {
+      throw new IllegalArgumentException("Invalid table metadata key: " + tableMetadataKey);
+    }
+    return parts.get(0);
+  }
+
+  private static String getTableNameFromTableMetadataKey(String tableMetadataKey) {
+    List<String> parts =
+        Splitter.on(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER).splitToList(tableMetadataKey);
+    if (parts.size() != 2 || parts.get(1).isEmpty()) {
+      throw new IllegalArgumentException("Invalid table metadata key: " + tableMetadataKey);
+    }
+    return parts.get(1);
   }
 
   @Override
@@ -448,29 +473,6 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table)),
           e);
     }
-  }
-
-  private static String getTableMetadataKey(String namespace, String table) {
-    return String.join(
-        String.valueOf(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER), namespace, table);
-  }
-
-  private static String getNamespaceNameFromTableMetadataKey(String tableMetadataKey) {
-    List<String> parts =
-        Splitter.on(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER).splitToList(tableMetadataKey);
-    if (parts.size() != 2 || parts.get(0).isEmpty()) {
-      throw new IllegalArgumentException("Invalid table metadata key: " + tableMetadataKey);
-    }
-    return parts.get(0);
-  }
-
-  private static String getTableNameFromTableMetadataKey(String tableMetadataKey) {
-    List<String> parts =
-        Splitter.on(ObjectStorageUtils.CONCATENATED_KEY_DELIMITER).splitToList(tableMetadataKey);
-    if (parts.size() != 2 || parts.get(1).isEmpty()) {
-      throw new IllegalArgumentException("Invalid table metadata key: " + tableMetadataKey);
-    }
-    return parts.get(1);
   }
 
   private void checkTableMetadata(TableMetadata metadata) {
