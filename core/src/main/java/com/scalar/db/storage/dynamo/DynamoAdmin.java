@@ -304,7 +304,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     requestBuilder.tableName(getFullTableName(namespace, table));
 
     try {
-      if (!(ifNotExists && tableExistsInternal(namespace, table))) {
+      if (!(ifNotExists && internalTableExists(namespace, table))) {
         client.createTable(requestBuilder.build());
         waitForTableCreation(namespace, table);
       }
@@ -543,14 +543,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private boolean metadataTableExists() throws ExecutionException {
-    return tableExistsInternal(Namespace.of(metadataNamespace), METADATA_TABLE);
+    return internalTableExists(Namespace.of(metadataNamespace), METADATA_TABLE);
   }
 
   private boolean namespacesTableExists() throws ExecutionException {
-    return tableExistsInternal(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
+    return internalTableExists(Namespace.of(metadataNamespace), NAMESPACES_TABLE);
   }
 
-  private boolean tableExistsInternal(Namespace namespace, String table) throws ExecutionException {
+  private boolean internalTableExists(Namespace namespace, String table) throws ExecutionException {
     try {
       client.describeTable(
           DescribeTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
