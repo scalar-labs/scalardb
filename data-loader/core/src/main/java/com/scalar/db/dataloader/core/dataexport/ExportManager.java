@@ -105,20 +105,21 @@ public abstract class ExportManager {
                       isFirstBatch,
                       exportReport));
         }
-        executorService.shutdown();
-        if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
-          logger.info("All tasks completed");
-        } else {
-          logger.error("Timeout occurred while waiting for tasks to complete");
-          // TODO: handle this
-        }
         processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException
-          | IOException
-          | UnknownTransactionStatusException
-          | CrudException e) {
+      } catch (IOException | UnknownTransactionStatusException | CrudException e) {
         logger.error("Error during export: ", e);
       } finally {
+        executorService.shutdown();
+        try {
+          if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
+            logger.info("All tasks completed");
+          } else {
+            logger.error("Timeout occurred while waiting for tasks to complete");
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.error("Interrupted while waiting for executor termination", e);
+        }
         bufferedWriter.flush();
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
