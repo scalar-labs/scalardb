@@ -5,7 +5,10 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
+<<<<<<< HEAD
 import com.scalar.db.api.DistributedTransactionAdmin;
+=======
+>>>>>>> master
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
@@ -29,6 +32,10 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
+<<<<<<< HEAD
+=======
+import com.scalar.db.service.StorageFactory;
+>>>>>>> master
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
@@ -62,7 +69,12 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
-      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      // Only validate the argument when provided by the user, if not set a default
+      if (maxThreads != null) {
+        validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      } else {
+        maxThreads = Runtime.getRuntime().availableProcessors();
+      }
 
       TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
       TableMetadata tableMetadata;
@@ -70,7 +82,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         TableMetadataService metaDataService = new TableMetadataService(admin);
         tableMetadata = metaDataService.getTableMetadata(namespace, table);
       }
-
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =
@@ -130,6 +141,11 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         DEPRECATED_END_EXCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION,
         END_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
   }
 
   private String getScalarDbPropertiesFilePath() {

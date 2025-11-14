@@ -79,11 +79,8 @@ public abstract class ExportManager {
       handleTransactionMetadata(exportOptions, tableMetadata);
       processHeader(exportOptions, tableMetadata, writer);
 
-      int maxThreadCount =
-          exportOptions.getMaxThreadCount() == 0
-              ? Runtime.getRuntime().availableProcessors()
-              : exportOptions.getMaxThreadCount();
-      ExecutorService executorService = Executors.newFixedThreadPool(maxThreadCount);
+      ExecutorService executorService =
+          Executors.newFixedThreadPool(exportOptions.getMaxThreadCount());
 
       BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
