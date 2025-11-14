@@ -105,21 +105,32 @@ public abstract class ExportManager {
                       isFirstBatch,
                       exportReport));
         }
-        executorService.shutdown();
-        if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
-          logger.info("All tasks completed");
-        } else {
-          logger.error("Timeout occurred while waiting for tasks to complete");
-          // TODO: handle this
-        }
-        processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException
-          | IOException
-          | UnknownTransactionStatusException
-          | CrudException e) {
+      } catch (UnknownTransactionStatusException | CrudException e) {
         logger.error("Error during export: ", e);
       } finally {
-        bufferedWriter.flush();
+        executorService.shutdown();
+        try {
+          if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
+            logger.info("All tasks completed");
+          } else {
+            logger.error("Timeout occurred while waiting for tasks to complete");
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.error("Interrupted while waiting for executor termination", e);
+        }
+        // Process footer after all tasks are complete
+        try {
+          processFooter(exportOptions, tableMetadata, bufferedWriter);
+        } catch (IOException e) {
+          logger.error("Error processing footer", e);
+        }
+        // Flush buffered writer
+        try {
+          bufferedWriter.flush();
+        } catch (IOException e) {
+          logger.error("Error flushing writer", e);
+        }
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
