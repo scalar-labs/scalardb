@@ -228,4 +228,54 @@ class ColumnUtilsTest {
             null, sourceRecord, false, mockMetadata, "namespace", "table");
     assertEquals(8, columns.size());
   }
+
+  /**
+   * Tests that the string "null" (lowercase) is correctly treated as null for numeric, boolean, and
+   * date/time types.
+   */
+  @Test
+  void createColumnFromValue_valueIsLowercaseNull_shouldReturnNullColumn()
+      throws ColumnParsingException {
+    String columnName = "testColumn";
+    ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+
+    // Integer type
+    Column<?> intColumn = ColumnUtils.createColumnFromValue(DataType.INT, columnInfo, "null");
+    assertEquals(IntColumn.ofNull(columnName), intColumn);
+
+    // Double type
+    Column<?> doubleColumn = ColumnUtils.createColumnFromValue(DataType.DOUBLE, columnInfo, "null");
+    assertEquals(DoubleColumn.ofNull(columnName), doubleColumn);
+
+    // Boolean type
+    Column<?> boolColumn = ColumnUtils.createColumnFromValue(DataType.BOOLEAN, columnInfo, "null");
+    assertEquals(BooleanColumn.ofNull(columnName), boolColumn);
+
+    // Date type
+    Column<?> dateColumn = ColumnUtils.createColumnFromValue(DataType.DATE, columnInfo, "null");
+    assertEquals(DateColumn.ofNull(columnName), dateColumn);
+
+    // Time type
+    Column<?> timeColumn = ColumnUtils.createColumnFromValue(DataType.TIME, columnInfo, "null");
+    assertEquals(TimeColumn.ofNull(columnName), timeColumn);
+
+    // Timestamp type
+    Column<?> timestampColumn =
+        ColumnUtils.createColumnFromValue(DataType.TIMESTAMP, columnInfo, "null");
+    assertEquals(TimestampColumn.ofNull(columnName), timestampColumn);
+  }
+
+  /**
+   * Tests that when the string value "null" is provided for TEXT columns, it is treated as a
+   * literal string and not converted to null.
+   */
+  @Test
+  void createColumnFromValue_valueIsNullString_shouldRemainLiteralForTextType()
+      throws ColumnParsingException {
+    String columnName = "textColumn";
+    ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+
+    Column<?> textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "null");
+    assertEquals(TextColumn.of(columnName, "null"), textCol);
+  }
 }
