@@ -370,7 +370,7 @@ public class CrudHandler {
         read(key, createGet(key), context, metadata);
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
-          put, context.snapshot.getResult(key).orElse(null), context);
+          put, context.snapshot.getResult(key).orElse(null), context.transactionId);
     }
 
     context.snapshot.putIntoWriteSet(key, put);
@@ -385,7 +385,7 @@ public class CrudHandler {
         read(key, createGet(key), context, metadata);
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
-          delete, context.snapshot.getResult(key).orElse(null), context);
+          delete, context.snapshot.getResult(key).orElse(null), context.transactionId);
     }
 
     context.snapshot.putIntoDeleteSet(key, delete);

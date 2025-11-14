@@ -3,7 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.scalar.db.api.ConditionBuilder.column;
 import static com.scalar.db.api.ConditionBuilder.deleteIfExists;
 import static com.scalar.db.api.ConditionBuilder.putIfExists;
-import static com.scalar.db.api.ConditionSetBuilder.condition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -1899,7 +1898,7 @@ public class CrudHandlerTest {
     // Assert
     verify(spied, never()).readUnread(any(), any(), any(), any());
     verify(snapshot).getResult(key);
-    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, context);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, ANY_ID_1);
     verify(snapshot).putIntoWriteSet(key, put);
   }
 
@@ -1943,7 +1942,7 @@ public class CrudHandlerTest {
     // Assert
     verify(spied).read(key, getForKey, context, TABLE_METADATA);
     verify(snapshot).getResult(key);
-    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, context);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, ANY_ID_1);
     verify(snapshot).putIntoWriteSet(key, put);
   }
 
@@ -1976,7 +1975,7 @@ public class CrudHandlerTest {
     // Assert
     verify(spied, never()).readUnread(any(), any(), any(), any());
     verify(snapshot).getResult(key);
-    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, context);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, ANY_ID_1);
     verify(snapshot).putIntoWriteSet(key, put);
   }
 
@@ -2054,7 +2053,7 @@ public class CrudHandlerTest {
     // Assert
     verify(spied, never()).readUnread(any(), any(), any(), any());
     verify(snapshot).getResult(key);
-    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result, context);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, result, ANY_ID_1);
     verify(snapshot).putIntoDeleteSet(key, delete);
   }
 
@@ -2094,7 +2093,7 @@ public class CrudHandlerTest {
     // Assert
     verify(spied).read(key, getForKey, context, TABLE_METADATA);
     verify(snapshot).getResult(key);
-    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null, context);
+    verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null, ANY_ID_1);
     verify(snapshot).putIntoDeleteSet(key, delete);
   }
 

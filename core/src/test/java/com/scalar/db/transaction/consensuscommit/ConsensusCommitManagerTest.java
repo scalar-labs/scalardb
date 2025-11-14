@@ -58,6 +58,7 @@ public class ConsensusCommitManagerTest {
 
   @Mock private DistributedStorage storage;
   @Mock private DistributedStorageAdmin admin;
+  @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private DatabaseConfig databaseConfig;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
@@ -75,6 +76,7 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
+            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
@@ -129,6 +131,7 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
+            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,
@@ -162,6 +165,7 @@ public class ConsensusCommitManagerTest {
         new ConsensusCommitManager(
             storage,
             admin,
+            consensusCommitConfig,
             databaseConfig,
             coordinator,
             parallelExecutor,

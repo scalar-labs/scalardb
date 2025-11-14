@@ -50,7 +50,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   private final TransactionContext context;
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -58,12 +58,12 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       TransactionContext context,
       CrudHandler crud,
       CommitHandler commit,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker,
+      ConsensusCommitOperationChecker operationChecker,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     this.context = checkNotNull(context);
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
-    this.mutationOperationChecker = mutationOperationChecker;
+    this.operationChecker = operationChecker;
     this.groupCommitter = groupCommitter;
   }
 
@@ -74,17 +74,40 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    return crud.get(copyAndSetTargetToIfNot(get), context);
+    get = copyAndSetTargetToIfNot(get);
+
+    try {
+      operationChecker.check(get, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.get(get, context);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    return crud.scan(copyAndSetTargetToIfNot(scan), context);
+    scan = copyAndSetTargetToIfNot(scan);
+
+    try {
+      operationChecker.check(scan, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.scan(scan, context);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
     scan = copyAndSetTargetToIfNot(scan);
+
+    try {
+      operationChecker.check(scan, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
     return crud.getScanner(scan, context);
   }
 
@@ -245,7 +268,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   private void checkMutation(Mutation mutation) throws CrudException {
     try {
-      mutationOperationChecker.check(mutation);
+      operationChecker.check(mutation);
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, getId());
     }
