@@ -650,9 +650,7 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void commit_SerializableUsedAndValidatedState_ShouldCommitProperly()
-      throws CommitException,
-          UnknownTransactionStatusException,
-          PreparationException,
+      throws CommitException, UnknownTransactionStatusException, PreparationException,
           ValidationException {
     // Arrange
     transaction.prepare();
