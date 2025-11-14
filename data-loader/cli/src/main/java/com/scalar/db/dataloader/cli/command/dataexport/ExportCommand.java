@@ -32,10 +32,6 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
-<<<<<<< HEAD
-=======
-import com.scalar.db.service.StorageFactory;
->>>>>>> master
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
