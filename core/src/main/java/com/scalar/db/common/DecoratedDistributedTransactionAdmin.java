@@ -383,12 +383,12 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public List<RoleDetail> getRoles() throws ExecutionException {
+  public List<Role> getRoles() throws ExecutionException {
     return distributedTransactionAdmin.getRoles();
   }
 
   @Override
-  public List<UserRoleDetail> getRolesForUser(String username) throws ExecutionException {
+  public List<RoleForUser> getRolesForUser(String username) throws ExecutionException {
     return distributedTransactionAdmin.getRolesForUser(username);
   }
 
@@ -410,8 +410,8 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public List<UserRole> getUsersForRole(String roleName) throws ExecutionException {
-    return distributedTransactionAdmin.getUsersForRole(roleName);
+  public List<GranteeUserRef> getGranteeUsersForRole(String roleName) throws ExecutionException {
+    return distributedTransactionAdmin.getGranteeUsersForRole(roleName);
   }
 
   @Override
