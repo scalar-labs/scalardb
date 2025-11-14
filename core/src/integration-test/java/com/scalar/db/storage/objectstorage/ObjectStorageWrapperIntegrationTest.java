@@ -336,8 +336,12 @@ public class ObjectStorageWrapperIntegrationTest {
   @Test
   public void close_ShouldNotThrowException() {
     // Arrange
+    Properties properties = getProperties(TEST_NAME);
+    ObjectStorageConfig objectStorageConfig =
+        ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties));
+    ObjectStorageWrapper wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
 
     // Act Assert
-    assertThatCode(() -> wrapper.close()).doesNotThrowAnyException();
+    assertThatCode(wrapper::close).doesNotThrowAnyException();
   }
 }

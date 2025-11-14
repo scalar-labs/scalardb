@@ -2,7 +2,9 @@ package com.scalar.db.storage.objectstorage;
 
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public interface ObjectStorageWrapper {
 
   /**

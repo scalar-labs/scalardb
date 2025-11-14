@@ -194,7 +194,8 @@ public class SelectStatementHandlerTest {
       throws Exception {
     // Arrange
     Get get = prepareGet();
-    when(wrapper.get(anyString())).thenThrow(new ObjectStorageWrapperException("error"));
+    when(wrapper.get(anyString()))
+        .thenThrow(new ObjectStorageWrapperException("error", new RuntimeException()));
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(get)).isInstanceOf(ExecutionException.class);
@@ -240,7 +241,8 @@ public class SelectStatementHandlerTest {
       throws Exception {
     // Arrange
     Scan scan = prepareScan();
-    when(wrapper.get(anyString())).thenThrow(new ObjectStorageWrapperException("error"));
+    when(wrapper.get(anyString()))
+        .thenThrow(new ObjectStorageWrapperException("error", new RuntimeException()));
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(scan)).isInstanceOf(ExecutionException.class);
@@ -352,7 +354,8 @@ public class SelectStatementHandlerTest {
       throws Exception {
     // Arrange
     Scan scanAll = prepareScanAll();
-    when(wrapper.getKeys(anyString())).thenThrow(new ObjectStorageWrapperException("error"));
+    when(wrapper.getKeys(anyString()))
+        .thenThrow(new ObjectStorageWrapperException("error", new RuntimeException()));
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(scanAll)).isInstanceOf(ExecutionException.class);

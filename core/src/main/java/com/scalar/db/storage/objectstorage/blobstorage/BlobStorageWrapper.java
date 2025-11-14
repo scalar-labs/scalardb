@@ -22,7 +22,9 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class BlobStorageWrapper implements ObjectStorageWrapper {
   private final BlobContainerClient client;
   private final Duration requestTimeoutInSeconds;
