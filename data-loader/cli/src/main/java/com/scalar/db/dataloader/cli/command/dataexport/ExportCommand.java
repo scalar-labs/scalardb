@@ -5,7 +5,8 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
-import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
@@ -28,7 +29,7 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -68,14 +69,16 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         maxThreads = Runtime.getRuntime().availableProcessors();
       }
 
-      StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
-      TableMetadataService metaDataService =
-          new TableMetadataService(storageFactory.getStorageAdmin());
+      TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
+      TableMetadata tableMetadata;
+      try (DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin()) {
+        TableMetadataService metaDataService = new TableMetadataService(admin);
+        tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      }
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
-      ExportManager exportManager = createExportManager(storageFactory, scalarDbDao, outputFormat);
-
-      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      ExportManager exportManager =
+          createExportManager(transactionFactory, scalarDbDao, outputFormat);
 
       Key partitionKey =
           partitionKeyValue != null ? getKeysFromList(partitionKeyValue, tableMetadata) : null;
@@ -156,17 +159,17 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private ExportManager createExportManager(
-      StorageFactory storageFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
+      TransactionFactory transactionFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
     ProducerTaskFactory taskFactory =
         new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
-    DistributedStorage storage = storageFactory.getStorage();
+    DistributedTransactionManager manager = transactionFactory.getTransactionManager();
     switch (fileFormat) {
       case JSON:
-        return new JsonExportManager(storage, scalarDbDao, taskFactory);
+        return new JsonExportManager(manager, scalarDbDao, taskFactory);
       case JSONL:
-        return new JsonLineExportManager(storage, scalarDbDao, taskFactory);
+        return new JsonLineExportManager(manager, scalarDbDao, taskFactory);
       case CSV:
-        return new CsvExportManager(storage, scalarDbDao, taskFactory);
+        return new CsvExportManager(manager, scalarDbDao, taskFactory);
       default:
         throw new AssertionError("Invalid file format" + fileFormat);
     }

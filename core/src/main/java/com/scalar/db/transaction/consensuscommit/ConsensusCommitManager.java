@@ -58,7 +58,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final CrudHandler crud;
   protected final CommitHandler commit;
   private final Isolation isolation;
-  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -86,7 +86,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             parallelExecutor);
     commit = createCommitHandler(config);
     isolation = config.getIsolation();
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -113,7 +115,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             parallelExecutor);
     commit = createCommitHandler(config);
     isolation = config.getIsolation();
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -121,6 +125,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   ConsensusCommitManager(
       DistributedStorage storage,
       DistributedStorageAdmin admin,
+      ConsensusCommitConfig config,
       DatabaseConfig databaseConfig,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
@@ -142,8 +147,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.commit = commit;
     this.groupCommitter = groupCommitter;
     this.isolation = isolation;
-    this.mutationOperationChecker =
-        new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    this.operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   // `groupCommitter` must be set before calling this method.
@@ -261,7 +267,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     DistributedTransaction transaction =
-        new ConsensusCommit(context, crud, commit, mutationOperationChecker, groupCommitter);
+        new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
     if (readOnly) {
       transaction = new ReadOnlyDistributedTransaction(transaction);
     }
