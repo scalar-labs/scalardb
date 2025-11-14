@@ -64,8 +64,6 @@ public class TableMetadataService {
 
   @VisibleForTesting
   void createTableMetadataTableIfNotExists(Connection connection) throws SQLException {
-    createSchemaIfNotExists(connection, metadataSchema);
-
     String createTableStatement =
         "CREATE TABLE "
             + encloseFullTableName(metadataSchema, TABLE_NAME)
@@ -396,18 +394,6 @@ public class TableMetadataService {
     String dropTableStatement = "DROP TABLE " + fullTableName;
 
     execute(connection, dropTableStatement);
-  }
-
-  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
-    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
-    try {
-      execute(connection, sqls);
-    } catch (SQLException e) {
-      // Suppress exceptions indicating the duplicate metadata schema
-      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
-        throw e;
-      }
-    }
   }
 
   private String enclose(String name) {

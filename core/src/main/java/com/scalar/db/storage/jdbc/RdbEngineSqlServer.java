@@ -144,7 +144,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String tableExistsInternalTableCheckSql(String fullTableName) {
+  public String internalTableExistsCheckSql(String fullTableName) {
     return "SELECT TOP 1 1 FROM " + fullTableName;
   }
 

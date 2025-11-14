@@ -117,6 +117,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      createMetadataSchemaIfNotExists(connection);
       createTableInternal(connection, namespace, table, metadata, false);
       addTableMetadata(connection, namespace, table, metadata, true, false);
     } catch (SQLException e) {
@@ -197,6 +198,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       dropTableInternal(connection, namespace, table);
       tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
+      deleteMetadataSchemaIfEmpty(connection);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Dropping the " + getFullTableName(namespace, table) + " table failed", e);
@@ -280,7 +282,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
 
-      if (!tableExistsInternal(connection, namespace, table)) {
+      if (!internalTableExists(connection, namespace, table)) {
         throw new IllegalArgumentException(
             CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
@@ -335,6 +337,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     try (Connection connection = dataSource.getConnection()) {
       TableMetadata tableMetadata = getImportTableMetadata(namespace, table, overrideColumnsType);
+      createMetadataSchemaIfNotExists(connection);
       addTableMetadata(connection, namespace, table, tableMetadata, true, false);
     } catch (SQLException | ExecutionException e) {
       throw new ExecutionException(
@@ -484,11 +487,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine.throwIfInvalidNamespaceName(table);
 
     try (Connection connection = dataSource.getConnection()) {
-      if (!tableExistsInternal(connection, namespace, table)) {
+      if (!internalTableExists(connection, namespace, table)) {
         throw new IllegalArgumentException(
             CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
 
+      createMetadataSchemaIfNotExists(connection);
       addTableMetadata(connection, namespace, table, metadata, true, true);
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -736,6 +740,21 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     tableMetadataService.createTableMetadataTableIfNotExists(connection);
   }
 
+  @VisibleForTesting
+  void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
+    createSchemaIfNotExists(connection, metadataSchema);
+  }
+
+  private void deleteMetadataSchemaIfEmpty(Connection connection) throws SQLException {
+    Set<String> internalTableNames = getInternalTableNames(connection, metadataSchema);
+    if (!internalTableNames.isEmpty()) {
+      return;
+    }
+
+    String sql = rdbEngine.dropNamespaceSql(metadataSchema);
+    execute(connection, sql);
+  }
+
   private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
       throws SQLException {
     String stmt = createTableStatement;
@@ -752,10 +771,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private boolean tableExistsInternal(Connection connection, String namespace, String table)
+  private boolean internalTableExists(Connection connection, String namespace, String table)
       throws ExecutionException {
     String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
+    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try {
       execute(connection, sql);
       return true;
@@ -769,6 +788,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           String.format(
               "Checking if the %s table exists failed", getFullTableName(namespace, table)),
           e);
+    }
+  }
+
+  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
+    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
+    try {
+      execute(connection, sqls);
+    } catch (SQLException e) {
+      // Suppress exceptions indicating the duplicate metadata schema
+      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
+        throw e;
+      }
     }
   }
 

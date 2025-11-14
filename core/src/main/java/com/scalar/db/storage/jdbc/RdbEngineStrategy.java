@@ -133,7 +133,7 @@ public interface RdbEngineStrategy {
 
   String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
-  String tableExistsInternalTableCheckSql(String fullTableName);
+  String internalTableExistsCheckSql(String fullTableName);
 
   default String createIndexSql(
       String schema, String table, String indexName, String indexedColumn) {
