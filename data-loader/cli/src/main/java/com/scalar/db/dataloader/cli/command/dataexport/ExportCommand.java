@@ -5,10 +5,7 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePo
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
-<<<<<<< HEAD
 import com.scalar.db.api.DistributedTransactionAdmin;
-=======
->>>>>>> master
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
