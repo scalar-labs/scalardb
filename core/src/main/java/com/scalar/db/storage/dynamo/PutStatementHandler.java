@@ -56,8 +56,7 @@ public class PutStatementHandler {
           CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put), e);
     } catch (TransactionConflictException e) {
       throw new RetriableExecutionException(
-          CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
-              e.getMessage(), e),
+          CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
           e);
     } catch (DynamoDbException e) {
       throw new ExecutionException(

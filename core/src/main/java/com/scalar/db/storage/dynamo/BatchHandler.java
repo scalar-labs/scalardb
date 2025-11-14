@@ -96,8 +96,7 @@ public class BatchHandler {
         // If all the reasons of the cancellation are "TransactionConflict", throw
         // RetriableExecutionException
         throw new RetriableExecutionException(
-            CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
-                e.getMessage(), e),
+            CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
             e);
       }
 
