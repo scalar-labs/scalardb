@@ -3,6 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -105,9 +107,10 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException {
+  public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException, ExecutionException {
     // Arrange
     Get get = prepareGet();
+    doNothing().when(operationChecker).check(get, context);
     TransactionResult result = mock(TransactionResult.class);
     when(crud.get(get, context)).thenReturn(Optional.of(result));
 
@@ -116,13 +119,32 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actual).isPresent();
+    verify(operationChecker).check(get, context);
     verify(crud).get(get, context);
   }
 
   @Test
-  public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException {
+  public void get_OperationCheckerThrowsExecutionException_ShouldThrowCrudException()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get get = prepareGet();
+    ExecutionException exception = new ExecutionException("operation check failed");
+    doThrow(exception).when(operationChecker).check(get, context);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.get(get))
+        .isInstanceOf(CrudException.class)
+        .hasMessage("operation check failed. Transaction ID: " + ANY_TX_ID)
+        .hasCause(exception);
+    verify(operationChecker).check(get, context);
+    verify(crud, never()).get(any(), any());
+  }
+
+  @Test
+  public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException, ExecutionException {
     // Arrange
     Scan scan = prepareScan();
+    doNothing().when(operationChecker).check(scan, context);
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
     when(crud.scan(scan, context)).thenReturn(results);
@@ -132,14 +154,33 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actual.size()).isEqualTo(1);
+    verify(operationChecker).check(scan, context);
     verify(crud).scan(scan, context);
   }
 
   @Test
-  public void getScannerAndScannerOne_ShouldCallCrudHandlerGetScannerAndScannerOne()
-      throws CrudException {
+  public void scan_OperationCheckerThrowsExecutionException_ShouldThrowCrudException()
+      throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
+    ExecutionException exception = new ExecutionException("operation check failed");
+    doThrow(exception).when(operationChecker).check(scan, context);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.scan(scan))
+        .isInstanceOf(CrudException.class)
+        .hasMessage("operation check failed. Transaction ID: " + ANY_TX_ID)
+        .hasCause(exception);
+    verify(operationChecker).check(scan, context);
+    verify(crud, never()).scan(any(), any());
+  }
+
+  @Test
+  public void getScannerAndScannerOne_ShouldCallCrudHandlerGetScannerAndScannerOne()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Scan scan = prepareScan();
+    doNothing().when(operationChecker).check(scan, context);
     TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
     Result result = mock(Result.class);
     when(scanner.one()).thenReturn(Optional.of(result));
@@ -151,15 +192,17 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actualResult).hasValue(result);
+    verify(operationChecker).check(scan, context);
     verify(crud).getScanner(scan, context);
     verify(scanner).one();
   }
 
   @Test
   public void getScannerAndScannerAll_ShouldCallCrudHandlerGetScannerAndScannerAll()
-      throws CrudException {
+      throws CrudException, ExecutionException {
     // Arrange
     Scan scan = prepareScan();
+    doNothing().when(operationChecker).check(scan, context);
     TransactionCrudOperable.Scanner scanner = mock(TransactionCrudOperable.Scanner.class);
     Result result1 = mock(Result.class);
     Result result2 = mock(Result.class);
@@ -172,8 +215,26 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actualResults).containsExactly(result1, result2);
+    verify(operationChecker).check(scan, context);
     verify(crud).getScanner(scan, context);
     verify(scanner).all();
+  }
+
+  @Test
+  public void getScanner_OperationCheckerThrowsExecutionException_ShouldThrowCrudException()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    ExecutionException exception = new ExecutionException("operation check failed");
+    doThrow(exception).when(operationChecker).check(scan, context);
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.getScanner(scan))
+        .isInstanceOf(CrudException.class)
+        .hasMessage("operation check failed. Transaction ID: " + ANY_TX_ID)
+        .hasCause(exception);
+    verify(operationChecker).check(scan, context);
+    verify(crud, never()).getScanner(any(), any());
   }
 
   @Test
@@ -589,7 +650,9 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void commit_SerializableUsedAndValidatedState_ShouldCommitProperly()
-      throws CommitException, UnknownTransactionStatusException, PreparationException,
+      throws CommitException,
+          UnknownTransactionStatusException,
+          PreparationException,
           ValidationException {
     // Arrange
     transaction.prepare();
