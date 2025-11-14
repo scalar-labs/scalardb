@@ -48,10 +48,12 @@ public class S3Config implements ObjectStorageConfig {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
     String contactPoints = databaseConfig.getContactPoints().get(0);
-    int lastSlashIndex = contactPoints.lastIndexOf('/');
-    if (lastSlashIndex != -1 && lastSlashIndex < contactPoints.length() - 1) {
-      region = contactPoints.substring(0, lastSlashIndex);
-      bucket = contactPoints.substring(lastSlashIndex + 1);
+    String[] contactPointsParts = contactPoints.split("/");
+    if (contactPointsParts.length == 2
+        && !contactPointsParts[0].isEmpty()
+        && !contactPointsParts[1].isEmpty()) {
+      region = contactPointsParts[0];
+      bucket = contactPointsParts[1];
     } else {
       throw new IllegalArgumentException(
           "Invalid contact points format. Expected: S3_REGION/BUCKET_NAME");
