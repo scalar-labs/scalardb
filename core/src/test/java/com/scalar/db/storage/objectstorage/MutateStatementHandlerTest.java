@@ -232,7 +232,8 @@ public class MutateStatementHandlerTest {
       throws Exception {
     // Arrange
     Put put = preparePut();
-    ObjectStorageWrapperException exception = new ObjectStorageWrapperException("Test error");
+    ObjectStorageWrapperException exception =
+        new ObjectStorageWrapperException("Test error", new RuntimeException());
     when(wrapper.get(anyString())).thenThrow(exception);
 
     // Act & Assert
@@ -535,7 +536,8 @@ public class MutateStatementHandlerTest {
       throws Exception {
     // Arrange
     Delete delete = prepareDelete();
-    ObjectStorageWrapperException exception = new ObjectStorageWrapperException("Test error");
+    ObjectStorageWrapperException exception =
+        new ObjectStorageWrapperException("Test error", new RuntimeException());
     when(wrapper.get(anyString())).thenThrow(exception);
 
     // Act & Assert
