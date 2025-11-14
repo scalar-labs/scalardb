@@ -75,7 +75,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         TableMetadataService metaDataService = new TableMetadataService(admin);
         tableMetadata = metaDataService.getTableMetadata(namespace, table);
       }
-
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
       ExportManager exportManager =

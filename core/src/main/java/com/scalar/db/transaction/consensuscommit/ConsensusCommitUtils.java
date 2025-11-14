@@ -15,6 +15,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -370,7 +371,7 @@ public final class ConsensusCommitUtils {
     if (!get.getConjunctions().isEmpty()) {
       // If there are conjunctions, we need to convert them to include conditions on the before
       // image
-      Set<AndConditionSet> converted = convertConjunctions(get.getConjunctions(), metadata);
+      Set<AndConditionSet> converted = convertConjunctions(get.getConjunctions(), metadata, true);
       return builder.clearConditions().whereOr(converted).build();
     }
 
@@ -390,7 +391,13 @@ public final class ConsensusCommitUtils {
     if (!scan.getConjunctions().isEmpty()) {
       // If there are conjunctions, we need to convert them to include conditions on the before
       // image
-      Set<AndConditionSet> converted = convertConjunctions(scan.getConjunctions(), metadata);
+
+      // If the scan is a cross-partition scan (ScanAll), we don't convert conditions on indexed
+      // columns
+      boolean convertIndexedColumns = !(scan instanceof ScanAll);
+
+      Set<AndConditionSet> converted =
+          convertConjunctions(scan.getConjunctions(), metadata, convertIndexedColumns);
       return builder.clearConditions().whereOr(converted).build();
     }
 
@@ -460,10 +467,13 @@ public final class ConsensusCommitUtils {
    *
    * @param conjunctions the conjunctions to convert
    * @param metadata the table metadata of the target table
+   * @param convertIndexedColumns whether to convert conditions on indexed columns
    * @return the converted conjunctions
    */
   private static Set<AndConditionSet> convertConjunctions(
-      Set<Selection.Conjunction> conjunctions, TableMetadata metadata) {
+      Set<Selection.Conjunction> conjunctions,
+      TableMetadata metadata,
+      boolean convertIndexedColumns) {
     Set<AndConditionSet> converted = new HashSet<>(conjunctions.size() * 2);
 
     // Keep the original conjunctions
@@ -479,6 +489,11 @@ public final class ConsensusCommitUtils {
         if (metadata.getPartitionKeyNames().contains(columnName)
             || metadata.getClusteringKeyNames().contains(columnName)) {
           // If the condition is on the primary key, we don't need to convert it
+          conditions.add(condition);
+          continue;
+        }
+
+        if (!convertIndexedColumns && metadata.getSecondaryIndexNames().contains(columnName)) {
           conditions.add(condition);
           continue;
         }
