@@ -10,6 +10,7 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
@@ -399,5 +400,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   @Override
   public String getTableNamesInNamespaceSql() {
     return "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
+  }
+
+  @Override
+  public int getMinimumIsolationLevelForConsistencyRead() {
+    // In PostgreSQL, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistent reads
+    return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }

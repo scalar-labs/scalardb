@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
-import com.scalar.db.api.DistributedStorageMutationAtomicityUnitIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAtomicityUnitIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
 
-public class CosmosMutationAtomicityUnitIntegrationTest
-    extends DistributedStorageMutationAtomicityUnitIntegrationTestBase {
+public class CosmosAtomicityUnitIntegrationTest
+    extends DistributedStorageAtomicityUnitIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {
@@ -20,6 +20,5 @@ public class CosmosMutationAtomicityUnitIntegrationTest
 
   @Disabled("This test fails. It might be a bug")
   @Override
-  public void
-      mutate_MutationsWithinRecordGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit() {}
+  public void mutate_MutationsWithinRecordGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit() {}
 }

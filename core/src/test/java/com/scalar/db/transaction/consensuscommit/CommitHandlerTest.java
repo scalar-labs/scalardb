@@ -108,7 +108,7 @@ public class CommitHandlerTest {
     when(storageInfoProvider.getStorageInfo(ANY_NAMESPACE_NAME))
         .thenReturn(
             new StorageInfoImpl(
-                "storage1", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
+                "storage1", StorageInfo.AtomicityUnit.PARTITION, Integer.MAX_VALUE, true));
   }
 
   @AfterEach

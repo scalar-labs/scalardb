@@ -41,7 +41,7 @@ public class ObjectStorageOperationCheckerTest {
   private static final String COL3 = "v3";
   private static final String COL4 = "v4";
   private static final StorageInfo STORAGE_INFO =
-      new StorageInfoImpl("ObjectStorage", StorageInfo.MutationAtomicityUnit.STORAGE, 100);
+      new StorageInfoImpl("ObjectStorage", StorageInfo.AtomicityUnit.STORAGE, 100, true);
 
   private static final TableMetadata TABLE_METADATA1 =
       TableMetadata.newBuilder()

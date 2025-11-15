@@ -2,7 +2,7 @@ package com.scalar.db.storage.multistorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.DistributedStorageMutationAtomicityUnitIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAtomicityUnitIntegrationTestBase;
 import com.scalar.db.api.Put;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -12,8 +12,8 @@ import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class MultiStorageMutationAtomicityUnitIntegrationTest
-    extends DistributedStorageMutationAtomicityUnitIntegrationTestBase {
+public class MultiStorageAtomicityUnitIntegrationTest
+    extends DistributedStorageAtomicityUnitIntegrationTestBase {
 
   @Override
   public Properties getProperties(String testName) {
@@ -61,7 +61,7 @@ public class MultiStorageMutationAtomicityUnitIntegrationTest
   }
 
   @Test
-  public void mutate_MutationsAcrossStorageGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit()
+  public void mutate_MutationsAcrossStorageGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit()
       throws ExecutionException {
     // Arrange
     Put put1 =

@@ -18,6 +18,7 @@ import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
@@ -539,5 +540,11 @@ class RdbEngineOracle extends AbstractRdbEngine {
   @Override
   public String getTableNamesInNamespaceSql() {
     return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
+  }
+
+  @Override
+  public int getMinimumIsolationLevelForConsistencyRead() {
+    // In Oracle, only the SERIALIZABLE isolation level guarantees the consistency read
+    return Connection.TRANSACTION_SERIALIZABLE;
   }
 }

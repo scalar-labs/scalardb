@@ -325,4 +325,6 @@ public interface RdbEngineStrategy {
       Set<Conjunction> conjunctions, TableMetadata metadata) {}
 
   String getTableNamesInNamespaceSql();
+
+  int getMinimumIsolationLevelForConsistencyRead();
 }

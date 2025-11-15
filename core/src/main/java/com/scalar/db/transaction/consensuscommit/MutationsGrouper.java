@@ -96,7 +96,7 @@ public class MutationsGrouper {
     private MutationGroup(Mutation mutation, StorageInfo storageInfo) {
       assert mutation.forNamespace().isPresent() && mutation.forTable().isPresent();
 
-      switch (storageInfo.getMutationAtomicityUnit()) {
+      switch (storageInfo.getAtomicityUnit()) {
         case RECORD:
           this.clusteringKey = mutation.getClusteringKey();
           this.partitionKey = mutation.getPartitionKey();
@@ -133,8 +133,7 @@ public class MutationsGrouper {
           this.storageInfo = storageInfo;
           break;
         default:
-          throw new AssertionError(
-              "Unknown mutation atomicity unit: " + storageInfo.getMutationAtomicityUnit());
+          throw new AssertionError("Unknown atomicity unit: " + storageInfo.getAtomicityUnit());
       }
     }
 

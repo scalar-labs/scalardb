@@ -53,7 +53,7 @@ public class OperationCheckerTest {
   private static final String COL3 = "v3";
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
-          "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE);
+          "cassandra", StorageInfo.AtomicityUnit.PARTITION, Integer.MAX_VALUE, true);
 
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
@@ -2045,9 +2045,9 @@ public class OperationCheckerTest {
   }
 
   @ParameterizedTest
-  @EnumSource(StorageInfo.MutationAtomicityUnit.class)
+  @EnumSource(StorageInfo.AtomicityUnit.class)
   public void check_MutationsGiven_ForAtomicityUnit_ShouldBehaveCorrectly(
-      StorageInfo.MutationAtomicityUnit mutationAtomicityUnit) throws ExecutionException {
+      StorageInfo.AtomicityUnit atomicityUnit) throws ExecutionException {
     // Arrange
     when(metadataManager.getTableMetadata(any()))
         .thenReturn(
@@ -2059,9 +2059,9 @@ public class OperationCheckerTest {
                 .addClusteringKey(CKEY1)
                 .build());
 
-    StorageInfo storageInfo1 = new StorageInfoImpl("s1", mutationAtomicityUnit, Integer.MAX_VALUE);
+    StorageInfo storageInfo1 = new StorageInfoImpl("s1", atomicityUnit, Integer.MAX_VALUE, true);
     StorageInfo storageInfo2 =
-        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE);
+        new StorageInfoImpl("s2", StorageInfo.AtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
     when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo1);
     when(storageInfoProvider.getStorageInfo("ns2")).thenReturn(storageInfo1);
     when(storageInfoProvider.getStorageInfo("other_ns")).thenReturn(storageInfo2);
@@ -2172,7 +2172,7 @@ public class OperationCheckerTest {
         catchException(() -> operationChecker.check(mutationsAcrossStorages));
 
     // Assert
-    switch (mutationAtomicityUnit) {
+    switch (atomicityUnit) {
       case RECORD:
         assertThat(exceptionForMutationsWithinRecord).doesNotThrowAnyException();
         assertThat(exceptionForMutationsWithinPartition)

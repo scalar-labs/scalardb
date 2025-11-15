@@ -35,9 +35,10 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
           "object_storage",
-          StorageInfo.MutationAtomicityUnit.PARTITION,
+          StorageInfo.AtomicityUnit.PARTITION,
           // No limit on the number of mutations
-          Integer.MAX_VALUE);
+          Integer.MAX_VALUE,
+          true);
 
   private final ObjectStorageWrapper wrapper;
   private final String metadataNamespace;
