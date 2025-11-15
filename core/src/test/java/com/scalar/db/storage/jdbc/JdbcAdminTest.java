@@ -829,7 +829,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
@@ -857,7 +856,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
@@ -885,7 +883,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [" + METADATA_SCHEMA + "]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[metadata]("
@@ -913,8 +910,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
-        "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -961,7 +956,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForXAndOverwriteMetadata_ShouldWorkProperly(
         RdbEngine.DB2,
-        "CREATE SCHEMA \"" + METADATA_SCHEMA + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
@@ -1023,7 +1017,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
@@ -1068,7 +1061,6 @@ public class JdbcAdminTest {
           throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
@@ -1112,7 +1104,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [" + METADATA_SCHEMA + "]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[metadata]("
@@ -1156,8 +1147,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.ORACLE,
-        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
-        "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1236,7 +1225,6 @@ public class JdbcAdminTest {
       throws Exception {
     addTableMetadata_createMetadataTableIfNotExistsForX_ShouldWorkProperly(
         RdbEngine.DB2,
-        "CREATE SCHEMA \"" + METADATA_SCHEMA + "\"",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
@@ -1356,6 +1344,7 @@ public class JdbcAdminTest {
     adminSpy.createTable(namespace, table, metadata, Collections.emptyMap());
 
     // Assert
+    verify(adminSpy).createMetadataSchemaIfNotExists(connection);
     verify(adminSpy).createTableInternal(connection, namespace, table, metadata, false);
     verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, false);
   }
@@ -1726,7 +1715,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
         "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
-        "DROP TABLE `" + METADATA_SCHEMA + "`.`metadata`");
+        "DROP TABLE `" + METADATA_SCHEMA + "`.`metadata`",
+        "DROP SCHEMA `" + METADATA_SCHEMA + "`");
   }
 
   @Test
@@ -1740,7 +1730,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP SCHEMA \"" + METADATA_SCHEMA + "\"");
   }
 
   @Test
@@ -1754,7 +1745,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
         "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
-        "DROP TABLE [" + METADATA_SCHEMA + "].[metadata]");
+        "DROP TABLE [" + METADATA_SCHEMA + "].[metadata]",
+        "DROP SCHEMA [" + METADATA_SCHEMA + "]");
   }
 
   @Test
@@ -1767,7 +1759,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP USER \"" + METADATA_SCHEMA + "\"");
   }
 
   @Test
@@ -1793,7 +1786,8 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
-        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"");
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP SCHEMA \"" + METADATA_SCHEMA + "\" RESTRICT");
   }
 
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
@@ -1804,6 +1798,10 @@ public class JdbcAdminTest {
 
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(false);
+
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
     List<Statement> mockedStatements = new ArrayList<>();
     for (String expectedSqlStatement : expectedSqlStatements) {
@@ -1921,7 +1919,11 @@ public class JdbcAdminTest {
     String table = "foo_table";
 
     ResultSet resultSet = mock(ResultSet.class);
-    when(resultSet.next()).thenReturn(true);
+    when(resultSet.next()).thenReturn(true, false);
+
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
     List<Statement> mockedStatements = new ArrayList<>();
     for (String expectedSqlStatement : expectedSqlStatements) {
@@ -3922,6 +3924,8 @@ public class JdbcAdminTest {
     // Arrange
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
 
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
     TableMetadata importedTableMetadata = mock(TableMetadata.class);
     doReturn(importedTableMetadata)
@@ -3936,6 +3940,7 @@ public class JdbcAdminTest {
 
     // Assert
     verify(adminSpy).getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap());
+    verify(adminSpy).createMetadataSchemaIfNotExists(connection);
     verify(adminSpy)
         .addTableMetadata(connection, NAMESPACE, TABLE, importedTableMetadata, true, false);
   }

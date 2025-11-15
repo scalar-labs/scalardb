@@ -159,7 +159,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String tableExistsInternalTableCheckSql(String fullTableName) {
+  public String internalTableExistsCheckSql(String fullTableName) {
     return "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
   }
 
