@@ -181,8 +181,7 @@ public class CommonDistributedStorageAdminTest {
 
     StorageInfo storageInfo = mock(StorageInfo.class);
     when(storageInfo.getStorageName()).thenReturn("test-storage");
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
 
@@ -258,8 +257,7 @@ public class CommonDistributedStorageAdminTest {
     Map<String, String> options = Collections.emptyMap();
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
     when(admin.tableExists(namespace, table)).thenReturn(false);
@@ -313,8 +311,7 @@ public class CommonDistributedStorageAdminTest {
     Map<String, String> options = Collections.emptyMap();
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
     when(admin.tableExists(namespace, table)).thenReturn(false);
@@ -368,8 +365,7 @@ public class CommonDistributedStorageAdminTest {
     Map<String, String> options = Collections.emptyMap();
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
 
@@ -426,8 +422,7 @@ public class CommonDistributedStorageAdminTest {
     Map<String, String> options = Collections.emptyMap();
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
 

@@ -7016,7 +7016,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @ParameterizedTest
   @MethodSource("isolationAndOnePhaseCommitEnabled")
   public void
-      insertAndCommit_SinglePartitionMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageMutationAtomicityUnit(
+      insertAndCommit_SinglePartitionMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageAtomicityUnit(
           Isolation isolation, boolean onePhaseCommitEnabled)
           throws TransactionException, ExecutionException, CoordinatorException {
     if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
@@ -7049,7 +7049,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
         // twice for prepare, twice for commit
         verify(storage, times(4)).mutate(anyList());
@@ -7121,7 +7121,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @ParameterizedTest
   @MethodSource("isolationAndOnePhaseCommitEnabled")
   public void
-      insertAndCommit_TwoPartitionsMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageMutationAtomicityUnit(
+      insertAndCommit_TwoPartitionsMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageAtomicityUnit(
           Isolation isolation, boolean onePhaseCommitEnabled)
           throws TransactionException, ExecutionException, CoordinatorException {
     if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
@@ -7154,7 +7154,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
       case PARTITION:
         // twice for prepare, twice for commit
@@ -7226,7 +7226,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @ParameterizedTest
   @MethodSource("isolationAndOnePhaseCommitEnabled")
   public void
-      insertAndCommit_TwoNamespacesMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageMutationAtomicityUnit(
+      insertAndCommit_TwoNamespacesMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageAtomicityUnit(
           Isolation isolation, boolean onePhaseCommitEnabled)
           throws TransactionException, ExecutionException, CoordinatorException {
     if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
@@ -7275,7 +7275,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       }
     } else {
       // same storage
-      switch (storageInfo1.getMutationAtomicityUnit()) {
+      switch (storageInfo1.getAtomicityUnit()) {
         case RECORD:
         case PARTITION:
         case TABLE:

@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.api.DistributedStorageMutationAtomicityUnitIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageAtomicityUnitIntegrationTestBase;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 
-public class CassandraMutationAtomicityUnitIntegrationTest
-    extends DistributedStorageMutationAtomicityUnitIntegrationTestBase {
+public class CassandraAtomicityUnitIntegrationTest
+    extends DistributedStorageAtomicityUnitIntegrationTestBase {
 
   @Override
   protected Properties getProperties(String testName) {

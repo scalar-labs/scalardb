@@ -163,9 +163,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
           "dynamo",
-          StorageInfo.MutationAtomicityUnit.STORAGE,
+          StorageInfo.AtomicityUnit.STORAGE,
           // DynamoDB has a limit of 100 items per transactional batch write operation
-          100);
+          100,
+          // TODO false for now as DynamoDB's Scan and Query support READ_COMMITTED isolation level
+          false);
 
   private final DynamoDbClient client;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;

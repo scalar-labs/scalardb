@@ -21,9 +21,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase {
+public abstract class DistributedStorageAtomicityUnitIntegrationTestBase {
   protected static final Logger logger =
-      LoggerFactory.getLogger(DistributedStorageMutationAtomicityUnitIntegrationTestBase.class);
+      LoggerFactory.getLogger(DistributedStorageAtomicityUnitIntegrationTestBase.class);
 
   protected static final String TEST_NAME = "storage_mau";
   protected static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
@@ -142,7 +142,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
   }
 
   @Test
-  public void mutate_MutationsWithinRecordGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit()
+  public void mutate_MutationsWithinRecordGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit()
       throws ExecutionException {
     // Arrange
     Put put1 =
@@ -185,9 +185,8 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
   }
 
   @Test
-  public void
-      mutate_MutationsWithinPartitionGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit()
-          throws ExecutionException {
+  public void mutate_MutationsWithinPartitionGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit()
+      throws ExecutionException {
     // Arrange
     storage.put(
         Put.newBuilder()
@@ -228,7 +227,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
 
     // Assert
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
         assertThat(exception).isInstanceOf(IllegalArgumentException.class);
         break;
@@ -280,7 +279,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
   }
 
   @Test
-  public void mutate_MutationsWithinTableGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit()
+  public void mutate_MutationsWithinTableGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit()
       throws ExecutionException {
     // Arrange
     storage.put(
@@ -322,7 +321,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
 
     // Assert
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
       case PARTITION:
         assertThat(exception).isInstanceOf(IllegalArgumentException.class);
@@ -374,9 +373,8 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
   }
 
   @Test
-  public void
-      mutate_MutationsWithinNamespaceGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit()
-          throws ExecutionException {
+  public void mutate_MutationsWithinNamespaceGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit()
+      throws ExecutionException {
     // Arrange
     storage.put(
         Put.newBuilder()
@@ -417,7 +415,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
 
     // Assert
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
       case PARTITION:
       case TABLE:
@@ -469,7 +467,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
   }
 
   @Test
-  public void mutate_MutationsWithinStorageGiven_ShouldBehaveCorrectlyBaseOnMutationAtomicityUnit()
+  public void mutate_MutationsWithinStorageGiven_ShouldBehaveCorrectlyBaseOnAtomicityUnit()
       throws ExecutionException {
     // Arrange
     storage.put(
@@ -511,7 +509,7 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
 
     // Assert
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
       case PARTITION:
       case TABLE:

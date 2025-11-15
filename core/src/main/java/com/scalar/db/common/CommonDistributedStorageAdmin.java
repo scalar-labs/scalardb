@@ -513,7 +513,7 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
       Map<String, String> options)
       throws ExecutionException {
     StorageInfo storageInfo = getStorageInfo(leftSourceNamespace);
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case STORAGE:
         break;
       case NAMESPACE:
@@ -521,7 +521,7 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
           throw new IllegalArgumentException(
               CoreError.VIRTUAL_TABLE_SOURCE_TABLES_OUTSIDE_OF_ATOMICITY_UNIT.buildMessage(
                   storageInfo.getStorageName(),
-                  storageInfo.getMutationAtomicityUnit(),
+                  storageInfo.getAtomicityUnit(),
                   ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
                   ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
         }
@@ -529,7 +529,7 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
       default:
         throw new UnsupportedOperationException(
             CoreError.VIRTUAL_TABLE_NOT_SUPPORTED_IN_STORAGE.buildMessage(
-                storageInfo.getStorageName(), storageInfo.getMutationAtomicityUnit()));
+                storageInfo.getStorageName(), storageInfo.getAtomicityUnit()));
     }
 
     if (!namespaceExists(namespace)) {
