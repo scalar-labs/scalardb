@@ -39,7 +39,7 @@ public class DynamoOperationCheckerTest {
   private static final String COL3 = "v3";
   private static final String COL4 = "v4";
   private static final StorageInfo STORAGE_INFO =
-      new StorageInfoImpl("dynamo", StorageInfo.MutationAtomicityUnit.STORAGE, 100);
+      new StorageInfoImpl("dynamo", StorageInfo.AtomicityUnit.STORAGE, 100, true);
 
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;

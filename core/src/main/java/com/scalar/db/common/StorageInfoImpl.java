@@ -9,16 +9,19 @@ import javax.annotation.concurrent.Immutable;
 public class StorageInfoImpl implements StorageInfo {
 
   private final String storageName;
-  private final MutationAtomicityUnit mutationAtomicityUnit;
+  private final AtomicityUnit atomicityUnit;
   private final int maxAtomicMutationsCount;
+  private final boolean consistentReadGuaranteed;
 
   public StorageInfoImpl(
       String storageName,
-      MutationAtomicityUnit mutationAtomicityUnit,
-      int maxAtomicMutationsCount) {
+      AtomicityUnit atomicityUnit,
+      int maxAtomicMutationsCount,
+      boolean consistentReadGuaranteed) {
     this.storageName = storageName;
-    this.mutationAtomicityUnit = mutationAtomicityUnit;
+    this.atomicityUnit = atomicityUnit;
     this.maxAtomicMutationsCount = maxAtomicMutationsCount;
+    this.consistentReadGuaranteed = consistentReadGuaranteed;
   }
 
   @Override
@@ -27,13 +30,18 @@ public class StorageInfoImpl implements StorageInfo {
   }
 
   @Override
-  public MutationAtomicityUnit getMutationAtomicityUnit() {
-    return mutationAtomicityUnit;
+  public AtomicityUnit getAtomicityUnit() {
+    return atomicityUnit;
   }
 
   @Override
   public int getMaxAtomicMutationsCount() {
     return maxAtomicMutationsCount;
+  }
+
+  @Override
+  public boolean isConsistentReadGuaranteed() {
+    return consistentReadGuaranteed;
   }
 
   @Override
@@ -47,20 +55,26 @@ public class StorageInfoImpl implements StorageInfo {
     StorageInfoImpl that = (StorageInfoImpl) o;
     return getMaxAtomicMutationsCount() == that.getMaxAtomicMutationsCount()
         && Objects.equals(getStorageName(), that.getStorageName())
-        && getMutationAtomicityUnit() == that.getMutationAtomicityUnit();
+        && getAtomicityUnit() == that.getAtomicityUnit()
+        && isConsistentReadGuaranteed() == that.isConsistentReadGuaranteed();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getStorageName(), getMutationAtomicityUnit(), getMaxAtomicMutationsCount());
+    return Objects.hash(
+        getStorageName(),
+        getAtomicityUnit(),
+        getMaxAtomicMutationsCount(),
+        isConsistentReadGuaranteed());
   }
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("storageName", storageName)
-        .add("mutationAtomicityUnit", mutationAtomicityUnit)
+        .add("atomicityUnit", atomicityUnit)
         .add("maxAtomicMutationsCount", maxAtomicMutationsCount)
+        .add("consistentReadGuaranteed", consistentReadGuaranteed)
         .toString();
   }
 }

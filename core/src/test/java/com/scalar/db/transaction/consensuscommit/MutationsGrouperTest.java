@@ -48,8 +48,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.RECORD);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.RECORD);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -94,8 +93,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.PARTITION);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -133,8 +131,7 @@ public class MutationsGrouperTest {
     String table1 = "table1";
     String table2 = "table2";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace1)).thenReturn(storageInfo);
@@ -170,8 +167,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(2); // Max 2 mutations per batch
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -203,8 +199,7 @@ public class MutationsGrouperTest {
     String table2 = "table2";
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace1)).thenReturn(storageInfo);
@@ -241,14 +236,12 @@ public class MutationsGrouperTest {
     String table2 = "table2";
 
     StorageInfo storageInfo1 = mock(StorageInfo.class);
-    when(storageInfo1.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.STORAGE);
+    when(storageInfo1.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.STORAGE);
     when(storageInfo1.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo1.getStorageName()).thenReturn("storage1");
 
     StorageInfo storageInfo2 = mock(StorageInfo.class);
-    when(storageInfo2.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.STORAGE);
+    when(storageInfo2.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.STORAGE);
     when(storageInfo2.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo2.getStorageName()).thenReturn("storage2");
 
@@ -294,14 +287,12 @@ public class MutationsGrouperTest {
     String table2 = "table2";
 
     StorageInfo storageInfo1 = mock(StorageInfo.class);
-    when(storageInfo1.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.STORAGE);
+    when(storageInfo1.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.STORAGE);
     when(storageInfo1.getMaxAtomicMutationsCount()).thenReturn(2); // Max 2 mutations per batch
     when(storageInfo1.getStorageName()).thenReturn("storage1");
 
     StorageInfo storageInfo2 = mock(StorageInfo.class);
-    when(storageInfo2.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.STORAGE);
+    when(storageInfo2.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.STORAGE);
     when(storageInfo2.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo2.getStorageName()).thenReturn("storage2");
 
@@ -354,8 +345,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.RECORD);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.RECORD);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -383,8 +373,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.PARTITION);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -412,8 +401,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -440,8 +428,7 @@ public class MutationsGrouperTest {
     String table1 = "table1";
     String table2 = "table2";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.NAMESPACE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.NAMESPACE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -470,8 +457,7 @@ public class MutationsGrouperTest {
     String table2 = "table2";
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.STORAGE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.STORAGE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace1)).thenReturn(storageInfo);
@@ -500,15 +486,13 @@ public class MutationsGrouperTest {
     String table2 = "table2";
 
     StorageInfo storageInfo1 = mock(StorageInfo.class);
-    when(storageInfo1.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo1.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo1.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo1.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace1)).thenReturn(storageInfo1);
 
     StorageInfo storageInfo2 = mock(StorageInfo.class);
-    when(storageInfo2.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo2.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo2.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo2.getStorageName()).thenReturn("storage2");
     when(storageInfoProvider.getStorageInfo(namespace2)).thenReturn(storageInfo2);
@@ -536,8 +520,7 @@ public class MutationsGrouperTest {
     String table2 = "table2";
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -564,8 +547,7 @@ public class MutationsGrouperTest {
     String table = "table";
 
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.PARTITION);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
@@ -590,8 +572,7 @@ public class MutationsGrouperTest {
     String namespace = "ns";
     String table = "table";
     StorageInfo storageInfo = mock(StorageInfo.class);
-    when(storageInfo.getMutationAtomicityUnit())
-        .thenReturn(StorageInfo.MutationAtomicityUnit.TABLE);
+    when(storageInfo.getAtomicityUnit()).thenReturn(StorageInfo.AtomicityUnit.TABLE);
     when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(3); // Max 3 mutations allowed
     when(storageInfo.getStorageName()).thenReturn("storage1");
     when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);

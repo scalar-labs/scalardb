@@ -509,4 +509,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
   public String getTableNamesInNamespaceSql() {
     return "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?";
   }
+
+  @Override
+  public boolean isConsistencyReadGuaranteed(int isolationLevel) {
+    // In MySQL, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistency reads.
+    return isolationLevel >= Connection.TRANSACTION_REPEATABLE_READ;
+  }
 }

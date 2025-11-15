@@ -911,25 +911,24 @@ public class MultiStorageAdminTest {
     when(admin1.getStorageInfo(anyString()))
         .thenReturn(
             new StorageInfoImpl(
-                "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
+                "cassandra", StorageInfo.AtomicityUnit.PARTITION, Integer.MAX_VALUE, true));
     when(admin2.getStorageInfo(anyString()))
-        .thenReturn(new StorageInfoImpl("dynamo", StorageInfo.MutationAtomicityUnit.STORAGE, 100));
+        .thenReturn(new StorageInfoImpl("dynamo", StorageInfo.AtomicityUnit.STORAGE, 100, true));
     when(admin3.getStorageInfo(anyString()))
         .thenReturn(
             new StorageInfoImpl(
-                "jdbc", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE));
+                "jdbc", StorageInfo.AtomicityUnit.STORAGE, Integer.MAX_VALUE, true));
 
     // Act Assert
     assertThat(multiStorageAdmin.getStorageInfo("ns1"))
         .isEqualTo(
             new StorageInfoImpl(
-                "s1", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
+                "s1", StorageInfo.AtomicityUnit.PARTITION, Integer.MAX_VALUE, true));
     assertThat(multiStorageAdmin.getStorageInfo("ns2"))
-        .isEqualTo(new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.STORAGE, 100));
+        .isEqualTo(new StorageInfoImpl("s2", StorageInfo.AtomicityUnit.STORAGE, 100, true));
     assertThat(multiStorageAdmin.getStorageInfo("ns3"))
         .isEqualTo(
-            new StorageInfoImpl(
-                "s3", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE));
+            new StorageInfoImpl("s3", StorageInfo.AtomicityUnit.STORAGE, Integer.MAX_VALUE, true));
 
     verify(admin1).getStorageInfo("ns1");
     verify(admin2).getStorageInfo("ns2");

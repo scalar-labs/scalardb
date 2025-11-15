@@ -385,4 +385,10 @@ class RdbEngineSqlite extends AbstractRdbEngine {
     // Do nothing. Namespace is just a table prefix in the SQLite implementation.
     return null;
   }
+
+  @Override
+  public boolean isConsistencyReadGuaranteed(int isolationLevel) {
+    // In SQLite, READ COMMITTED and higher isolation levels guarantee consistent reads
+    return isolationLevel >= Connection.TRANSACTION_READ_COMMITTED;
+  }
 }

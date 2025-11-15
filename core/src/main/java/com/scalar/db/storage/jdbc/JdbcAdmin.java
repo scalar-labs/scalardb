@@ -50,12 +50,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
   private static final String INDEX_NAME_PREFIX = "index";
-  private static final StorageInfo STORAGE_INFO =
-      new StorageInfoImpl(
-          "jdbc",
-          StorageInfo.MutationAtomicityUnit.STORAGE,
-          // No limit on the number of mutations
-          Integer.MAX_VALUE);
 
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
@@ -740,8 +734,21 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public StorageInfo getStorageInfo(String namespace) {
-    return STORAGE_INFO;
+  public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
+    boolean consistentReadGuaranteed;
+    try (Connection connection = dataSource.getConnection()) {
+      int isolationLevel = connection.getTransactionIsolation();
+      consistentReadGuaranteed = rdbEngine.isConsistencyReadGuaranteed(isolationLevel);
+    } catch (SQLException e) {
+      throw new ExecutionException("Getting the transaction isolation level failed", e);
+    }
+
+    return new StorageInfoImpl(
+        "jdbc",
+        StorageInfo.AtomicityUnit.STORAGE,
+        // No limit on the number of mutations
+        Integer.MAX_VALUE,
+        consistentReadGuaranteed);
   }
 
   @VisibleForTesting

@@ -373,7 +373,7 @@ public class OperationChecker {
         && mutation2.forNamespace().isPresent()
         && mutation2.forTable().isPresent();
 
-    switch (storageInfo1.getMutationAtomicityUnit()) {
+    switch (storageInfo1.getAtomicityUnit()) {
       case RECORD:
         if (!mutation1.getClusteringKey().equals(mutation2.getClusteringKey())) {
           return true; // Different clustering keys
@@ -402,8 +402,7 @@ public class OperationChecker {
         }
         break;
       default:
-        throw new AssertionError(
-            "Unknown mutation atomicity unit: " + storageInfo1.getMutationAtomicityUnit());
+        throw new AssertionError("Unknown atomicity unit: " + storageInfo1.getAtomicityUnit());
     }
 
     return false;
@@ -411,7 +410,7 @@ public class OperationChecker {
 
   private String getErrorMessageForOutOfAtomicityUnit(
       StorageInfo storageInfo, List<? extends Mutation> mutations) {
-    switch (storageInfo.getMutationAtomicityUnit()) {
+    switch (storageInfo.getAtomicityUnit()) {
       case RECORD:
         return CoreError.OPERATION_CHECK_ERROR_MULTI_RECORD_MUTATION.buildMessage(
             storageInfo.getStorageName(), mutations);
@@ -427,8 +426,7 @@ public class OperationChecker {
       case STORAGE:
         return CoreError.OPERATION_CHECK_ERROR_MULTI_STORAGE_MUTATION.buildMessage(mutations);
       default:
-        throw new AssertionError(
-            "Unknown mutation atomicity unit: " + storageInfo.getMutationAtomicityUnit());
+        throw new AssertionError("Unknown atomicity unit: " + storageInfo.getAtomicityUnit());
     }
   }
 
