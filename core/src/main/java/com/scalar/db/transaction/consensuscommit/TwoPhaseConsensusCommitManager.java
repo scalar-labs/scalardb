@@ -208,7 +208,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
-    Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot = new Snapshot(txId, tableMetadataManager);
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     TwoPhaseConsensusCommit transaction =
