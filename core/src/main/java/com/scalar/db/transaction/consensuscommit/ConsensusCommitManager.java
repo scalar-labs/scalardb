@@ -263,7 +263,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           "Setting different isolation level from the one in DatabaseConfig might cause unexpected "
               + "anomalies");
     }
-    Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot = new Snapshot(txId, tableMetadataManager);
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     DistributedTransaction transaction =

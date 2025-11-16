@@ -1,12 +1,22 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.concurrent.LazyInit;
+import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -21,12 +31,19 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -129,7 +146,9 @@ public class CommitHandler {
 
     Optional<Future<Void>> beforePreparationHookFuture = invokeBeforePreparationHook(context);
 
-    if (canOnePhaseCommit(context)) {
+    ValidationInfo validationInfo = buildValidationInfo(context);
+
+    if (canOnePhaseCommit(validationInfo, context)) {
       try {
         onePhaseCommitRecords(context);
         return;
@@ -156,9 +175,9 @@ public class CommitHandler {
       }
     }
 
-    if (context.snapshot.hasReads()) {
+    if (validationInfo.isActuallyValidationRequired()) {
       try {
-        validateRecords(context);
+        validateRecords(validationInfo, context.transactionId);
       } catch (ValidationException e) {
         safelyCallOnFailureBeforeCommit(context);
 
@@ -192,14 +211,14 @@ public class CommitHandler {
   }
 
   @VisibleForTesting
-  boolean canOnePhaseCommit(TransactionContext context) throws CommitException {
+  boolean canOnePhaseCommit(ValidationInfo validationInfo, TransactionContext context)
+      throws CommitException {
     if (!onePhaseCommitEnabled) {
       return false;
     }
 
-    // If validation is required (in SERIALIZABLE isolation), we cannot one-phase commit the
-    // transaction
-    if (context.isValidationRequired()) {
+    // If validation is required, we cannot one-phase commit the transaction
+    if (validationInfo.isActuallyValidationRequired()) {
       return false;
     }
 
@@ -243,34 +262,31 @@ public class CommitHandler {
     }
   }
 
-  protected void handleCommitConflict(TransactionContext context, Exception cause)
-      throws CommitConflictException, UnknownTransactionStatusException {
-    try {
-      Optional<State> s = coordinator.getState(context.transactionId);
-      if (s.isPresent()) {
-        TransactionState state = s.get().getState();
-        if (state.equals(TransactionState.ABORTED)) {
-          rollbackRecords(context);
-          throw new CommitConflictException(
-              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
-                  cause.getMessage()),
-              cause,
-              context.transactionId);
+  private ValidationInfo buildValidationInfo(TransactionContext context) {
+    if (context.isValidationRequired()) {
+      Set<Snapshot.Key> updatedRecordKeys =
+          Stream.concat(
+                  context.snapshot.getWriteSet().stream().map(Map.Entry::getKey),
+                  context.snapshot.getDeleteSet().stream().map(Map.Entry::getKey))
+              .collect(Collectors.toSet());
+
+      Collection<Map.Entry<Get, Optional<TransactionResult>>> getSet = new ArrayList<>();
+      for (Map.Entry<Get, Optional<TransactionResult>> geSetEntry : context.snapshot.getGetSet()) {
+        // We don't need to validate the record in the write set or delete set
+        Snapshot.Key key = new Snapshot.Key(geSetEntry.getKey());
+        if (!updatedRecordKeys.contains(key)) {
+          getSet.add(geSetEntry);
         }
-      } else {
-        throw new UnknownTransactionStatusException(
-            CoreError
-                .CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-                .buildMessage(cause.getMessage()),
-            cause,
-            context.transactionId);
       }
-    } catch (CoordinatorException ex) {
-      throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(ex.getMessage()),
-          ex,
-          context.transactionId);
+
+      Collection<Map.Entry<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>>> scanSet =
+          context.snapshot.getScanSet();
+      Collection<Snapshot.ScannerInfo> scannerSet = context.snapshot.getScannerSet();
+
+      return new ValidationInfo(getSet, scanSet, scannerSet, updatedRecordKeys);
     }
+
+    return new ValidationInfo();
   }
 
   @VisibleForTesting
@@ -336,15 +352,331 @@ public class CommitHandler {
   }
 
   public void validateRecords(TransactionContext context) throws ValidationException {
+    ValidationInfo validationInfo = buildValidationInfo(context);
+    if (!validationInfo.isActuallyValidationRequired()) {
+      return;
+    }
+
+    validateRecords(validationInfo, context.transactionId);
+  }
+
+  private void validateRecords(ValidationInfo validationInfo, String transactionId)
+      throws ValidationException {
     try {
-      // validation is executed when SERIALIZABLE is chosen.
-      context.snapshot.toSerializable(storage);
+      toSerializable(validationInfo, transactionId);
     } catch (ExecutionException e) {
       throw new ValidationException(
           CoreError.CONSENSUS_COMMIT_VALIDATION_FAILED.buildMessage(e.getMessage()),
           e,
-          context.transactionId);
+          transactionId);
     }
+  }
+
+  @VisibleForTesting
+  void toSerializable(ValidationInfo validationInfo, String transactionId)
+      throws ExecutionException, ValidationConflictException {
+    List<ParallelExecutorTask> tasks = new ArrayList<>();
+
+    // Scan set is re-validated to check if there is no anti-dependency
+    for (Map.Entry<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>> entry :
+        validationInfo.scanSet) {
+      tasks.add(
+          () ->
+              validateScanResults(
+                  storage,
+                  entry.getKey(),
+                  entry.getValue(),
+                  false,
+                  validationInfo.updatedRecordKeys,
+                  transactionId));
+    }
+
+    // Scanner set is re-validated to check if there is no anti-dependency
+    for (Snapshot.ScannerInfo scannerInfo : validationInfo.scannerSet) {
+      tasks.add(
+          () ->
+              validateScanResults(
+                  storage,
+                  scannerInfo.scan,
+                  scannerInfo.results,
+                  true,
+                  validationInfo.updatedRecordKeys,
+                  transactionId));
+    }
+
+    // Get set is re-validated to check if there is no anti-dependency
+    for (Map.Entry<Get, Optional<TransactionResult>> entry : validationInfo.getSet) {
+      Get get = entry.getKey();
+      TableMetadata metadata = getTableMetadata(get);
+
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
+        // For Get with index
+        tasks.add(
+            () ->
+                validateGetWithIndexResult(
+                    storage,
+                    get,
+                    entry.getValue(),
+                    validationInfo.updatedRecordKeys,
+                    transactionId,
+                    metadata));
+      } else {
+        // For other Get
+        tasks.add(() -> validateGetResult(storage, get, entry.getValue(), transactionId, metadata));
+      }
+    }
+
+    parallelExecutor.validateRecords(tasks, transactionId);
+  }
+
+  /**
+   * Validates the scan results to check if there is no anti-dependency.
+   *
+   * <p>This method scans the latest data and compares it with the scan results. If there is a
+   * discrepancy, it means that the scan results are changed by another transaction. In this case,
+   * an {@link ValidationConflictException} is thrown.
+   *
+   * <p>Since the validation is performed after the prepare-record phase, the scan might include
+   * prepared records if the transaction has performed operations that affect the scan result. In
+   * such cases, those prepared records can be safely ignored.
+   *
+   * <p>Note that this logic is based on the assumption that identical scans return results in the
+   * same order, provided that the underlying data remains unchanged.
+   *
+   * @param storage a distributed storage
+   * @param scan the scan to be validated
+   * @param results the results of the scan
+   * @param notFullyScannedScanner if this is a validation for a scanner that has not been fully
+   *     scanned
+   * @param transactionId the transaction ID
+   * @throws ExecutionException if a storage operation fails
+   * @throws ValidationConflictException if the scan results are changed by another transaction
+   */
+  private void validateScanResults(
+      DistributedStorage storage,
+      Scan scan,
+      LinkedHashMap<Snapshot.Key, TransactionResult> results,
+      boolean notFullyScannedScanner,
+      Set<Snapshot.Key> updatedRecordKeys,
+      String transactionId)
+      throws ExecutionException, ValidationConflictException {
+    Scanner scanner = null;
+    try {
+      TableMetadata metadata = getTableMetadata(scan);
+
+      scanner = storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata));
+
+      // Initialize the iterator for the latest scan results
+      Optional<Result> latestResult = getNextResult(scanner, scan);
+
+      // Initialize the iterator for the original scan results
+      Iterator<Map.Entry<Snapshot.Key, TransactionResult>> originalResultIterator =
+          results.entrySet().iterator();
+      Map.Entry<Snapshot.Key, TransactionResult> originalResultEntry =
+          Iterators.getNext(originalResultIterator, null);
+
+      // Compare the records of the iterators
+      while (latestResult.isPresent() && originalResultEntry != null) {
+        TransactionResult latestTxResult = new TransactionResult(latestResult.get());
+        Snapshot.Key key = new Snapshot.Key(scan, latestTxResult, metadata);
+
+        if (latestTxResult.getId() != null && latestTxResult.getId().equals(transactionId)) {
+          // The record is inserted/deleted/updated by this transaction
+
+          // Skip the record of the latest scan results
+          latestResult = getNextResult(scanner, scan);
+
+          if (originalResultEntry.getKey().equals(key)) {
+            // The record is updated by this transaction
+
+            // Skip the record of the original scan results
+            originalResultEntry = Iterators.getNext(originalResultIterator, null);
+          } else {
+            // The record is inserted/deleted by this transaction
+          }
+
+          continue;
+        }
+
+        // Compare the records of the original scan results and the latest scan results
+        if (!originalResultEntry.getKey().equals(key)) {
+          if (updatedRecordKeys.contains(originalResultEntry.getKey())) {
+            // The record is inserted/deleted/updated by this transaction
+
+            // Skip the record of the original scan results
+            originalResultEntry = Iterators.getNext(originalResultIterator, null);
+            continue;
+          }
+
+          // The record is inserted/deleted by another transaction
+          throwExceptionDueToAntiDependency(transactionId);
+        }
+        if (isChanged(latestTxResult, originalResultEntry.getValue())) {
+          // The record is updated by another transaction
+          throwExceptionDueToAntiDependency(transactionId);
+        }
+
+        // Proceed to the next record
+        latestResult = getNextResult(scanner, scan);
+        originalResultEntry = Iterators.getNext(originalResultIterator, null);
+      }
+
+      while (originalResultEntry != null) {
+        if (updatedRecordKeys.contains(originalResultEntry.getKey())) {
+          // The record is inserted/deleted/updated by this transaction
+
+          // Skip the record of the original scan results
+          originalResultEntry = Iterators.getNext(originalResultIterator, null);
+        } else {
+          // The record is inserted/deleted by another transaction
+          throwExceptionDueToAntiDependency(transactionId);
+        }
+      }
+
+      if (!latestResult.isPresent()) {
+        return;
+      }
+
+      if (scan.getLimit() != 0 && results.size() == scan.getLimit()) {
+        // We’ve already checked up to the limit, so no further checks are needed
+        return;
+      }
+
+      if (notFullyScannedScanner) {
+        // If the scanner is not fully scanned, no further checks are needed
+        return;
+      }
+
+      // Check if there are any remaining records in the latest scan results
+      while (latestResult.isPresent()) {
+        TransactionResult latestTxResult = new TransactionResult(latestResult.get());
+
+        if (latestTxResult.getId() != null && latestTxResult.getId().equals(transactionId)) {
+          // The record is inserted/deleted by this transaction
+
+          // Skip the record
+          latestResult = getNextResult(scanner, scan);
+        } else {
+          // The record is inserted by another transaction
+          throwExceptionDueToAntiDependency(transactionId);
+        }
+      }
+    } finally {
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          logger.warn("Failed to close the scanner. Transaction ID: {}", transactionId, e);
+        }
+      }
+    }
+  }
+
+  private Optional<Result> getNextResult(Scanner scanner, Scan scan) throws ExecutionException {
+    Optional<Result> next = scanner.one();
+    if (!next.isPresent()) {
+      return next;
+    }
+
+    if (!scan.getConjunctions().isEmpty()) {
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
+      next =
+          next.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), scan.getConjunctions()));
+    }
+
+    return next.isPresent() ? next : getNextResult(scanner, scan);
+  }
+
+  private void validateGetWithIndexResult(
+      DistributedStorage storage,
+      Get get,
+      Optional<TransactionResult> originalResult,
+      Set<Snapshot.Key> updatedRecordKeys,
+      String transactionId,
+      TableMetadata metadata)
+      throws ExecutionException, ValidationConflictException {
+    assert get.forNamespace().isPresent() && get.forTable().isPresent();
+
+    // If this transaction or another transaction inserts records into the index range,
+    // the Get with index operation may retrieve multiple records, which would result in
+    // an IllegalArgumentException. Therefore, we use Scan with index instead.
+    Scan scanWithIndex =
+        Scan.newBuilder()
+            .namespace(get.forNamespace().get())
+            .table(get.forTable().get())
+            .indexKey(get.getPartitionKey())
+            .whereOr(
+                get.getConjunctions().stream()
+                    .map(c -> ConditionSetBuilder.andConditionSet(c.getConditions()).build())
+                    .collect(Collectors.toSet()))
+            .consistency(get.getConsistency())
+            .attributes(get.getAttributes())
+            .build();
+
+    LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>(1);
+    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
+
+    // Validate the result to check if there is no anti-dependency
+    validateScanResults(storage, scanWithIndex, results, false, updatedRecordKeys, transactionId);
+  }
+
+  private void validateGetResult(
+      DistributedStorage storage,
+      Get get,
+      Optional<TransactionResult> originalResult,
+      String transactionId,
+      TableMetadata metadata)
+      throws ExecutionException, ValidationConflictException {
+    // Check if a read record is not changed
+    Optional<TransactionResult> latestResult =
+        storage
+            .get(ConsensusCommitUtils.prepareGetForStorage(get, metadata))
+            .map(TransactionResult::new);
+
+    if (!get.getConjunctions().isEmpty()) {
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
+      latestResult =
+          latestResult.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), get.getConjunctions()));
+    }
+
+    if (isChanged(latestResult, originalResult)) {
+      throwExceptionDueToAntiDependency(transactionId);
+    }
+  }
+
+  private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, operation);
+    return transactionTableMetadata.getTableMetadata();
+  }
+
+  private boolean isChanged(
+      Optional<TransactionResult> latestResult, Optional<TransactionResult> result) {
+    if (latestResult.isPresent() != result.isPresent()) {
+      return true;
+    }
+    if (!latestResult.isPresent()) {
+      return false;
+    }
+    return isChanged(latestResult.get(), result.get());
+  }
+
+  private boolean isChanged(TransactionResult latestResult, TransactionResult result) {
+    return !Objects.equals(latestResult.getId(), result.getId());
+  }
+
+  private void throwExceptionDueToAntiDependency(String transactionId)
+      throws ValidationConflictException {
+    throw new ValidationConflictException(
+        CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), transactionId);
   }
 
   public void commitState(TransactionContext context)
@@ -362,6 +694,36 @@ public class CommitHandler {
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
           e,
           id);
+    }
+  }
+
+  protected void handleCommitConflict(TransactionContext context, Exception cause)
+      throws CommitConflictException, UnknownTransactionStatusException {
+    try {
+      Optional<State> s = coordinator.getState(context.transactionId);
+      if (s.isPresent()) {
+        TransactionState state = s.get().getState();
+        if (state.equals(TransactionState.ABORTED)) {
+          rollbackRecords(context);
+          throw new CommitConflictException(
+              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
+                  cause.getMessage()),
+              cause,
+              context.transactionId);
+        }
+      } else {
+        throw new UnknownTransactionStatusException(
+            CoreError
+                .CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
+                .buildMessage(cause.getMessage()),
+            cause,
+            context.transactionId);
+      }
+    } catch (CoordinatorException ex) {
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(ex.getMessage()),
+          ex,
+          context.transactionId);
     }
   }
 
@@ -443,5 +805,55 @@ public class CommitHandler {
    */
   public void setBeforePreparationHook(BeforePreparationHook beforePreparationHook) {
     this.beforePreparationHook = checkNotNull(beforePreparationHook);
+  }
+
+  static class ValidationInfo {
+    public final Collection<Map.Entry<Get, Optional<TransactionResult>>> getSet;
+    public final Collection<Map.Entry<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>>>
+        scanSet;
+    public final Collection<Snapshot.ScannerInfo> scannerSet;
+    public final Set<Snapshot.Key> updatedRecordKeys;
+
+    ValidationInfo() {
+      this.getSet = new ArrayList<>();
+      this.scanSet = new ArrayList<>();
+      this.scannerSet = new ArrayList<>();
+      this.updatedRecordKeys = new HashSet<>();
+    }
+
+    ValidationInfo(
+        Collection<Map.Entry<Get, Optional<TransactionResult>>> getSet,
+        Collection<Map.Entry<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>>> scanSet,
+        Collection<Snapshot.ScannerInfo> scannerSet,
+        Set<Snapshot.Key> updatedRecordKeys) {
+      this.getSet = getSet;
+      this.scanSet = scanSet;
+      this.scannerSet = scannerSet;
+      this.updatedRecordKeys = updatedRecordKeys;
+    }
+
+    boolean isActuallyValidationRequired() {
+      return !getSet.isEmpty() || !scanSet.isEmpty() || !scannerSet.isEmpty();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof ValidationInfo)) {
+        return false;
+      }
+      ValidationInfo that = (ValidationInfo) o;
+      return Iterables.elementsEqual(getSet, that.getSet)
+          && Iterables.elementsEqual(scanSet, that.scanSet)
+          && Iterables.elementsEqual(scannerSet, that.scannerSet)
+          && Iterables.elementsEqual(updatedRecordKeys, that.updatedRecordKeys);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(getSet, scanSet, scannerSet, updatedRecordKeys);
+    }
   }
 }

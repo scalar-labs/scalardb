@@ -60,9 +60,10 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  boolean canOnePhaseCommit(TransactionContext context) throws CommitException {
+  boolean canOnePhaseCommit(ValidationInfo validationInfo, TransactionContext context)
+      throws CommitException {
     try {
-      return super.canOnePhaseCommit(context);
+      return super.canOnePhaseCommit(validationInfo, context);
     } catch (CommitException e) {
       cancelGroupCommitIfNeeded(context.transactionId);
       throw e;
