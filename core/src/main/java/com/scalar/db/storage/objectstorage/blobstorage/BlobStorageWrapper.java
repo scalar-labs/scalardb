@@ -22,7 +22,9 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class BlobStorageWrapper implements ObjectStorageWrapper {
   private final BlobContainerClient client;
   private final Duration requestTimeoutInSeconds;
@@ -35,12 +37,19 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
             .credential(new StorageSharedKeyCredential(config.getUsername(), config.getPassword()))
             .buildClient()
             .getBlobContainerClient(config.getBucket());
-    this.requestTimeoutInSeconds = Duration.ofSeconds(config.getRequestTimeoutInSeconds());
-    this.parallelTransferOptions =
-        new ParallelTransferOptions()
-            .setBlockSizeLong(config.getParallelUploadBlockSizeInBytes())
-            .setMaxConcurrency(config.getParallelUploadMaxParallelism())
-            .setMaxSingleUploadSizeLong(config.getParallelUploadThresholdInBytes());
+    this.requestTimeoutInSeconds =
+        config.getRequestTimeoutInSeconds().map(Duration::ofSeconds).orElse(null);
+    this.parallelTransferOptions = new ParallelTransferOptions();
+    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
+      parallelTransferOptions.setBlockSizeLong(config.getParallelUploadBlockSizeInBytes().get());
+    }
+    if (config.getParallelUploadMaxParallelism().isPresent()) {
+      parallelTransferOptions.setMaxConcurrency(config.getParallelUploadMaxParallelism().get());
+    }
+    if (config.getParallelUploadThresholdInBytes().isPresent()) {
+      parallelTransferOptions.setMaxSingleUploadSizeLong(
+          config.getParallelUploadThresholdInBytes().get());
+    }
   }
 
   @Override
