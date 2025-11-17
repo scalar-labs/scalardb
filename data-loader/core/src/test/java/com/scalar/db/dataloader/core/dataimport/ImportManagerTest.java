@@ -95,7 +95,7 @@ public class ImportManagerTest {
   }
 
   @Test
-  void startImport_shouldUseStorageMode_whenTransactionManagerIsSingleCrud() throws Exception {
+  void startImport_shouldUseSingleCrudMode_whenTransactionManagerIsSingleCrud() throws Exception {
     // Arrange
     Map<String, TableMetadata> tableMetadata = new HashMap<>();
     BufferedReader reader = mock(BufferedReader.class);

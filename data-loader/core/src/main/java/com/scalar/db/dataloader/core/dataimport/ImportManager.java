@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
 /**
@@ -33,6 +34,7 @@ import lombok.NonNull;
  *   <li>Notifying listeners of various import events
  * </ul>
  */
+@AllArgsConstructor
 @SuppressWarnings("SameNameButDifferent")
 public class ImportManager implements ImportEventListener {
 
@@ -42,19 +44,6 @@ public class ImportManager implements ImportEventListener {
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
   private final DistributedTransactionManager distributedTransactionManager;
-
-  public ImportManager(
-      @NonNull Map<String, TableMetadata> tableMetadata,
-      @NonNull BufferedReader importFileReader,
-      @NonNull ImportOptions importOptions,
-      ImportProcessorFactory importProcessorFactory,
-      DistributedTransactionManager distributedTransactionManager) {
-    this.tableMetadata = tableMetadata;
-    this.importFileReader = importFileReader;
-    this.importOptions = importOptions;
-    this.importProcessorFactory = importProcessorFactory;
-    this.distributedTransactionManager = distributedTransactionManager;
-  }
 
   /**
    * Starts the import process using the configured parameters.
