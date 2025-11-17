@@ -1,7 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import com.scalar.db.dataloader.cli.ScalarDbMode;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import picocli.CommandLine;
@@ -17,11 +17,24 @@ public class ImportCommandOptions {
   public static final String ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT = "-ls";
   public static final String DEPRECATED_LOG_SUCCESS_RECORDS_OPTION = "--log-success";
 
+  public static final String DEPRECATED_MODE_OPTION = "--mode";
+  public static final String DEPRECATED_MODE_OPTION_SHORT = "-m";
+
+  /**
+   * @deprecated As of release 3.17.0 This option is no longer used and will be removed in release
+   *     4.0.0. The option is not fully removed as users who might already have their scripts or
+   *     commands pre-set might pass the argument and when passed if not supported, picocli will
+   *     throw an error. We want to avoid that and instead just show a warning. The behavior is now
+   *     determined by the transaction manager configuration in the ScalarDB properties file.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--mode", "-m"},
-      description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
+      description =
+          "Deprecated: This option is no longer used. The behavior is now determined by the transaction manager configuration in the ScalarDB properties file.",
       paramLabel = "<MODE>",
-      defaultValue = "STORAGE")
+      defaultValue = "STORAGE",
+      hidden = true)
   protected ScalarDbMode scalarDbMode;
 
   @CommandLine.Option(

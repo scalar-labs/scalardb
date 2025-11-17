@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessor;
@@ -12,11 +12,11 @@ import com.scalar.db.dataloader.core.dataimport.processor.TableColumnDataTypes;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
+import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionManager;
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
 /**
@@ -34,7 +34,6 @@ import lombok.NonNull;
  * </ul>
  */
 @SuppressWarnings("SameNameButDifferent")
-@AllArgsConstructor
 public class ImportManager implements ImportEventListener {
 
   @NonNull private final Map<String, TableMetadata> tableMetadata;
@@ -42,8 +41,20 @@ public class ImportManager implements ImportEventListener {
   @NonNull private final ImportOptions importOptions;
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
-  private final ScalarDbMode scalarDbMode;
   private final DistributedTransactionManager distributedTransactionManager;
+
+  public ImportManager(
+      @NonNull Map<String, TableMetadata> tableMetadata,
+      @NonNull BufferedReader importFileReader,
+      @NonNull ImportOptions importOptions,
+      ImportProcessorFactory importProcessorFactory,
+      DistributedTransactionManager distributedTransactionManager) {
+    this.tableMetadata = tableMetadata;
+    this.importFileReader = importFileReader;
+    this.importOptions = importOptions;
+    this.importProcessorFactory = importProcessorFactory;
+    this.distributedTransactionManager = distributedTransactionManager;
+  }
 
   /**
    * Starts the import process using the configured parameters.
@@ -51,8 +62,20 @@ public class ImportManager implements ImportEventListener {
    * <p>If the data chunk size in {@link ImportOptions} is set to 0, the entire file will be
    * processed as a single chunk. Otherwise, the file will be processed in chunks of the specified
    * size.
+   *
+   * <p>The ScalarDB mode is determined automatically based on the transaction manager
+   * configuration: if the transaction manager is configured as single-crud, STORAGE mode is used;
+   * otherwise, TRANSACTION mode is used by default.
    */
   public void startImport() {
+    // Determine ScalarDB mode based on transaction manager type. This mode will be refactored later
+    // and removed so that the whole code can just use one way to import all the data with the
+    // correct interface and not depend on making this distinction.
+    TransactionMode scalarDbMode =
+        distributedTransactionManager instanceof SingleCrudOperationTransactionManager
+            ? TransactionMode.SINGLE_CRUD
+            : TransactionMode.CONSENSUS_COMMIT;
+
     ImportProcessorParams params =
         ImportProcessorParams.builder()
             .scalarDbMode(scalarDbMode)

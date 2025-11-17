@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
@@ -44,6 +46,8 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "import", description = "Import data into a ScalarDB table")
 public class ImportCommand extends ImportCommandOptions implements Callable<Integer> {
 
+  private static final Logger logger = LoggerFactory.getLogger(ImportCommand.class);
+
   /** Spec injected by PicoCli */
   @Spec CommandSpec spec;
 
@@ -51,6 +55,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateDeprecatedOptions();
     applyDeprecatedOptions();
+    warnAboutIgnoredDeprecatedOptions();
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
@@ -152,7 +157,6 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             reader,
             importOptions,
             importProcessorFactory,
-            scalarDbMode,
             TransactionFactory.create(configFile).getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
@@ -274,6 +278,28 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         DEPRECATED_LOG_SUCCESS_RECORDS_OPTION,
         ENABLE_LOG_SUCCESS_RECORDS_OPTION,
         ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT);
+  }
+
+  /** Warns about deprecated options that are no longer used and have been completely ignored. */
+  private void warnAboutIgnoredDeprecatedOptions() {
+    CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
+    boolean hasModeOption =
+        parseResult.hasMatchedOption(DEPRECATED_MODE_OPTION)
+            || parseResult.hasMatchedOption(DEPRECATED_MODE_OPTION_SHORT);
+
+    if (hasModeOption) {
+      // Use picocli's ANSI support for colored warning output
+      CommandLine.Help.Ansi ansi = CommandLine.Help.Ansi.AUTO;
+      String warning =
+          ansi.string(
+              "@|bold,yellow The "
+                  + DEPRECATED_MODE_OPTION
+                  + " option is deprecated and no longer has any effect. "
+                  + "The import behavior is now determined by the transaction manager configuration "
+                  + "in your ScalarDB properties file.|@");
+
+      logger.warn(warning);
+    }
   }
 
   /**

@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
@@ -83,7 +83,7 @@ class ImportProcessorTest {
   void process_withStorageMode_shouldProcessAllDataChunks() {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
+    when(params.getScalarDbMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
 
@@ -103,7 +103,7 @@ class ImportProcessorTest {
   void process_withTransactionMode_shouldProcessAllDataChunks() throws TransactionException {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.TRANSACTION);
+    when(params.getScalarDbMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
@@ -228,7 +228,7 @@ class ImportProcessorTest {
   @Test
   void process_withShutdown_shouldShutdownExecutorsGracefully() {
     // Arrange
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
+    when(params.getScalarDbMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
