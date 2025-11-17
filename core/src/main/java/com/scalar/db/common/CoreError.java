@@ -434,7 +434,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS(
       Category.USER_ERROR,
       "0100",
-      "The condition is not allowed to target transaction metadata columns. Column: %s",
+      "The condition is not allowed to target transaction metadata columns. Table: %s; Column: %s",
       "",
       ""),
   CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA(
@@ -898,7 +898,7 @@ public enum CoreError implements ScalarDbError {
   OBJECT_STORAGE_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
       Category.USER_ERROR,
       "0257",
-      "The value of the column %s in the primary key contains an illegal character.",
+      "The value of the column %s in the primary key contains an illegal character. Value: %s",
       "",
       ""),
   CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_PROJECTION_NOT_ALLOWED(
@@ -1244,7 +1244,11 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
-      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
+      Category.INTERNAL_ERROR,
+      "0063",
+      "Getting the MySQL JDBC connection metadata failed. Details: %s",
+      "",
+      ""),
   OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION(
       Category.INTERNAL_ERROR, "0064", "An error occurred in the selection. Details: %s", "", ""),
   OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION(
