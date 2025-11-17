@@ -28,7 +28,7 @@ public class S3ConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, S3_STORAGE);
-    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(S3Config.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
     props.setProperty(
         S3Config.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
     props.setProperty(

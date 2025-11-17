@@ -56,7 +56,11 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-    metadataNamespace = getString(databaseConfig.getProperties(), TABLE_METADATA_NAMESPACE, null);
+    metadataNamespace =
+        getString(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_NAMESPACE,
+            DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
       logger.warn(

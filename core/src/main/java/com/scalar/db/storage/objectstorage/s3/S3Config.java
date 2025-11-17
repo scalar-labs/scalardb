@@ -2,6 +2,7 @@ package com.scalar.db.storage.objectstorage.s3;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
+import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.google.common.base.Splitter;
 import com.scalar.db.common.CoreError;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 public class S3Config implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "s3";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
+  public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
   public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
       PREFIX + "parallel_upload_block_size_in_bytes";
@@ -60,7 +62,11 @@ public class S3Config implements ObjectStorageConfig {
     }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-    metadataNamespace = databaseConfig.getSystemNamespaceName();
+    metadataNamespace =
+        getString(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_NAMESPACE,
+            DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
       logger.warn(
