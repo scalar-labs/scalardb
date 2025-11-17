@@ -20,8 +20,8 @@ import lombok.Value;
 @Builder
 @Value
 public class ImportProcessorParams {
-  /** The operational mode of ScalarDB (transaction or storage mode). */
-  TransactionMode scalarDbMode;
+  /** Wether the import will be done as SINGLE_CRUD or as CONSENSUS COMMIT */
+  TransactionMode transactionMode;
 
   /** Configuration options for the import operation. */
   ImportOptions importOptions;

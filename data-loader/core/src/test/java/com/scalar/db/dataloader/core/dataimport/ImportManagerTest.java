@@ -122,7 +122,7 @@ public class ImportManagerTest {
     verify(processorFactory).createImportProcessor(paramsCaptor.capture());
 
     ImportProcessorParams capturedParams = paramsCaptor.getValue();
-    assertEquals(TransactionMode.SINGLE_CRUD, capturedParams.getScalarDbMode());
+    assertEquals(TransactionMode.SINGLE_CRUD, capturedParams.getTransactionMode());
   }
 
   @Test
@@ -153,6 +153,6 @@ public class ImportManagerTest {
     verify(processorFactory).createImportProcessor(paramsCaptor.capture());
 
     ImportProcessorParams capturedParams = paramsCaptor.getValue();
-    assertEquals(TransactionMode.CONSENSUS_COMMIT, capturedParams.getScalarDbMode());
+    assertEquals(TransactionMode.CONSENSUS_COMMIT, capturedParams.getTransactionMode());
   }
 }

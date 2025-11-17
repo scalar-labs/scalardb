@@ -389,7 +389,7 @@ public abstract class ImportProcessor {
             .build();
     notifyDataChunkStarted(status);
     ImportDataChunkStatus importDataChunkStatus;
-    if (params.getScalarDbMode() == TransactionMode.CONSENSUS_COMMIT) {
+    if (params.getTransactionMode() == TransactionMode.CONSENSUS_COMMIT) {
       importDataChunkStatus = processDataChunkWithTransactions(dataChunk, transactionBatchSize);
     } else {
       importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);

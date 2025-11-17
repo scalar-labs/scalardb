@@ -83,7 +83,7 @@ class ImportProcessorTest {
   void process_withStorageMode_shouldProcessAllDataChunks() {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(TransactionMode.SINGLE_CRUD);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
 
@@ -103,7 +103,7 @@ class ImportProcessorTest {
   void process_withTransactionMode_shouldProcessAllDataChunks() throws TransactionException {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
@@ -228,7 +228,7 @@ class ImportProcessorTest {
   @Test
   void process_withShutdown_shouldShutdownExecutorsGracefully() {
     // Arrange
-    when(params.getScalarDbMode()).thenReturn(TransactionMode.SINGLE_CRUD);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);

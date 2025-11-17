@@ -79,7 +79,7 @@ class JsonImportProcessorTest {
   void test_importProcessWithStorage() {
     params =
         ImportProcessorParams.builder()
-            .scalarDbMode(TransactionMode.SINGLE_CRUD)
+            .transactionMode(TransactionMode.SINGLE_CRUD)
             .importOptions(importOptions)
             .dao(dao)
             .distributedTransactionManager(distributedTransactionManager)
@@ -97,7 +97,7 @@ class JsonImportProcessorTest {
   void test_importProcessWithTransaction() {
     params =
         ImportProcessorParams.builder()
-            .scalarDbMode(TransactionMode.CONSENSUS_COMMIT)
+            .transactionMode(TransactionMode.CONSENSUS_COMMIT)
             .importOptions(importOptions)
             .dao(dao)
             .distributedTransactionManager(distributedTransactionManager)
