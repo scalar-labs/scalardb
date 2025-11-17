@@ -50,7 +50,7 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "import", description = "Import data into a ScalarDB table")
 public class ImportCommand extends ImportCommandOptions implements Callable<Integer> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImportCommand.class);
+  private static final Logger logger = LoggerFactory.getLogger(ImportCommand.class);
 
   /** Spec injected by PicoCli */
   @Spec CommandSpec spec;
@@ -284,28 +284,27 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
           spec.commandLine(), DataLoaderError.INVALID_CONTROL_FILE.buildMessage(controlFilePath));
     }
   }
-    /** Warns about deprecated options that are no longer used and have been completely ignored. */
-    private void warnAboutIgnoredDeprecatedOptions() {
-        CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
-        boolean hasRawRecordOption =
-                parseResult.hasMatchedOption(DEPRECATED_LOG_RAW_RECORDS_OPTION)
-                        || parseResult.hasMatchedOption(DEPRECATED_LOG_RAW_RECORDS_OPTION_SHORT);
+  /** Warns about deprecated options that are no longer used and have been completely ignored. */
+  private void warnAboutIgnoredDeprecatedOptions() {
+    CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
+    boolean hasRawRecordOption =
+        parseResult.hasMatchedOption(DEPRECATED_LOG_RAW_RECORDS_OPTION)
+            || parseResult.hasMatchedOption(DEPRECATED_LOG_RAW_RECORDS_OPTION_SHORT);
 
-        if (hasRawRecordOption) {
-            // Use picocli's ANSI support for colored warning output
-            CommandLine.Help.Ansi ansi = CommandLine.Help.Ansi.AUTO;
-            String warning =
-                    ansi.string(
-                            "@|bold,yellow The "
-                                    + DEPRECATED_LOG_RAW_RECORDS_OPTION
-                                    + " option is deprecated and no longer has any effect. "
-                                    + "This option is no longer required because failure records are "
-                                    + "always logged by default.|@");
+    if (hasRawRecordOption) {
+      // Use picocli's ANSI support for colored warning output
+      CommandLine.Help.Ansi ansi = CommandLine.Help.Ansi.AUTO;
+      String warning =
+          ansi.string(
+              "@|bold,yellow The "
+                  + DEPRECATED_LOG_RAW_RECORDS_OPTION
+                  + " option is deprecated and no longer has any effect. "
+                  + "This option is no longer required because failure records are "
+                  + "always logged by default.|@");
 
-            logger.warn(warning);
-        }
+      logger.warn(warning);
     }
-
+  }
 
   /**
    * Validates that deprecated and new options are not both specified.
