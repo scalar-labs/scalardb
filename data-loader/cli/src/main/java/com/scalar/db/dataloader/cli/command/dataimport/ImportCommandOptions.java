@@ -133,7 +133,8 @@ public class ImportCommandOptions {
   @CommandLine.Option(
       names = {"--log-raw-record", "-lr"},
       description = "Include the original source record in the log file output (default: false)",
-      defaultValue = "false")
+      defaultValue = "false",
+      hidden = true)
   protected boolean logRawRecord;
 
   @CommandLine.Option(
