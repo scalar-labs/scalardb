@@ -270,7 +270,11 @@ public class ObjectStorageWrapperIntegrationTest {
       }
     } finally {
       for (int i = 0; i < numberOfObjects; i++) {
-        wrapper.delete(prefix + i);
+        try {
+          wrapper.delete(prefix + i);
+        } catch (PreconditionFailedException e) {
+          // The object may not exist if the setup failed partially, so do nothing
+        }
       }
     }
   }
@@ -336,8 +340,12 @@ public class ObjectStorageWrapperIntegrationTest {
   @Test
   public void close_ShouldNotThrowException() {
     // Arrange
+    Properties properties = getProperties(TEST_NAME);
+    ObjectStorageConfig objectStorageConfig =
+        ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties));
+    ObjectStorageWrapper wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
 
     // Act Assert
-    assertThatCode(() -> wrapper.close()).doesNotThrowAnyException();
+    assertThatCode(wrapper::close).doesNotThrowAnyException();
   }
 }
