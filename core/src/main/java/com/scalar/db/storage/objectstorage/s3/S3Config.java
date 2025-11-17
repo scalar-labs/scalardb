@@ -3,9 +3,12 @@ package com.scalar.db.storage.objectstorage.s3;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 
+import com.google.common.base.Splitter;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
+import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,9 +24,6 @@ public class S3Config implements ObjectStorageConfig {
       PREFIX + "parallel_upload_threshold_in_bytes";
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
 
-  public static final long DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = 8 * 1024 * 1024; // 8MB
-  public static final int DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM = 50;
-  public static final long DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES = 8 * 1024 * 1024; // 8MB
   public static final int DEFAULT_REQUEST_TIMEOUT_IN_SECONDS = 15;
 
   private static final Logger logger = LoggerFactory.getLogger(S3Config.class);
@@ -33,10 +33,10 @@ public class S3Config implements ObjectStorageConfig {
   private final String metadataNamespace;
   private final String region;
 
-  private final long parallelUploadBlockSizeInBytes;
-  private final int parallelUploadMaxParallelism;
-  private final long parallelUploadThresholdInBytes;
-  private final int requestTimeoutInSeconds;
+  private final Long parallelUploadBlockSizeInBytes;
+  private final Integer parallelUploadMaxParallelism;
+  private final Long parallelUploadThresholdInBytes;
+  private final Integer requestTimeoutInSeconds;
 
   public S3Config(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -48,12 +48,12 @@ public class S3Config implements ObjectStorageConfig {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
     String contactPoints = databaseConfig.getContactPoints().get(0);
-    String[] contactPointsParts = contactPoints.split("/");
-    if (contactPointsParts.length == 2
-        && !contactPointsParts[0].isEmpty()
-        && !contactPointsParts[1].isEmpty()) {
-      region = contactPointsParts[0];
-      bucket = contactPointsParts[1];
+    List<String> contactPointsParts = Splitter.on('/').splitToList(contactPoints);
+    if (contactPointsParts.size() == 2
+        && !contactPointsParts.get(0).isEmpty()
+        && !contactPointsParts.get(1).isEmpty()) {
+      region = contactPointsParts.get(0);
+      bucket = contactPointsParts.get(1);
     } else {
       throw new IllegalArgumentException(
           "Invalid contact points format. Expected: S3_REGION/BUCKET_NAME");
@@ -70,25 +70,13 @@ public class S3Config implements ObjectStorageConfig {
     }
 
     parallelUploadBlockSizeInBytes =
-        getLong(
-            databaseConfig.getProperties(),
-            PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
-            DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, null);
     parallelUploadMaxParallelism =
-        getInt(
-            databaseConfig.getProperties(),
-            PARALLEL_UPLOAD_MAX_PARALLELISM,
-            DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
+        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_MAX_PARALLELISM, null);
     parallelUploadThresholdInBytes =
-        getLong(
-            databaseConfig.getProperties(),
-            PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
-            DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
+        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, null);
     requestTimeoutInSeconds =
-        getInt(
-            databaseConfig.getProperties(),
-            REQUEST_TIMEOUT_IN_SECONDS,
-            DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
+        getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_IN_SECONDS, null);
   }
 
   @Override
@@ -120,19 +108,19 @@ public class S3Config implements ObjectStorageConfig {
     return region;
   }
 
-  public long getParallelUploadBlockSizeInBytes() {
-    return parallelUploadBlockSizeInBytes;
+  public Optional<Long> getParallelUploadBlockSizeInBytes() {
+    return Optional.ofNullable(parallelUploadBlockSizeInBytes);
   }
 
-  public int getParallelUploadMaxParallelism() {
-    return parallelUploadMaxParallelism;
+  public Optional<Integer> getParallelUploadMaxParallelism() {
+    return Optional.ofNullable(parallelUploadMaxParallelism);
   }
 
-  public long getParallelUploadThresholdInBytes() {
-    return parallelUploadThresholdInBytes;
+  public Optional<Long> getParallelUploadThresholdInBytes() {
+    return Optional.ofNullable(parallelUploadThresholdInBytes);
   }
 
-  public int getRequestTimeoutInSeconds() {
-    return requestTimeoutInSeconds;
+  public Optional<Integer> getRequestTimeoutInSeconds() {
+    return Optional.ofNullable(requestTimeoutInSeconds);
   }
 }

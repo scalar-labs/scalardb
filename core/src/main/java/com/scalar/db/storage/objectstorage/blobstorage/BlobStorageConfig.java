@@ -6,6 +6,7 @@ import static com.scalar.db.config.ConfigUtils.getLong;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,11 +22,6 @@ public class BlobStorageConfig implements ObjectStorageConfig {
       PREFIX + "parallel_upload_threshold_in_bytes";
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
 
-  public static final long DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = 4 * 1024 * 1024; // 4MB
-  public static final int DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM = 4;
-  public static final long DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES = 4 * 1024 * 1024; // 4MB
-  public static final int DEFAULT_REQUEST_TIMEOUT_IN_SECONDS = 15;
-
   private static final Logger logger = LoggerFactory.getLogger(BlobStorageConfig.class);
   private final String endpoint;
   private final String username;
@@ -33,10 +29,10 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   private final String bucket;
   private final String metadataNamespace;
 
-  private final long parallelUploadBlockSizeInBytes;
-  private final int parallelUploadMaxParallelism;
-  private final long parallelUploadThresholdInBytes;
-  private final int requestTimeoutInSeconds;
+  private final Long parallelUploadBlockSizeInBytes;
+  private final Integer parallelUploadMaxParallelism;
+  private final Long parallelUploadThresholdInBytes;
+  private final Integer requestTimeoutInSeconds;
 
   public BlobStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -68,25 +64,13 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     }
 
     parallelUploadBlockSizeInBytes =
-        getLong(
-            databaseConfig.getProperties(),
-            PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
-            DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, null);
     parallelUploadMaxParallelism =
-        getInt(
-            databaseConfig.getProperties(),
-            PARALLEL_UPLOAD_MAX_PARALLELISM,
-            DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
+        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_MAX_PARALLELISM, null);
     parallelUploadThresholdInBytes =
-        getLong(
-            databaseConfig.getProperties(),
-            PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
-            DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
+        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, null);
     requestTimeoutInSeconds =
-        getInt(
-            databaseConfig.getProperties(),
-            REQUEST_TIMEOUT_IN_SECONDS,
-            DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
+        getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_IN_SECONDS, null);
   }
 
   @Override
@@ -118,19 +102,19 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     return endpoint;
   }
 
-  public long getParallelUploadBlockSizeInBytes() {
-    return parallelUploadBlockSizeInBytes;
+  public Optional<Long> getParallelUploadBlockSizeInBytes() {
+    return Optional.ofNullable(parallelUploadBlockSizeInBytes);
   }
 
-  public int getParallelUploadMaxParallelism() {
-    return parallelUploadMaxParallelism;
+  public Optional<Integer> getParallelUploadMaxParallelism() {
+    return Optional.ofNullable(parallelUploadMaxParallelism);
   }
 
-  public long getParallelUploadThresholdInBytes() {
-    return parallelUploadThresholdInBytes;
+  public Optional<Long> getParallelUploadThresholdInBytes() {
+    return Optional.ofNullable(parallelUploadThresholdInBytes);
   }
 
-  public int getRequestTimeoutInSeconds() {
-    return requestTimeoutInSeconds;
+  public Optional<Integer> getRequestTimeoutInSeconds() {
+    return Optional.ofNullable(requestTimeoutInSeconds);
   }
 }

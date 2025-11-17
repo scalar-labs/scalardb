@@ -48,14 +48,14 @@ public class BlobStorageConfigTest {
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
-    assertThat(config.getParallelUploadBlockSizeInBytes())
-        .isEqualTo(Long.parseLong(ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES));
-    assertThat(config.getParallelUploadMaxParallelism())
-        .isEqualTo(Integer.parseInt(ANY_PARALLEL_UPLOAD_MAX_PARALLELISM));
-    assertThat(config.getParallelUploadThresholdInBytes())
-        .isEqualTo(Long.parseLong(ANY_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES));
-    assertThat(config.getRequestTimeoutInSeconds())
-        .isEqualTo(Integer.parseInt(ANY_REQUEST_TIMEOUT_IN_SECONDS));
+    assertThat(config.getParallelUploadBlockSizeInBytes()).isNotEmpty();
+    assertThat(config.getParallelUploadBlockSizeInBytes().get()).isEqualTo(5242880);
+    assertThat(config.getParallelUploadMaxParallelism()).isNotEmpty();
+    assertThat(config.getParallelUploadMaxParallelism().get()).isEqualTo(4);
+    assertThat(config.getParallelUploadThresholdInBytes()).isNotEmpty();
+    assertThat(config.getParallelUploadThresholdInBytes().get()).isEqualTo(10485760);
+    assertThat(config.getRequestTimeoutInSeconds()).isNotEmpty();
+    assertThat(config.getRequestTimeoutInSeconds().get()).isEqualTo(30);
   }
 
   @Test
@@ -75,14 +75,12 @@ public class BlobStorageConfigTest {
     assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getParallelUploadBlockSizeInBytes())
-        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
-    assertThat(config.getParallelUploadMaxParallelism())
-        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_MAX_PARALLELISM);
-    assertThat(config.getParallelUploadThresholdInBytes())
-        .isEqualTo(BlobStorageConfig.DEFAULT_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
-    assertThat(config.getRequestTimeoutInSeconds())
-        .isEqualTo(BlobStorageConfig.DEFAULT_REQUEST_TIMEOUT_IN_SECONDS);
+    assertThat(config.getMetadataNamespace())
+        .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
+    assertThat(config.getParallelUploadBlockSizeInBytes()).isEmpty();
+    assertThat(config.getParallelUploadMaxParallelism()).isEmpty();
+    assertThat(config.getParallelUploadThresholdInBytes()).isEmpty();
+    assertThat(config.getRequestTimeoutInSeconds()).isEmpty();
   }
 
   @Test

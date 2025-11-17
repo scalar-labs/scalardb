@@ -40,24 +40,31 @@ public class S3Wrapper implements ObjectStorageWrapper {
   private final String bucket;
 
   public S3Wrapper(S3Config config) {
+    AwsCrtAsyncHttpClient.Builder httpClientBuilder = AwsCrtAsyncHttpClient.builder();
+    if (config.getParallelUploadMaxParallelism().isPresent()) {
+      httpClientBuilder.maxConcurrency(config.getParallelUploadMaxParallelism().get());
+    }
+    MultipartConfiguration.Builder multipartConfigBuilder = MultipartConfiguration.builder();
+    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
+      multipartConfigBuilder.minimumPartSizeInBytes(
+          config.getParallelUploadBlockSizeInBytes().get());
+    }
+    ClientOverrideConfiguration.Builder overrideConfigBuilder =
+        ClientOverrideConfiguration.builder();
+    if (config.getRequestTimeoutInSeconds().isPresent()) {
+      overrideConfigBuilder.apiCallTimeout(
+          Duration.ofSeconds(config.getRequestTimeoutInSeconds().get()));
+    }
+
     this.client =
         S3AsyncClient.builder()
             .region(Region.of(config.getRegion()))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(config.getUsername(), config.getPassword())))
-            .httpClientBuilder(
-                AwsCrtAsyncHttpClient.builder()
-                    .maxConcurrency(config.getParallelUploadMaxParallelism()))
-            .multipartConfiguration(
-                MultipartConfiguration.builder()
-                    .minimumPartSizeInBytes(config.getParallelUploadBlockSizeInBytes())
-                    .thresholdInBytes(config.getParallelUploadThresholdInBytes())
-                    .build())
-            .overrideConfiguration(
-                ClientOverrideConfiguration.builder()
-                    .apiCallTimeout(Duration.ofSeconds(config.getRequestTimeoutInSeconds()))
-                    .build())
+            .httpClientBuilder(httpClientBuilder)
+            .multipartConfiguration(multipartConfigBuilder.build())
+            .overrideConfiguration(overrideConfigBuilder.build())
             .build();
     this.bucket = config.getBucket();
   }
