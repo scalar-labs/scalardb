@@ -80,7 +80,7 @@ class ImportProcessorTest {
   }
 
   @Test
-  void process_withStorageMode_shouldProcessAllDataChunks() {
+  void process_withSingleCrudMode_shouldProcessAllDataChunks() {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
     when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
@@ -100,7 +100,7 @@ class ImportProcessorTest {
   }
 
   @Test
-  void process_withTransactionMode_shouldProcessAllDataChunks() throws TransactionException {
+  void process_withConsensusCommitMode_shouldProcessAllDataChunks() throws TransactionException {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
     when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);

@@ -374,8 +374,8 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a complete data chunk using parallel execution. The processing mode (transactional or
-   * storage) is determined by the configured {@link TransactionMode}.
+   * Processes a complete data chunk using parallel execution. The processing mode (CONSENSUS COMMIT
+   * or SINGLE_CRUD) is determined by the configured {@link TransactionMode}.
    *
    * @param dataChunk the data chunk to process
    * @param transactionBatchSize the size of transaction batches (used only in transaction mode)

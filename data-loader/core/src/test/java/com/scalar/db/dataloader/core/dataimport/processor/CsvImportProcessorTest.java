@@ -76,7 +76,7 @@ class CsvImportProcessorTest {
   }
 
   @Test
-  void test_importProcessWithStorage() {
+  void test_importProcessWithSingleCrud() {
     params =
         ImportProcessorParams.builder()
             .transactionMode(TransactionMode.SINGLE_CRUD)
@@ -94,7 +94,7 @@ class CsvImportProcessorTest {
   }
 
   @Test
-  void test_importProcessWithTransaction() {
+  void test_importProcessWithConsensusCommit() {
     params =
         ImportProcessorParams.builder()
             .transactionMode(TransactionMode.CONSENSUS_COMMIT)
