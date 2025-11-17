@@ -112,6 +112,12 @@ public abstract class ExportManager {
         try {
           if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
             logger.info("All tasks completed");
+            // Process footer after all tasks are complete
+            try {
+              processFooter(exportOptions, tableMetadata, bufferedWriter);
+            } catch (IOException e) {
+              logger.error("Error processing footer", e);
+            }
           } else {
             logger.error("Timeout occurred while waiting for tasks to complete");
           }
@@ -119,12 +125,7 @@ public abstract class ExportManager {
           Thread.currentThread().interrupt();
           logger.error("Interrupted while waiting for executor termination", e);
         }
-        // Process footer after all tasks are complete
-        try {
-          processFooter(exportOptions, tableMetadata, bufferedWriter);
-        } catch (IOException e) {
-          logger.error("Error processing footer", e);
-        }
+
         // Flush buffered writer
         try {
           bufferedWriter.flush();
