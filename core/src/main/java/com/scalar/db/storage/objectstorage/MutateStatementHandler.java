@@ -10,7 +10,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.Collections;
 import java.util.List;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(
       ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
@@ -78,7 +80,7 @@ public class MutateStatementHandler extends StatementHandler {
           wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize());
         }
       }
-    } catch (PreconditionFailedException e) {
+    } catch (PreconditionFailedException | ConflictOccurredException e) {
       throw new RetriableExecutionException(
           CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } catch (ObjectStorageWrapperException e) {

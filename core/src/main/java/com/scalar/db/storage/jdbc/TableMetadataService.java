@@ -334,7 +334,7 @@ public class TableMetadataService {
   }
 
   Set<String> getNamespaceNamesOfExistingTables(Connection connection) throws SQLException {
-    if (!tableExistsInternal(connection, metadataSchema, TABLE_NAME)) {
+    if (!internalTableExists(connection, metadataSchema, TABLE_NAME)) {
       return Collections.emptySet();
     }
 
@@ -383,10 +383,10 @@ public class TableMetadataService {
     }
   }
 
-  private boolean tableExistsInternal(Connection connection, String namespace, String table)
+  private boolean internalTableExists(Connection connection, String namespace, String table)
       throws SQLException {
     String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
+    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try {
       execute(connection, sql);
       return true;
