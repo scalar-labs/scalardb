@@ -201,7 +201,8 @@ public class StreamingRecordIteratorTest {
   public void next_WhenWrapperThrowsException_ShouldThrowRuntimeException() throws Exception {
     // Arrange
     List<String> partitionKeys = Collections.singletonList(PARTITION_KEY_1);
-    ObjectStorageWrapperException exception = new ObjectStorageWrapperException("Test error");
+    ObjectStorageWrapperException exception =
+        new ObjectStorageWrapperException("Test error", new RuntimeException());
     when(wrapper.get(anyString())).thenThrow(exception);
 
     StreamingRecordIterator iterator =

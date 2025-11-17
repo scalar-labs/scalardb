@@ -1,18 +1,20 @@
-package com.scalar.db.storage.objectstorage.blobstorage;
+package com.scalar.db.storage.objectstorage.s3;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
 
+import com.google.common.base.Splitter;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BlobStorageConfig implements ObjectStorageConfig {
-  public static final String STORAGE_NAME = "blob-storage";
+public class S3Config implements ObjectStorageConfig {
+  public static final String STORAGE_NAME = "s3";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
@@ -24,19 +26,21 @@ public class BlobStorageConfig implements ObjectStorageConfig {
       PREFIX + "parallel_upload_threshold_in_bytes";
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
 
-  private static final Logger logger = LoggerFactory.getLogger(BlobStorageConfig.class);
-  private final String endpoint;
+  public static final int DEFAULT_REQUEST_TIMEOUT_IN_SECONDS = 15;
+
+  private static final Logger logger = LoggerFactory.getLogger(S3Config.class);
   private final String username;
   private final String password;
   private final String bucket;
   private final String metadataNamespace;
+  private final String region;
 
   private final Long parallelUploadBlockSizeInBytes;
   private final Integer parallelUploadMaxParallelism;
   private final Long parallelUploadThresholdInBytes;
   private final Integer requestTimeoutInSeconds;
 
-  public BlobStorageConfig(DatabaseConfig databaseConfig) {
+  public S3Config(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
     if (!storage.equals(STORAGE_NAME)) {
       throw new IllegalArgumentException(
@@ -45,14 +49,16 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     if (databaseConfig.getContactPoints().isEmpty()) {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
-    String fullEndpoint = databaseConfig.getContactPoints().get(0);
-    int lastSlashIndex = fullEndpoint.lastIndexOf('/');
-    if (lastSlashIndex != -1 && lastSlashIndex < fullEndpoint.length() - 1) {
-      endpoint = fullEndpoint.substring(0, lastSlashIndex);
-      bucket = fullEndpoint.substring(lastSlashIndex + 1);
+    String contactPoints = databaseConfig.getContactPoints().get(0);
+    List<String> contactPointsParts = Splitter.on('/').splitToList(contactPoints);
+    if (contactPointsParts.size() == 2
+        && !contactPointsParts.get(0).isEmpty()
+        && !contactPointsParts.get(1).isEmpty()) {
+      region = contactPointsParts.get(0);
+      bucket = contactPointsParts.get(1);
     } else {
       throw new IllegalArgumentException(
-          "Invalid contact points format. Expected: BLOB_URI/CONTAINER_NAME");
+          "Invalid contact points format. Expected: S3_REGION/BUCKET_NAME");
     }
     username = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
@@ -66,7 +72,7 @@ public class BlobStorageConfig implements ObjectStorageConfig {
       logger.warn(
           "The configuration property \""
               + DatabaseConfig.SCAN_FETCH_SIZE
-              + "\" is not applicable to Blob Storage and will be ignored.");
+              + "\" is not applicable to S3 and will be ignored.");
     }
 
     parallelUploadBlockSizeInBytes =
@@ -104,8 +110,8 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     return metadataNamespace;
   }
 
-  public String getEndpoint() {
-    return endpoint;
+  public String getRegion() {
+    return region;
   }
 
   public Optional<Long> getParallelUploadBlockSizeInBytes() {
