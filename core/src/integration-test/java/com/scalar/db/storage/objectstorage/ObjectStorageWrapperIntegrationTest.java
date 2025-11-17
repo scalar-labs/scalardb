@@ -270,7 +270,11 @@ public class ObjectStorageWrapperIntegrationTest {
       }
     } finally {
       for (int i = 0; i < numberOfObjects; i++) {
-        wrapper.delete(prefix + i);
+        try {
+          wrapper.delete(prefix + i);
+        } catch (PreconditionFailedException e) {
+          // The object may not exist if the setup failed partially, so do nothing
+        }
       }
     }
   }
