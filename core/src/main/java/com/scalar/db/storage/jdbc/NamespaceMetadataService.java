@@ -27,11 +27,10 @@ public class NamespaceMetadataService {
   }
 
   void createNamespacesTableIfNotExists(Connection connection) throws SQLException {
-    if (tableExistsInternal(connection, metadataSchema, TABLE_NAME)) {
+    if (internalTableExists(connection, metadataSchema, TABLE_NAME)) {
       return;
     }
 
-    createSchemaIfNotExists(connection, metadataSchema);
     String createTableStatement =
         "CREATE TABLE "
             + encloseFullTableName(metadataSchema, TABLE_NAME)
@@ -52,7 +51,6 @@ public class NamespaceMetadataService {
   void deleteNamespacesTableIfEmpty(Connection connection) throws SQLException {
     if (isNamespacesTableEmpty(connection)) {
       deleteTable(connection, encloseFullTableName(metadataSchema, TABLE_NAME));
-      deleteMetadataSchema(connection);
     }
   }
 
@@ -73,11 +71,6 @@ public class NamespaceMetadataService {
     }
 
     return namespaces.size() == 1 && namespaces.contains(metadataSchema);
-  }
-
-  private void deleteMetadataSchema(Connection connection) throws SQLException {
-    String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
-    execute(connection, sql);
   }
 
   void insertIntoNamespacesTable(Connection connection, String namespaceName) throws SQLException {
@@ -178,10 +171,10 @@ public class NamespaceMetadataService {
     }
   }
 
-  private boolean tableExistsInternal(Connection connection, String namespace, String table)
+  private boolean internalTableExists(Connection connection, String namespace, String table)
       throws SQLException {
     String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
+    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try {
       execute(connection, sql);
       return true;
@@ -199,18 +192,6 @@ public class NamespaceMetadataService {
     String dropTableStatement = "DROP TABLE " + fullTableName;
 
     execute(connection, dropTableStatement);
-  }
-
-  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
-    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
-    try {
-      execute(connection, sqls);
-    } catch (SQLException e) {
-      // Suppress exceptions indicating the duplicate metadata schema
-      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
-        throw e;
-      }
-    }
   }
 
   private String enclose(String name) {
