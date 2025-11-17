@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
@@ -48,6 +50,8 @@ import picocli.CommandLine.Spec;
 @CommandLine.Command(name = "import", description = "Import data into a ScalarDB table")
 public class ImportCommand extends ImportCommandOptions implements Callable<Integer> {
 
+    private static final Logger logger = LoggerFactory.getLogger(ImportCommand.class);
+
   /** Spec injected by PicoCli */
   @Spec CommandSpec spec;
 
@@ -55,6 +59,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateDeprecatedOptions();
     applyDeprecatedOptions();
+    warnAboutIgnoredDeprecatedOptions();
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
@@ -279,6 +284,28 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
           spec.commandLine(), DataLoaderError.INVALID_CONTROL_FILE.buildMessage(controlFilePath));
     }
   }
+    /** Warns about deprecated options that are no longer used and have been completely ignored. */
+    private void warnAboutIgnoredDeprecatedOptions() {
+        CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
+        boolean hasRawRecordOption =
+                parseResult.hasMatchedOption(DEPRECATED_LOG_RAW_RECORDS_OPTION)
+                        || parseResult.hasMatchedOption(DEPRECATED_LOG_RAW_RECORDS_OPTION_SHORT);
+
+        if (hasRawRecordOption) {
+            // Use picocli's ANSI support for colored warning output
+            CommandLine.Help.Ansi ansi = CommandLine.Help.Ansi.AUTO;
+            String warning =
+                    ansi.string(
+                            "@|bold,yellow The "
+                                    + DEPRECATED_LOG_RAW_RECORDS_OPTION
+                                    + " option is deprecated and no longer has any effect. "
+                                    + "This option is no longer required because failure records are "
+                                    + "always logged by default.|@");
+
+            logger.warn(warning);
+        }
+    }
+
 
   /**
    * Validates that deprecated and new options are not both specified.

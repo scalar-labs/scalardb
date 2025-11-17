@@ -16,6 +16,8 @@ public class ImportCommandOptions {
   public static final String ENABLE_LOG_SUCCESS_RECORDS_OPTION = "--enable-log-success";
   public static final String ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT = "-ls";
   public static final String DEPRECATED_LOG_SUCCESS_RECORDS_OPTION = "--log-success";
+  public static final String DEPRECATED_LOG_RAW_RECORDS_OPTION_SHORT = "-lr";
+  public static final String DEPRECATED_LOG_RAW_RECORDS_OPTION = "--log-raw-record";
 
   @CommandLine.Option(
       names = {"--mode", "-m"},
@@ -123,6 +125,11 @@ public class ImportCommandOptions {
       defaultValue = "false")
   protected boolean ignoreNullValues;
 
+  /**
+   * @deprecated As of release 3.6.2. This option is no longer required because failure records are
+   *     always logged by default. It will be removed in release 4.0.0.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--log-raw-record", "-lr"},
       description = "Include the original source record in the log file output (default: false)",

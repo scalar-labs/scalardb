@@ -94,8 +94,7 @@ public class SplitByDataChunkImportLogger extends AbstractImportLogger {
       ImportTargetResultStatus status = target.getStatus();
       if (status.equals(ImportTargetResultStatus.SAVED) && config.isLogSuccessRecordsEnabled()) {
         writeLog(target, LogFileType.SUCCESS, importTaskResult.getDataChunkId());
-      } else if (!status.equals(ImportTargetResultStatus.SAVED)
-          && config.isLogRawSourceRecordsEnabled()) {
+      } else if (!status.equals(ImportTargetResultStatus.SAVED)) {
         writeLog(target, LogFileType.FAILURE, importTaskResult.getDataChunkId());
       }
     }
