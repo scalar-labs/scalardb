@@ -43,7 +43,7 @@ public class ImportManager implements ImportEventListener {
   @NonNull private final ImportOptions importOptions;
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
-  private final DistributedTransactionManager distributedTransactionManager;
+  @NonNull private final DistributedTransactionManager distributedTransactionManager;
 
   /**
    * Starts the import process using the configured parameters.
