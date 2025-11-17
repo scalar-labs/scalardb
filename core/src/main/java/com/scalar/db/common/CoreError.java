@@ -434,7 +434,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS(
       Category.USER_ERROR,
       "0100",
-      "The condition is not allowed to target transaction metadata columns. Column: %s",
+      "The condition is not allowed to target transaction metadata columns. Table: %s; Column: %s",
       "",
       ""),
   CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA(
@@ -974,7 +974,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
-      Category.INTERNAL_ERROR, "0058", "Committing records failed", "", ""),
+      Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category

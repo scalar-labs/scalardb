@@ -293,7 +293,7 @@ public class CommitHandler {
           context.transactionId);
     } catch (ExecutionException e) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED.buildMessage(e.getMessage()),
           e,
           context.transactionId);
     }
