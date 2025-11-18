@@ -169,11 +169,11 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Notify once the task is completed
+   * Notify once a single CRUD task is completed
    *
    * @param result task result object
    */
-  protected void notifyStorageRecordCompleted(ImportTaskResult result) {
+  protected void notifySingleCrudRecordCompleted(ImportTaskResult result) {
     // Add data to summary, success logs with/without raw data
     for (ImportEventListener listener : listeners) {
       listener.onTaskComplete(result);
@@ -366,14 +366,14 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a single record in storage mode (non-transactional). Each record is processed
+   * Processes a single record in single CRUD mode (non-transactional). Each record is processed
    * independently without transaction guarantees.
    *
    * @param dataChunkId the parent data chunk id of the chunk containing this record
    * @param importRow the record to process
    * @return an {@link ImportTaskResult} containing the processing result for the record
    */
-  private ImportTaskResult processStorageRecord(int dataChunkId, ImportRow importRow) {
+  private ImportTaskResult processSingleCrudRecord(int dataChunkId, ImportRow importRow) {
     ImportTaskParams taskParams =
         ImportTaskParams.builder()
             .sourceRecord(importRow.getSourceData())
@@ -394,7 +394,7 @@ public abstract class ImportProcessor {
             .targets(importRecordResult.getTargets())
             .dataChunkId(dataChunkId)
             .build();
-    notifyStorageRecordCompleted(modifiedTaskResult);
+    notifySingleCrudRecordCompleted(modifiedTaskResult);
     return modifiedTaskResult;
   }
 
@@ -416,9 +416,10 @@ public abstract class ImportProcessor {
     notifyDataChunkStarted(status);
     ImportDataChunkStatus importDataChunkStatus;
     if (params.getTransactionMode() == TransactionMode.CONSENSUS_COMMIT) {
-      importDataChunkStatus = processDataChunkWithTransactions(dataChunk, transactionBatchSize);
+      importDataChunkStatus =
+          processDataChunkInConsensusCommitMode(dataChunk, transactionBatchSize);
     } else {
-      importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);
+      importDataChunkStatus = processDataChunkInSingleCrudMode(dataChunk);
     }
     notifyDataChunkCompleted(importDataChunkStatus);
   }
@@ -431,7 +432,7 @@ public abstract class ImportProcessor {
    * @param transactionBatchSize the number of records per transaction batch
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
-  private ImportDataChunkStatus processDataChunkWithTransactions(
+  private ImportDataChunkStatus processDataChunkInConsensusCommitMode(
       ImportDataChunk dataChunk, int transactionBatchSize) {
     Instant startTime = Instant.now();
     List<ImportTransactionBatch> transactionBatches =
@@ -471,13 +472,13 @@ public abstract class ImportProcessor {
    * @param dataChunk the data chunk to process
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
-  private ImportDataChunkStatus processDataChunkWithoutTransactions(ImportDataChunk dataChunk) {
+  private ImportDataChunkStatus processDataChunkInSingleCrudMode(ImportDataChunk dataChunk) {
     Instant startTime = Instant.now();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
 
     for (ImportRow importRow : dataChunk.getSourceData()) {
-      ImportTaskResult result = processStorageRecord(dataChunk.getDataChunkId(), importRow);
+      ImportTaskResult result = processSingleCrudRecord(dataChunk.getDataChunkId(), importRow);
       boolean allSaved =
           result.getTargets().stream()
               .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
