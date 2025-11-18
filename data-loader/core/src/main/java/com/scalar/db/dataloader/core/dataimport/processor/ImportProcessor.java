@@ -317,7 +317,12 @@ public abstract class ImportProcessor {
 
     } catch (TransactionException e) {
       isSuccess = false;
-      logger.error(e.getMessage());
+      logger.error(
+          "Transaction failed for batch {} in data chunk {}: {}",
+          transactionBatch.getTransactionBatchId(),
+          dataChunkId,
+          e.getMessage(),
+          e);
       try {
         if (transaction != null) {
           transaction.abort(); // Ensure transaction is aborted
@@ -327,6 +332,25 @@ public abstract class ImportProcessor {
             "Failed to abort transaction: {}", abortException.getMessage(), abortException);
       }
       error = e.getMessage();
+    } catch (Exception e) {
+      // Catch unknown exceptions
+      isSuccess = false;
+      logger.error(
+          "Unexpected exception occurred while processing transaction batch {} in data chunk {}.",
+          transactionBatch.getTransactionBatchId(),
+          dataChunkId,
+          e);
+      try {
+        if (transaction != null) {
+          transaction.abort(); // Ensure transaction is aborted
+        }
+      } catch (Exception abortException) {
+        logger.error(
+            "Failed to abort transaction after unexpected error: {}",
+            abortException.getMessage(),
+            abortException);
+      }
+      error = "Unexpected error: " + e.getClass().getSimpleName() + " - " + e.getMessage();
     }
     ImportTransactionBatchResult importTransactionBatchResult =
         ImportTransactionBatchResult.builder()
