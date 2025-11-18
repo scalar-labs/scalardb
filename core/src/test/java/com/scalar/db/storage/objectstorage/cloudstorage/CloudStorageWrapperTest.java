@@ -345,7 +345,8 @@ public class CloudStorageWrapperTest {
     @SuppressWarnings("unchecked")
     Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
+    when(page.getValues()).thenReturn(Arrays.asList(blob1, blob2, blob3));
+    when(page.getNextPage()).thenReturn(null);
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -362,12 +363,54 @@ public class CloudStorageWrapperTest {
   }
 
   @Test
+  public void deleteByPrefix_MultiplePagesGiven_ShouldDeleteAllObjectsAcrossPages()
+      throws Exception {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+    String objectKey3 = ANY_PREFIX + "test2/object3";
+
+    Blob blob1 = mock(Blob.class);
+    Blob blob2 = mock(Blob.class);
+    Blob blob3 = mock(Blob.class);
+    when(blob1.getName()).thenReturn(objectKey1);
+    when(blob2.getName()).thenReturn(objectKey2);
+    when(blob3.getName()).thenReturn(objectKey3);
+
+    // Mock paginated responses with 2 pages
+    @SuppressWarnings("unchecked")
+    Page<Blob> page1 = mock(Page.class);
+    @SuppressWarnings("unchecked")
+    Page<Blob> page2 = mock(Page.class);
+
+    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page1);
+    when(page1.getValues()).thenReturn(Arrays.asList(blob1, blob2));
+    when(page1.getNextPage()).thenReturn(page2);
+    when(page2.getValues()).thenReturn(Collections.singletonList(blob3));
+    when(page2.getNextPage()).thenReturn(null);
+
+    StorageBatch batch = mock(StorageBatch.class);
+    when(storage.batch()).thenReturn(batch);
+    @SuppressWarnings("unchecked")
+    StorageBatchResult<Boolean> batchResult = mock(StorageBatchResult.class);
+    doReturn(batchResult).when(batch).delete(any(BlobId.class));
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    verify(storage, org.mockito.Mockito.times(2)).batch();
+    verify(batch, org.mockito.Mockito.times(2)).submit();
+  }
+
+  @Test
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
     @SuppressWarnings("unchecked")
     Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Collections.emptyList());
+    when(page.getValues()).thenReturn(Collections.emptyList());
+    when(page.getNextPage()).thenReturn(null);
 
     // Act
     wrapper.deleteByPrefix(ANY_PREFIX);

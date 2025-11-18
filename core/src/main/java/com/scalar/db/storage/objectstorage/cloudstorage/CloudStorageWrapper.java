@@ -1,7 +1,7 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
+import com.google.api.gax.paging.Page;
 import com.google.auth.oauth2.ServiceAccountCredentials;
-import com.google.cloud.BatchResult;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -37,6 +37,10 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
 
   public CloudStorageWrapper(CloudStorageConfig config) {
     ServiceAccountCredentials credentials;
+    if (config.getPassword() == null) {
+      throw new RuntimeException(
+          "Service account credentials are not provided in the password field");
+    }
     try (ByteArrayInputStream keyStream =
         new ByteArrayInputStream(config.getPassword().getBytes(StandardCharsets.UTF_8))) {
       credentials = ServiceAccountCredentials.fromStream(keyStream);
@@ -209,34 +213,24 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
-      Iterable<Blob> blobs =
-          storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
-      List<BlobId> blobIds = new ArrayList<>();
-      for (Blob blob : blobs) {
-        blobIds.add(BlobId.of(bucket, blob.getName()));
-      }
-      // Delete objects in batches
-      for (int i = 0; i < blobIds.size(); i += BATCH_DELETE_SIZE_LIMIT) {
-        int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
-        List<BlobId> batch = blobIds.subList(i, endIndex);
-        StorageBatch storageBatch = storage.batch();
-        for (BlobId blobId : batch) {
-          storageBatch
-              .delete(blobId)
-              .notify(
-                  new BatchResult.Callback<Boolean, StorageException>() {
-                    @Override
-                    public void success(Boolean result) {}
-
-                    @Override
-                    public void error(StorageException e) {
-                      if (e.getCode() != CloudStorageErrorCode.NOT_FOUND.get()) {
-                        throw e;
-                      }
-                    }
-                  });
+      Page<Blob> page = storage.list(bucket, Storage.BlobListOption.prefix(prefix));
+      while (page != null) {
+        // Collect BlobIds to delete
+        List<BlobId> blobIds = new ArrayList<>();
+        for (Blob blob : page.getValues()) {
+          blobIds.add(BlobId.of(bucket, blob.getName()));
         }
-        storageBatch.submit();
+        // Delete objects in batches
+        for (int i = 0; i < blobIds.size(); i += BATCH_DELETE_SIZE_LIMIT) {
+          int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
+          List<BlobId> batch = blobIds.subList(i, endIndex);
+          StorageBatch storageBatch = storage.batch();
+          for (BlobId blobId : batch) {
+            storageBatch.delete(blobId);
+          }
+          storageBatch.submit();
+        }
+        page = page.getNextPage();
       }
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(

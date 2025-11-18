@@ -66,7 +66,10 @@ public interface ObjectStorageWrapper {
   void delete(String key, String version) throws ObjectStorageWrapperException;
 
   /**
-   * Delete objects with the specified prefix from the storage.
+   * Delete objects with the specified prefix from the storage. <br>
+   * <br>
+   * <strong>Attention:</strong> This method does not guarantee atomicity and assume to be used
+   * where concurrent operations do not occur.
    *
    * @param prefix the prefix of the objects to delete
    * @throws ObjectStorageWrapperException if an error occurs
