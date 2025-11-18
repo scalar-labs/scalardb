@@ -121,35 +121,6 @@ public class VirtualTableInfoManagerTest {
   }
 
   @Test
-  public void getVirtualTableInfo_AdminThrowsRuntimeException_ShouldThrowRuntimeException()
-      throws Exception {
-    // Arrange
-    manager = new VirtualTableInfoManager(admin, -1);
-    when(admin.getVirtualTableInfo("ns", "table"))
-        .thenThrow(new IllegalArgumentException("Table does not exist"));
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.getVirtualTableInfo("ns", "table"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Table does not exist");
-  }
-
-  @Test
-  public void getVirtualTableInfo_AdminThrowsExecutionException_ShouldWrapInExecutionException()
-      throws Exception {
-    // Arrange
-    manager = new VirtualTableInfoManager(admin, -1);
-    when(admin.getVirtualTableInfo("ns", "table"))
-        .thenThrow(new ExecutionException("Storage execution error"));
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.getVirtualTableInfo("ns", "table"))
-        .isInstanceOf(ExecutionException.class)
-        .hasMessageContaining("Getting the virtual table information failed")
-        .hasMessageContaining("ns.table");
-  }
-
-  @Test
   public void getVirtualTableInfo_CalledMultipleTimes_ShouldUseCache() throws Exception {
     // Arrange
     manager = new VirtualTableInfoManager(admin, -1);
@@ -183,6 +154,51 @@ public class VirtualTableInfoManagerTest {
 
     // Assert
     verify(admin, times(2)).getVirtualTableInfo("ns", "table");
+  }
+
+  @Test
+  public void getVirtualTableInfo_VirtualTableDoesNotExist_ShouldNotCacheNullResult()
+      throws Exception {
+    // Arrange
+    manager = new VirtualTableInfoManager(admin, -1);
+    when(admin.getVirtualTableInfo("ns", "table")).thenReturn(Optional.empty());
+
+    // Act
+    manager.getVirtualTableInfo("ns", "table");
+    manager.getVirtualTableInfo("ns", "table");
+    manager.getVirtualTableInfo("ns", "table");
+
+    // Assert - admin should be called multiple times because null is not cached
+    verify(admin, times(3)).getVirtualTableInfo("ns", "table");
+  }
+
+  @Test
+  public void getVirtualTableInfo_AdminThrowsRuntimeException_ShouldThrowRuntimeException()
+      throws Exception {
+    // Arrange
+    manager = new VirtualTableInfoManager(admin, -1);
+    when(admin.getVirtualTableInfo("ns", "table"))
+        .thenThrow(new IllegalArgumentException("Table does not exist"));
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.getVirtualTableInfo("ns", "table"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Table does not exist");
+  }
+
+  @Test
+  public void getVirtualTableInfo_AdminThrowsExecutionException_ShouldWrapInExecutionException()
+      throws Exception {
+    // Arrange
+    manager = new VirtualTableInfoManager(admin, -1);
+    when(admin.getVirtualTableInfo("ns", "table"))
+        .thenThrow(new ExecutionException("Storage execution error"));
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.getVirtualTableInfo("ns", "table"))
+        .isInstanceOf(ExecutionException.class)
+        .hasMessageContaining("Getting the virtual table information failed")
+        .hasMessageContaining("ns.table");
   }
 
   private VirtualTableInfo createVirtualTableInfo() {

@@ -1,6 +1,5 @@
 package com.scalar.db.common;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -14,7 +13,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /** A class that manages and caches table metadata */
@@ -54,7 +52,6 @@ public class TableMetadataManager {
    * @return a table metadata. null if the table is not found.
    * @throws ExecutionException if the operation fails
    */
-  @Nullable
   public TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException(
@@ -64,14 +61,13 @@ public class TableMetadataManager {
   }
 
   /**
-   * Returns a table metadata corresponding to the specified namespace and table.
+   * Returns a table metadata corresponding to the specified operation.
    *
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
    * @return a table metadata. null if the table is not found.
    * @throws ExecutionException if the operation fails
    */
-  @Nullable
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
       TableKey key = new TableKey(namespace, table);
@@ -80,12 +76,11 @@ public class TableMetadataManager {
       throw new ExecutionException(
           CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)),
-          e.getCause());
+          e);
     }
   }
 
-  @VisibleForTesting
-  static class TableKey {
+  public static class TableKey {
     public final String namespace;
     public final String table;
 

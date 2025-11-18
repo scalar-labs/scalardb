@@ -1,18 +1,16 @@
 package com.scalar.db.common;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -20,22 +18,15 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class VirtualTableInfoManager {
 
-  private final LoadingCache<TableKey, Optional<VirtualTableInfo>> virtualTableInfoCache;
+  private final LoadingCache<TableKey, VirtualTableInfo> virtualTableInfoCache;
 
   public VirtualTableInfoManager(DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
-    CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (cacheExpirationTimeSecs >= 0) {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
     virtualTableInfoCache =
-        builder.build(
-            new CacheLoader<TableKey, Optional<VirtualTableInfo>>() {
-              @Nonnull
-              @Override
-              public Optional<VirtualTableInfo> load(@Nonnull TableKey key) throws Exception {
-                return admin.getVirtualTableInfo(key.namespace, key.table);
-              }
-            });
+        builder.build(key -> admin.getVirtualTableInfo(key.namespace, key.table).orElse(null));
   }
 
   /**
@@ -69,13 +60,8 @@ public class VirtualTableInfoManager {
       throws ExecutionException {
     try {
       TableKey key = new TableKey(namespace, table);
-      return virtualTableInfoCache.get(key).orElse(null);
-    } catch (java.util.concurrent.ExecutionException
-        | com.google.common.util.concurrent.UncheckedExecutionException e) {
-      if (e.getCause() instanceof RuntimeException) {
-        throw (RuntimeException) e.getCause();
-      }
-
+      return virtualTableInfoCache.get(key);
+    } catch (CompletionException e) {
       throw new ExecutionException(
           CoreError.GETTING_VIRTUAL_TABLE_INFO_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)),
