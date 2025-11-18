@@ -98,5 +98,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: cassandra_3.0_integration_test_reports_${{ matrix.mode.label }}
+          name: s3_3.0_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestObjectStorage
