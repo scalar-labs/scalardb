@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.dataloader.core.DataLoaderError;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
@@ -55,12 +55,12 @@ public abstract class ImportProcessor {
    *
    * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
    * batches transactions according to the specified sizes. The processing can be done in either
-   * transactional or storage mode, depending on the configured {@link ScalarDbMode}.
+   * single CRUD or consensus commit mode, depending on the configured {@link TransactionMode}.
    *
    * @param dataChunkSize the number of records to include in each data chunk for parallel
    *     processing
    * @param transactionBatchSize the number of records to group together in a single transaction
-   *     (only used in transaction mode)
+   *     (only used in consensus commit mode)
    * @param reader the {@link BufferedReader} used to read the source file
    */
   public void process(int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
@@ -399,11 +399,12 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a complete data chunk using parallel execution. The processing mode (transactional or
-   * storage) is determined by the configured {@link ScalarDbMode}.
+   * Processes a complete data chunk using parallel execution. The processing mode (consensus commit
+   * or single CRUD) is determined by the configured {@link TransactionMode}.
    *
    * @param dataChunk the data chunk to process
-   * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
+   * @param transactionBatchSize the size of transaction batches (used only in consensus commit
+   *     mode)
    */
   private void processDataChunk(ImportDataChunk dataChunk, int transactionBatchSize) {
     ImportDataChunkStatus status =
@@ -414,7 +415,7 @@ public abstract class ImportProcessor {
             .build();
     notifyDataChunkStarted(status);
     ImportDataChunkStatus importDataChunkStatus;
-    if (params.getScalarDbMode() == ScalarDbMode.TRANSACTION) {
+    if (params.getTransactionMode() == TransactionMode.CONSENSUS_COMMIT) {
       importDataChunkStatus = processDataChunkWithTransactions(dataChunk, transactionBatchSize);
     } else {
       importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);
@@ -423,7 +424,7 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a data chunk using transaction mode with parallel batch processing. Multiple
+   * Processes a data chunk using consensus commit mode with parallel batch processing. Multiple
    * transaction batches are processed concurrently using a thread pool.
    *
    * @param dataChunk the data chunk to process
@@ -464,8 +465,8 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a data chunk using storage mode with parallel record processing. Individual records
-   * are processed concurrently without transaction guarantees.
+   * Processes a data chunk using single CRUD mode with parallel record processing. Individual
+   * records are processed concurrently without transaction guarantees.
    *
    * @param dataChunk the data chunk to process
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics

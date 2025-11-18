@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import java.util.Map;
@@ -20,8 +20,8 @@ import lombok.Value;
 @Builder
 @Value
 public class ImportProcessorParams {
-  /** The operational mode of ScalarDB (transaction or storage mode). */
-  ScalarDbMode scalarDbMode;
+  /** The transaction mode for data operations. */
+  TransactionMode transactionMode;
 
   /** Configuration options for the import operation. */
   ImportOptions importOptions;
