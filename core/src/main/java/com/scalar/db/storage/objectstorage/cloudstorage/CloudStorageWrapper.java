@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
-import com.google.api.gax.paging.Page;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -18,7 +17,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -179,24 +177,22 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
-      Page<Blob> page = storage.list(bucket, Storage.BlobListOption.prefix(prefix));
-      while (page != null) {
-        // Collect BlobIds to delete
-        List<BlobId> blobIds = new ArrayList<>();
-        for (Blob blob : page.getValues()) {
-          blobIds.add(BlobId.of(bucket, blob.getName()));
+      // Collect all blob IDs with the specified prefix
+      Iterable<Blob> blobs =
+          storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
+      List<BlobId> blobIds =
+          StreamSupport.stream(blobs.spliterator(), false)
+              .map(blob -> BlobId.of(bucket, blob.getName()))
+              .collect(Collectors.toList());
+      // Delete blobs in batches
+      for (int i = 0; i < blobIds.size(); i += BATCH_DELETE_SIZE_LIMIT) {
+        int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
+        List<BlobId> batch = blobIds.subList(i, endIndex);
+        StorageBatch storageBatch = storage.batch();
+        for (BlobId blobId : batch) {
+          storageBatch.delete(blobId);
         }
-        // Delete objects in batches
-        for (int i = 0; i < blobIds.size(); i += BATCH_DELETE_SIZE_LIMIT) {
-          int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
-          List<BlobId> batch = blobIds.subList(i, endIndex);
-          StorageBatch storageBatch = storage.batch();
-          for (BlobId blobId : batch) {
-            storageBatch.delete(blobId);
-          }
-          storageBatch.submit();
-        }
-        page = page.getNextPage();
+        storageBatch.submit();
       }
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
