@@ -1,0 +1,255 @@
+package com.scalar.db.storage.objectstorage.cloudstorage;
+
+import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.cloud.BatchResult;
+import com.google.cloud.WriteChannel;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageBatch;
+import com.google.cloud.storage.StorageException;
+import com.google.cloud.storage.StorageOptions;
+import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
+import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
+import com.scalar.db.storage.objectstorage.PreconditionFailedException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import javax.annotation.concurrent.ThreadSafe;
+
+@ThreadSafe
+public class CloudStorageWrapper implements ObjectStorageWrapper {
+  public static final int BATCH_DELETE_SIZE_LIMIT = 100;
+  private final Storage storage;
+  private final String bucket;
+  private final Integer parallelUploadBlockSizeInBytes;
+
+  public CloudStorageWrapper(CloudStorageConfig config) {
+    ServiceAccountCredentials credentials;
+    try (ByteArrayInputStream keyStream =
+        new ByteArrayInputStream(config.getPassword().getBytes(StandardCharsets.UTF_8))) {
+      credentials = ServiceAccountCredentials.fromStream(keyStream);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to load the service account credentials", e);
+    }
+
+    storage =
+        StorageOptions.newBuilder()
+            .setProjectId(config.getProjectId())
+            .setCredentials(credentials)
+            .build()
+            .getService();
+    bucket = config.getBucket();
+    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
+      parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().get();
+    } else {
+      parallelUploadBlockSizeInBytes = null;
+    }
+  }
+
+  @VisibleForTesting
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public CloudStorageWrapper(CloudStorageConfig config, Storage storage) {
+    this.storage = storage;
+    this.bucket = config.getBucket();
+    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
+      parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().get();
+    } else {
+      parallelUploadBlockSizeInBytes = null;
+    }
+  }
+
+  @Override
+  public Optional<ObjectStorageWrapperResponse> get(String key)
+      throws ObjectStorageWrapperException {
+    try {
+      Blob blob = storage.get(BlobId.of(bucket, key));
+      if (blob == null) {
+        return Optional.empty();
+      }
+      String payload = new String(blob.getContent(), StandardCharsets.UTF_8);
+      String generation = String.valueOf(blob.getGeneration());
+      return Optional.of(new ObjectStorageWrapperResponse(payload, generation));
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to get the object with key '%s'", key), e);
+    }
+  }
+
+  @Override
+  public Set<String> getKeys(String prefix) throws ObjectStorageWrapperException {
+    try {
+      Iterable<Blob> blobs =
+          storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
+      return StreamSupport.stream(blobs.spliterator(), false)
+          .map(Blob::getName)
+          .collect(Collectors.toSet());
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to get the object keys with prefix '%s'", prefix), e);
+    }
+  }
+
+  @Override
+  public void insert(String key, String object) throws ObjectStorageWrapperException {
+    try {
+      byte[] data = object.getBytes(StandardCharsets.UTF_8);
+      BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
+      Storage.BlobWriteOption precondition = Storage.BlobWriteOption.doesNotExist();
+      try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
+        if (parallelUploadBlockSizeInBytes != null) {
+          writer.setChunkSize(parallelUploadBlockSizeInBytes);
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        while (buffer.hasRemaining()) {
+          writer.write(buffer);
+        }
+      }
+    } catch (StorageException e) {
+      if (e.getCode() == CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to insert the object with key '%s' due to precondition failure", key),
+            e);
+      }
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to insert the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to insert the object with key '%s'", key), e);
+    }
+  }
+
+  @Override
+  public void update(String key, String object, String version)
+      throws ObjectStorageWrapperException {
+    try {
+      byte[] data = object.getBytes(StandardCharsets.UTF_8);
+      BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
+      Storage.BlobWriteOption precondition =
+          Storage.BlobWriteOption.generationMatch(Long.parseLong(version));
+      try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
+        if (parallelUploadBlockSizeInBytes != null) {
+          writer.setChunkSize(parallelUploadBlockSizeInBytes);
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        while (buffer.hasRemaining()) {
+          writer.write(buffer);
+        }
+      }
+    } catch (StorageException e) {
+      if (e.getCode() == CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to update the object with key '%s' due to precondition failure", key),
+            e);
+      }
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to update the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to update the object with key '%s'", key), e);
+    }
+  }
+
+  @Override
+  public void delete(String key) throws ObjectStorageWrapperException {
+    try {
+      if (!storage.delete(BlobId.of(bucket, key))) {
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to delete the object with key '%s' due to precondition failure", key));
+      }
+    } catch (PreconditionFailedException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
+    }
+  }
+
+  @Override
+  public void delete(String key, String version) throws ObjectStorageWrapperException {
+    try {
+      if (!storage.delete(
+          BlobId.of(bucket, key),
+          Storage.BlobSourceOption.generationMatch(Long.parseLong(version)))) {
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to delete the object with key '%s' due to precondition failure", key));
+      }
+    } catch (PreconditionFailedException e) {
+      throw e;
+    } catch (StorageException e) {
+      if (e.getCode() == CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
+        throw new PreconditionFailedException(
+            String.format(
+                "Failed to delete the object with key '%s' due to precondition failure", key),
+            e);
+      }
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the object with key '%s'", key), e);
+    }
+  }
+
+  @Override
+  public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
+    try {
+      Iterable<Blob> blobs =
+          storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
+      List<BlobId> blobIds = new ArrayList<>();
+      for (Blob blob : blobs) {
+        blobIds.add(BlobId.of(bucket, blob.getName()));
+      }
+      // Delete objects in batches
+      for (int i = 0; i < blobIds.size(); i += BATCH_DELETE_SIZE_LIMIT) {
+        int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
+        List<BlobId> batch = blobIds.subList(i, endIndex);
+        StorageBatch storageBatch = storage.batch();
+        for (BlobId blobId : batch) {
+          storageBatch
+              .delete(blobId)
+              .notify(
+                  new BatchResult.Callback<Boolean, StorageException>() {
+                    @Override
+                    public void success(Boolean result) {}
+
+                    @Override
+                    public void error(StorageException e) {
+                      if (e.getCode() != CloudStorageErrorCode.NOT_FOUND.get()) {
+                        throw e;
+                      }
+                    }
+                  });
+        }
+        storageBatch.submit();
+      }
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException(
+          String.format("Failed to delete the objects with prefix '%s'", prefix), e);
+    }
+  }
+
+  @Override
+  public void close() throws ObjectStorageWrapperException {
+    try {
+      storage.close();
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException("Failed to close the storage wrapper", e);
+    }
+  }
+}

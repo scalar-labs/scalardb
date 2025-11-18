@@ -74,5 +74,5 @@ public interface ObjectStorageWrapper {
   void deleteByPrefix(String prefix) throws ObjectStorageWrapperException;
 
   /** Close the storage wrapper. */
-  void close();
+  void close() throws ObjectStorageWrapperException;
 }

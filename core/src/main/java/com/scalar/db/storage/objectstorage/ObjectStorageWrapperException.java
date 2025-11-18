@@ -5,4 +5,8 @@ public class ObjectStorageWrapperException extends Exception {
   public ObjectStorageWrapperException(String message, Throwable cause) {
     super(message, cause);
   }
+
+  public ObjectStorageWrapperException(String message) {
+    super(message);
+  }
 }
