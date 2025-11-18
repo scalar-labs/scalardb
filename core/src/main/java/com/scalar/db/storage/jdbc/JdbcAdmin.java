@@ -254,7 +254,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       if (!virtualTableInfos.isEmpty()) {
         // For a source table of virtual tables
         throw new IllegalArgumentException(
-            CoreError.SOURCE_TABLES_CANNET_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST.buildMessage(
+            CoreError.SOURCE_TABLES_CANNOT_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST.buildMessage(
                 getFullTableName(namespace, table),
                 virtualTableInfos.stream()
                     .map(v -> getFullTableName(v.getNamespaceName(), v.getTableName()))

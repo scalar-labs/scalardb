@@ -991,7 +991,7 @@ public enum CoreError implements ScalarDbError {
       "The virtual table must be in the same storage as its source tables. Virtual table: %s; Left source table: %s; Right source table: %s",
       "",
       ""),
-  SOURCE_TABLES_CANNET_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST(
+  SOURCE_TABLES_CANNOT_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST(
       Category.USER_ERROR,
       "0273",
       "Source tables cannot be dropped while virtual tables depending on them exist. Source table: %s; Virtual tables: %s",
