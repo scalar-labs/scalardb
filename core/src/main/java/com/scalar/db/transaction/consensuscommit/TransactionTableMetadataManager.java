@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -12,7 +11,6 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -30,17 +28,12 @@ public class TransactionTableMetadataManager {
     }
     tableMetadataCache =
         builder.build(
-            new CacheLoader<TableKey, TransactionTableMetadata>() {
-              @Nullable
-              @Override
-              public TransactionTableMetadata load(@Nonnull TableKey key)
-                  throws ExecutionException {
-                TableMetadata tableMetadata = admin.getTableMetadata(key.namespace, key.table);
-                if (tableMetadata == null) {
-                  return null;
-                }
-                return new TransactionTableMetadata(tableMetadata);
+            key -> {
+              TableMetadata tableMetadata = admin.getTableMetadata(key.namespace, key.table);
+              if (tableMetadata == null) {
+                return null;
               }
+              return new TransactionTableMetadata(tableMetadata);
             });
   }
 

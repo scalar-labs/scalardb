@@ -1,9 +1,7 @@
 package com.scalar.db.common;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Admin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
@@ -13,7 +11,6 @@ import com.scalar.db.util.ThrowableFunction;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -34,15 +31,7 @@ public class TableMetadataManager {
     if (cacheExpirationTimeSecs >= 0) {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
-    tableMetadataCache =
-        builder.build(
-            new CacheLoader<TableKey, TableMetadata>() {
-              @Nullable
-              @Override
-              public TableMetadata load(@Nonnull TableKey key) throws Exception {
-                return getTableMetadataFunc.apply(key);
-              }
-            });
+    tableMetadataCache = builder.build(getTableMetadataFunc::apply);
   }
 
   /**
@@ -81,8 +70,7 @@ public class TableMetadataManager {
     }
   }
 
-  @VisibleForTesting
-  static class TableKey {
+  public static class TableKey {
     public final String namespace;
     public final String table;
 
