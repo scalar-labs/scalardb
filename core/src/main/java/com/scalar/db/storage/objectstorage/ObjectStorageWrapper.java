@@ -68,7 +68,7 @@ public interface ObjectStorageWrapper {
   /**
    * Delete objects with the specified prefix from the storage. <br>
    * <br>
-   * <strong>Attention:</strong> This method does not guarantee atomicity and assume to be used
+   * <strong>Attention:</strong> This method does not guarantee atomicity and is assumed to be used
    * where concurrent operations do not occur.
    *
    * @param prefix the prefix of the objects to delete

@@ -1,7 +1,6 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
 import com.google.api.gax.paging.Page;
-import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -16,7 +15,6 @@ import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -36,22 +34,10 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   private final Integer parallelUploadBlockSizeInBytes;
 
   public CloudStorageWrapper(CloudStorageConfig config) {
-    ServiceAccountCredentials credentials;
-    if (config.getPassword() == null) {
-      throw new RuntimeException(
-          "Service account credentials are not provided in the password field");
-    }
-    try (ByteArrayInputStream keyStream =
-        new ByteArrayInputStream(config.getPassword().getBytes(StandardCharsets.UTF_8))) {
-      credentials = ServiceAccountCredentials.fromStream(keyStream);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to load the service account credentials", e);
-    }
-
     storage =
         StorageOptions.newBuilder()
             .setProjectId(config.getProjectId())
-            .setCredentials(credentials)
+            .setCredentials(config.getCredentials())
             .build()
             .getService();
     bucket = config.getBucket();
@@ -108,18 +94,8 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void insert(String key, String object) throws ObjectStorageWrapperException {
     try {
-      byte[] data = object.getBytes(StandardCharsets.UTF_8);
-      BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
       Storage.BlobWriteOption precondition = Storage.BlobWriteOption.doesNotExist();
-      try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
-        if (parallelUploadBlockSizeInBytes != null) {
-          writer.setChunkSize(parallelUploadBlockSizeInBytes);
-        }
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        while (buffer.hasRemaining()) {
-          writer.write(buffer);
-        }
-      }
+      writeData(key, object, precondition);
     } catch (StorageException e) {
       if (e.getCode() == CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
         throw new PreconditionFailedException(
@@ -139,19 +115,9 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   public void update(String key, String object, String version)
       throws ObjectStorageWrapperException {
     try {
-      byte[] data = object.getBytes(StandardCharsets.UTF_8);
-      BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
       Storage.BlobWriteOption precondition =
           Storage.BlobWriteOption.generationMatch(Long.parseLong(version));
-      try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
-        if (parallelUploadBlockSizeInBytes != null) {
-          writer.setChunkSize(parallelUploadBlockSizeInBytes);
-        }
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        while (buffer.hasRemaining()) {
-          writer.write(buffer);
-        }
-      }
+      writeData(key, object, precondition);
     } catch (StorageException e) {
       if (e.getCode() == CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
         throw new PreconditionFailedException(
@@ -244,6 +210,22 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
       storage.close();
     } catch (Exception e) {
       throw new ObjectStorageWrapperException("Failed to close the storage wrapper", e);
+    }
+  }
+
+  private void writeData(String key, String object, Storage.BlobWriteOption precondition)
+      throws IOException {
+    byte[] data = object.getBytes(StandardCharsets.UTF_8);
+    BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
+
+    try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
+      if (parallelUploadBlockSizeInBytes != null) {
+        writer.setChunkSize(parallelUploadBlockSizeInBytes);
+      }
+      ByteBuffer buffer = ByteBuffer.wrap(data);
+      while (buffer.hasRemaining()) {
+        writer.write(buffer);
+      }
     }
   }
 }
