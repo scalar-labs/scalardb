@@ -1,8 +1,8 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
@@ -10,7 +10,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -19,27 +19,27 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class TransactionTableMetadataManager {
 
-  private final LoadingCache<TableKey, Optional<TransactionTableMetadata>> tableMetadataCache;
+  private final LoadingCache<TableKey, TransactionTableMetadata> tableMetadataCache;
 
   public TransactionTableMetadataManager(
       DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
 
-    CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (cacheExpirationTimeSecs >= 0) {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
     tableMetadataCache =
         builder.build(
-            new CacheLoader<TableKey, Optional<TransactionTableMetadata>>() {
-              @Nonnull
+            new CacheLoader<TableKey, TransactionTableMetadata>() {
+              @Nullable
               @Override
-              public Optional<TransactionTableMetadata> load(@Nonnull TableKey key)
+              public TransactionTableMetadata load(@Nonnull TableKey key)
                   throws ExecutionException {
                 TableMetadata tableMetadata = admin.getTableMetadata(key.namespace, key.table);
                 if (tableMetadata == null) {
-                  return Optional.empty();
+                  return null;
                 }
-                return Optional.of(new TransactionTableMetadata(tableMetadata));
+                return new TransactionTableMetadata(tableMetadata);
               }
             });
   }
@@ -74,12 +74,12 @@ public class TransactionTableMetadataManager {
       throws ExecutionException {
     try {
       TableKey key = new TableKey(namespace, table);
-      return tableMetadataCache.get(key).orElse(null);
-    } catch (java.util.concurrent.ExecutionException e) {
+      return tableMetadataCache.get(key);
+    } catch (CompletionException e) {
       throw new ExecutionException(
           CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(
               ScalarDbUtils.getFullTableName(namespace, table)),
-          e);
+          e.getCause());
     }
   }
 
