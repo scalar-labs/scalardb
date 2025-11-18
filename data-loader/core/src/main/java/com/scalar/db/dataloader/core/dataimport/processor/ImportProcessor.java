@@ -323,14 +323,7 @@ public abstract class ImportProcessor {
           dataChunkId,
           e.getMessage(),
           e);
-      try {
-        if (transaction != null) {
-          transaction.abort(); // Ensure transaction is aborted
-        }
-      } catch (TransactionException abortException) {
-        logger.error(
-            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
-      }
+      abortTransactionSafely(transaction);
       error = e.getMessage();
     } catch (Exception e) {
       // Catch unchecked exceptions
@@ -340,16 +333,7 @@ public abstract class ImportProcessor {
           transactionBatch.getTransactionBatchId(),
           dataChunkId,
           e);
-      try {
-        if (transaction != null) {
-          transaction.abort(); // Ensure transaction is aborted
-        }
-      } catch (Exception abortException) {
-        logger.error(
-            "Failed to abort transaction after unexpected error: {}",
-            abortException.getMessage(),
-            abortException);
-      }
+      abortTransactionSafely(transaction);
       error = "Unexpected error: " + e.getClass().getSimpleName() + " - " + e.getMessage();
     }
     ImportTransactionBatchResult importTransactionBatchResult =
@@ -362,6 +346,22 @@ public abstract class ImportProcessor {
             .build();
     notifyTransactionBatchCompleted(importTransactionBatchResult);
     return importTransactionBatchResult;
+  }
+
+  /**
+   * Safely aborts the provided distributed transaction. If the transaction is null, this method
+   * takes no action. If an exception occurs during the abort operation, it is logged as an error.
+   *
+   * @param transaction the {@link DistributedTransaction} to be aborted, may be null
+   */
+  private void abortTransactionSafely(DistributedTransaction transaction) {
+    try {
+      if (transaction != null) {
+        transaction.abort();
+      }
+    } catch (Exception e) {
+      logger.error("Failed to abort transaction: {}", e.getMessage(), e);
+    }
   }
 
   /**
