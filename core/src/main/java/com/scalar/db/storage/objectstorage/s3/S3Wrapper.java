@@ -127,21 +127,18 @@ public class S3Wrapper implements ObjectStorageWrapper {
               AsyncRequestBody.fromString(object))
           .join();
     } catch (Exception e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof S3Exception) {
-        Optional<S3Exception> s3Exception = findS3Exception(e);
-        if (s3Exception.isPresent()) {
-          if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
-            throw new ConflictOccurredException(
-                String.format("Failed to insert the object with key '%s' due to conflict", key),
-                s3Exception.get());
-          }
-          if (s3Exception.get().statusCode() == S3ErrorCode.PRECONDITION_FAILED.get()) {
-            throw new PreconditionFailedException(
-                String.format(
-                    "Failed to insert the object with key '%s' due to precondition failure", key),
-                s3Exception.get());
-          }
+      Optional<S3Exception> s3Exception = findS3Exception(e);
+      if (s3Exception.isPresent()) {
+        if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
+          throw new ConflictOccurredException(
+              String.format("Failed to insert the object with key '%s' due to conflict", key),
+              s3Exception.get());
+        }
+        if (s3Exception.get().statusCode() == S3ErrorCode.PRECONDITION_FAILED.get()) {
+          throw new PreconditionFailedException(
+              String.format(
+                  "Failed to insert the object with key '%s' due to precondition failure", key),
+              s3Exception.get());
         }
       }
       throw new ObjectStorageWrapperException(
@@ -159,22 +156,19 @@ public class S3Wrapper implements ObjectStorageWrapper {
               AsyncRequestBody.fromString(object))
           .join();
     } catch (Exception e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof S3Exception) {
-        Optional<S3Exception> s3Exception = findS3Exception(e);
-        if (s3Exception.isPresent()) {
-          if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
-            throw new ConflictOccurredException(
-                String.format("Failed to update the object with key '%s' due to conflict", key),
-                s3Exception.get());
-          }
-          if (s3Exception.get().statusCode() == S3ErrorCode.NOT_FOUND.get()
-              || s3Exception.get().statusCode() == S3ErrorCode.PRECONDITION_FAILED.get()) {
-            throw new PreconditionFailedException(
-                String.format(
-                    "Failed to update the object with key '%s' due to precondition failure", key),
-                s3Exception.get());
-          }
+      Optional<S3Exception> s3Exception = findS3Exception(e);
+      if (s3Exception.isPresent()) {
+        if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
+          throw new ConflictOccurredException(
+              String.format("Failed to update the object with key '%s' due to conflict", key),
+              s3Exception.get());
+        }
+        if (s3Exception.get().statusCode() == S3ErrorCode.NOT_FOUND.get()
+            || s3Exception.get().statusCode() == S3ErrorCode.PRECONDITION_FAILED.get()) {
+          throw new PreconditionFailedException(
+              String.format(
+                  "Failed to update the object with key '%s' due to precondition failure", key),
+              s3Exception.get());
         }
       }
       throw new ObjectStorageWrapperException(
@@ -189,21 +183,18 @@ public class S3Wrapper implements ObjectStorageWrapper {
           .deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).ifMatch("*").build())
           .join();
     } catch (Exception e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof S3Exception) {
-        Optional<S3Exception> s3Exception = findS3Exception(e);
-        if (s3Exception.isPresent()) {
-          if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
-            throw new ConflictOccurredException(
-                String.format("Failed to delete the object with key '%s' due to conflict", key),
-                s3Exception.get());
-          }
-          if (s3Exception.get().statusCode() == S3ErrorCode.NOT_FOUND.get()) {
-            throw new PreconditionFailedException(
-                String.format(
-                    "Failed to delete the object with key '%s' due to precondition failure", key),
-                s3Exception.get());
-          }
+      Optional<S3Exception> s3Exception = findS3Exception(e);
+      if (s3Exception.isPresent()) {
+        if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
+          throw new ConflictOccurredException(
+              String.format("Failed to delete the object with key '%s' due to conflict", key),
+              s3Exception.get());
+        }
+        if (s3Exception.get().statusCode() == S3ErrorCode.NOT_FOUND.get()) {
+          throw new PreconditionFailedException(
+              String.format(
+                  "Failed to delete the object with key '%s' due to precondition failure", key),
+              s3Exception.get());
         }
       }
       throw new ObjectStorageWrapperException(
@@ -219,22 +210,19 @@ public class S3Wrapper implements ObjectStorageWrapper {
               DeleteObjectRequest.builder().bucket(bucket).key(key).ifMatch(version).build())
           .join();
     } catch (Exception e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof S3Exception) {
-        Optional<S3Exception> s3Exception = findS3Exception(e);
-        if (s3Exception.isPresent()) {
-          if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
-            throw new ConflictOccurredException(
-                String.format("Failed to delete the object with key '%s' due to conflict", key),
-                s3Exception.get());
-          }
-          if (s3Exception.get().statusCode() == S3ErrorCode.NOT_FOUND.get()
-              || s3Exception.get().statusCode() == S3ErrorCode.PRECONDITION_FAILED.get()) {
-            throw new PreconditionFailedException(
-                String.format(
-                    "Failed to delete the object with key '%s' due to precondition failure", key),
-                s3Exception.get());
-          }
+      Optional<S3Exception> s3Exception = findS3Exception(e);
+      if (s3Exception.isPresent()) {
+        if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
+          throw new ConflictOccurredException(
+              String.format("Failed to delete the object with key '%s' due to conflict", key),
+              s3Exception.get());
+        }
+        if (s3Exception.get().statusCode() == S3ErrorCode.NOT_FOUND.get()
+            || s3Exception.get().statusCode() == S3ErrorCode.PRECONDITION_FAILED.get()) {
+          throw new PreconditionFailedException(
+              String.format(
+                  "Failed to delete the object with key '%s' due to precondition failure", key),
+              s3Exception.get());
         }
       }
       throw new ObjectStorageWrapperException(
