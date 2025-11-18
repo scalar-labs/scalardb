@@ -333,7 +333,7 @@ public abstract class ImportProcessor {
       }
       error = e.getMessage();
     } catch (Exception e) {
-      // Catch unknown exceptions
+      // Catch unchecked exceptions
       isSuccess = false;
       logger.error(
           "Unexpected exception occurred while processing transaction batch {} in data chunk {}.",

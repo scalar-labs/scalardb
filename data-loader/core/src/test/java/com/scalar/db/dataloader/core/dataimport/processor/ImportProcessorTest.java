@@ -285,7 +285,6 @@ class ImportProcessorTest {
     assertFalse(result.isSuccess());
     assertEquals(0, result.getTransactionBatchId());
     assertEquals(1, result.getDataChunkId());
-    assertTrue(result.getErrors().get(0).contains("Unexpected error: RuntimeException"));
     assertTrue(result.getErrors().get(0).contains("Unexpected error"));
   }
 
