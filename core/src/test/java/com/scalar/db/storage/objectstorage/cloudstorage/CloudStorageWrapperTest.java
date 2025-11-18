@@ -345,8 +345,7 @@ public class CloudStorageWrapperTest {
     @SuppressWarnings("unchecked")
     Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.getValues()).thenReturn(Arrays.asList(blob1, blob2, blob3));
-    when(page.getNextPage()).thenReturn(null);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -377,17 +376,11 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    // Mock paginated responses with 2 pages
+    // Mock with iterateAll() that returns all blobs across pages
     @SuppressWarnings("unchecked")
-    Page<Blob> page1 = mock(Page.class);
-    @SuppressWarnings("unchecked")
-    Page<Blob> page2 = mock(Page.class);
-
-    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page1);
-    when(page1.getValues()).thenReturn(Arrays.asList(blob1, blob2));
-    when(page1.getNextPage()).thenReturn(page2);
-    when(page2.getValues()).thenReturn(Collections.singletonList(blob3));
-    when(page2.getNextPage()).thenReturn(null);
+    Page<Blob> page = mock(Page.class);
+    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -399,8 +392,8 @@ public class CloudStorageWrapperTest {
     wrapper.deleteByPrefix(ANY_PREFIX);
 
     // Assert
-    verify(storage, org.mockito.Mockito.times(2)).batch();
-    verify(batch, org.mockito.Mockito.times(2)).submit();
+    verify(storage).batch();
+    verify(batch).submit();
   }
 
   @Test
@@ -409,8 +402,7 @@ public class CloudStorageWrapperTest {
     @SuppressWarnings("unchecked")
     Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.getValues()).thenReturn(Collections.emptyList());
-    when(page.getNextPage()).thenReturn(null);
+    when(page.iterateAll()).thenReturn(Collections.emptyList());
 
     // Act
     wrapper.deleteByPrefix(ANY_PREFIX);
