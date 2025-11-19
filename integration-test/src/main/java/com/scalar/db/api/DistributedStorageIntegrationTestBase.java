@@ -108,6 +108,20 @@ public abstract class DistributedStorageIntegrationTestBase {
     return COL_NAME6;
   }
 
+  protected TableMetadata getTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addColumn(getColumnName1(), DataType.INT)
+        .addColumn(getColumnName2(), DataType.TEXT)
+        .addColumn(getColumnName3(), DataType.INT)
+        .addColumn(getColumnName4(), DataType.INT)
+        .addColumn(getColumnName5(), DataType.BOOLEAN)
+        .addColumn(getColumnName6(), DataType.BLOB)
+        .addPartitionKey(getColumnName1())
+        .addClusteringKey(getColumnName4())
+        .addSecondaryIndex(getColumnName3())
+        .build();
+  }
+
   protected DistributedStorage getStorage() {
     return storage;
   }
@@ -119,22 +133,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   private void createTable() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
-    admin.createTable(
-        namespace,
-        getTableName(),
-        TableMetadata.newBuilder()
-            .addColumn(getColumnName1(), DataType.INT)
-            .addColumn(getColumnName2(), DataType.TEXT)
-            .addColumn(getColumnName3(), DataType.INT)
-            .addColumn(getColumnName4(), DataType.INT)
-            .addColumn(getColumnName5(), DataType.BOOLEAN)
-            .addColumn(getColumnName6(), DataType.BLOB)
-            .addPartitionKey(getColumnName1())
-            .addClusteringKey(getColumnName4())
-            .addSecondaryIndex(getColumnName3())
-            .build(),
-        true,
-        options);
+    admin.createTable(namespace, getTableName(), getTableMetadata(), true, options);
   }
 
   protected int getLargeDataSizeInBytes() {

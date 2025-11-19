@@ -227,7 +227,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
 
   private boolean tableExistsOnJdbc(String namespace, String table) throws Exception {
     String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
-    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
+    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute(sql);

@@ -385,7 +385,7 @@ public abstract class ImportProcessor {
             .dao(params.getDao())
             .build();
     ImportTaskResult importRecordResult =
-        new ImportStorageTask(taskParams, params.getDistributedStorage()).execute();
+        new ImportStorageTask(taskParams, params.getDistributedTransactionManager()).execute();
 
     ImportTaskResult modifiedTaskResult =
         ImportTaskResult.builder()

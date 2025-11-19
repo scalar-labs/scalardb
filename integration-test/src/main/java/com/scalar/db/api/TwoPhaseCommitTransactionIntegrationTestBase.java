@@ -122,7 +122,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     return NAMESPACE_BASE_NAME;
   }
 
-  private void createTables() throws ExecutionException {
+  protected TableMetadata getTableMetadata() {
     TableMetadata.Builder tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -144,13 +144,16 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     if (isTimestampTypeSupported()) {
       tableMetadata.addColumn(TIMESTAMP_COL, DataType.TIMESTAMP);
     }
+    return tableMetadata.build();
+  }
 
+  private void createTables() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin1.createCoordinatorTables(true, options);
     admin1.createNamespace(namespace1, true, options);
-    admin1.createTable(namespace1, TABLE_1, tableMetadata.build(), true, options);
+    admin1.createTable(namespace1, TABLE_1, getTableMetadata(), true, options);
     admin2.createNamespace(namespace2, true, options);
-    admin2.createTable(namespace2, TABLE_2, tableMetadata.build(), true, options);
+    admin2.createTable(namespace2, TABLE_2, getTableMetadata(), true, options);
   }
 
   protected Map<String, String> getCreationOptions() {

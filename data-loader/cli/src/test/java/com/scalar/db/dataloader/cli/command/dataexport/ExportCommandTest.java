@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -152,14 +153,14 @@ class ExportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the deprecated value was parsed
-    assertEquals(true, command.startExclusiveDeprecated);
+    assertTrue(command.startExclusiveDeprecated);
 
     // Apply deprecated options (this is what the command does after validation)
     command.applyDeprecatedOptions();
 
     // Verify the value was applied with inverted logic
     // start-exclusive=true should become start-inclusive=false
-    assertEquals(false, command.scanStartInclusive);
+    assertFalse(command.scanStartInclusive);
   }
 
   @Test
@@ -181,13 +182,175 @@ class ExportCommandTest {
     cmd.parseArgs(args);
 
     // Verify the deprecated value was parsed
-    assertEquals(false, command.endExclusiveDeprecated);
+    assertFalse(command.endExclusiveDeprecated);
 
     // Apply deprecated options (this is what the command does after validation)
     command.applyDeprecatedOptions();
 
     // Verify the value was applied with inverted logic
     // end-exclusive=false should become end-inclusive=true
-    assertEquals(true, command.scanEndInclusive);
+    assertTrue(command.scanEndInclusive);
+  }
+
+  @Test
+  void call_withOnlyDeprecatedThreads_shouldApplyValue() {
+    // Simulate command line parsing with only deprecated option
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--threads",
+      "12"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the deprecated value was parsed
+    assertEquals(12, command.threadsDeprecated);
+
+    // Apply deprecated options (this is what the command does after validation)
+    command.applyDeprecatedOptions();
+
+    // Verify the value was applied to maxThreads
+    assertEquals(12, command.maxThreads);
+  }
+
+  @Test
+  void call_withMaxThreadsSpecified_shouldUseSpecifiedValue() {
+    // Simulate command line parsing with --max-threads
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--max-threads",
+      "8"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the value was parsed
+    assertEquals(8, command.maxThreads);
+  }
+
+  @Test
+  void call_withoutMaxThreads_shouldDefaultToAvailableProcessors() {
+    // Simulate command line parsing without --max-threads
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify maxThreads is null before validation
+    assertEquals(null, command.maxThreads);
+
+    // Simulate what happens in call() after validation
+    command.spec = cmd.getCommandSpec();
+    command.applyDeprecatedOptions();
+    if (command.maxThreads == null) {
+      command.maxThreads = Runtime.getRuntime().availableProcessors();
+    }
+
+    // Verify it was set to available processors
+    assertEquals(Runtime.getRuntime().availableProcessors(), command.maxThreads);
+  }
+
+  @Test
+  void call_withDeprecatedIncludeMetadataOption_shouldParseAndDetectOption() {
+    // Test that the deprecated option can be parsed without crashing
+    // and is detected for warning purposes (both long and short forms)
+    String[] argsWithLongForm = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "--include-metadata"
+    };
+
+    String[] argsWithShortForm = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON",
+      "-m"
+    };
+
+    // Test long form
+    ExportCommand commandLong = new ExportCommand();
+    CommandLine cmdLong = new CommandLine(commandLong);
+    cmdLong.parseArgs(argsWithLongForm);
+    commandLong.spec = cmdLong.getCommandSpec();
+
+    // Verify the option is detected (so warning will trigger)
+    assertTrue(
+        cmdLong
+            .getParseResult()
+            .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION));
+
+    // Test short form
+    ExportCommand commandShort = new ExportCommand();
+    CommandLine cmdShort = new CommandLine(commandShort);
+    cmdShort.parseArgs(argsWithShortForm);
+    commandShort.spec = cmdShort.getCommandSpec();
+
+    // Verify the short option is detected (so warning will trigger)
+    assertTrue(
+        cmdShort
+            .getParseResult()
+            .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION_SHORT));
+  }
+
+  @Test
+  void call_withoutDeprecatedIncludeMetadataOption_shouldNotDetectOption() {
+    // Verify that when the deprecated option is NOT used, it's not detected
+    // (so warning won't trigger incorrectly)
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--format",
+      "JSON"
+    };
+
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+    command.spec = cmd.getCommandSpec();
+
+    // Verify the option is NOT detected (so warning won't trigger)
+    assertFalse(
+        cmd.getParseResult()
+            .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION));
   }
 }

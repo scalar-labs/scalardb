@@ -10,13 +10,6 @@ public interface ObjectStorageConfig {
   String getStorageName();
 
   /**
-   * Returns the endpoint for the object storage service.
-   *
-   * @return the endpoint
-   */
-  String getEndpoint();
-
-  /**
    * Returns the username for authentication.
    *
    * @return the username

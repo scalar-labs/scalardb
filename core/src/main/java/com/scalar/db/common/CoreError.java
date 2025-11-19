@@ -434,7 +434,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS(
       Category.USER_ERROR,
       "0100",
-      "The condition is not allowed to target transaction metadata columns. Column: %s",
+      "The condition is not allowed to target transaction metadata columns. Table: %s; Column: %s",
       "",
       ""),
   CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA(
@@ -889,6 +889,48 @@ public enum CoreError implements ScalarDbError {
       "Object Storage does not support the feature for altering column types",
       "",
       ""),
+  OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0256",
+      "Cross-partition scan with ordering is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0257",
+      "The value of the column %s in the primary key contains an illegal character. Value: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_PROJECTION_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0258",
+      "Specifying transaction metadata columns in the projection is not allowed. Table: %s; Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_ORDERING_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0259",
+      "Specifying transaction metadata columns in the ordering is not allowed. Table: %s; Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0260",
+      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0261",
+      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0262",
+      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1014,6 +1056,12 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0026",
       "A conflict occurred when committing records. Details: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0027",
+      "A transaction conflict occurred in the mutation. Details: %s",
       "",
       ""),
 
@@ -1196,7 +1244,15 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
-      Category.INTERNAL_ERROR, "0063", "Getting the MySQL JDBC connection metadata failed", "", ""),
+      Category.INTERNAL_ERROR,
+      "0063",
+      "Getting the MySQL JDBC connection metadata failed. Details: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0064", "An error occurred in the selection. Details: %s", "", ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION(
+      Category.INTERNAL_ERROR, "0065", "An error occurred in the mutation. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category

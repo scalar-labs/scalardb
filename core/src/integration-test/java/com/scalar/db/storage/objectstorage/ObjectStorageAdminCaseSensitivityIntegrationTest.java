@@ -52,10 +52,6 @@ public class ObjectStorageAdminCaseSensitivityIntegrationTest
   }
 
   @Override
-  @Disabled("Temporarily disabled because it includes DML operations")
-  public void truncateTable_ShouldTruncateProperly() {}
-
-  @Override
   @Disabled("Object Storage does not have a concept of namespaces")
   public void
       dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
