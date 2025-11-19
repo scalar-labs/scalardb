@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -278,5 +279,52 @@ public class ImportCommandTest {
 
     // Verify it was set to available processors
     assertEquals(Runtime.getRuntime().availableProcessors(), command.maxThreads);
+  }
+
+  @Test
+  void call_withoutSpecifyingLogRawRecord_shouldUseDefaultTrueValue() {
+    // Simulate command line parsing with --max-threads
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--file",
+      "import.json",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--max-threads",
+      "8"
+    };
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the value was parsed
+    assertTrue(command.logRawRecord);
+  }
+
+  @Test
+  void call_withSpecifyingLogRawRecordFalse_shouldUseFalsee() {
+    // Simulate command line parsing with --max-threads
+    String[] args = {
+      "--config",
+      "scalardb.properties",
+      "--file",
+      "import.json",
+      "--namespace",
+      "scalar",
+      "--table",
+      "asset",
+      "--max-threads",
+      "8",
+      "--log-raw-record=false"
+    };
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    // Verify the value was parsed
+    assertFalse(command.logRawRecord);
   }
 }

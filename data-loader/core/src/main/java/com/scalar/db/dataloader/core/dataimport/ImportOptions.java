@@ -27,7 +27,7 @@ public class ImportOptions {
   @Builder.Default private final char delimiter = ',';
 
   @Builder.Default private final boolean logSuccessRecords = false;
-  @Builder.Default private final boolean logRawRecord = false;
+  @Builder.Default private final boolean logRawRecord = true;
 
   private final int dataChunkSize;
   private final int transactionBatchSize;
