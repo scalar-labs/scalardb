@@ -3,7 +3,6 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
@@ -32,7 +31,6 @@ class CsvImportProcessorTest {
   @Mock TableColumnDataTypes tableColumnDataTypes;
 
   ScalarDbDao dao;
-  @Mock DistributedStorage distributedStorage;
   DistributedTransactionManager distributedTransactionManager;
   CsvImportProcessor csvImportProcessor;
 
@@ -65,7 +63,7 @@ class CsvImportProcessorTest {
                 "table",
                 UnitTestUtils.getPartitionKey(1),
                 UnitTestUtils.getClusteringKey(),
-                distributedStorage))
+                distributedTransactionManager))
         .thenReturn(UnitTestUtils.getResult(1));
     Mockito.when(
             dao.get(
@@ -84,7 +82,6 @@ class CsvImportProcessorTest {
             .scalarDbMode(ScalarDbMode.STORAGE)
             .importOptions(importOptions)
             .dao(dao)
-            .distributedStorage(distributedStorage)
             .distributedTransactionManager(distributedTransactionManager)
             .tableColumnDataTypes(tableColumnDataTypes)
             .tableMetadataByTableName(tableMetadataByTableName)
@@ -103,7 +100,6 @@ class CsvImportProcessorTest {
             .scalarDbMode(ScalarDbMode.TRANSACTION)
             .importOptions(importOptions)
             .dao(dao)
-            .distributedStorage(distributedStorage)
             .distributedTransactionManager(distributedTransactionManager)
             .tableColumnDataTypes(tableColumnDataTypes)
             .tableMetadataByTableName(tableMetadataByTableName)

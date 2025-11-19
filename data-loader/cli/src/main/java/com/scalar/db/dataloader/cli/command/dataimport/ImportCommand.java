@@ -8,13 +8,10 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbStorageManager;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbTransactionManager;
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.dataloader.core.dataimport.log.SingleFileImportLogger;
@@ -26,7 +23,6 @@ import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedReader;
 import java.io.File;
@@ -150,32 +146,14 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       throws IOException {
     File configFile = new File(configFilePath);
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
-    ImportManager importManager;
-    if (scalarDbMode == ScalarDbMode.TRANSACTION) {
-      ScalarDbTransactionManager scalarDbTransactionManager =
-          new ScalarDbTransactionManager(TransactionFactory.create(configFile));
-      importManager =
-          new ImportManager(
-              tableMetadataMap,
-              reader,
-              importOptions,
-              importProcessorFactory,
-              ScalarDbMode.TRANSACTION,
-              null,
-              scalarDbTransactionManager.getDistributedTransactionManager());
-    } else {
-      ScalarDbStorageManager scalarDbStorageManager =
-          new ScalarDbStorageManager(StorageFactory.create(configFile));
-      importManager =
-          new ImportManager(
-              tableMetadataMap,
-              reader,
-              importOptions,
-              importProcessorFactory,
-              ScalarDbMode.STORAGE,
-              scalarDbStorageManager.getDistributedStorage(),
-              null);
-    }
+    ImportManager importManager =
+        new ImportManager(
+            tableMetadataMap,
+            reader,
+            importOptions,
+            importProcessorFactory,
+            scalarDbMode,
+            TransactionFactory.create(configFile).getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
     } else {
