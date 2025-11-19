@@ -41,6 +41,7 @@ subprojects {
         mariadDbDriverVersion = '3.5.3'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.13.1'
+        caffeineVersion = '2.9.3'
         junitVersion = '5.11.4'
         commonsLangVersion = '3.17.0'
         assertjVersion = '3.27.3'
