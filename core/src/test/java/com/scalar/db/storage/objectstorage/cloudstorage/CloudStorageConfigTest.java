@@ -24,7 +24,7 @@ public class CloudStorageConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_PROJECT_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, CloudStorage_STORAGE);
-    props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
+    props.setProperty(CloudStorageConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
     props.setProperty(
         CloudStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
         ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);

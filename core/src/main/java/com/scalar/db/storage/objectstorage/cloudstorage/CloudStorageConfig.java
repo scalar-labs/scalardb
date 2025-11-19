@@ -1,6 +1,7 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 public class CloudStorageConfig implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "cloud-storage";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
+  public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
   public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
       PREFIX + "parallel_upload_block_size_in_bytes";
@@ -40,7 +42,11 @@ public class CloudStorageConfig implements ObjectStorageConfig {
     bucket = databaseConfig.getContactPoints().get(0);
     projectId = databaseConfig.getUsername().orElse(null);
     password = databaseConfig.getPassword().orElse(null);
-    metadataNamespace = databaseConfig.getSystemNamespaceName();
+    metadataNamespace =
+        getString(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_NAMESPACE,
+            DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
       logger.warn(
