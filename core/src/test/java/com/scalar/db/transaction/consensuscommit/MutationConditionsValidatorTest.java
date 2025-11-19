@@ -32,6 +32,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class MutationConditionsValidatorTest {
+
+  private static final String TRANSACTION_ID = "id";
+
   private MutationConditionsValidator validator;
   @Mock private TransactionResult existingRecord;
   @Mock private Put put;
@@ -45,14 +48,10 @@ public class MutationConditionsValidatorTest {
   private static final String C2 = "col_2";
   private static final String C3 = "col_3";
 
-  private TransactionContext context;
-  @Mock private Snapshot snapshot;
-
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     validator = new MutationConditionsValidator();
-    context = new TransactionContext("a_tx_id", snapshot, Isolation.SNAPSHOT, false, false);
   }
 
   @Test
@@ -62,7 +61,8 @@ public class MutationConditionsValidatorTest {
     prepareMutationWithCondition(put, putIf);
 
     // Act Assert
-    Assertions.assertThatThrownBy(() -> validator.checkIfConditionIsSatisfied(put, null, context))
+    Assertions.assertThatThrownBy(
+            () -> validator.checkIfConditionIsSatisfied(put, null, TRANSACTION_ID))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -73,7 +73,8 @@ public class MutationConditionsValidatorTest {
     prepareMutationWithCondition(put, putIfExists);
 
     // Act Assert
-    Assertions.assertThatThrownBy(() -> validator.checkIfConditionIsSatisfied(put, null, context))
+    Assertions.assertThatThrownBy(
+            () -> validator.checkIfConditionIsSatisfied(put, null, TRANSACTION_ID))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -85,7 +86,7 @@ public class MutationConditionsValidatorTest {
 
     // Act Assert
     Assertions.assertThatCode(
-            () -> validator.checkIfConditionIsSatisfied(put, existingRecord, context))
+            () -> validator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
         .doesNotThrowAnyException();
   }
 
@@ -97,7 +98,7 @@ public class MutationConditionsValidatorTest {
 
     // Act Assert
     Assertions.assertThatThrownBy(
-            () -> validator.checkIfConditionIsSatisfied(put, existingRecord, context))
+            () -> validator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -108,7 +109,8 @@ public class MutationConditionsValidatorTest {
     prepareMutationWithCondition(put, putIfNotExists);
 
     // Act Assert
-    Assertions.assertThatCode(() -> validator.checkIfConditionIsSatisfied(put, null, context))
+    Assertions.assertThatCode(
+            () -> validator.checkIfConditionIsSatisfied(put, null, TRANSACTION_ID))
         .doesNotThrowAnyException();
   }
 
@@ -120,7 +122,7 @@ public class MutationConditionsValidatorTest {
 
     // Act Assert
     Assertions.assertThatThrownBy(
-            () -> validator.checkIfConditionIsSatisfied(delete, null, context))
+            () -> validator.checkIfConditionIsSatisfied(delete, null, TRANSACTION_ID))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -132,7 +134,7 @@ public class MutationConditionsValidatorTest {
 
     // Act Assert
     Assertions.assertThatThrownBy(
-            () -> validator.checkIfConditionIsSatisfied(delete, null, context))
+            () -> validator.checkIfConditionIsSatisfied(delete, null, TRANSACTION_ID))
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
@@ -144,7 +146,7 @@ public class MutationConditionsValidatorTest {
 
     // Act Assert
     Assertions.assertThatCode(
-            () -> validator.checkIfConditionIsSatisfied(delete, existingRecord, context))
+            () -> validator.checkIfConditionIsSatisfied(delete, existingRecord, TRANSACTION_ID))
         .doesNotThrowAnyException();
   }
 
@@ -319,9 +321,9 @@ public class MutationConditionsValidatorTest {
   private void validateConditionIsSatisfied(Mutation mutation, TransactionResult existingRecord)
       throws UnsatisfiedConditionException {
     if (mutation instanceof Put) {
-      validator.checkIfConditionIsSatisfied((Put) mutation, existingRecord, context);
+      validator.checkIfConditionIsSatisfied((Put) mutation, existingRecord, TRANSACTION_ID);
     } else {
-      validator.checkIfConditionIsSatisfied((Delete) mutation, existingRecord, context);
+      validator.checkIfConditionIsSatisfied((Delete) mutation, existingRecord, TRANSACTION_ID);
     }
   }
 }

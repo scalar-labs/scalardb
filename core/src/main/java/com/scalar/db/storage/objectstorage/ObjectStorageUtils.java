@@ -2,6 +2,7 @@ package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.blobstorage.BlobStorageConfig;
+import com.scalar.db.storage.objectstorage.s3.S3Config;
 import java.util.Objects;
 
 public class ObjectStorageUtils {
@@ -16,9 +17,15 @@ public class ObjectStorageUtils {
     return String.join(String.valueOf(OBJECT_KEY_DELIMITER), namespace, table);
   }
 
+  public static String[] parseObjectKey(String objectKey) {
+    return objectKey.split(String.valueOf(OBJECT_KEY_DELIMITER), 3);
+  }
+
   public static ObjectStorageConfig getObjectStorageConfig(DatabaseConfig databaseConfig) {
     if (Objects.equals(databaseConfig.getStorage(), BlobStorageConfig.STORAGE_NAME)) {
       return new BlobStorageConfig(databaseConfig);
+    } else if (Objects.equals(databaseConfig.getStorage(), S3Config.STORAGE_NAME)) {
+      return new S3Config(databaseConfig);
     } else {
       throw new IllegalArgumentException(
           "Unsupported Object Storage: " + databaseConfig.getStorage());
