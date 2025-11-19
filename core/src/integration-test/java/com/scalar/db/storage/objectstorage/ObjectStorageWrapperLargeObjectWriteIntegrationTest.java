@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.blobstorage.BlobStorageConfig;
+import com.scalar.db.storage.objectstorage.cloudstorage.CloudStorageConfig;
 import com.scalar.db.storage.objectstorage.s3.S3Config;
 import java.util.Arrays;
 import java.util.Optional;
@@ -47,6 +48,13 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
           BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
           String.valueOf(parallelUploadUnit * 2));
       parallelUploadThresholdInBytes = parallelUploadUnit * 2;
+    } else if (ObjectStorageEnv.isCloudStorage()) {
+      // Minimum block size must be greater than or equal to 256KB for Cloud Storage
+      Long parallelUploadUnit = 256 * 1024L; // 256KB
+      properties.setProperty(
+          CloudStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
+          String.valueOf(parallelUploadUnit));
+      parallelUploadThresholdInBytes = parallelUploadUnit * 2;
     } else if (ObjectStorageEnv.isS3()) {
       // Minimum part size must be greater than or equal to 5MB for S3
       Long parallelUploadUnit = 5 * 1024 * 1024L; // 5MB
@@ -59,7 +67,7 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
       throw new AssertionError();
     }
 
-    char[] charArray = new char[(int) parallelUploadThresholdInBytes];
+    char[] charArray = new char[(int) parallelUploadThresholdInBytes + 1];
     Arrays.fill(charArray, 'a');
     testObject1 = new String(charArray);
     Arrays.fill(charArray, 'b');
@@ -163,14 +171,14 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
     String objectKey = "non-existing-key";
 
     // Act Assert
-    assertThatCode(() -> wrapper.update(objectKey, "some-object", "some-version"))
+    assertThatCode(() -> wrapper.update(objectKey, "some-object", "123456789"))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
   @Test
   public void update_WrongVersionGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
-    String wrongVersion = "wrong-version";
+    String wrongVersion = "123456789";
 
     // Act Assert
     assertThatCode(() -> wrapper.update(TEST_KEY2, "another-object", wrongVersion))

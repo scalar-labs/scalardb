@@ -2,6 +2,7 @@ package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.blobstorage.BlobStorageConfig;
+import com.scalar.db.storage.objectstorage.cloudstorage.CloudStorageConfig;
 import com.scalar.db.storage.objectstorage.s3.S3Config;
 import java.util.Collections;
 import java.util.Map;
@@ -74,6 +75,11 @@ public class ObjectStorageEnv {
   public static boolean isBlobStorage() {
     return System.getProperty(PROP_OBJECT_STORAGE_STORAGE, DEFAULT_OBJECT_STORAGE_STORAGE)
         .equals(BlobStorageConfig.STORAGE_NAME);
+  }
+
+  public static boolean isCloudStorage() {
+    return System.getProperty(PROP_OBJECT_STORAGE_STORAGE, DEFAULT_OBJECT_STORAGE_STORAGE)
+        .equals(CloudStorageConfig.STORAGE_NAME);
   }
 
   public static boolean isS3() {

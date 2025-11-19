@@ -193,6 +193,9 @@ dependencies {
     implementation("com.google.cloud:alloydb-jdbc-connector:${alloyDbJdbcConnectorVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -226,7 +229,7 @@ task integrationTestCassandra(type: Test) {
     classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
 }
 
@@ -237,7 +240,7 @@ task integrationTestCosmos(type: Test) {
     classpath = sourceSets.integrationTestCosmos.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     jvmArgs '-XX:MaxDirectMemorySize=4g', '-Xmx6g',
             // INFO com.azure.cosmos.implementation.RxDocumentClientImpl - Initializing DocumentClient [3] with serviceEndpoint [https://localhost:8081/], ...
@@ -255,7 +258,7 @@ task integrationTestDynamo(type: Test) {
     classpath = sourceSets.integrationTestDynamo.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     maxParallelForks = 10
 }
@@ -267,7 +270,7 @@ task integrationTestJdbc(type: Test) {
     classpath = sourceSets.integrationTestJdbc.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     maxHeapSize = "4g"
 }
@@ -279,7 +282,7 @@ task integrationTestObjectStorage(type: Test) {
     classpath = sourceSets.integrationTestObjectStorage.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
 }
 
@@ -290,7 +293,7 @@ task integrationTestMultiStorage(type: Test) {
     classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
-        systemProperties(System.getProperties().findAll{it.key.toString().startsWith("scalardb")})
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
 }
 
