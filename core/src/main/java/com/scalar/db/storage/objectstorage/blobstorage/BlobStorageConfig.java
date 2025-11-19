@@ -85,11 +85,6 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   }
 
   @Override
-  public String getUsername() {
-    return username;
-  }
-
-  @Override
   public String getPassword() {
     return password;
   }
@@ -106,6 +101,10 @@ public class BlobStorageConfig implements ObjectStorageConfig {
 
   public String getEndpoint() {
     return endpoint;
+  }
+
+  public String getUsername() {
+    return username;
   }
 
   public Optional<Long> getParallelUploadBlockSizeInBytes() {
