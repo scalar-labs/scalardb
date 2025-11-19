@@ -32,6 +32,7 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -354,7 +355,7 @@ public abstract class ImportProcessor {
    *
    * @param transaction the {@link DistributedTransaction} to be aborted, may be null
    */
-  private void abortTransactionSafely(DistributedTransaction transaction) {
+  private void abortTransactionSafely(@Nullable DistributedTransaction transaction) {
     try {
       if (transaction != null) {
         transaction.abort();
