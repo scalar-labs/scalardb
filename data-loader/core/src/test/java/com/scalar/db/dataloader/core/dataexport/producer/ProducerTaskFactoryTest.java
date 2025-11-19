@@ -25,7 +25,7 @@ class ProducerTaskFactoryTest {
 
   @Test
   void createProducerTask_withJsonFileFormat_shouldReturnJsonProducerTask() {
-    ProducerTaskFactory producerTaskFactory = new ProducerTaskFactory(null, false, true);
+    ProducerTaskFactory producerTaskFactory = new ProducerTaskFactory(null, true);
     Assertions.assertEquals(
         JsonProducerTask.class,
         producerTaskFactory
@@ -35,7 +35,7 @@ class ProducerTaskFactoryTest {
 
   @Test
   void createProducerTask_withJsonLinesFileFormat_shouldReturnJsonLineProducerTask() {
-    ProducerTaskFactory producerTaskFactory = new ProducerTaskFactory(null, false, false);
+    ProducerTaskFactory producerTaskFactory = new ProducerTaskFactory(null, false);
     Assertions.assertEquals(
         JsonLineProducerTask.class,
         producerTaskFactory
@@ -45,7 +45,7 @@ class ProducerTaskFactoryTest {
 
   @Test
   void createProducerTask_withCsvFileFormat_shouldReturnCsvProducerTask() {
-    ProducerTaskFactory producerTaskFactory = new ProducerTaskFactory(",", false, false);
+    ProducerTaskFactory producerTaskFactory = new ProducerTaskFactory(",", false);
     Assertions.assertEquals(
         CsvProducerTask.class,
         producerTaskFactory

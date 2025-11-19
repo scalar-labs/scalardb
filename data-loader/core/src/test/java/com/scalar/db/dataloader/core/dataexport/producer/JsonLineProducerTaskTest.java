@@ -26,8 +26,7 @@ class JsonLineProducerTaskTest {
     mockMetadata = UnitTestUtils.createTestTableMetadata();
     projectedColumns = UnitTestUtils.getColumnsListOfMetadata();
     columnData = UnitTestUtils.getColumnData();
-    jsonLineProducerTask =
-        new JsonLineProducerTask(false, projectedColumns, mockMetadata, columnData);
+    jsonLineProducerTask = new JsonLineProducerTask(projectedColumns, mockMetadata, columnData);
   }
 
   @Test
@@ -39,7 +38,7 @@ class JsonLineProducerTaskTest {
 
   @Test
   void process_withValidResultList_shouldReturnValidJsonLineString() {
-    ObjectNode rootNode = UnitTestUtils.getOutputDataWithoutMetadata();
+    ObjectNode rootNode = UnitTestUtils.getOutputDataWithMetadata();
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
@@ -50,8 +49,7 @@ class JsonLineProducerTaskTest {
 
   @Test
   void process_withValidResultListWithMetadata_shouldReturnValidJsonLineString() {
-    jsonLineProducerTask =
-        new JsonLineProducerTask(true, projectedColumns, mockMetadata, columnData);
+    jsonLineProducerTask = new JsonLineProducerTask(projectedColumns, mockMetadata, columnData);
     ObjectNode rootNode = UnitTestUtils.getOutputDataWithMetadata();
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockMetadata);
@@ -64,8 +62,7 @@ class JsonLineProducerTaskTest {
   @Test
   void process_withValidResultList_withPartialProjections_shouldReturnValidJsonLineString() {
     projectedColumns = UnitTestUtils.getPartialColumnsListWithoutMetadata();
-    jsonLineProducerTask =
-        new JsonLineProducerTask(false, projectedColumns, mockMetadata, columnData);
+    jsonLineProducerTask = new JsonLineProducerTask(projectedColumns, mockMetadata, columnData);
     ObjectNode rootNode = UnitTestUtils.getPartialOutputDataWithoutMetadata();
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockMetadata);
@@ -79,8 +76,7 @@ class JsonLineProducerTaskTest {
   void
       process_withValidResultList_withPartialProjectionsAndMetadata_shouldReturnValidJsonLineString() {
     projectedColumns = UnitTestUtils.getPartialColumnsListWithMetadata();
-    jsonLineProducerTask =
-        new JsonLineProducerTask(true, projectedColumns, mockMetadata, columnData);
+    jsonLineProducerTask = new JsonLineProducerTask(projectedColumns, mockMetadata, columnData);
     ObjectNode rootNode = UnitTestUtils.getPartialOutputDataWithMetadata();
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockMetadata);
@@ -94,8 +90,8 @@ class JsonLineProducerTaskTest {
   void
       process_withValidResultListWithNoProjectionSpecifiedWithoutMetadata_shouldReturnValidJsonLineString() {
     jsonLineProducerTask =
-        new JsonLineProducerTask(false, Collections.emptyList(), mockMetadata, columnData);
-    ObjectNode rootNode = UnitTestUtils.getOutputDataWithoutMetadata();
+        new JsonLineProducerTask(Collections.emptyList(), mockMetadata, columnData);
+    ObjectNode rootNode = UnitTestUtils.getOutputDataWithMetadata();
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockMetadata);
     List<Result> resultList = new ArrayList<>();
@@ -108,7 +104,7 @@ class JsonLineProducerTaskTest {
   void
       process_withValidResultListWithNoProjectionSpecifiedWithMetadata_shouldReturnValidJsonLineString() {
     jsonLineProducerTask =
-        new JsonLineProducerTask(true, Collections.emptyList(), mockMetadata, columnData);
+        new JsonLineProducerTask(Collections.emptyList(), mockMetadata, columnData);
     ObjectNode rootNode = UnitTestUtils.getOutputDataWithMetadata();
     Map<String, Column<?>> values = UnitTestUtils.createTestValues();
     Result result = new ResultImpl(values, mockMetadata);
