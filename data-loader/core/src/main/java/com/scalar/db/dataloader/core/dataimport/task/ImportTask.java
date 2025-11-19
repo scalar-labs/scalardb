@@ -183,7 +183,7 @@ public abstract class ImportTask {
           .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(Collections.singletonList(DataLoaderError.TABLE_METADATA_MISSING.buildMessage()))
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .build();
     }
 
@@ -210,7 +210,7 @@ public abstract class ImportTask {
           .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(validationResult.getErrorMessages())
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .build();
     }
 
@@ -225,7 +225,7 @@ public abstract class ImportTask {
           .errors(
               Collections.singletonList(
                   DataLoaderError.COULD_NOT_FIND_PARTITION_KEY.buildMessage()))
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .build();
     }
     Optional<Key> optionalClusteringKey = Optional.empty();
@@ -241,7 +241,7 @@ public abstract class ImportTask {
             .errors(
                 Collections.singletonList(
                     DataLoaderError.COULD_NOT_FIND_CLUSTERING_KEY.buildMessage()))
-            .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+            .importedRecord(getRecordForLogging(mutableSourceRecord))
             .build();
       }
     }
@@ -258,7 +258,7 @@ public abstract class ImportTask {
           .tableName(table)
           .status(ImportTargetResultStatus.RETRIEVAL_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .build();
     }
     ImportTaskAction importAction =
@@ -278,7 +278,7 @@ public abstract class ImportTask {
             .errors(
                 Collections.singletonList(
                     DataLoaderError.UPSERT_INSERT_MISSING_COLUMNS.buildMessage()))
-            .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+            .importedRecord(getRecordForLogging(mutableSourceRecord))
             .build();
       }
     }
@@ -287,7 +287,7 @@ public abstract class ImportTask {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_ALREADY_EXISTS)
           .errors(Collections.singletonList(DataLoaderError.DATA_ALREADY_EXISTS.buildMessage()))
@@ -298,7 +298,7 @@ public abstract class ImportTask {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_NOT_FOUND)
           .errors(Collections.singletonList(DataLoaderError.DATA_NOT_FOUND.buildMessage()))
@@ -320,7 +320,7 @@ public abstract class ImportTask {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
           .build();
@@ -339,14 +339,14 @@ public abstract class ImportTask {
           .namespace(namespace)
           .tableName(table)
           .importAction(importAction)
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .status(ImportTargetResultStatus.SAVED)
           .build();
 
     } catch (ScalarDbDaoException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
-          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
+          .importedRecord(getRecordForLogging(mutableSourceRecord))
           .tableName(table)
           .importAction(importAction)
           .status(ImportTargetResultStatus.SAVE_FAILED)
@@ -428,6 +428,20 @@ public abstract class ImportTask {
       ImportTaskAction importAction, ImportOptions importOptions) {
     return importAction == ImportTaskAction.UPDATE
         && importOptions.getImportMode() == ImportMode.INSERT;
+  }
+
+  /**
+   * Returns the given source record only if raw record logging is enabled in the import options.
+   *
+   * <p>This helper method centralizes the logic for conditionally including the raw source record
+   * in {@code ImportTargetResult}. If {@code logRawRecord} is disabled, {@code null} is returned to
+   * avoid storing or displaying the raw record.
+   *
+   * @param record the source record to include conditionally
+   * @return the provided record if raw record logging is enabled; otherwise {@code null}
+   */
+  private ObjectNode getRecordForLogging(ObjectNode record) {
+    return params.getImportOptions().isLogRawRecord() ? record : null;
   }
 
   /**
