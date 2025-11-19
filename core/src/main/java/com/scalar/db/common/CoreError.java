@@ -1322,7 +1322,7 @@ public enum CoreError implements ScalarDbError {
   CREATING_VIRTUAL_TABLE_FAILED(
       Category.INTERNAL_ERROR,
       "0066",
-      "Creating the virtual table failed. Table: %s; SOURCE TABLE1: %s; SOURCE TABLE2: %s",
+      "Creating the virtual table failed. Virtual table: %s; Left source table: %s; Right source table: %s",
       "",
       ""),
   GETTING_VIRTUAL_TABLE_INFO_FAILED(
