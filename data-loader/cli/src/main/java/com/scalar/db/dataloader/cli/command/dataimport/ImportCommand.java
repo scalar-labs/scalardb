@@ -4,10 +4,13 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDe
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
@@ -75,12 +78,24 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .prettyPrint(prettyPrint)
             .build();
     LogWriterFactory logWriterFactory = createLogWriterFactory(config);
+    File configFile = new File(configFilePath);
+    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+
+    // Validate transaction mode configuration before proceeding
+    validateTransactionMode(transactionFactory);
+
     Map<String, TableMetadata> tableMetadataMap =
-        createTableMetadataMap(controlFile, namespace, tableName);
+        createTableMetadataMap(controlFile, namespace, tableName, transactionFactory);
     try (BufferedReader reader =
         Files.newBufferedReader(Paths.get(sourceFilePath), Charset.defaultCharset())) {
       ImportManager importManager =
-          createImportManager(importOptions, tableMetadataMap, reader, logWriterFactory, config);
+          createImportManager(
+              importOptions,
+              tableMetadataMap,
+              reader,
+              logWriterFactory,
+              config,
+              transactionFactory);
       importManager.startImport();
     }
     return 0;
@@ -101,14 +116,16 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param controlFile control file
    * @param namespace Namespace
    * @param tableName Single table name
+   * @param transactionFactory transaction factory to use
    * @return {@code Map<String, TableMetadata>} a table metadata map
    * @throws ParameterException if one of the argument values is wrong
    */
   private Map<String, TableMetadata> createTableMetadataMap(
-      ControlFile controlFile, String namespace, String tableName)
-      throws IOException, TableMetadataException {
-    File configFile = new File(configFilePath);
-    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+      ControlFile controlFile,
+      String namespace,
+      String tableName,
+      TransactionFactory transactionFactory)
+      throws TableMetadataException {
     try (DistributedTransactionAdmin transactionAdmin = transactionFactory.getTransactionAdmin()) {
       TableMetadataService tableMetadataService = new TableMetadataService(transactionAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
@@ -135,6 +152,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param reader buffered reader with source data
    * @param logWriterFactory log writer factory object
    * @param config import logging config
+   * @param transactionFactory transaction factory to use
    * @return ImportManager object
    */
   private ImportManager createImportManager(
@@ -142,9 +160,9 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       Map<String, TableMetadata> tableMetadataMap,
       BufferedReader reader,
       LogWriterFactory logWriterFactory,
-      ImportLoggerConfig config)
+      ImportLoggerConfig config,
+      TransactionFactory transactionFactory)
       throws IOException {
-    File configFile = new File(configFilePath);
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
     ImportManager importManager =
         new ImportManager(
@@ -153,7 +171,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             importOptions,
             importProcessorFactory,
             scalarDbMode,
-            TransactionFactory.create(configFile).getTransactionManager());
+            transactionFactory.getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
     } else {
@@ -233,6 +251,62 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
           spec.commandLine(),
           DataLoaderError.LOG_DIRECTORY_WRITE_ACCESS_DENIED.buildMessage(
               logDirectoryPath.toAbsolutePath()));
+    }
+  }
+
+  /**
+   * Validate transaction mode configuration by attempting to start and abort a transaction
+   *
+   * @param transactionFactory transaction factory to test
+   * @throws ParameterException if transaction mode is incompatible with the configured transaction
+   *     manager
+   */
+  void validateTransactionMode(TransactionFactory transactionFactory) {
+    // Only validate when in TRANSACTION mode
+    if (scalarDbMode != ScalarDbMode.TRANSACTION) {
+      return;
+    }
+
+    DistributedTransaction transaction = null;
+    try {
+      // Try to start a read only transaction to verify the transaction manager is properly
+      // configured
+      transaction = transactionFactory.getTransactionManager().startReadOnly();
+    } catch (Exception e) {
+      // Check for specific error about beginning transaction not allowed
+      if (e.getMessage() != null
+          && e.getMessage()
+              .contains(
+                  CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
+                      .buildCode())) {
+        throw new ParameterException(
+            spec.commandLine(),
+            DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(
+                "The current configuration does not support TRANSACTION mode. "
+                    + "Please try with STORAGE mode or check your ScalarDB configuration. "
+                    + "Error: "
+                    + e.getClass().getSimpleName()
+                    + " - "
+                    + e.getMessage()));
+      }
+
+      // Other exceptions - configuration or runtime error
+      throw new ParameterException(
+          spec.commandLine(),
+          DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(
+              "Failed to validate transaction mode compatibility. Error: "
+                  + e.getClass().getSimpleName()
+                  + " - "
+                  + e.getMessage()));
+    } finally {
+      // Ensure transaction is aborted
+      if (transaction != null) {
+        try {
+          transaction.abort();
+        } catch (Exception ignored) {
+          // Ignore errors during cleanup
+        }
+      }
     }
   }
 

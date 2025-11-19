@@ -216,6 +216,12 @@ public enum DataLoaderError implements ScalarDbError {
       "Cannot specify both deprecated option '%s' and new option '%s'. Please use only '%s'",
       "",
       ""),
+  INVALID_TRANSACTION_MODE(
+      Category.USER_ERROR,
+      "0058",
+      "TRANSACTION mode is not compatible with the current configuration. %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category
