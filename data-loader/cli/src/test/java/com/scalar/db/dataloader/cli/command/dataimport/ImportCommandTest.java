@@ -7,11 +7,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.common.CoreError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -288,18 +286,14 @@ public class ImportCommandTest {
   }
 
   @Test
-  void validateTransactionMode_withInvalidConfig_shouldThrowException() throws Exception {
-    // Arrange - Mock TransactionFactory to throw exception with error
+  void validateTransactionMode_withUnsupportedOperation_shouldThrowException() throws Exception {
+    // Arrange - Mock TransactionFactory to throw UnsupportedOperationException
     TransactionFactory mockFactory = mock(TransactionFactory.class);
     DistributedTransactionManager mockManager = mock(DistributedTransactionManager.class);
 
     when(mockFactory.getTransactionManager()).thenReturn(mockManager);
     when(mockManager.startReadOnly())
-        .thenThrow(
-            new TransactionException(
-                CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-                    .buildMessage(),
-                null));
+        .thenThrow(new UnsupportedOperationException("Transaction mode is not supported"));
 
     ImportCommand command = new ImportCommand();
     CommandLine cmd = new CommandLine(command);
@@ -312,13 +306,8 @@ public class ImportCommandTest {
             CommandLine.ParameterException.class,
             () -> command.validateTransactionMode(mockFactory));
 
-    assertTrue(thrown.getMessage().contains("does not support TRANSACTION mode"));
-    assertTrue(
-        thrown
-            .getMessage()
-            .contains(
-                CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-                    .buildCode()));
+    assertTrue(thrown.getMessage().contains("TRANSACTION mode is not compatible"));
+    assertTrue(thrown.getMessage().contains("UnsupportedOperationException"));
   }
 
   @Test
@@ -341,7 +330,7 @@ public class ImportCommandTest {
             CommandLine.ParameterException.class,
             () -> command.validateTransactionMode(mockFactory));
 
-    assertTrue(thrown.getMessage().contains("Failed to validate transaction mode"));
+    assertTrue(thrown.getMessage().contains("Failed to validate TRANSACTION mode"));
     assertTrue(thrown.getMessage().contains("RuntimeException"));
     assertTrue(thrown.getMessage().contains("Connection failed"));
   }

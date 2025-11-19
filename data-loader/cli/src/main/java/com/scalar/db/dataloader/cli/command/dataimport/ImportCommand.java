@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CoreError;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.ScalarDbMode;
@@ -272,32 +271,22 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       // Try to start a read only transaction to verify the transaction manager is properly
       // configured
       transaction = transactionFactory.getTransactionManager().startReadOnly();
-    } catch (Exception e) {
-      // Check for specific error about beginning transaction not allowed
-      if (e.getMessage() != null
-          && e.getMessage()
-              .contains(
-                  CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-                      .buildCode())) {
-        throw new ParameterException(
-            spec.commandLine(),
-            DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(
-                "The current configuration does not support TRANSACTION mode. "
-                    + "Please try with STORAGE mode or check your ScalarDB configuration. "
-                    + "Error: "
-                    + e.getClass().getSimpleName()
-                    + " - "
-                    + e.getMessage()));
-      }
-
-      // Other exceptions - configuration or runtime error
+    } catch (UnsupportedOperationException e) {
+      // Transaction mode is not supported by the configured transaction manager
       throw new ParameterException(
           spec.commandLine(),
           DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(
-              "Failed to validate transaction mode compatibility. Error: "
+              "Please try with STORAGE mode or check your ScalarDB configuration. "
+                  + "Error: "
                   + e.getClass().getSimpleName()
                   + " - "
                   + e.getMessage()));
+    } catch (Exception e) {
+      // Other exceptions - configuration or runtime error
+      throw new ParameterException(
+          spec.commandLine(),
+          DataLoaderError.TRANSACTION_MODE_VALIDATION_FAILED.buildMessage(
+              "Error: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
     } finally {
       // Ensure transaction is aborted
       if (transaction != null) {
