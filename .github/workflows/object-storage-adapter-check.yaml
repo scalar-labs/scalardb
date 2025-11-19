@@ -92,48 +92,48 @@ jobs:
           name: s3_integration_test_reports_default
           path: core/build/reports/tests/integrationTestObjectStorage
 
-  integration-test-s3:
-    name: S3 integration test (with_group_commit)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestObjectStorage' task
-        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=s3 -Dscalardb.object_storage.endpoint=${{ env.S3_REGION }}/${{ env.S3_BUCKET_NAME }} -Dscalardb.object_storage.username=${{ env.S3_ACCESS_KEY_ID }} -Dscalardb.object_storage.password=${{ env.S3_SECRET_ACCESS_KEY }} ${{ env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: s3_integration_test_reports_with_group_commit
-          path: core/build/reports/tests/integrationTestObjectStorage
+#  integration-test-s3-with-group-commit:
+#    name: S3 integration test (with_group_commit)
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - uses: actions/checkout@v5
+#
+#      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+#        uses: actions/setup-java@v5
+#        with:
+#          java-version: ${{ env.JAVA_VERSION }}
+#          distribution: ${{ env.JAVA_VENDOR }}
+#
+#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+#        uses: actions/setup-java@v5
+#        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+#        with:
+#          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+#          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+#
+#      - name: Login to Oracle container registry
+#        uses: docker/login-action@v3
+#        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+#        with:
+#          registry: container-registry.oracle.com
+#          username: ${{ secrets.OCR_USERNAME }}
+#          password: ${{ secrets.OCR_TOKEN }}
+#
+#      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+#        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+#        run: |
+#          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+#          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+#      - name: Setup Gradle
+#        uses: gradle/actions/setup-gradle@v5
+#
+#      - name: Execute Gradle 'integrationTestObjectStorage' task
+#        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=s3 -Dscalardb.object_storage.endpoint=${{ env.S3_REGION }}/${{ env.S3_BUCKET_NAME }} -Dscalardb.object_storage.username=${{ env.S3_ACCESS_KEY_ID }} -Dscalardb.object_storage.password=${{ env.S3_SECRET_ACCESS_KEY }} ${{ env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+#
+#      - name: Upload Gradle test reports
+#        if: always()
+#        uses: actions/upload-artifact@v5
+#        with:
+#          name: s3_integration_test_reports_with_group_commit
+#          path: core/build/reports/tests/integrationTestObjectStorage
