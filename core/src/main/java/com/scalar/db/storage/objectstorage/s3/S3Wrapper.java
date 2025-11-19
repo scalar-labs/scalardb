@@ -35,7 +35,9 @@ import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 
 @ThreadSafe
 public class S3Wrapper implements ObjectStorageWrapper {
+  // DeleteObjects API has a limit of 1000 objects per request
   public static final int BATCH_DELETE_SIZE_LIMIT = 1000;
+
   private final S3AsyncClient client;
   private final String bucket;
 
@@ -281,8 +283,12 @@ public class S3Wrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void close() {
-    client.close();
+  public void close() throws ObjectStorageWrapperException {
+    try {
+      client.close();
+    } catch (Exception e) {
+      throw new ObjectStorageWrapperException("Failed to close the storage wrapper", e);
+    }
   }
 
   private Optional<S3Exception> findS3Exception(Throwable throwable) {

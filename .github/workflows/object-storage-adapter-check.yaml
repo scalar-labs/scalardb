@@ -44,6 +44,9 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
   S3_REGION: ap-northeast-1
   S3_BUCKET_NAME: scalardb-test-bucket
+  CLOUD_STORAGE_PROJECT_ID: ${{ secrets.CLOUD_STORAGE_PROJECT_ID }}
+  CLOUD_STORAGE_SERVICE_ACCOUNT_KEY: ${{ secrets.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}
+  CLOUD_STORAGE_BUCKET_NAME: scalardb-test-bucket
 
 jobs:
   integration-test-s3:
@@ -98,5 +101,59 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: cassandra_3.0_integration_test_reports_${{ matrix.mode.label }}
+          name: s3_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestObjectStorage
+  integration-test-cloud-storage:
+    name: Cloud Storage integration test (${{ matrix.mode.label }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v5
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to Oracle container registry
+        uses: docker/login-action@v3
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        with:
+          registry: container-registry.oracle.com
+          username: ${{ secrets.OCR_USERNAME }}
+          password: ${{ secrets.OCR_TOKEN }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+        run: |
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestObjectStorage' task
+        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=scalardb-test-bucket -Dscalardb.object_storage.username=${{ env.CLOUD_STORAGE_PROJECT_ID }} -Dscalardb.object_storage.password=${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }} ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: cloud_storage_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestObjectStorage
