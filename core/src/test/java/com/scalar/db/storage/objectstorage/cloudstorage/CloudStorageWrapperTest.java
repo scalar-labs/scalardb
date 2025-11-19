@@ -424,6 +424,8 @@ public class CloudStorageWrapperTest {
 
   @Test
   public void close_ShouldCloseTheStorage() throws Exception {
+    // Arrange
+
     // Act
     wrapper.close();
 

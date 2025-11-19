@@ -26,7 +26,9 @@ import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class CloudStorageWrapper implements ObjectStorageWrapper {
+  // Batch API has a limit of 100 operations per request
   public static final int BATCH_DELETE_SIZE_LIMIT = 100;
+
   private final Storage storage;
   private final String bucket;
   private final Integer parallelUploadBlockSizeInBytes;

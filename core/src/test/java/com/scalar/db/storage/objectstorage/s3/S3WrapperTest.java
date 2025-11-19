@@ -552,7 +552,7 @@ public class S3WrapperTest {
   }
 
   @Test
-  public void close_ShouldCloseTheClient() {
+  public void close_ShouldCloseTheClient() throws Exception {
     // Arrange
 
     // Act
