@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport.dao;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
@@ -10,15 +9,13 @@ import com.scalar.db.api.PutBuilder.Buildable;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanBuilder;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.ScanRange;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -29,22 +26,30 @@ import javax.annotation.Nullable;
 public class ScalarDbDao {
 
   /**
-   * Retrieve record from ScalarDB instance in storage mode
+   * Retrieves a record from a ScalarDB table using the specified partition and optional clustering
+   * keys while operating in storage mode through a {@link DistributedTransactionManager}.
    *
-   * @param namespace Namespace name
-   * @param table Table name
-   * @param partitionKey Partition key
-   * @param clusteringKey Optional clustering key for get
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode.
-   * @return Optional get result
-   * @throws ScalarDbDaoException if something goes wrong while reading the data
+   * <p>This method creates a {@link Get} operation for the given namespace and table, executes it
+   * using the provided transaction manager, and returns the result if the record exists.
+   *
+   * @param namespace the name of the ScalarDB namespace containing the target table
+   * @param table the name of the table to retrieve the record from
+   * @param partitionKey the partition key identifying the record's partition
+   * @param clusteringKey the optional clustering key identifying a specific record within the
+   *     partition; may be {@code null} if the table does not use clustering keys
+   * @param manager the {@link DistributedTransactionManager} instance used to perform the get
+   *     operation
+   * @return an {@link Optional} containing the {@link Result} if the record exists, or an empty
+   *     {@link Optional} if not found
+   * @throws ScalarDbDaoException if an error occurs while performing the get operation or
+   *     interacting with ScalarDB
    */
   public Optional<Result> get(
       String namespace,
       String table,
       Key partitionKey,
       Key clusteringKey,
-      DistributedStorage storage)
+      DistributedTransactionManager manager)
       throws ScalarDbDaoException {
 
     // Retrieving the key data for logging
@@ -52,8 +57,8 @@ public class ScalarDbDao {
 
     try {
       Get get = createGetWith(namespace, table, partitionKey, clusteringKey);
-      return storage.get(get);
-    } catch (ExecutionException e) {
+      return manager.get(get);
+    } catch (CrudException | UnknownTransactionStatusException e) {
       throw new ScalarDbDaoException("error GET " + loggingKey, e);
     }
   }
@@ -117,15 +122,24 @@ public class ScalarDbDao {
   }
 
   /**
-   * Save record in ScalarDB instance
+   * Saves a record into a ScalarDB table using the specified partition and optional clustering keys
+   * through a {@link DistributedTransactionManager}.
    *
-   * @param namespace Namespace name
-   * @param table Table name
-   * @param partitionKey Partition key
-   * @param clusteringKey Optional clustering key
-   * @param columns List of column values to be inserted or updated
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @throws ScalarDbDaoException if something goes wrong while executing the transaction
+   * <p>This method constructs a {@link Put} operation with the provided key and column information,
+   * then executes it using the given transaction manager. The operation inserts a new record or
+   * updates an existing one if a record with the same primary key already exists.
+   *
+   * @param namespace the name of the ScalarDB namespace containing the target table
+   * @param table the name of the table where the record will be inserted or updated
+   * @param partitionKey the partition key identifying the record's partition
+   * @param clusteringKey the optional clustering key identifying a specific record within the
+   *     partition; may be {@code null} if the table does not use clustering keys
+   * @param columns the list of {@link Column} objects representing the column values to insert or
+   *     update
+   * @param manager the {@link DistributedTransactionManager} instance used to perform the put
+   *     operation
+   * @throws ScalarDbDaoException if an error occurs while executing the put operation or
+   *     interacting with ScalarDB
    */
   public void put(
       String namespace,
@@ -133,51 +147,14 @@ public class ScalarDbDao {
       Key partitionKey,
       Key clusteringKey,
       List<Column<?>> columns,
-      DistributedStorage storage)
+      DistributedTransactionManager manager)
       throws ScalarDbDaoException {
     Put put = createPutWith(namespace, table, partitionKey, clusteringKey, columns);
     try {
-      storage.put(put);
-    } catch (ExecutionException e) {
+      manager.put(put);
+    } catch (CrudException | UnknownTransactionStatusException e) {
       throw new ScalarDbDaoException(
           DataLoaderError.ERROR_CRUD_EXCEPTION.buildMessage(e.getMessage()), e);
-    }
-  }
-
-  /**
-   * Scan a ScalarDB table
-   *
-   * @param namespace ScalarDB namespace
-   * @param table ScalarDB table name
-   * @param partitionKey Partition key used in ScalarDB scan
-   * @param range Optional range to set ScalarDB scan start and end values
-   * @param sorts Optional scan clustering key sorting values
-   * @param projections List of column projection to use during scan
-   * @param limit Scan limit value
-   * @param storage Distributed storage for ScalarDB connection that is running in storage mode
-   * @return List of ScalarDB scan results
-   * @throws ScalarDbDaoException if scan fails
-   */
-  public List<Result> scan(
-      String namespace,
-      String table,
-      Key partitionKey,
-      ScanRange range,
-      List<Scan.Ordering> sorts,
-      List<String> projections,
-      int limit,
-      DistributedStorage storage)
-      throws ScalarDbDaoException {
-    // Create scan
-    Scan scan = createScan(namespace, table, partitionKey, range, sorts, projections, limit);
-
-    // scan data
-    try {
-      try (Scanner scanner = storage.scan(scan)) {
-        return scanner.all();
-      }
-    } catch (ExecutionException | IOException e) {
-      throw new ScalarDbDaoException(DataLoaderError.ERROR_SCAN.buildMessage(e.getMessage()), e);
     }
   }
 
