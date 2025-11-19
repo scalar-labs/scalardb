@@ -183,6 +183,7 @@ public abstract class ImportTask {
           .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(Collections.singletonList(DataLoaderError.TABLE_METADATA_MISSING.buildMessage()))
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .build();
     }
 
@@ -209,6 +210,7 @@ public abstract class ImportTask {
           .tableName(table)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(validationResult.getErrorMessages())
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .build();
     }
 
@@ -223,6 +225,7 @@ public abstract class ImportTask {
           .errors(
               Collections.singletonList(
                   DataLoaderError.COULD_NOT_FIND_PARTITION_KEY.buildMessage()))
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .build();
     }
     Optional<Key> optionalClusteringKey = Optional.empty();
@@ -238,6 +241,7 @@ public abstract class ImportTask {
             .errors(
                 Collections.singletonList(
                     DataLoaderError.COULD_NOT_FIND_CLUSTERING_KEY.buildMessage()))
+            .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
             .build();
       }
     }
@@ -254,6 +258,7 @@ public abstract class ImportTask {
           .tableName(table)
           .status(ImportTargetResultStatus.RETRIEVAL_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .build();
     }
     ImportTaskAction importAction =
@@ -273,6 +278,7 @@ public abstract class ImportTask {
             .errors(
                 Collections.singletonList(
                     DataLoaderError.UPSERT_INSERT_MISSING_COLUMNS.buildMessage()))
+            .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
             .build();
       }
     }
@@ -281,7 +287,7 @@ public abstract class ImportTask {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
-          .importedRecord(mutableSourceRecord)
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_ALREADY_EXISTS)
           .errors(Collections.singletonList(DataLoaderError.DATA_ALREADY_EXISTS.buildMessage()))
@@ -292,7 +298,7 @@ public abstract class ImportTask {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
-          .importedRecord(mutableSourceRecord)
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .importAction(importAction)
           .status(ImportTargetResultStatus.DATA_NOT_FOUND)
           .errors(Collections.singletonList(DataLoaderError.DATA_NOT_FOUND.buildMessage()))
@@ -314,7 +320,7 @@ public abstract class ImportTask {
       return ImportTargetResult.builder()
           .namespace(namespace)
           .tableName(table)
-          .importedRecord(mutableSourceRecord)
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .status(ImportTargetResultStatus.VALIDATION_FAILED)
           .errors(Collections.singletonList(e.getMessage()))
           .build();
@@ -333,13 +339,14 @@ public abstract class ImportTask {
           .namespace(namespace)
           .tableName(table)
           .importAction(importAction)
-          .importedRecord(mutableSourceRecord)
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .status(ImportTargetResultStatus.SAVED)
           .build();
 
     } catch (ScalarDbDaoException e) {
       return ImportTargetResult.builder()
           .namespace(namespace)
+          .importedRecord(importOptions.isLogRawRecord() ? mutableSourceRecord : null)
           .tableName(table)
           .importAction(importAction)
           .status(ImportTargetResultStatus.SAVE_FAILED)
