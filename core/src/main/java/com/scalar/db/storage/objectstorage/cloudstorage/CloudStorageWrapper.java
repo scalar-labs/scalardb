@@ -41,11 +41,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
             .build()
             .getService();
     bucket = config.getBucket();
-    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
-      parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().get();
-    } else {
-      parallelUploadBlockSizeInBytes = null;
-    }
+    parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().orElse(null);
   }
 
   @VisibleForTesting
@@ -53,11 +49,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   public CloudStorageWrapper(CloudStorageConfig config, Storage storage) {
     this.storage = storage;
     this.bucket = config.getBucket();
-    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
-      parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().get();
-    } else {
-      parallelUploadBlockSizeInBytes = null;
-    }
+    parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().orElse(null);
   }
 
   @Override
