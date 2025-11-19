@@ -75,6 +75,10 @@ public abstract class AbstractImportLogger implements ImportEventListener {
     if (shouldSkipLoggingSuccess(batchResult)) {
       return;
     }
+    // Skip logging records if log raw records is not enabled and execution is not success
+    if (!batchResult.isSuccess() && !config.isLogRawSourceRecordsEnabled()) {
+      return;
+    }
 
     logTransactionBatch(batchResult);
     notifyTransactionBatchCompleted(batchResult);

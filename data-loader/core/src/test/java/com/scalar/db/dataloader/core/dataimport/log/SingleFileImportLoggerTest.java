@@ -25,6 +25,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -261,5 +262,29 @@ class SingleFileImportLoggerTest {
     assertEquals(expected.getBatchCount(), actual.getBatchCount());
     assertEquals(
         expected.getTotalDurationInMilliSeconds(), actual.getTotalDurationInMilliSeconds());
+  }
+
+  @Test
+  void onTransactionBatchCompleted_ShouldNotLogOrNotify_WhenRawLoggingIsSkipped()
+      throws IOException {
+    // Arrange
+    ImportLoggerConfig config =
+        ImportLoggerConfig.builder()
+            .logDirectoryPath(tempDir.toString() + "/")
+            .isLogRawSourceRecordsEnabled(false)
+            .isLogSuccessRecordsEnabled(true) // success logging OFF
+            .build();
+
+    // Spy on logger to verify internal calls
+    SingleFileImportLogger loggerSpy =
+        Mockito.spy(new SingleFileImportLogger(config, logWriterFactory));
+
+    ImportTransactionBatchResult batch = createBatchResults(1, false).get(0); // success batch
+
+    // Act
+    loggerSpy.onTransactionBatchCompleted(batch);
+
+    // Assert
+    Mockito.verify(loggerSpy, Mockito.never()).logTransactionBatch(Mockito.any());
   }
 }
