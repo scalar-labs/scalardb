@@ -10,13 +10,6 @@ public interface ObjectStorageConfig {
   String getStorageName();
 
   /**
-   * Returns the username for authentication.
-   *
-   * @return the username
-   */
-  String getUsername();
-
-  /**
    * Returns the password for authentication.
    *
    * @return the password
