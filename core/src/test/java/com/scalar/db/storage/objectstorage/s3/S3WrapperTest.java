@@ -47,10 +47,10 @@ public class S3WrapperTest {
   private static final String METADATA_NAMESPACE = "scalardb";
   private static final String REGION = "us-west-2";
   private static final String BUCKET = "bucket";
-  private static final String ANY_OBJECT_KEY = "any-object-key";
-  private static final String ANY_PREFIX = "any-prefix/";
-  private static final String ANY_DATA = "any-data";
-  private static final String ANY_ETAG = "any-etag";
+  private static final String ANY_OBJECT_KEY = "any_object_key";
+  private static final String ANY_PREFIX = "any_prefix/";
+  private static final String ANY_DATA = "any_data";
+  private static final String ANY_ETAG = "any_etag";
 
   @Mock private S3Config config;
   @Mock private S3AsyncClient client;

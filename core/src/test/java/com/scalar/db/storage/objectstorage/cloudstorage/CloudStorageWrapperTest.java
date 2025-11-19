@@ -36,11 +36,11 @@ import org.mockito.MockitoAnnotations;
 
 public class CloudStorageWrapperTest {
   private static final String METADATA_NAMESPACE = "scalardb";
-  private static final String PROJECT_ID = "project-id";
+  private static final String PROJECT_ID = "project_id";
   private static final String BUCKET = "bucket";
-  private static final String ANY_OBJECT_KEY = "any-object-key";
-  private static final String ANY_PREFIX = "any-prefix/";
-  private static final String ANY_DATA = "any-data";
+  private static final String ANY_OBJECT_KEY = "any_object_key";
+  private static final String ANY_PREFIX = "any_prefix/";
+  private static final String ANY_DATA = "any_data";
   private static final long ANY_GENERATION = 12345L;
 
   @Mock private CloudStorageConfig config;

@@ -934,7 +934,7 @@ public enum CoreError implements ScalarDbError {
   OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_NOT_FOUND(
       Category.USER_ERROR,
       "0263",
-      "The service account key for Cloud Storage is not found.",
+      "The service account key for Cloud Storage was not found.",
       "",
       ""),
   OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
