@@ -53,8 +53,7 @@ public class DeleteStatementHandler {
       throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
     } catch (TransactionConflictException e) {
       throw new RetriableExecutionException(
-          CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
-              e.getMessage(), e),
+          CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
           e);
     } catch (DynamoDbException e) {
       throw new ExecutionException(
