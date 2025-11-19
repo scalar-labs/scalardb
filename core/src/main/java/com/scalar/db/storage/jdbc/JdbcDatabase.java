@@ -391,10 +391,23 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           }
         }
 
+        // Check if all right expressions are IS_NULL
+        boolean allRightConditionsAreIsNull = false;
+        if (!rightExpressions.isEmpty()) {
+          allRightConditionsAreIsNull =
+              rightExpressions.stream()
+                  .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL);
+        }
+
         if (!leftExpressions.isEmpty()) {
           putBuilderForLeftSourceTable.condition(ConditionBuilder.putIf(leftExpressions));
         }
-        if (!rightExpressions.isEmpty()) {
+        if (virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+            && allRightConditionsAreIsNull) {
+          // In case of LEFT_OUTER join, if all conditions for the right source table are IS_NULL,
+          // it means the right record should not exist, so we use PutIfNotExists.
+          putBuilderForRightSourceTable.condition(ConditionBuilder.putIfNotExists());
+        } else if (!rightExpressions.isEmpty()) {
           putBuilderForRightSourceTable.condition(ConditionBuilder.putIf(rightExpressions));
         }
       }
@@ -460,10 +473,23 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           }
         }
 
+        // Check if all right expressions are IS_NULL
+        boolean allRightConditionsAreIsNull = false;
+        if (!rightExpressions.isEmpty()) {
+          allRightConditionsAreIsNull =
+              rightExpressions.stream()
+                  .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL);
+        }
+
         if (!leftExpressions.isEmpty()) {
           deleteBuilderForLeftSourceTable.condition(ConditionBuilder.deleteIf(leftExpressions));
         }
-        if (!rightExpressions.isEmpty()) {
+        if (virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+            && allRightConditionsAreIsNull) {
+          // In case of LEFT_OUTER join, if all conditions for the right source table are IS_NULL,
+          // it means the right record should not exist, so we use DeleteIfExists.
+          deleteBuilderForRightSourceTable.condition(ConditionBuilder.deleteIfExists());
+        } else if (!rightExpressions.isEmpty()) {
           deleteBuilderForRightSourceTable.condition(ConditionBuilder.deleteIf(rightExpressions));
         }
       }

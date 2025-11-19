@@ -90,6 +90,29 @@ public final class JdbcUtils {
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
 
+    config
+        .getIsolation()
+        .ifPresent(
+            isolation -> {
+              switch (isolation) {
+                case READ_UNCOMMITTED:
+                  dataSource.setDefaultTransactionIsolation(
+                      Connection.TRANSACTION_READ_UNCOMMITTED);
+                  break;
+                case READ_COMMITTED:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                  break;
+                case REPEATABLE_READ:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+                  break;
+                case SERIALIZABLE:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                  break;
+                default:
+                  throw new AssertionError();
+              }
+            });
+
     dataSource.setDefaultReadOnly(false);
 
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
@@ -116,6 +139,29 @@ public final class JdbcUtils {
     dataSource.setUrl(config.getJdbcUrl());
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
+
+    config
+        .getIsolation()
+        .ifPresent(
+            isolation -> {
+              switch (isolation) {
+                case READ_UNCOMMITTED:
+                  dataSource.setDefaultTransactionIsolation(
+                      Connection.TRANSACTION_READ_UNCOMMITTED);
+                  break;
+                case READ_COMMITTED:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                  break;
+                case REPEATABLE_READ:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+                  break;
+                case SERIALIZABLE:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                  break;
+                default:
+                  throw new AssertionError();
+              }
+            });
 
     dataSource.setDefaultReadOnly(false);
 
