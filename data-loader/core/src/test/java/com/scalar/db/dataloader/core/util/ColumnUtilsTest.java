@@ -242,27 +242,49 @@ class ColumnUtilsTest {
     // Integer type
     Column<?> intColumn = ColumnUtils.createColumnFromValue(DataType.INT, columnInfo, "null");
     assertEquals(IntColumn.ofNull(columnName), intColumn);
+    intColumn = ColumnUtils.createColumnFromValue(DataType.INT, columnInfo, "Null");
+    assertEquals(IntColumn.ofNull(columnName), intColumn);
 
     // Double type
     Column<?> doubleColumn = ColumnUtils.createColumnFromValue(DataType.DOUBLE, columnInfo, "null");
+    assertEquals(DoubleColumn.ofNull(columnName), doubleColumn);
+    doubleColumn = ColumnUtils.createColumnFromValue(DataType.DOUBLE, columnInfo, "NULL");
     assertEquals(DoubleColumn.ofNull(columnName), doubleColumn);
 
     // Boolean type
     Column<?> boolColumn = ColumnUtils.createColumnFromValue(DataType.BOOLEAN, columnInfo, "null");
     assertEquals(BooleanColumn.ofNull(columnName), boolColumn);
 
+    boolColumn = ColumnUtils.createColumnFromValue(DataType.BOOLEAN, columnInfo, "nuLL");
+    assertEquals(BooleanColumn.ofNull(columnName), boolColumn);
+
     // Date type
     Column<?> dateColumn = ColumnUtils.createColumnFromValue(DataType.DATE, columnInfo, "null");
+    assertEquals(DateColumn.ofNull(columnName), dateColumn);
+    dateColumn = ColumnUtils.createColumnFromValue(DataType.DATE, columnInfo, "NULL");
     assertEquals(DateColumn.ofNull(columnName), dateColumn);
 
     // Time type
     Column<?> timeColumn = ColumnUtils.createColumnFromValue(DataType.TIME, columnInfo, "null");
     assertEquals(TimeColumn.ofNull(columnName), timeColumn);
 
+    timeColumn = ColumnUtils.createColumnFromValue(DataType.TIME, columnInfo, "nuLL");
+    assertEquals(TimeColumn.ofNull(columnName), timeColumn);
+
     // Timestamp type
     Column<?> timestampColumn =
         ColumnUtils.createColumnFromValue(DataType.TIMESTAMP, columnInfo, "null");
     assertEquals(TimestampColumn.ofNull(columnName), timestampColumn);
+    timestampColumn = ColumnUtils.createColumnFromValue(DataType.TIMESTAMP, columnInfo, "NULL");
+    assertEquals(TimestampColumn.ofNull(columnName), timestampColumn);
+
+    // Timestamp type
+    Column<?> timestamprtzColumn =
+        ColumnUtils.createColumnFromValue(DataType.TIMESTAMPTZ, columnInfo, "null");
+    assertEquals(TimestampTZColumn.ofNull(columnName), timestamprtzColumn);
+    timestamprtzColumn =
+        ColumnUtils.createColumnFromValue(DataType.TIMESTAMPTZ, columnInfo, "Null");
+    assertEquals(TimestampTZColumn.ofNull(columnName), timestamprtzColumn);
   }
 
   /**
@@ -277,5 +299,14 @@ class ColumnUtilsTest {
 
     Column<?> textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "null");
     assertEquals(TextColumn.of(columnName, "null"), textCol);
+
+    textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "NULL");
+    assertEquals(TextColumn.of(columnName, "NULL"), textCol);
+
+    textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "Null");
+    assertEquals(TextColumn.of(columnName, "Null"), textCol);
+
+    textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "nuLL");
+    assertEquals(TextColumn.of(columnName, "nuLL"), textCol);
   }
 }
