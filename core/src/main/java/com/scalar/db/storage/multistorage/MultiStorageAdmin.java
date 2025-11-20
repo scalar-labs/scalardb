@@ -5,16 +5,21 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -286,6 +291,54 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
       }
       throw e;
     }
+  }
+
+  @Override
+  public void createVirtualTable(
+      String namespace,
+      String table,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      VirtualTableJoinType joinType,
+      Map<String, String> options)
+      throws ExecutionException {
+    StorageInfo storageInfo = getStorageInfo(namespace);
+    StorageInfo storageInfoForLeftSourceNamespace = getStorageInfo(leftSourceNamespace);
+    StorageInfo storageInfoForRightSourceNamespace = getStorageInfo(rightSourceNamespace);
+    if (!storageInfo.getStorageName().equals(storageInfoForLeftSourceNamespace.getStorageName())) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_IN_DIFFERENT_STORAGE_FROM_SOURCE_TABLES.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+    }
+    if (!storageInfoForLeftSourceNamespace
+        .getStorageName()
+        .equals(storageInfoForRightSourceNamespace.getStorageName())) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_SOURCE_TABLES_IN_DIFFERENT_STORAGES.buildMessage(
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+    }
+
+    getAdmin(namespace)
+        .createVirtualTable(
+            namespace,
+            table,
+            leftSourceNamespace,
+            leftSourceTable,
+            rightSourceNamespace,
+            rightSourceTable,
+            joinType,
+            options);
+  }
+
+  @Override
+  public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
+      throws ExecutionException {
+    return getAdmin(namespace, table).getVirtualTableInfo(namespace, table);
   }
 
   private AdminHolder getAdminHolder(String namespace) {

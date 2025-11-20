@@ -20,6 +20,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
@@ -29,6 +31,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -492,6 +495,25 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public StorageInfo getStorageInfo(String namespace) {
     return STORAGE_INFO;
+  }
+
+  @Override
+  public void createVirtualTable(
+      String namespace,
+      String table,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      VirtualTableJoinType joinType,
+      Map<String, String> options) {
+    throw new AssertionError("CommonDistributedStorageAdmin should not call this method");
+  }
+
+  @Override
+  public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table) {
+    // Virtual tables are not supported.
+    return Optional.empty();
   }
 
   @Override

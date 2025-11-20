@@ -4,10 +4,13 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -138,6 +141,34 @@ public class AdminService implements DistributedStorageAdmin {
   @Override
   public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
     return admin.getStorageInfo(namespace);
+  }
+
+  @Override
+  public void createVirtualTable(
+      String namespace,
+      String table,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      VirtualTableJoinType joinType,
+      Map<String, String> options)
+      throws ExecutionException {
+    admin.createVirtualTable(
+        namespace,
+        table,
+        leftSourceNamespace,
+        leftSourceTable,
+        rightSourceNamespace,
+        rightSourceTable,
+        joinType,
+        options);
+  }
+
+  @Override
+  public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
+      throws ExecutionException {
+    return admin.getVirtualTableInfo(namespace, table);
   }
 
   @Override

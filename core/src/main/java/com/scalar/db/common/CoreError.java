@@ -943,6 +943,72 @@ public enum CoreError implements ScalarDbError {
       "Failed to load the service account key for Cloud Storage.",
       "",
       ""),
+  VIRTUAL_TABLE_NOT_SUPPORTED_IN_STORAGE(
+      Category.USER_ERROR,
+      "0265",
+      "To support virtual tables, the atomicity unit of the storage must be at least at the namespace level. Storage: %s; Atomicity unit: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_SOURCE_TABLES_OUTSIDE_OF_ATOMICITY_UNIT(
+      Category.USER_ERROR,
+      "0266",
+      "The source tables must reside within the atomicity unit of the storage. Storage: %s; Atomicity unit: %s; Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  DYNAMO_VIRTUAL_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0267",
+      "The virtual table functionality is not supported in DynamoDB",
+      "",
+      ""),
+  VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_PRIMARY_KEY(
+      Category.USER_ERROR,
+      "0268",
+      "The source tables must have the same primary key. Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_PRIMARY_KEY_TYPES(
+      Category.USER_ERROR,
+      "0269",
+      "The source tables must have the same data types for primary key column. Column: %s; Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_CLUSTERING_ORDERS(
+      Category.USER_ERROR,
+      "0270",
+      "The source tables must have the same clustering orders for clustering key column. Column: %s; Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_SOURCE_TABLES_HAVE_CONFLICTING_COLUMN_NAMES(
+      Category.USER_ERROR,
+      "0271",
+      "The source tables have conflicting non-key column names. Left source table: %s; Right source table: %s; Conflicting columns: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_CANNOT_USE_VIRTUAL_TABLE_AS_SOURCE(
+      Category.USER_ERROR,
+      "0272",
+      "Virtual tables cannot be used as source tables. Source table: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_SOURCE_TABLES_IN_DIFFERENT_STORAGES(
+      Category.USER_ERROR,
+      "0273",
+      "The source tables must be in the same storage. Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  VIRTUAL_TABLE_IN_DIFFERENT_STORAGE_FROM_SOURCE_TABLES(
+      Category.USER_ERROR,
+      "0274",
+      "The virtual table must be in the same storage as its source tables. Virtual table: %s; Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  SOURCE_TABLES_CANNOT_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST(
+      Category.USER_ERROR,
+      "0275",
+      "Source tables cannot be dropped while virtual tables depending on them exist. Source table: %s; Virtual tables: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1265,6 +1331,18 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0064", "An error occurred in the selection. Details: %s", "", ""),
   OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION(
       Category.INTERNAL_ERROR, "0065", "An error occurred in the mutation. Details: %s", "", ""),
+  CREATING_VIRTUAL_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0066",
+      "Creating the virtual table failed. Virtual table: %s; Left source table: %s; Right source table: %s",
+      "",
+      ""),
+  GETTING_VIRTUAL_TABLE_INFO_FAILED(
+      Category.INTERNAL_ERROR,
+      "0067",
+      "Getting the virtual table information failed. Table: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
