@@ -80,11 +80,11 @@ public abstract class ExportManager {
       ExecutorService executorService =
           Executors.newFixedThreadPool(exportOptions.getMaxThreadCount());
 
-      BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
       try (TransactionManagerCrudOperable.Scanner scanner =
-          createScanner(exportOptions, dao, manager)) {
+              createScanner(exportOptions, dao, manager);
+          BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -106,18 +106,20 @@ public abstract class ExportManager {
         executorService.shutdown();
         if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
           logger.info("All tasks completed");
+          processFooter(exportOptions, tableMetadata, bufferedWriter);
         } else {
           logger.error("Timeout occurred while waiting for tasks to complete");
           // TODO: handle this
         }
-        processFooter(exportOptions, tableMetadata, bufferedWriter);
       } catch (InterruptedException
           | IOException
           | UnknownTransactionStatusException
           | CrudException e) {
         logger.error("Error during export: ", e);
       } finally {
-        bufferedWriter.flush();
+        if (!executorService.isShutdown()) {
+          executorService.shutdownNow();
+        }
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
