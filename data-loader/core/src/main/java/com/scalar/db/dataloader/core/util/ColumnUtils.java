@@ -83,9 +83,14 @@ public final class ColumnUtils {
       DataType dataType, ColumnInfo columnInfo, @Nullable String value)
       throws ColumnParsingException {
     String columnName = columnInfo.getColumnName();
-    if (value != null && (!dataType.equals(DataType.TEXT) && value.equalsIgnoreCase("null"))
-        || (dataType.equals(DataType.TEXT) && "\\N".equals(value))) {
-      value = null;
+    if (value != null) {
+      if (dataType.equals(DataType.TEXT)) {
+        if ("\\N".equals(value)) {
+          value = null;
+        }
+      } else if (value.equalsIgnoreCase("null")) {
+        value = null;
+      }
     }
     try {
       switch (dataType) {
