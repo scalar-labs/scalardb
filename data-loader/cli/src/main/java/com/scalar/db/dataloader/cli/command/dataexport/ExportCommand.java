@@ -1,10 +1,12 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 
-import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.cli.exception.DirectoryValidationException;
 import com.scalar.db.dataloader.cli.util.DirectoryUtils;
@@ -28,7 +30,7 @@ import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.KeyUtils;
 import com.scalar.db.io.Key;
-import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -48,6 +50,9 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    validateDeprecatedOptions();
+    applyDeprecatedOptions();
+    warnAboutIgnoredDeprecatedOptions();
     String scalarDbPropertiesFilePath = getScalarDbPropertiesFilePath();
 
     try {
@@ -55,16 +60,23 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
       FileUtils.validateFilePath(scalarDbPropertiesFilePath);
       validatePositiveValue(
           spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
-      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      // Only validate the argument when provided by the user, if not set a default
+      if (maxThreads != null) {
+        validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+      } else {
+        maxThreads = Runtime.getRuntime().availableProcessors();
+      }
 
-      StorageFactory storageFactory = StorageFactory.create(scalarDbPropertiesFilePath);
-      TableMetadataService metaDataService =
-          new TableMetadataService(storageFactory.getStorageAdmin());
+      TransactionFactory transactionFactory = TransactionFactory.create(scalarDbPropertiesFilePath);
+      TableMetadata tableMetadata;
+      try (DistributedTransactionAdmin admin = transactionFactory.getTransactionAdmin()) {
+        TableMetadataService metaDataService = new TableMetadataService(admin);
+        tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      }
       ScalarDbDao scalarDbDao = new ScalarDbDao();
 
-      ExportManager exportManager = createExportManager(storageFactory, scalarDbDao, outputFormat);
-
-      TableMetadata tableMetadata = metaDataService.getTableMetadata(namespace, table);
+      ExportManager exportManager =
+          createExportManager(transactionFactory, scalarDbDao, outputFormat);
 
       Key partitionKey =
           partitionKeyValue != null ? getKeysFromList(partitionKeyValue, tableMetadata) : null;
@@ -104,6 +116,51 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
     return 0;
   }
 
+  /**
+   * Validates that deprecated and new options are not both specified.
+   *
+   * @throws CommandLine.ParameterException if both old and new options are specified
+   */
+  private void validateDeprecatedOptions() {
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_START_EXCLUSIVE_OPTION,
+        START_INCLUSIVE_OPTION,
+        START_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_END_EXCLUSIVE_OPTION,
+        END_INCLUSIVE_OPTION,
+        END_INCLUSIVE_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
+  }
+
+  /** Warns about deprecated options that are no longer used and have been completely ignored. */
+  private void warnAboutIgnoredDeprecatedOptions() {
+    CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
+    boolean hasIncludeMetadata =
+        parseResult.hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION)
+            || parseResult.hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION_SHORT);
+
+    if (hasIncludeMetadata) {
+      // Use picocli's ANSI support for colored warning output
+      CommandLine.Help.Ansi ansi = CommandLine.Help.Ansi.AUTO;
+      String warning =
+          ansi.string(
+              "@|bold,yellow The "
+                  + DEPRECATED_INCLUDE_METADATA_OPTION
+                  + " option is deprecated and no longer has any effect. "
+                  + "Use the 'scalar.db.consensus_commit.include_metadata.enabled' configuration property "
+                  + "in your ScalarDB properties file to control whether transaction metadata is included in scan operations.|@");
+
+      logger.warn(warning);
+    }
+  }
+
   private String getScalarDbPropertiesFilePath() {
     if (StringUtils.isBlank(configFilePath)) {
       throw new IllegalArgumentException(DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage());
@@ -122,17 +179,16 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   }
 
   private ExportManager createExportManager(
-      StorageFactory storageFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
-    ProducerTaskFactory taskFactory =
-        new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
-    DistributedStorage storage = storageFactory.getStorage();
+      TransactionFactory transactionFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
+    ProducerTaskFactory taskFactory = new ProducerTaskFactory(delimiter, prettyPrintJson);
+    DistributedTransactionManager manager = transactionFactory.getTransactionManager();
     switch (fileFormat) {
       case JSON:
-        return new JsonExportManager(storage, scalarDbDao, taskFactory);
+        return new JsonExportManager(manager, scalarDbDao, taskFactory);
       case JSONL:
-        return new JsonLineExportManager(storage, scalarDbDao, taskFactory);
+        return new JsonLineExportManager(manager, scalarDbDao, taskFactory);
       case CSV:
-        return new CsvExportManager(storage, scalarDbDao, taskFactory);
+        return new CsvExportManager(manager, scalarDbDao, taskFactory);
       default:
         throw new AssertionError("Invalid file format" + fileFormat);
     }
@@ -143,7 +199,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         ExportOptions.builder(namespace, table, partitionKey, outputFormat)
             .sortOrders(sortOrders)
             .excludeHeaderRow(excludeHeader)
-            .includeTransactionMetadata(includeTransactionMetadata)
             .delimiter(delimiter)
             .limit(limit)
             .maxThreadCount(maxThreads)

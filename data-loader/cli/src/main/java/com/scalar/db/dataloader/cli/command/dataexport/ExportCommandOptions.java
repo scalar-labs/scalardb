@@ -10,6 +10,17 @@ import picocli.CommandLine;
 public class ExportCommandOptions {
 
   protected static final String DEFAULT_CONFIG_FILE_NAME = "scalardb.properties";
+  public static final String START_INCLUSIVE_OPTION = "--start-inclusive";
+  public static final String START_INCLUSIVE_OPTION_SHORT = "-si";
+  public static final String DEPRECATED_START_EXCLUSIVE_OPTION = "--start-exclusive";
+  public static final String END_INCLUSIVE_OPTION = "--end-inclusive";
+  public static final String END_INCLUSIVE_OPTION_SHORT = "-ei";
+  public static final String DEPRECATED_END_EXCLUSIVE_OPTION = "--end-exclusive";
+  public static final String MAX_THREADS_OPTION = "--max-threads";
+  public static final String MAX_THREADS_OPTION_SHORT = "-mt";
+  public static final String DEPRECATED_THREADS_OPTION = "--threads";
+  public static final String DEPRECATED_INCLUDE_METADATA_OPTION = "--include-metadata";
+  public static final String DEPRECATED_INCLUDE_METADATA_OPTION_SHORT = "-m";
 
   @CommandLine.Option(
       names = {"--config", "-c"},
@@ -60,10 +71,19 @@ public class ExportCommandOptions {
       defaultValue = "json")
   protected FileFormat outputFormat;
 
+  /**
+   * @deprecated As of release 3.17.0 This option is no longer used and will be removed in release
+   *     4.0.0. The option is not fully removed as users who might already have their scripts or
+   *     commands pre-set might pass the argument and when passed if not supported, picocli will
+   *     throw an error. We want to avoid that and instead just show a warning.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--include-metadata", "-m"},
-      description = "Include transaction metadata in the exported data (default: false)",
-      defaultValue = "false")
+      description =
+          "Deprecated: This option is no longer used. Please use scalar.db.consensus_commit.include_metadata.enabled to control whether transaction metadata is included in scan operations.",
+      defaultValue = "false",
+      hidden = true)
   protected boolean includeTransactionMetadata;
 
   @CommandLine.Option(
@@ -71,7 +91,18 @@ public class ExportCommandOptions {
       paramLabel = "<MAX_THREADS>",
       description =
           "Maximum number of threads to use for parallel processing (default: number of available processors)")
-  protected int maxThreads;
+  protected Integer maxThreads;
+
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --max-threads instead
+   */
+  @Deprecated
+  @CommandLine.Option(
+      names = {DEPRECATED_THREADS_OPTION},
+      paramLabel = "<THREADS>",
+      description = "Deprecated: Use --max-threads instead",
+      hidden = true)
+  protected Integer threadsDeprecated;
 
   @CommandLine.Option(
       names = {"--start-key", "-sk"},
@@ -87,6 +118,17 @@ public class ExportCommandOptions {
   // TODO: test that -si false, works
   protected boolean scanStartInclusive;
 
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --start-inclusive
+   *     instead (inverted logic).
+   */
+  @CommandLine.Option(
+      names = {DEPRECATED_START_EXCLUSIVE_OPTION},
+      description = "Deprecated: Use --start-inclusive instead (inverted logic)",
+      hidden = true)
+  @Deprecated
+  protected Boolean startExclusiveDeprecated;
+
   @CommandLine.Option(
       names = {"--end-key", "-ek"},
       paramLabel = "<KEY=VALUE>",
@@ -99,6 +141,17 @@ public class ExportCommandOptions {
       description = "Make the end key inclusive (default: true)",
       defaultValue = "true")
   protected boolean scanEndInclusive;
+
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --end-inclusive instead
+   *     (inverted logic).
+   */
+  @CommandLine.Option(
+      names = {DEPRECATED_END_EXCLUSIVE_OPTION},
+      description = "Deprecated: Use --end-inclusive instead (inverted logic)",
+      hidden = true)
+  @Deprecated
+  protected Boolean endExclusiveDeprecated;
 
   @CommandLine.Option(
       names = {"--sort-by", "-s"},
@@ -144,4 +197,28 @@ public class ExportCommandOptions {
       description = "Size of the data chunk to process in a single task (default: 200)",
       defaultValue = "200")
   protected int dataChunkSize;
+
+  /**
+   * Applies deprecated option values if they are set.
+   *
+   * <p>This method is called AFTER validateDeprecatedOptions(), so we are guaranteed that both the
+   * deprecated and new options were not specified together. If we reach this point, only the
+   * deprecated option was provided by the user.
+   */
+  public void applyDeprecatedOptions() {
+    // If the deprecated option is set, use its value (inverted logic)
+    if (startExclusiveDeprecated != null) {
+      scanStartInclusive = !startExclusiveDeprecated;
+    }
+
+    // If the deprecated option is set, use its value (inverted logic)
+    if (endExclusiveDeprecated != null) {
+      scanEndInclusive = !endExclusiveDeprecated;
+    }
+
+    // If the deprecated option is set, use its value
+    if (threadsDeprecated != null) {
+      maxThreads = threadsDeprecated;
+    }
+  }
 }

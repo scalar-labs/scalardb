@@ -15,6 +15,7 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.PutIf;
@@ -28,6 +29,7 @@ import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
+import com.scalar.db.common.BatchResultImpl;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -36,10 +38,12 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -160,7 +164,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     get = copyAndSetTargetToIfNot(get);
 
     try {
-      return storage.get(get.withConsistency(Consistency.LINEARIZABLE));
+      return storage.get(Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build());
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, null);
     }
@@ -171,7 +175,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     scan = copyAndSetTargetToIfNot(scan);
 
     try (com.scalar.db.api.Scanner scanner =
-        storage.scan(scan.withConsistency(Consistency.LINEARIZABLE))) {
+        storage.scan(Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build())) {
       return scanner.all();
     } catch (ExecutionException | IOException e) {
       throw new CrudException(e.getMessage(), e, null);
@@ -226,7 +230,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     put = copyAndSetTargetToIfNot(put);
 
     try {
-      storage.put(put.withConsistency(Consistency.LINEARIZABLE));
+      storage.put(Put.newBuilder(put).consistency(Consistency.LINEARIZABLE).build());
     } catch (NoMutationException e) {
       throwUnsatisfiedConditionException(put);
     } catch (ExecutionException e) {
@@ -331,7 +335,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     delete = copyAndSetTargetToIfNot(delete);
 
     try {
-      storage.delete(delete.withConsistency(Consistency.LINEARIZABLE));
+      storage.delete(Delete.newBuilder(delete).consistency(Consistency.LINEARIZABLE).build());
     } catch (NoMutationException e) {
       throwUnsatisfiedConditionException(delete);
     } catch (ExecutionException e) {
@@ -356,19 +360,55 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
               .buildMessage());
     }
 
-    for (Mutation mutation : mutations) {
-      if (mutation instanceof Put) {
-        put((Put) mutation);
-      } else if (mutation instanceof Delete) {
-        delete((Delete) mutation);
-      } else if (mutation instanceof Insert) {
-        insert((Insert) mutation);
-      } else if (mutation instanceof Upsert) {
-        upsert((Upsert) mutation);
-      } else {
-        assert mutation instanceof Update;
-        update((Update) mutation);
-      }
+    Mutation mutation = mutations.get(0);
+    if (mutation instanceof Put) {
+      put((Put) mutation);
+    } else if (mutation instanceof Delete) {
+      delete((Delete) mutation);
+    } else if (mutation instanceof Insert) {
+      insert((Insert) mutation);
+    } else if (mutation instanceof Upsert) {
+      upsert((Upsert) mutation);
+    } else {
+      assert mutation instanceof Update;
+      update((Update) mutation);
+    }
+  }
+
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations)
+      throws CrudException, UnknownTransactionStatusException {
+    checkArgument(!operations.isEmpty(), CoreError.EMPTY_OPERATIONS_SPECIFIED.buildMessage());
+    if (operations.size() > 1) {
+      throw new UnsupportedOperationException(
+          CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_MULTIPLE_OPERATIONS_NOT_SUPPORTED
+              .buildMessage());
+    }
+
+    Operation operation = operations.get(0);
+    if (operation instanceof Get) {
+      Optional<Result> result = get((Get) operation);
+      return Collections.singletonList(new BatchResultImpl(result));
+    } else if (operation instanceof Scan) {
+      List<Result> results = scan((Scan) operation);
+      return Collections.singletonList(new BatchResultImpl(results));
+    } else if (operation instanceof Put) {
+      put((Put) operation);
+      return Collections.singletonList(BatchResultImpl.PUT_BATCH_RESULT);
+    } else if (operation instanceof Insert) {
+      insert((Insert) operation);
+      return Collections.singletonList(BatchResultImpl.INSERT_BATCH_RESULT);
+    } else if (operation instanceof Upsert) {
+      upsert((Upsert) operation);
+      return Collections.singletonList(BatchResultImpl.UPSERT_BATCH_RESULT);
+    } else if (operation instanceof Update) {
+      update((Update) operation);
+      return Collections.singletonList(BatchResultImpl.UPDATE_BATCH_RESULT);
+    } else if (operation instanceof Delete) {
+      delete((Delete) operation);
+      return Collections.singletonList(BatchResultImpl.DELETE_BATCH_RESULT);
+    } else {
+      throw new AssertionError("Unknown operation: " + operation);
     }
   }
 

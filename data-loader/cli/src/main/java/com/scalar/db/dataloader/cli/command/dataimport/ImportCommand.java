@@ -1,9 +1,11 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDeprecatedOptionPair;
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
@@ -12,8 +14,6 @@ import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbStorageManager;
-import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbTransactionManager;
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
 import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.dataloader.core.dataimport.log.SingleFileImportLogger;
@@ -25,7 +25,6 @@ import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataException;
 import com.scalar.db.dataloader.core.tablemetadata.TableMetadataService;
 import com.scalar.db.dataloader.core.util.TableMetadataUtil;
-import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import java.io.BufferedReader;
 import java.io.File;
@@ -53,31 +52,50 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
 
   @Override
   public Integer call() throws Exception {
+    validateDeprecatedOptions();
+    applyDeprecatedOptions();
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
         spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
     validatePositiveValue(
         spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
-    validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+    // Only validate the argument when provided by the user, if not set a default
+    if (maxThreads != null) {
+      validatePositiveValue(spec.commandLine(), maxThreads, DataLoaderError.INVALID_MAX_THREADS);
+    } else {
+      maxThreads = Runtime.getRuntime().availableProcessors();
+    }
     validatePositiveValue(
         spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
     ImportOptions importOptions = createImportOptions(controlFile);
-    ImportLoggerConfig config =
+    ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .logDirectoryPath(logDirectory)
             .isLogRawSourceRecordsEnabled(importOptions.isLogRawRecord())
             .isLogSuccessRecordsEnabled(importOptions.isLogSuccessRecords())
             .prettyPrint(prettyPrint)
             .build();
-    LogWriterFactory logWriterFactory = createLogWriterFactory(config);
+    LogWriterFactory logWriterFactory = createLogWriterFactory(importLoggerConfig);
+    File configFile = new File(configFilePath);
+    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+
+    // Validate transaction mode configuration before proceeding
+    validateTransactionMode(transactionFactory);
+
     Map<String, TableMetadata> tableMetadataMap =
-        createTableMetadataMap(controlFile, namespace, tableName);
+        createTableMetadataMap(controlFile, namespace, tableName, transactionFactory);
     try (BufferedReader reader =
         Files.newBufferedReader(Paths.get(sourceFilePath), Charset.defaultCharset())) {
       ImportManager importManager =
-          createImportManager(importOptions, tableMetadataMap, reader, logWriterFactory, config);
+          createImportManager(
+              importOptions,
+              tableMetadataMap,
+              reader,
+              importLoggerConfig,
+              logWriterFactory,
+              transactionFactory);
       importManager.addListener(new ConsoleImportProgressListener(Duration.ofSeconds(1)));
       importManager.startImport();
     }
@@ -99,16 +117,18 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param controlFile control file
    * @param namespace Namespace
    * @param tableName Single table name
+   * @param transactionFactory transaction factory to use
    * @return {@code Map<String, TableMetadata>} a table metadata map
    * @throws ParameterException if one of the argument values is wrong
    */
   private Map<String, TableMetadata> createTableMetadataMap(
-      ControlFile controlFile, String namespace, String tableName)
-      throws IOException, TableMetadataException {
-    File configFile = new File(configFilePath);
-    StorageFactory storageFactory = StorageFactory.create(configFile);
-    try (DistributedStorageAdmin storageAdmin = storageFactory.getStorageAdmin()) {
-      TableMetadataService tableMetadataService = new TableMetadataService(storageAdmin);
+      ControlFile controlFile,
+      String namespace,
+      String tableName,
+      TransactionFactory transactionFactory)
+      throws TableMetadataException {
+    try (DistributedTransactionAdmin transactionAdmin = transactionFactory.getTransactionAdmin()) {
+      TableMetadataService tableMetadataService = new TableMetadataService(transactionAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
       if (controlFile != null) {
         for (ControlFileTable table : controlFile.getTables()) {
@@ -131,49 +151,33 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param importOptions import options
    * @param tableMetadataMap table metadata map
    * @param reader buffered reader with source data
+   * @param importLoggerConfig import logging config
    * @param logWriterFactory log writer factory object
-   * @param config import logging config
+   * @param transactionFactory transaction factory to use
    * @return ImportManager object
    */
   private ImportManager createImportManager(
       ImportOptions importOptions,
       Map<String, TableMetadata> tableMetadataMap,
       BufferedReader reader,
+      ImportLoggerConfig importLoggerConfig,
       LogWriterFactory logWriterFactory,
-      ImportLoggerConfig config)
+      TransactionFactory transactionFactory)
       throws IOException {
-    File configFile = new File(configFilePath);
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
-    ImportManager importManager;
-    if (scalarDbMode == ScalarDbMode.TRANSACTION) {
-      ScalarDbTransactionManager scalarDbTransactionManager =
-          new ScalarDbTransactionManager(TransactionFactory.create(configFile));
-      importManager =
-          new ImportManager(
-              tableMetadataMap,
-              reader,
-              importOptions,
-              importProcessorFactory,
-              ScalarDbMode.TRANSACTION,
-              null,
-              scalarDbTransactionManager.getDistributedTransactionManager());
-    } else {
-      ScalarDbStorageManager scalarDbStorageManager =
-          new ScalarDbStorageManager(StorageFactory.create(configFile));
-      importManager =
-          new ImportManager(
-              tableMetadataMap,
-              reader,
-              importOptions,
-              importProcessorFactory,
-              ScalarDbMode.STORAGE,
-              scalarDbStorageManager.getDistributedStorage(),
-              null);
-    }
+    ImportManager importManager =
+        new ImportManager(
+            tableMetadataMap,
+            reader,
+            importOptions,
+            importProcessorFactory,
+            scalarDbMode,
+            transactionFactory.getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
-      importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
+      importManager.addListener(
+          new SplitByDataChunkImportLogger(importLoggerConfig, logWriterFactory));
     } else {
-      importManager.addListener(new SingleFileImportLogger(config, logWriterFactory));
+      importManager.addListener(new SingleFileImportLogger(importLoggerConfig, logWriterFactory));
     }
     return importManager;
   }
@@ -253,6 +257,48 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   }
 
   /**
+   * Validate transaction mode configuration by attempting to start and abort a transaction
+   *
+   * @param transactionFactory transaction factory to test
+   * @throws ParameterException if transaction mode is incompatible with the configured transaction
+   *     manager
+   */
+  void validateTransactionMode(TransactionFactory transactionFactory) {
+    // Only validate when in TRANSACTION mode
+    if (scalarDbMode != ScalarDbMode.TRANSACTION) {
+      return;
+    }
+
+    DistributedTransaction transaction = null;
+    try {
+      // Try to start a read only transaction to verify the transaction manager is properly
+      // configured
+      transaction = transactionFactory.getTransactionManager().startReadOnly();
+    } catch (UnsupportedOperationException e) {
+      // Transaction mode is not supported by the configured transaction manager
+      throw new ParameterException(
+          spec.commandLine(),
+          DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(e.getMessage()),
+          e);
+    } catch (Exception e) {
+      // Other exceptions - configuration or runtime error
+      throw new ParameterException(
+          spec.commandLine(),
+          DataLoaderError.TRANSACTION_MODE_VALIDATION_FAILED.buildMessage(e.getMessage()),
+          e);
+    } finally {
+      // Ensure transaction is aborted
+      if (transaction != null) {
+        try {
+          transaction.abort();
+        } catch (Exception ignored) {
+          // Ignore errors during cleanup
+        }
+      }
+    }
+  }
+
+  /**
    * Generate control file from a valid control file path
    *
    * @param controlFilePath control directory path
@@ -275,6 +321,24 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   }
 
   /**
+   * Validates that deprecated and new options are not both specified.
+   *
+   * @throws ParameterException if both old and new options are specified
+   */
+  private void validateDeprecatedOptions() {
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_THREADS_OPTION,
+        MAX_THREADS_OPTION,
+        MAX_THREADS_OPTION_SHORT);
+    validateDeprecatedOptionPair(
+        spec.commandLine(),
+        DEPRECATED_LOG_SUCCESS_RECORDS_OPTION,
+        ENABLE_LOG_SUCCESS_RECORDS_OPTION,
+        ENABLE_LOG_SUCCESS_RECORDS_OPTION_SHORT);
+  }
+
+  /**
    * Generate import options object from provided cli parameter data
    *
    * @param controlFile control file
@@ -289,7 +353,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .controlFile(controlFile)
             .controlFileValidationLevel(controlFileValidation)
             .logRawRecord(logRawRecord)
-            .logSuccessRecords(logSuccessRecords)
+            .logSuccessRecords(enableLogSuccessRecords)
             .ignoreNullValues(ignoreNullValues)
             .namespace(namespace)
             .dataChunkSize(dataChunkSize)

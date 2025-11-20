@@ -59,7 +59,7 @@ public class ExportOptionsValidator {
     }
 
     // Make sure that all partition key columns are provided
-    if (partitionKeyNames.size() != key.getColumns().size()) {
+    if (partitionKeyNames.size() != key.size()) {
       throw new ExportOptionsValidationException(
           DataLoaderError.INCOMPLETE_PARTITION_KEY.buildMessage(partitionKeyNames));
     }

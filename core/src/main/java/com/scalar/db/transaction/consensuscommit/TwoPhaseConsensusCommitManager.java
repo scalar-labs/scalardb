@@ -10,9 +10,11 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
@@ -57,9 +59,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryExecutor recoveryExecutor;
+  private final CrudHandler crud;
   private final CommitHandler commit;
-  private final boolean isIncludeMetadataEnabled;
-  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  private final ConsensusCommitOperationChecker operationChecker;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -76,6 +78,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    crud =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            config.isIncludeMetadataEnabled(),
+            parallelExecutor);
     commit =
         new CommitHandler(
             storage,
@@ -85,8 +94,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             new MutationsGrouper(new StorageInfoProvider(admin)),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
-    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -102,6 +112,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    crud =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            config.isIncludeMetadataEnabled(),
+            parallelExecutor);
     commit =
         new CommitHandler(
             storage,
@@ -111,8 +128,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             new MutationsGrouper(new StorageInfoProvider(admin)),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
-    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -125,6 +143,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryExecutor recoveryExecutor,
+      CrudHandler crud,
       CommitHandler commit) {
     super(databaseConfig);
     this.storage = storage;
@@ -136,9 +155,11 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recoveryExecutor = recoveryExecutor;
+    this.crud = crud;
     this.commit = commit;
-    isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
-    mutationOperationChecker = new ConsensusCommitMutationOperationChecker(tableMetadataManager);
+    operationChecker =
+        new ConsensusCommitOperationChecker(
+            tableMetadataManager, config.isIncludeMetadataEnabled());
   }
 
   private void throwIfGroupCommitIsEnabled() {
@@ -188,18 +209,10 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   TwoPhaseCommitTransaction begin(
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
-    CrudHandler crud =
-        new CrudHandler(
-            storage,
-            snapshot,
-            recoveryExecutor,
-            tableMetadataManager,
-            isIncludeMetadataEnabled,
-            parallelExecutor,
-            readOnly,
-            oneOperation);
+    TransactionContext context =
+        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, mutationOperationChecker);
+        new TwoPhaseConsensusCommit(context, crud, commit, operationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
     return transaction;
@@ -392,6 +405,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         false);
   }
 
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations)
+      throws CrudException, UnknownTransactionStatusException {
+    boolean readOnly = operations.stream().allMatch(o -> o instanceof Selection);
+    return executeTransaction(t -> t.batch(operations), readOnly);
+  }
+
   private <R> R executeTransaction(
       ThrowableFunction<TwoPhaseCommitTransaction, R, TransactionException> throwableFunction,
       boolean readOnly)
@@ -423,7 +443,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     try {
       transaction.rollback();
     } catch (RollbackException e) {
-      logger.warn("Rolling back the transaction failed", e);
+      logger.warn(
+          "Rolling back the transaction failed. Transaction ID: {}", transaction.getId(), e);
     }
   }
 

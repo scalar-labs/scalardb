@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -228,7 +229,7 @@ public class CassandraAdminTest {
         QueryBuilder.insertInto(
                 quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
-            .value(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace))
+            .value(CassandraAdmin.NAMESPACES_NAME_COL, keyspace)
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -568,7 +569,7 @@ public class CassandraAdminTest {
             .from(
                 quoteIfNecessary(METADATA_KEYSPACE),
                 quoteIfNecessary(CassandraAdmin.NAMESPACES_TABLE))
-            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, quoteIfNecessary(keyspace)))
+            .where(QueryBuilder.eq(CassandraAdmin.NAMESPACES_NAME_COL, keyspace))
             .toString();
     verify(cassandraSession).execute(query);
   }
@@ -798,6 +799,43 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void repairTable_WhenTableAlreadyExistsWithoutIndex_ShouldCreateIndex()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addClusteringKey("c4")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BLOB)
+            .addColumn("c4", DataType.INT)
+            .addColumn("c5", DataType.BOOLEAN)
+            .addSecondaryIndex("c2")
+            .addSecondaryIndex("c4")
+            .build();
+    // The table already exists
+    when(clusterManager.getMetadata(namespace, table))
+        .thenReturn(mock(com.datastax.driver.core.TableMetadata.class));
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTable(table))
+        .thenReturn(mock(com.datastax.driver.core.TableMetadata.class));
+
+    CassandraAdmin adminSpy = spy(cassandraAdmin);
+
+    // Act
+    adminSpy.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy)
+        .createSecondaryIndexes(namespace, table, tableMetadata.getSecondaryIndexNames(), true);
+  }
+
+  @Test
   public void addNewColumnToTable_ShouldWorkProperly() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
@@ -823,6 +861,63 @@ public class CassandraAdminTest {
         SchemaBuilder.alterTable(namespace, table)
             .addColumn(column)
             .type(com.datastax.driver.core.DataType.text())
+            .getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
+  public void dropColumnFromTable_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String column = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn("c1");
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+    when(clusterManager.getSession()).thenReturn(cassandraSession);
+
+    // Act
+    cassandraAdmin.dropColumnFromTable(namespace, table, column);
+
+    // Assert
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table).dropColumn(column).getQueryString();
+    verify(cassandraSession).execute(alterTableQuery);
+  }
+
+  @Test
+  public void renameColumn_ShouldWorkProperly() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "tbl";
+    String oldColumnName = "c1";
+    String newColumnName = "c2";
+    com.datastax.driver.core.TableMetadata tableMetadata =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    ColumnMetadata c1 = mock(ColumnMetadata.class);
+    when(c1.getName()).thenReturn(oldColumnName);
+    when(c1.getType()).thenReturn(com.datastax.driver.core.DataType.text());
+    when(tableMetadata.getPartitionKey()).thenReturn(Collections.singletonList(c1));
+    when(tableMetadata.getClusteringColumns()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getIndexes()).thenReturn(Collections.emptyList());
+    when(tableMetadata.getColumns()).thenReturn(Collections.singletonList(c1));
+    when(clusterManager.getMetadata(any(), any())).thenReturn(tableMetadata);
+
+    // Act
+    cassandraAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+
+    // Assert
+    String alterTableQuery =
+        SchemaBuilder.alterTable(namespace, table)
+            .renameColumn(oldColumnName)
+            .to(newColumnName)
             .getQueryString();
     verify(cassandraSession).execute(alterTableQuery);
   }
@@ -880,15 +975,14 @@ public class CassandraAdminTest {
     // Act
     Throwable thrown1 =
         catchThrowable(
-            () -> cassandraAdmin.getImportTableMetadata(namespace, table, Collections.emptyMap()));
-    Throwable thrown2 =
-        catchThrowable(
-            () -> cassandraAdmin.addRawColumnToTable(namespace, table, column, DataType.INT));
-    Throwable thrown3 =
-        catchThrowable(
             () ->
                 cassandraAdmin.importTable(
                     namespace, table, Collections.emptyMap(), Collections.emptyMap()));
+    Throwable thrown2 =
+        catchThrowable(() -> cassandraAdmin.renameTable(namespace, table, "new_table"));
+    Throwable thrown3 =
+        catchThrowable(
+            () -> cassandraAdmin.alterColumnType(namespace, table, column, DataType.INT));
 
     // Assert
     assertThat(thrown1).isInstanceOf(UnsupportedOperationException.class);

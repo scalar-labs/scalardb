@@ -36,41 +36,67 @@ import org.slf4j.LoggerFactory;
 @NotThreadSafe
 public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private static final Logger logger = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
-
+  private final TransactionContext context;
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final ConsensusCommitMutationOperationChecker mutationOperationChecker;
+  private final ConsensusCommitOperationChecker operationChecker;
   private boolean validated;
   private boolean needRollback;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseConsensusCommit(
+      TransactionContext context,
       CrudHandler crud,
       CommitHandler commit,
-      ConsensusCommitMutationOperationChecker mutationOperationChecker) {
+      ConsensusCommitOperationChecker operationChecker) {
+    this.context = context;
     this.crud = crud;
     this.commit = commit;
-    this.mutationOperationChecker = mutationOperationChecker;
+    this.operationChecker = operationChecker;
   }
 
   @Override
   public String getId() {
-    return crud.getSnapshot().getId();
+    return context.transactionId;
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    return crud.get(copyAndSetTargetToIfNot(get));
+    get = copyAndSetTargetToIfNot(get);
+
+    try {
+      operationChecker.check(get, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.get(get, context);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    return crud.scan(copyAndSetTargetToIfNot(scan));
+    scan = copyAndSetTargetToIfNot(scan);
+
+    try {
+      operationChecker.check(scan, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.scan(scan, context);
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    return crud.getScanner(copyAndSetTargetToIfNot(scan));
+    scan = copyAndSetTargetToIfNot(scan);
+
+    try {
+      operationChecker.check(scan, context);
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, getId());
+    }
+
+    return crud.getScanner(scan, context);
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -93,7 +119,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private void putInternal(Put put) throws CrudException {
     put = copyAndSetTargetToIfNot(put);
     checkMutation(put);
-    crud.put(put);
+    crud.put(put, context);
   }
 
   @Override
@@ -114,7 +140,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private void deleteInternal(Delete delete) throws CrudException {
     delete = copyAndSetTargetToIfNot(delete);
     checkMutation(delete);
-    crud.delete(delete);
+    crud.delete(delete, context);
   }
 
   @Override
@@ -122,7 +148,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     insert = copyAndSetTargetToIfNot(insert);
     Put put = ConsensusCommitUtils.createPutForInsert(insert);
     checkMutation(put);
-    crud.put(put);
+    crud.put(put, context);
   }
 
   @Override
@@ -130,7 +156,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     upsert = copyAndSetTargetToIfNot(upsert);
     Put put = ConsensusCommitUtils.createPutForUpsert(upsert);
     checkMutation(put);
-    crud.put(put);
+    crud.put(put, context);
   }
 
   @Override
@@ -140,13 +166,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     Put put = ConsensusCommitUtils.createPutForUpdate(update);
     checkMutation(put);
     try {
-      crud.put(put);
+      crud.put(put, context);
     } catch (UnsatisfiedConditionException e) {
       if (update.getCondition().isPresent()) {
         throw new UnsatisfiedConditionException(
             ConsensusCommitUtils.convertUnsatisfiedConditionExceptionMessageForUpdate(
                 e, update.getCondition().get()),
-            crud.getSnapshot().getId());
+            getId());
       }
 
       // If the condition is not specified, it means that the record does not exist. In this case,
@@ -155,46 +181,31 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    checkArgument(!mutations.isEmpty());
-    for (Mutation m : mutations) {
-      if (m instanceof Put) {
-        put((Put) m);
-      } else if (m instanceof Delete) {
-        delete((Delete) m);
-      } else if (m instanceof Insert) {
-        insert((Insert) m);
-      } else if (m instanceof Upsert) {
-        upsert((Upsert) m);
-      } else {
-        assert m instanceof Update;
-        update((Update) m);
-      }
-    }
-  }
-
-  @Override
   public void prepare() throws PreparationException {
-    if (!crud.areAllScannersClosed()) {
+    if (!context.areAllScannersClosed()) {
       throw new IllegalStateException(
           CoreError.TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED.buildMessage());
     }
 
     // Execute implicit pre-read
     try {
-      crud.readIfImplicitPreReadEnabled();
+      crud.readIfImplicitPreReadEnabled(context);
     } catch (CrudConflictException e) {
       throw new PreparationConflictException(
-          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(),
+          CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ.buildMessage(
+              e.getMessage()),
           e,
           getId());
     } catch (CrudException e) {
       throw new PreparationException(
-          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(), e, getId());
+          CoreError.CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED.buildMessage(
+              e.getMessage()),
+          e,
+          getId());
     }
 
     try {
-      crud.waitForRecoveryCompletionIfNecessary();
+      crud.waitForRecoveryCompletionIfNecessary(context);
     } catch (CrudConflictException e) {
       throw new PreparationConflictException(e.getMessage(), e, getId());
     } catch (CrudException e) {
@@ -202,7 +213,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      commit.prepareRecords(crud.getSnapshot());
+      commit.prepareRecords(context);
     } finally {
       needRollback = true;
     }
@@ -210,19 +221,19 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void validate() throws ValidationException {
-    commit.validateRecords(crud.getSnapshot());
+    commit.validateRecords(context);
     validated = true;
   }
 
   @Override
   public void commit() throws CommitConflictException, UnknownTransactionStatusException {
-    if (crud.getSnapshot().isValidationRequired() && !validated) {
+    if (context.isValidationRequired() && !validated) {
       throw new IllegalStateException(
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE.buildMessage());
     }
 
     try {
-      commit.commitState(crud.getSnapshot());
+      commit.commitState(context);
     } catch (CommitConflictException | UnknownTransactionStatusException e) {
       // no need to rollback because the transaction has already been rolled back
       needRollback = false;
@@ -230,15 +241,15 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       throw e;
     }
 
-    commit.commitRecords(crud.getSnapshot());
+    commit.commitRecords(context);
   }
 
   @Override
   public void rollback() throws RollbackException {
     try {
-      crud.closeScanners();
+      context.closeScanners();
     } catch (CrudException e) {
-      logger.warn("Failed to close the scanner", e);
+      logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
     }
 
     if (!needRollback) {
@@ -246,7 +257,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      TransactionState state = commit.abortState(crud.getSnapshot().getId());
+      TransactionState state = commit.abortState(getId());
       if (state == TransactionState.COMMITTED) {
         throw new RollbackException(
             CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED
@@ -258,7 +269,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
           CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED.buildMessage(), e, getId());
     }
 
-    commit.rollbackRecords(crud.getSnapshot());
+    commit.rollbackRecords(context);
+  }
+
+  @VisibleForTesting
+  TransactionContext getTransactionContext() {
+    return context;
   }
 
   @VisibleForTesting
@@ -271,9 +287,14 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     return commit;
   }
 
+  @VisibleForTesting
+  void waitForRecoveryCompletion() throws CrudException {
+    crud.waitForRecoveryCompletion(context);
+  }
+
   private void checkMutation(Mutation mutation) throws CrudException {
     try {
-      mutationOperationChecker.check(mutation);
+      operationChecker.check(mutation);
     } catch (ExecutionException e) {
       throw new CrudException(e.getMessage(), e, getId());
     }

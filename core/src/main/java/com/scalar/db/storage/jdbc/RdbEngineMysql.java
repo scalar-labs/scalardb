@@ -115,18 +115,45 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+  public String renameColumnSql(
+      String namespace,
+      String table,
+      String oldColumnName,
+      String newColumnName,
+      String columnType) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
-        + " MODIFY"
-        + enclose(columnName)
+        + " CHANGE COLUMN "
+        + enclose(oldColumnName)
+        + " "
+        + enclose(newColumnName)
         + " "
         + columnType;
   }
 
   @Override
-  public String tableExistsInternalTableCheckSql(String fullTableName) {
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
+    return "ALTER TABLE "
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + encloseFullTableName(namespace, newTableName);
+  }
+
+  @Override
+  public String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " MODIFY "
+          + enclose(columnName)
+          + " "
+          + columnType
+    };
+  }
+
+  @Override
+  public String internalTableExistsCheckSql(String fullTableName) {
     return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
   }
 
@@ -136,12 +163,25 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(schema, table)
+          + " RENAME INDEX "
+          + enclose(oldIndexName)
+          + " TO "
+          + enclose(newIndexName)
+    };
+  }
+
+  @Override
   public String enclose(String name) {
     return "`" + name + "`";
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }
 
@@ -463,5 +503,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
   public void setConnectionToReadOnly(Connection connection, boolean readOnly) throws SQLException {
     // Observed performance degradation when using read-only connections in MySQL. So we do not
     // set the read-only mode for MySQL connections.
+  }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?";
   }
 }

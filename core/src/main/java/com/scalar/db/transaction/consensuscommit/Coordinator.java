@@ -6,19 +6,18 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -127,7 +126,7 @@ public class Coordinator {
 
   private Optional<Coordinator.State> getStateInternal(String id) throws CoordinatorException {
     Get get = createGetWith(id);
-    return get(get);
+    return get(get, id);
   }
 
   /**
@@ -161,7 +160,7 @@ public class Coordinator {
 
   public void putState(Coordinator.State state) throws CoordinatorException {
     Put put = createPutWith(state);
-    put(put);
+    put(put, state.getId());
   }
 
   void putStateForGroupCommit(
@@ -182,7 +181,7 @@ public class Coordinator {
     State state = new State(parentId, childIds, transactionState, createdAt);
 
     Put put = createPutWith(state);
-    put(put);
+    put(put, state.getId());
   }
 
   public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
@@ -287,18 +286,18 @@ public class Coordinator {
 
   @VisibleForTesting
   Get createGetWith(String id) {
-    return new Get(new Key(Attribute.toIdValue(id)))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(coordinatorNamespace)
-        .forTable(TABLE);
+    return Get.newBuilder()
+        .namespace(coordinatorNamespace)
+        .table(TABLE)
+        .partitionKey(Key.ofText(Attribute.ID, id))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
-  private Optional<Coordinator.State> get(Get get) throws CoordinatorException {
+  private Optional<Coordinator.State> get(Get get, String id) throws CoordinatorException {
     int counter = 0;
+    Exception exception = null;
     while (true) {
-      if (counter >= MAX_RETRY_COUNT) {
-        throw new CoordinatorException("Can't get coordinator state");
-      }
       try {
         Optional<Result> result = storage.get(get);
         if (result.isPresent()) {
@@ -306,43 +305,75 @@ public class Coordinator {
         } else {
           return Optional.empty();
         }
-      } catch (ExecutionException e) {
-        logger.warn("Can't get coordinator state", e);
+      } catch (Exception e) {
+        if (exception == null) {
+          exception = e;
+        } else {
+          exception.addSuppressed(e);
+        }
+
+        if (counter + 1 >= MAX_RETRY_COUNT) {
+          throw new CoordinatorException("Can't get coordinator state", exception);
+        }
+
+        logger.warn(
+            "Can't get coordinator state. Retrying... Attempt: {}; Transaction ID: {}",
+            counter,
+            id,
+            e);
+
+        exponentialBackoff(counter++);
       }
-      exponentialBackoff(counter++);
     }
   }
 
   @VisibleForTesting
   Put createPutWith(Coordinator.State state) {
-    Put put = new Put(new Key(Attribute.toIdValue(state.getId())));
     String childIds = state.getChildIdsAsString();
+    PutBuilder.Buildable builder =
+        Put.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(Attribute.ID, state.getId()))
+            .intValue(Attribute.STATE, state.getState().get())
+            .bigIntValue(Attribute.CREATED_AT, state.getCreatedAt())
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(ConditionBuilder.putIfNotExists());
+
     if (!childIds.isEmpty()) {
-      put.withValue(Attribute.toChildIdsValue(childIds));
+      builder = builder.textValue(Attribute.CHILD_IDS, childIds);
     }
-    return put.withValue(Attribute.toStateValue(state.getState()))
-        .withValue(Attribute.toCreatedAtValue(state.getCreatedAt()))
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withCondition(new PutIfNotExists())
-        .forNamespace(coordinatorNamespace)
-        .forTable(TABLE);
+    return builder.build();
   }
 
-  private void put(Put put) throws CoordinatorException {
+  private void put(Put put, String id) throws CoordinatorException {
     int counter = 0;
+    Exception exception = null;
     while (true) {
-      if (counter >= MAX_RETRY_COUNT) {
-        throw new CoordinatorException("Couldn't put coordinator state");
-      }
       try {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
         throw new CoordinatorConflictException("Mutation seems applied already", e);
-      } catch (ExecutionException e) {
-        logger.warn("Putting state in coordinator failed", e);
+      } catch (Exception e) {
+        if (exception == null) {
+          exception = e;
+        } else {
+          exception.addSuppressed(e);
+        }
+
+        if (counter + 1 >= MAX_RETRY_COUNT) {
+          throw new CoordinatorException("Couldn't put coordinator state", exception);
+        }
+
+        logger.warn(
+            "Putting state in coordinator failed. Retrying... Attempt: {}; Transaction ID: {}",
+            counter,
+            id,
+            e);
+
+        exponentialBackoff(counter++);
       }
-      exponentialBackoff(counter++);
     }
   }
 
@@ -362,20 +393,15 @@ public class Coordinator {
 
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
-      id = result.getValue(Attribute.ID).get().getAsString().get();
-      state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
-      createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
-      Optional<Value<?>> childIdsOpt = result.getValue(Attribute.CHILD_IDS);
-      Optional<String> childIdsStrOpt;
-      if (childIdsOpt.isPresent()) {
-        childIdsStrOpt = childIdsOpt.get().getAsString();
+      id = result.getText(Attribute.ID);
+      state = TransactionState.getInstance(result.getInt(Attribute.STATE));
+      createdAt = result.getBigInt(Attribute.CREATED_AT);
+      String childIdsStr = result.getText(Attribute.CHILD_IDS);
+      if (childIdsStr != null) {
+        childIds = Splitter.on(CHILD_IDS_DELIMITER).omitEmptyStrings().splitToList(childIdsStr);
       } else {
-        childIdsStrOpt = Optional.empty();
+        childIds = EMPTY_CHILD_IDS;
       }
-      childIds =
-          childIdsStrOpt
-              .map(s -> Splitter.on(CHILD_IDS_DELIMITER).omitEmptyStrings().splitToList(s))
-              .orElse(EMPTY_CHILD_IDS);
     }
 
     public State(String id, TransactionState state) {
@@ -454,16 +480,13 @@ public class Coordinator {
     }
 
     private void checkNotMissingRequired(Result result) throws CoordinatorException {
-      if (!result.getValue(Attribute.ID).isPresent()
-          || !result.getValue(Attribute.ID).get().getAsString().isPresent()) {
+      if (result.isNull(Attribute.ID) || result.getText(Attribute.ID) == null) {
         throw new CoordinatorException("id is missing in the coordinator state");
       }
-      if (!result.getValue(Attribute.STATE).isPresent()
-          || result.getValue(Attribute.STATE).get().getAsInt() == 0) {
+      if (result.isNull(Attribute.STATE) || result.getInt(Attribute.STATE) == 0) {
         throw new CoordinatorException("state is missing in the coordinator state");
       }
-      if (!result.getValue(Attribute.CREATED_AT).isPresent()
-          || result.getValue(Attribute.CREATED_AT).get().getAsLong() == 0) {
+      if (result.isNull(Attribute.CREATED_AT) || result.getBigInt(Attribute.CREATED_AT) == 0) {
         throw new CoordinatorException("created_at is missing in the coordinator state");
       }
     }

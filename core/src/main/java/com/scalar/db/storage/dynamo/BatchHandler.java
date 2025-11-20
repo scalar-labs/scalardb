@@ -86,7 +86,7 @@ public class BatchHandler {
       boolean allReasonsAreTransactionConflicts = true;
       for (CancellationReason reason : e.cancellationReasons()) {
         if (reason.code().equals("ConditionalCheckFailed")) {
-          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
+          throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), mutations, e);
         }
         if (!reason.code().equals("TransactionConflict") && !reason.code().equals("None")) {
           allReasonsAreTransactionConflicts = false;
@@ -96,8 +96,7 @@ public class BatchHandler {
         // If all the reasons of the cancellation are "TransactionConflict", throw
         // RetriableExecutionException
         throw new RetriableExecutionException(
-            CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(
-                e.getMessage(), e),
+            CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
             e);
       }
 

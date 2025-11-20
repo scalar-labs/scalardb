@@ -10,6 +10,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
@@ -26,8 +27,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
 
   @Override
   protected Properties getProperties(String testName) {
-    Properties properties = new Properties();
-    properties.putAll(JdbcEnv.getProperties(testName));
+    Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     testUtils = new JdbcAdminImportTestUtils(properties);
@@ -192,6 +192,7 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     super.importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly();
   }
 
+  @AfterAll
   @Override
   public void afterAll() {
     try {

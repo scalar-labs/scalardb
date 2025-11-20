@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class GetTest {
@@ -20,42 +20,42 @@ public class GetTest {
   private static final String ANY_TEXT_3 = "text3";
 
   private Get prepareGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey);
   }
 
   private Get prepareAnotherGet() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     return new Get(partitionKey, clusteringKey);
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey);
   }
 
   @Test
   public void getPartitionKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key expected = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key expected = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Get get = new Get(expected, clusteringKey);
 
     // Act
     Key actual = get.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
+    Assertions.<Key>assertThat(expected).isEqualTo(actual);
   }
 
   @Test
   public void getClusteringKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key expected = new Key(ANY_NAME_1, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key expected = Key.ofText(ANY_NAME_1, ANY_TEXT_2);
     Get get = new Get(partitionKey, expected);
 
     // Act
@@ -68,7 +68,7 @@ public class GetTest {
   @Test
   public void getClusteringKey_ClusteringKeyNotGivenInConstructor_ShouldReturnNull() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey);
 
     // Act

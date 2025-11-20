@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -26,21 +27,21 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
   private static final String TEST_NAME = "storage_admin_repair";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
   private static final String TABLE = "test_table";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
-  private static final String COL_NAME12 = "c12";
-  private static final String COL_NAME13 = "c13";
-  private static final String COL_NAME14 = "c14";
-  private static final String COL_NAME15 = "c15";
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String COL_NAME5 = "c5";
+  protected static final String COL_NAME6 = "c6";
+  protected static final String COL_NAME7 = "c7";
+  protected static final String COL_NAME8 = "c8";
+  protected static final String COL_NAME9 = "c9";
+  protected static final String COL_NAME10 = "c10";
+  protected static final String COL_NAME11 = "c11";
+  protected static final String COL_NAME12 = "c12";
+  protected static final String COL_NAME13 = "c13";
+  protected static final String COL_NAME14 = "c14";
+  protected static final String COL_NAME15 = "c15";
 
   protected DistributedStorageAdmin admin;
 
@@ -210,6 +211,21 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     waitForDifferentSessionDdl();
     assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
+  }
+
+  @Test
+  public void
+      repairTable_WhenTableAlreadyExistsWithoutIndexAndMetadataSpecifiesIndex_ShouldCreateIndex()
+          throws Exception {
+    // Arrange
+    admin.dropIndex(getNamespace(), getTable(), COL_NAME5);
+
+    // Act
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
+
+    // Assert
+    assertThatCode(() -> admin.dropIndex(getNamespace(), getTable(), COL_NAME5))
+        .doesNotThrowAnyException();
   }
 
   @Test

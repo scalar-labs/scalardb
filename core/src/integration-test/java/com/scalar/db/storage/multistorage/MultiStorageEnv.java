@@ -18,9 +18,9 @@ public final class MultiStorageEnv {
   private static final String DEFAULT_CASSANDRA_USERNAME = "cassandra";
   private static final String DEFAULT_CASSANDRA_PASSWORD = "cassandra";
 
-  private static final String DEFAULT_JDBC_CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String DEFAULT_JDBC_USERNAME = "root";
-  private static final String DEFAULT_JDBC_PASSWORD = "mysql";
+  private static final String DEFAULT_JDBC_CONTACT_POINT = "jdbc:postgresql://localhost:5432/";
+  private static final String DEFAULT_JDBC_USERNAME = "postgres";
+  private static final String DEFAULT_JDBC_PASSWORD = "postgres";
 
   private MultiStorageEnv() {}
 
@@ -48,6 +48,9 @@ public final class MultiStorageEnv {
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
 
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
     return properties;
   }
 
@@ -69,6 +72,9 @@ public final class MultiStorageEnv {
     properties.setProperty(
         DatabaseConfig.SYSTEM_NAMESPACE_NAME,
         DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME + "_" + testName);
+
+    // Metadata cache expiration time
+    properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
 
     return properties;
   }

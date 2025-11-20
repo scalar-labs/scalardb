@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.util.Collections;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class ScanTest {
@@ -22,9 +22,9 @@ public class ScanTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key startClusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Key endClusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     Scan.Ordering ordering = Scan.Ordering.asc(ANY_NAME_2);
 
     return new Scan(partitionKey)
@@ -36,9 +36,9 @@ public class ScanTest {
   }
 
   private Scan prepareAnotherScan() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key startClusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Key endClusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_4);
     Scan.Ordering ordering = Scan.Ordering.asc(ANY_NAME_2);
 
     return new Scan(partitionKey)
@@ -81,9 +81,9 @@ public class ScanTest {
   @Test
   public void constructorAndSetters_AllSet_ShouldGetWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key startClusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Key endClusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     Scan.Ordering ordering = Scan.Ordering.asc(ANY_NAME_2);
 
     // Act
@@ -96,7 +96,7 @@ public class ScanTest {
             .withLimit(100);
 
     // Assert
-    assertThat((Iterable<? extends Value<?>>) scan.getPartitionKey()).isEqualTo(partitionKey);
+    Assertions.<Key>assertThat(scan.getPartitionKey()).isEqualTo(partitionKey);
     assertThat(scan.getStartClusteringKey()).isEqualTo(Optional.of(startClusteringKey));
     assertThat(scan.getEndClusteringKey()).isEqualTo(Optional.of(endClusteringKey));
     assertThat(scan.getProjections()).isEqualTo(Collections.singletonList(ANY_NAME_1));

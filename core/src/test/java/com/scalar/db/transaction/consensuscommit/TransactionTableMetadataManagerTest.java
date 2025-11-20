@@ -1,7 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,7 +76,11 @@ public class TransactionTableMetadataManagerTest {
     // Act
     TransactionTableMetadata actual =
         tableMetadataManager.getTransactionTableMetadata(
-            new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl"));
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("c1", "aaa"))
+                .build());
 
     // Assert
     verify(admin).getTableMetadata(anyString(), anyString());
@@ -88,7 +94,8 @@ public class TransactionTableMetadataManagerTest {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
 
-    Get get = new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl");
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
 
     // Act
     tableMetadataManager.getTransactionTableMetadata(get);
@@ -107,7 +114,8 @@ public class TransactionTableMetadataManagerTest {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, 1); // one second
 
-    Get get = new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl");
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
 
     // Act
     tableMetadataManager.getTransactionTableMetadata(get);
@@ -120,7 +128,95 @@ public class TransactionTableMetadataManagerTest {
     assertTransactionMetadata(actual);
   }
 
+  @Test
+  public void getTransactionTableMetadata_TableNotFound_ShouldReturnNull()
+      throws ExecutionException {
+    // Arrange
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+
+    when(admin.getTableMetadata("ns", "tbl")).thenReturn(null);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    TransactionTableMetadata actual = tableMetadataManager.getTransactionTableMetadata(get);
+
+    // Assert
+    verify(admin).getTableMetadata("ns", "tbl");
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void
+      getTransactionTableMetadata_TableNotFoundCalledTwice_ShouldCallDistributedStorageAdminTwice()
+          throws ExecutionException {
+    // Arrange
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+
+    when(admin.getTableMetadata("ns", "tbl")).thenReturn(null);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    tableMetadataManager.getTransactionTableMetadata(get);
+    TransactionTableMetadata actual = tableMetadataManager.getTransactionTableMetadata(get);
+
+    // Assert
+    verify(admin, times(2)).getTableMetadata("ns", "tbl");
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void
+      getTransactionTableMetadata_ExecutionExceptionThrownByAdmin_ShouldThrowExecutionException()
+          throws ExecutionException {
+    // Arrange
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+
+    ExecutionException expectedException = mock(ExecutionException.class);
+    when(admin.getTableMetadata("ns", "tbl")).thenThrow(expectedException);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    assertThatThrownBy(() -> tableMetadataManager.getTransactionTableMetadata(get))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(expectedException);
+
+    // Assert
+    verify(admin).getTableMetadata("ns", "tbl");
+  }
+
+  @Test
+  public void
+      getTransactionTableMetadata_RuntimeExceptionThrownByAdmin_ShouldThrowRuntimeException()
+          throws ExecutionException {
+    // Arrange
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+
+    IllegalArgumentException illegalArgumentException = mock(IllegalArgumentException.class);
+    when(admin.getTableMetadata("ns", "tbl")).thenThrow(illegalArgumentException);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    assertThatThrownBy(() -> tableMetadataManager.getTransactionTableMetadata(get))
+        .isEqualTo(illegalArgumentException);
+
+    // Assert
+    verify(admin).getTableMetadata("ns", "tbl");
+  }
+
   private void assertTransactionMetadata(TransactionTableMetadata actual) {
+    assertThat(actual).isNotNull();
     assertThat(actual.getTableMetadata()).isEqualTo(tableMetadata);
     assertThat(actual.getPartitionKeyNames())
         .isEqualTo(new LinkedHashSet<>(Collections.singletonList(ACCOUNT_ID)));

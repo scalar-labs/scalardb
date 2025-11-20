@@ -1,14 +1,21 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.api.ConditionBuilder.column;
+import static com.scalar.db.api.ConditionSetBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.Consistency;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -699,5 +706,831 @@ public class ConsensusCommitUtilsTest {
     assertThat(columns).containsKey("tx_version");
     assertThat(columns.get("tx_version").hasNullValue()).isFalse();
     assertThat(columns.get("tx_version").getIntValue()).isEqualTo(5);
+  }
+
+  @Test
+  public void prepareGetForStorage_GetWithoutConjunctions_shouldReturnPreparedGet() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "key1"))
+            .projections("col1", "col2")
+            .build();
+
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.TEXT)
+            .addPartitionKey("pk")
+            .build();
+
+    // Act
+    Get actual = ConsensusCommitUtils.prepareGetForStorage(get, metadata);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("pk", "key1"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void prepareGetForStorage_GetWithConjunctions_shouldConvertConjunctions() {
+    // Arrange
+    TableMetadata metadata =
+        ConsensusCommitUtils.buildTransactionTableMetadata(
+            TableMetadata.newBuilder()
+                .addColumn("pk", DataType.INT)
+                .addColumn("ck", DataType.INT)
+                .addColumn("col1", DataType.INT)
+                .addColumn("col2", DataType.INT)
+                .addColumn("col3", DataType.INT)
+                .addColumn("col4", DataType.TEXT)
+                .addPartitionKey("pk")
+                .addClusteringKey("ck")
+                .addSecondaryIndex("col3")
+                .build());
+
+    // Act Assert
+
+    // Single condition
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // AND condition
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col1").isEqualToInt(10))
+                    .and(column("col2").isGreaterThanInt(20))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(
+                    condition(column("col1").isEqualToInt(10))
+                        .and(column("col2").isGreaterThanInt(20))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                        .and(column(Attribute.BEFORE_PREFIX + "col2").isGreaterThanInt(20))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // OR condition
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col1").isEqualToInt(10))
+                    .or(column("col2").isEqualToInt(30))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .or(column("col2").isEqualToInt(30))
+                .or(column(Attribute.BEFORE_PREFIX + "col2").isEqualToInt(30))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Complex condition (AND + OR)
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(
+                        condition(column("col1").isGreaterThanInt(10))
+                            .and(column("col1").isLessThanInt(20))
+                            .build())
+                    .or(
+                        condition(column("col2").isGreaterThanInt(30))
+                            .and(column("col2").isLessThanOrEqualToInt(40))
+                            .build())
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(
+                    condition(column("col1").isGreaterThanInt(10))
+                        .and(column("col1").isLessThanInt(20))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col1").isGreaterThanInt(10))
+                        .and(column(Attribute.BEFORE_PREFIX + "col1").isLessThanInt(20))
+                        .build())
+                .or(
+                    condition(column("col2").isGreaterThanInt(30))
+                        .and(column("col2").isLessThanOrEqualToInt(40))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col2").isGreaterThanInt(30))
+                        .and(column(Attribute.BEFORE_PREFIX + "col2").isLessThanOrEqualToInt(40))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // LIKE expression (should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col4").isLikeText("pattern%"))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(column("col4").isLikeText("pattern%"))
+                .or(column(Attribute.BEFORE_PREFIX + "col4").isLikeText("pattern%"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // LIKE expression with escape (should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col4").isLikeText("%pattern%", "\\"))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(column("col4").isLikeText("%pattern%", "\\"))
+                .or(column(Attribute.BEFORE_PREFIX + "col4").isLikeText("%pattern%", "\\"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on secondary index (should be converted for Get)
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col3").isEqualToInt(300))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(column("col3").isEqualToInt(300))
+                .or(column(Attribute.BEFORE_PREFIX + "col3").isEqualToInt(300))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Mixed condition: secondary index and non-indexed column (both should be converted for Get)
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col3").isEqualToInt(300))
+                    .and(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(
+                    condition(column("col3").isEqualToInt(300))
+                        .and(column("col1").isEqualToInt(10))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col3").isEqualToInt(300))
+                        .and(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Mixed condition with OR: secondary index OR non-indexed column (both should be converted
+    // for Get)
+    assertThat(
+            ConsensusCommitUtils.prepareGetForStorage(
+                Get.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .clusteringKey(Key.ofInt("ck", 200))
+                    .where(column("col3").isEqualToInt(300))
+                    .or(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .clusteringKey(Key.ofInt("ck", 200))
+                .where(column("col3").isEqualToInt(300))
+                .or(column(Attribute.BEFORE_PREFIX + "col3").isEqualToInt(300))
+                .or(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void prepareScanForStorage_ScanWithoutConjunctionsAndLimit_shouldReturnPreparedScan() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "key1"))
+            .projections("col1", "col2")
+            .build();
+
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.TEXT)
+            .addPartitionKey("pk")
+            .build();
+
+    // Act
+    Scan actual = ConsensusCommitUtils.prepareScanForStorage(scan, metadata);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("pk", "key1"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void prepareScanForStorage_ScanWithLimit_shouldRemoveLimit() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofText("pk", "key1"))
+            .limit(10)
+            .build();
+
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addColumn("pk", DataType.TEXT).addPartitionKey("pk").build();
+
+    // Act
+    Scan actual = ConsensusCommitUtils.prepareScanForStorage(scan, metadata);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("pk", "key1"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void prepareScanForStorage_ScanWithConjunctions_shouldConvertConjunctions() {
+    // Arrange
+    TableMetadata metadata =
+        ConsensusCommitUtils.buildTransactionTableMetadata(
+            TableMetadata.newBuilder()
+                .addColumn("pk", DataType.INT)
+                .addColumn("ck", DataType.INT)
+                .addColumn("col1", DataType.INT)
+                .addColumn("col2", DataType.INT)
+                .addColumn("col3", DataType.INT)
+                .addColumn("col4", DataType.TEXT)
+                .addPartitionKey("pk")
+                .addClusteringKey("ck")
+                .addSecondaryIndex("col3")
+                .build());
+
+    // Act Assert
+
+    // Single condition
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // AND condition
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(column("col1").isEqualToInt(10))
+                    .and(column("col2").isGreaterThanInt(20))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(
+                    condition(column("col1").isEqualToInt(10))
+                        .and(column("col2").isGreaterThanInt(20))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                        .and(column(Attribute.BEFORE_PREFIX + "col2").isGreaterThanInt(20))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // OR condition
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(column("col1").isEqualToInt(10))
+                    .or(column("col2").isEqualToInt(30))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .or(column("col2").isEqualToInt(30))
+                .or(column(Attribute.BEFORE_PREFIX + "col2").isEqualToInt(30))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Complex condition (AND + OR)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(
+                        condition(column("col1").isGreaterThanInt(10))
+                            .and(column("col1").isLessThanInt(20))
+                            .build())
+                    .or(
+                        condition(column("col2").isGreaterThanInt(30))
+                            .and(column("col2").isLessThanOrEqualToInt(40))
+                            .build())
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(
+                    condition(column("col1").isGreaterThanInt(10))
+                        .and(column("col1").isLessThanInt(20))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col1").isGreaterThanInt(10))
+                        .and(column(Attribute.BEFORE_PREFIX + "col1").isLessThanInt(20))
+                        .build())
+                .or(
+                    condition(column("col2").isGreaterThanInt(30))
+                        .and(column("col2").isLessThanOrEqualToInt(40))
+                        .build())
+                .or(
+                    condition(column(Attribute.BEFORE_PREFIX + "col2").isGreaterThanInt(30))
+                        .and(column(Attribute.BEFORE_PREFIX + "col2").isLessThanOrEqualToInt(40))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // LIKE expression (should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(column("col4").isLikeText("pattern%"))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(column("col4").isLikeText("pattern%"))
+                .or(column(Attribute.BEFORE_PREFIX + "col4").isLikeText("pattern%"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // LIKE expression with escape (should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(column("col4").isLikeText("%pattern%", "\\"))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(column("col4").isLikeText("%pattern%", "\\"))
+                .or(column(Attribute.BEFORE_PREFIX + "col4").isLikeText("%pattern%", "\\"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on partition key (should not be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("pk").isEqualToInt(100))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("pk").isEqualToInt(100))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on partition key and other columns (only other columns should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("pk").isEqualToInt(50))
+                    .and(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(
+                    condition(column("pk").isEqualToInt(50))
+                        .and(column("col1").isEqualToInt(10))
+                        .build())
+                .or(
+                    condition(column("pk").isEqualToInt(50))
+                        .and(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("pk").isEqualToInt(50))
+                    .or(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("pk").isEqualToInt(50))
+                .or(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on clustering key (should not be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("ck").isGreaterThanInt(150))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("ck").isGreaterThanInt(150))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on clustering key and other columns (only other columns should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("ck").isEqualToInt(150))
+                    .and(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(
+                    condition(column("ck").isEqualToInt(150))
+                        .and(column("col1").isEqualToInt(10))
+                        .build())
+                .or(
+                    condition(column("ck").isEqualToInt(150))
+                        .and(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("ck").isEqualToInt(150))
+                    .or(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("ck").isEqualToInt(150))
+                .or(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on secondary index (should be converted)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                Scan.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .partitionKey(Key.ofInt("pk", 100))
+                    .where(column("col3").isEqualToInt(300))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 100))
+                .where(column("col3").isEqualToInt(300))
+                .or(column(Attribute.BEFORE_PREFIX + "col3").isEqualToInt(300))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void
+      prepareScanForStorage_ScanAllWithConjunctionsOnSecondaryIndex_shouldNotConvertSecondaryIndexConditions() {
+    // Arrange
+    TableMetadata metadata =
+        ConsensusCommitUtils.buildTransactionTableMetadata(
+            TableMetadata.newBuilder()
+                .addColumn("pk", DataType.INT)
+                .addColumn("ck", DataType.INT)
+                .addColumn("col1", DataType.INT)
+                .addColumn("col2", DataType.INT)
+                .addColumn("col3", DataType.INT)
+                .addColumn("col4", DataType.TEXT)
+                .addPartitionKey("pk")
+                .addClusteringKey("ck")
+                .addSecondaryIndex("col3")
+                .build());
+
+    // Act Assert
+
+    // Condition on secondary index (should NOT be converted for ScanAll)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                ScanAll.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("col3").isEqualToInt(300))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("col3").isEqualToInt(300))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on non-indexed column (should be converted for ScanAll)
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                ScanAll.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Mixed condition: secondary index and non-indexed column
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                ScanAll.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("col3").isEqualToInt(300))
+                    .and(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(
+                    condition(column("col3").isEqualToInt(300))
+                        .and(column("col1").isEqualToInt(10))
+                        .build())
+                .or(
+                    condition(column("col3").isEqualToInt(300))
+                        .and(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                        .build())
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Mixed condition with OR: secondary index OR non-indexed column
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                ScanAll.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("col3").isEqualToInt(300))
+                    .or(column("col1").isEqualToInt(10))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("col3").isEqualToInt(300))
+                .or(column("col1").isEqualToInt(10))
+                .or(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on partition key should not be converted
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                ScanAll.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("pk").isEqualToInt(100))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("pk").isEqualToInt(100))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+
+    // Condition on clustering key should not be converted
+    assertThat(
+            ConsensusCommitUtils.prepareScanForStorage(
+                ScanAll.newBuilder()
+                    .namespace("ns")
+                    .table("tbl")
+                    .all()
+                    .where(column("ck").isGreaterThanInt(150))
+                    .build(),
+                metadata))
+        .isEqualTo(
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("ck").isGreaterThanInt(150))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
   }
 }

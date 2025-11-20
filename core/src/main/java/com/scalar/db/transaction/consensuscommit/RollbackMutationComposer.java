@@ -1,20 +1,17 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
-import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.scalar.db.api.ConditionBuilder;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -126,14 +123,19 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     Key partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
     Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
 
-    return new Delete(partitionKey, clusteringKey.orElse(null))
-        .forNamespace(base.forNamespace().get())
-        .forTable(base.forTable().get())
-        .withCondition(
-            new DeleteIf(
-                new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                new ConditionalExpression(STATE, toStateValue(result.getState()), Operator.EQ)))
-        .withConsistency(Consistency.LINEARIZABLE);
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(base.forNamespace().get())
+            .table(base.forTable().get())
+            .partitionKey(partitionKey)
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ID).isEqualToText(id))
+                    .and(ConditionBuilder.column(STATE).isEqualToInt(result.getState().get()))
+                    .build())
+            .consistency(Consistency.LINEARIZABLE);
+    clusteringKey.ifPresent(deleteBuilder::clusteringKey);
+
+    return deleteBuilder.build();
   }
 
   private Optional<TransactionResult> getLatestResult(
@@ -159,12 +161,16 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       }
     }
 
-    Get get =
-        new Get(partitionKey, clusteringKey)
-            .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(operation.forNamespace().get())
-            .forTable(operation.forTable().get());
+    GetBuilder.BuildableGetWithPartitionKey getBuilder =
+        Get.newBuilder()
+            .namespace(operation.forNamespace().get())
+            .table(operation.forTable().get())
+            .partitionKey(partitionKey)
+            .consistency(Consistency.LINEARIZABLE);
+    if (clusteringKey != null) {
+      getBuilder.clusteringKey(clusteringKey);
+    }
 
-    return storage.get(get).map(TransactionResult::new);
+    return storage.get(getBuilder.build()).map(TransactionResult::new);
   }
 }

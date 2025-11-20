@@ -196,6 +196,52 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void addNewColumnToTable(
+      String namespace,
+      String table,
+      String columnName,
+      DataType columnType,
+      boolean encrypted,
+      boolean ifNotExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.addNewColumnToTable(
+        namespace, table, columnName, columnType, encrypted, ifNotExists);
+  }
+
+  @Override
+  public void dropColumnFromTable(String namespace, String table, String columnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName);
+  }
+
+  @Override
+  public void dropColumnFromTable(
+      String namespace, String table, String columnName, boolean ifExists)
+      throws ExecutionException {
+    distributedTransactionAdmin.dropColumnFromTable(namespace, table, columnName, ifExists);
+  }
+
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    distributedTransactionAdmin.renameColumn(namespace, table, oldColumnName, newColumnName);
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    distributedTransactionAdmin.alterColumnType(namespace, table, columnName, newColumnType);
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    distributedTransactionAdmin.renameTable(namespace, oldTableName, newTableName);
+  }
+
+  @Override
   public void importTable(String namespace, String table, Map<String, String> options)
       throws ExecutionException {
     distributedTransactionAdmin.importTable(namespace, table, options);
@@ -335,6 +381,105 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   public Set<Privilege> getPrivileges(String username, String namespaceName, String tableName)
       throws ExecutionException {
     return distributedTransactionAdmin.getPrivileges(username, namespaceName, tableName);
+  }
+
+  @Override
+  public void createRole(String roleName) throws ExecutionException {
+    distributedTransactionAdmin.createRole(roleName);
+  }
+
+  @Override
+  public void dropRole(String roleName) throws ExecutionException {
+    distributedTransactionAdmin.dropRole(roleName);
+  }
+
+  @Override
+  public List<Role> getRoles() throws ExecutionException {
+    return distributedTransactionAdmin.getRoles();
+  }
+
+  @Override
+  public List<RoleForUser> getRolesForUser(String username) throws ExecutionException {
+    return distributedTransactionAdmin.getRolesForUser(username);
+  }
+
+  @Override
+  public void grantRoleToUser(String username, String roleName, boolean withAdminOption)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantRoleToUser(username, roleName, withAdminOption);
+  }
+
+  @Override
+  public void revokeRoleFromUser(String username, String roleName) throws ExecutionException {
+    distributedTransactionAdmin.revokeRoleFromUser(username, roleName);
+  }
+
+  @Override
+  public void revokeAdminOptionFromUser(String username, String roleName)
+      throws ExecutionException {
+    distributedTransactionAdmin.revokeAdminOptionFromUser(username, roleName);
+  }
+
+  @Override
+  public List<GranteeUserRef> getGranteeUsersForRole(String roleName) throws ExecutionException {
+    return distributedTransactionAdmin.getGranteeUsersForRole(roleName);
+  }
+
+  @Override
+  public void grantRoleToRole(String roleName, String memberRoleName, boolean withAdminOption)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantRoleToRole(roleName, memberRoleName, withAdminOption);
+  }
+
+  @Override
+  public void revokeRoleFromRole(String roleName, String memberRoleName) throws ExecutionException {
+    distributedTransactionAdmin.revokeRoleFromRole(roleName, memberRoleName);
+  }
+
+  @Override
+  public void revokeAdminOptionFromRole(String roleName, String memberRoleName)
+      throws ExecutionException {
+    distributedTransactionAdmin.revokeAdminOptionFromRole(roleName, memberRoleName);
+  }
+
+  @Override
+  public Set<Privilege> getRolePrivileges(String roleName, String namespaceName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getRolePrivileges(roleName, namespaceName);
+  }
+
+  @Override
+  public Set<Privilege> getRolePrivileges(String roleName, String namespaceName, String tableName)
+      throws ExecutionException {
+    return distributedTransactionAdmin.getRolePrivileges(roleName, namespaceName, tableName);
+  }
+
+  @Override
+  public void grantPrivilegeToRole(String roleName, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantPrivilegeToRole(roleName, namespaceName, privileges);
+  }
+
+  @Override
+  public void grantPrivilegeToRole(
+      String roleName, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    distributedTransactionAdmin.grantPrivilegeToRole(
+        roleName, namespaceName, tableName, privileges);
+  }
+
+  @Override
+  public void revokePrivilegeFromRole(
+      String roleName, String namespaceName, Privilege... privileges) throws ExecutionException {
+    distributedTransactionAdmin.revokePrivilegeFromRole(roleName, namespaceName, privileges);
+  }
+
+  @Override
+  public void revokePrivilegeFromRole(
+      String roleName, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    distributedTransactionAdmin.revokePrivilegeFromRole(
+        roleName, namespaceName, tableName, privileges);
   }
 
   @Override

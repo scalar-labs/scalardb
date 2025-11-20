@@ -377,16 +377,16 @@ public enum CoreError implements ScalarDbError {
       ""),
   MULTI_STORAGE_STORAGE_NOT_FOUND(
       Category.USER_ERROR, "0084", "Storage not found. Storage: %s", "", ""),
-  JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0085", "The namespace name is not acceptable. Namespace: %s", "", ""),
-  JDBC_TABLE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0086", "The table name is not acceptable. Table: %s", "", ""),
-  JDBC_IMPORT_NOT_SUPPORTED(
+  JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
-      "0087",
-      "Importing tables is not allowed in the RDB engine. RDB engine: %s",
+      "0085",
+      "The namespace name is not acceptable in SQLite. Namespace: %s",
       "",
       ""),
+  JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
+      Category.USER_ERROR, "0086", "The table name is not acceptable in SQLite. Table: %s", "", ""),
+  JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR, "0087", "Importing tables is not allowed in SQLite", "", ""),
   JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
       Category.USER_ERROR, "0088", "The %s table must have a primary key", "", ""),
   JDBC_RDB_ENGINE_NOT_SUPPORTED(
@@ -434,7 +434,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS(
       Category.USER_ERROR,
       "0100",
-      "The condition is not allowed to target transaction metadata columns. Column: %s",
+      "The condition is not allowed to target transaction metadata columns. Table: %s; Column: %s",
       "",
       ""),
   CONSENSUS_COMMIT_COLUMN_RESERVED_AS_TRANSACTION_METADATA(
@@ -678,6 +678,271 @@ public enum CoreError implements ScalarDbError {
       "Mutations across multiple storages are not allowed. Mutations: %s",
       "",
       ""),
+  DROP_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0216",
+      "Primary key columns cannot be dropped. Table: %s; Column: %s",
+      "",
+      ""),
+  COSMOS_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0217",
+      "Cosmos DB does not support the feature for dropping columns",
+      "",
+      ""),
+  DYNAMO_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0218",
+      "DynamoDB does not support the feature for dropping columns",
+      "",
+      ""),
+  COSMOS_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0219",
+      "Cosmos DB does not support the feature for renaming columns",
+      "",
+      ""),
+  DYNAMO_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0220",
+      "DynamoDB does not support the feature for renaming columns",
+      "",
+      ""),
+  CASSANDRA_RENAME_NON_PRIMARY_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0221",
+      "Cassandra does not support renaming non-primary key columns",
+      "",
+      ""),
+  JDBC_DB2_RENAME_PRIMARY_OR_INDEX_KEY_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0222",
+      "Db2 does not support renaming primary key or index key columns",
+      "",
+      ""),
+  DYNAMO_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0223",
+      "Import-related functionality is not supported in DynamoDB",
+      "",
+      ""),
+  DYNAMO_PARTITION_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0224",
+      "The BLOB type is supported only for the last column in the partition key in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0225",
+      "The BLOB type is not supported for clustering keys in DynamoDB. Column: %s",
+      "",
+      ""),
+  DYNAMO_INDEX_COLUMN_BOOLEAN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0226",
+      "The BOOLEAN type is not supported for index columns in DynamoDB. Column: %s",
+      "",
+      ""),
+  CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0227",
+      "The TIMESTAMP type is not supported in Cassandra. Column: %s",
+      "",
+      ""),
+  JDBC_DB2_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0228",
+      "With Db2, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0229",
+      "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0230", "Renaming tables is not supported in Cassandra", "", ""),
+  COSMOS_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0231", "Renaming tables is not supported in Cosmos DB", "", ""),
+  DYNAMO_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0232", "Renaming tables is not supported in DynamoDB", "", ""),
+  ALTER_PRIMARY_OR_INDEX_KEY_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0233",
+      "Altering primary key or index key column types is not supported. Table: %s; Column: %s",
+      "",
+      ""),
+  INVALID_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0234",
+      "Invalid column type conversion from %s to %s. Column: %s",
+      "",
+      ""),
+  CASSANDRA_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0235",
+      "Cassandra does not support the feature for altering column types",
+      "",
+      ""),
+  COSMOS_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0236",
+      "Cosmos DB does not support the feature for altering column types",
+      "",
+      ""),
+  DYNAMO_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0237",
+      "DynamoDB does not support the feature for altering column types",
+      "",
+      ""),
+  JDBC_SQLITE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0238",
+      "SQLite does not support the feature for altering column types",
+      "",
+      ""),
+  JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0239",
+      "Oracle does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_DB2_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0240",
+      "Db2 does not support column type conversion from %s to %s",
+      "",
+      ""),
+  EMPTY_OPERATIONS_SPECIFIED(Category.USER_ERROR, "0241", "The operations are empty", "", ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_MULTIPLE_OPERATIONS_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0242",
+      "Multiple operations are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BATCH_RESULT_DOES_NOT_HAVE_GET_RESULT(
+      Category.USER_ERROR, "0243", "This batch result doesn't have a get result", "", ""),
+  BATCH_RESULT_DOES_NOT_HAVE_SCAN_RESULT(
+      Category.USER_ERROR, "0244", "This batch result doesn't have a scan result", "", ""),
+  JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0245",
+      "TiDB does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0246",
+      "With Oracle, using a BLOB column as partition key, clustering key or secondary index is not supported.",
+      "",
+      ""),
+  JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0247",
+      "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "",
+      ""),
+  JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0248",
+      "With Oracle, setting a condition on a BLOB column when using a selection operation is not supported. Condition: %s",
+      "",
+      ""),
+  NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
+      Category.USER_ERROR,
+      "0249",
+      "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_IMPORT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0250",
+      "Import-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_INDEX_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0251",
+      "Index-related functionality is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_DROP_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0252",
+      "Object Storage does not support the feature for dropping columns",
+      "",
+      ""),
+  OBJECT_STORAGE_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0253",
+      "Object Storage does not support the feature for renaming columns",
+      "",
+      ""),
+  OBJECT_STORAGE_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0254", "Renaming tables is not supported in Object Storage", "", ""),
+  OBJECT_STORAGE_ALTER_COLUMN_TYPE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0255",
+      "Object Storage does not support the feature for altering column types",
+      "",
+      ""),
+  OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0256",
+      "Cross-partition scan with ordering is not supported in Object Storage",
+      "",
+      ""),
+  OBJECT_STORAGE_PRIMARY_KEY_CONTAINS_ILLEGAL_CHARACTER(
+      Category.USER_ERROR,
+      "0257",
+      "The value of the column %s in the primary key contains an illegal character. Value: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_PROJECTION_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0258",
+      "Specifying transaction metadata columns in the projection is not allowed. Table: %s; Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_SPECIFYING_TRANSACTION_METADATA_COLUMNS_IN_ORDERING_NOT_ALLOWED(
+      Category.USER_ERROR,
+      "0259",
+      "Specifying transaction metadata columns in the ordering is not allowed. Table: %s; Column: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0260",
+      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0261",
+      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
+      Category.USER_ERROR,
+      "0262",
+      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
+      "",
+      ""),
+  OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_NOT_FOUND(
+      Category.USER_ERROR,
+      "0263",
+      "The service account key for Cloud Storage was not found.",
+      "",
+      ""),
+  OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
+      Category.USER_ERROR,
+      "0264",
+      "Failed to load the service account key for Cloud Storage.",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -728,19 +993,35 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
-      Category.CONCURRENCY_ERROR, "0013", "The record being prepared already exists", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0013",
+      "The record being prepared already exists. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
-      Category.CONCURRENCY_ERROR, "0014", "A conflict occurred when preparing records", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0014",
+      "A conflict occurred when preparing records. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE(
       Category.CONCURRENCY_ERROR,
       "0015",
-      "The committing state in the coordinator failed. The transaction has been aborted",
+      "The committing state in the coordinator failed. The transaction has been aborted. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHILE_IMPLICIT_PRE_READ(
-      Category.CONCURRENCY_ERROR, "0016", "A conflict occurred during implicit pre-read", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0016",
+      "A conflict occurred during implicit pre-read. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_READ_UNCOMMITTED_RECORD(
-      Category.CONCURRENCY_ERROR, "0017", "This record needs to be recovered", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0017",
+      "This record needs to be recovered. Table: %s; Partition Key: %s; Clustering Key: %s; Transaction ID that wrote the record: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_CONDITION_NOT_SATISFIED_BECAUSE_RECORD_NOT_EXISTS(
       Category.CONCURRENCY_ERROR,
       "0018",
@@ -784,7 +1065,17 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS(
-      Category.CONCURRENCY_ERROR, "0026", "A conflict occurred when committing records", "", ""),
+      Category.CONCURRENCY_ERROR,
+      "0026",
+      "A conflict occurred when committing records. Details: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION(
+      Category.CONCURRENCY_ERROR,
+      "0027",
+      "A transaction conflict occurred in the mutation. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category
@@ -890,20 +1181,21 @@ public enum CoreError implements ScalarDbError {
   JDBC_TRANSACTION_BEGINNING_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR, "0035", "Beginning a transaction failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED(
-      Category.INTERNAL_ERROR, "0036", "Preparing records failed", "", ""),
-  CONSENSUS_COMMIT_VALIDATION_FAILED(Category.INTERNAL_ERROR, "0037", "Validation failed", "", ""),
+      Category.INTERNAL_ERROR, "0036", "Preparing records failed. Details: %s", "", ""),
+  CONSENSUS_COMMIT_VALIDATION_FAILED(
+      Category.INTERNAL_ERROR, "0037", "Validation failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_EXECUTING_IMPLICIT_PRE_READ_FAILED(
-      Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed", "", ""),
+      Category.INTERNAL_ERROR, "0038", "Executing implicit pre-read failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED(
       Category.INTERNAL_ERROR,
       "0039",
-      "Reading a record from the underlying storage failed",
+      "Reading a record from the underlying storage failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED(
       Category.INTERNAL_ERROR,
       "0040",
-      "Scanning records from the underlying storage failed",
+      "Scanning records from the underlying storage failed. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
@@ -919,10 +1211,10 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0044", "The Upsert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPDATE_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0045", "The Update operation failed. Details: %s", "", ""),
-  HANDLING_BEFORE_PREPARATION_SNAPSHOT_HOOK_FAILED(
+  CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED(
       Category.INTERNAL_ERROR,
       "0046",
-      "Handling the before-preparation snapshot hook failed. Details: %s",
+      "Handling the before-preparation hook failed. Details: %s",
       "",
       ""),
   JDBC_TRANSACTION_GETTING_SCANNER_FAILED(
@@ -938,7 +1230,41 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
-      Category.INTERNAL_ERROR, "0058", "Committing records failed", "", ""),
+      Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
+  DROPPING_COLUMN_FROM_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0059",
+      "Dropping a column from the table failed. Table: %s; Column: %s",
+      "",
+      ""),
+  RENAMING_COLUMN_FAILED(
+      Category.INTERNAL_ERROR,
+      "0060",
+      "Renaming a column failed. Table: %s; Old column name: %s; New column name: %s",
+      "",
+      ""),
+  RENAMING_TABLE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0061",
+      "Renaming a table failed. Old table name: %s; New table name: %s",
+      "",
+      ""),
+  ALTERING_COLUMN_TYPE_FAILED(
+      Category.INTERNAL_ERROR,
+      "0062",
+      "Altering a column type failed. Table: %s; Column: %s; New column type: %s",
+      "",
+      ""),
+  JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED(
+      Category.INTERNAL_ERROR,
+      "0063",
+      "Getting the MySQL JDBC connection metadata failed. Details: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION(
+      Category.INTERNAL_ERROR, "0064", "An error occurred in the selection. Details: %s", "", ""),
+  OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION(
+      Category.INTERNAL_ERROR, "0065", "An error occurred in the mutation. Details: %s", "", ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -952,21 +1278,31 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist",
+      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_CANNOT_GET_STATE(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR, "0002", "The state cannot be retrieved", "", ""),
+  CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0002",
+      "The coordinator status cannot be retrieved. Details: %s",
+      "",
+      ""),
   CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0003",
-      "The coordinator status is unknown",
+      "The coordinator status is unknown. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0004",
-      "Aborting state failed with NoMutationException, but the coordinator status does not exist",
+      "Aborting state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_ONE_PHASE_COMMITTING_RECORDS_FAILED(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0005",
+      "One-phase committing records failed. Details: %s",
       "",
       ""),
   ;

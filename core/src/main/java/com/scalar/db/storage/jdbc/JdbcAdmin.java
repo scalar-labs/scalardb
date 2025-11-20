@@ -9,8 +9,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
@@ -40,26 +38,17 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"})
+@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-  public static final String METADATA_TABLE = "metadata";
+  private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
 
-  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
-  @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
-  @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
-  @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
-  @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
-  @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
-  @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
   @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
-  public static final String NAMESPACES_TABLE = "namespaces";
-  @VisibleForTesting static final String NAMESPACE_COL_NAMESPACE_NAME = "namespace_name";
-  private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
+
   private static final String INDEX_NAME_PREFIX = "index";
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
@@ -71,6 +60,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
   private final String metadataSchema;
+  private final TableMetadataService tableMetadataService;
+  private final NamespaceMetadataService namespaceMetadataService;
 
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
@@ -78,6 +69,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     metadataSchema = config.getMetadataSchema();
+    tableMetadataService = new TableMetadataService(metadataSchema, rdbEngine);
+    namespaceMetadataService = new NamespaceMetadataService(metadataSchema, rdbEngine);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -85,19 +78,39 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
+    tableMetadataService = new TableMetadataService(metadataSchema, rdbEngine);
+    namespaceMetadataService = new NamespaceMetadataService(metadataSchema, rdbEngine);
+  }
+
+  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
+    return metadata.getClusteringKeyNames().stream()
+        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+  }
+
+  @VisibleForTesting
+  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
-      throw new IllegalArgumentException(
-          CoreError.JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE.buildMessage(namespace));
-    }
+    rdbEngine.throwIfInvalidNamespaceName(namespace);
+
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, rdbEngine.createSchemaSqls(namespace));
+      createMetadataSchemaIfNotExists(connection);
       createNamespacesTableIfNotExists(connection);
-      insertIntoNamespacesTable(connection, namespace);
+      namespaceMetadataService.insertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
       throw new ExecutionException("Creating the " + namespace + " schema failed", e);
     }
@@ -108,7 +121,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      createNamespacesTableIfNotExists(connection);
+      createMetadataSchemaIfNotExists(connection);
       createTableInternal(connection, namespace, table, metadata, false);
       addTableMetadata(connection, namespace, table, metadata, true, false);
     } catch (SQLException e) {
@@ -125,10 +138,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       TableMetadata metadata,
       boolean ifNotExists)
       throws SQLException {
-    if (!rdbEngine.isValidNamespaceOrTableName(table)) {
-      throw new IllegalArgumentException(
-          CoreError.JDBC_TABLE_NAME_NOT_ACCEPTABLE.buildMessage(table));
-    }
+    rdbEngine.throwIfInvalidTableName(table);
+
     String createTableStatement = "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
     // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
     LinkedHashSet<String> sortedColumnNames =
@@ -155,117 +166,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     createIndex(connection, schema, table, metadata, ifNotExists);
   }
 
-  private void createIndex(
-      Connection connection,
-      String schema,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists)
-      throws SQLException {
-    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      createIndex(connection, schema, table, indexedColumn, ifNotExists);
-    }
-  }
-
-  @VisibleForTesting
-  void addTableMetadata(
-      Connection connection,
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean createMetadataTable,
-      boolean overwriteMetadata)
-      throws SQLException {
-    if (createMetadataTable) {
-      createMetadataSchemaAndTableIfNotExists(connection);
-    }
-    if (overwriteMetadata) {
-      // Delete the metadata for the table before we add them
-      execute(connection, getDeleteTableMetadataStatement(namespace, table));
-    }
-    LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
-    orderedColumns.addAll(metadata.getClusteringKeyNames());
-    orderedColumns.addAll(metadata.getColumnNames());
-    int ordinalPosition = 1;
-    for (String column : orderedColumns) {
-      insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
-    }
-  }
-
-  private void createMetadataSchemaAndTableIfNotExists(Connection connection) throws SQLException {
-    createSchemaIfNotExists(connection, metadataSchema);
-    createMetadataTableIfNotExists(connection);
-  }
-
-  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
-    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
-    try {
-      execute(connection, sqls);
-    } catch (SQLException e) {
-      // Suppress exceptions indicating the duplicate metadata schema
-      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
-        throw e;
-      }
-    }
-  }
-
-  @VisibleForTesting
-  void createMetadataTableIfNotExists(Connection connection) throws SQLException {
-    String createTableStatement =
-        "CREATE TABLE "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE)
-            + "("
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + " "
-            + getTextType(128, true)
-            + ","
-            + enclose(METADATA_COL_COLUMN_NAME)
-            + " "
-            + getTextType(128, true)
-            + ","
-            + enclose(METADATA_COL_DATA_TYPE)
-            + " "
-            + getTextType(20, false)
-            + " NOT NULL,"
-            + enclose(METADATA_COL_KEY_TYPE)
-            + " "
-            + getTextType(20, false)
-            + ","
-            + enclose(METADATA_COL_CLUSTERING_ORDER)
-            + " "
-            + getTextType(10, false)
-            + ","
-            + enclose(METADATA_COL_INDEXED)
-            + " "
-            + getBooleanType()
-            + " NOT NULL,"
-            + enclose(METADATA_COL_ORDINAL_POSITION)
-            + " INTEGER NOT NULL,"
-            + "PRIMARY KEY ("
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + ", "
-            + enclose(METADATA_COL_COLUMN_NAME)
-            + "))";
-
-    createTable(connection, createTableStatement, true);
-  }
-
-  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
-      throws SQLException {
-    String stmt = createTableStatement;
-    if (ifNotExists) {
-      stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
-    }
-    try {
-      execute(connection, stmt);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
-        throw e;
-      }
-    }
-  }
-
   private void createTableInternalSqlsAfterCreateTable(
       Connection connection,
       String schema,
@@ -285,75 +185,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String getTextType(int charLength, boolean isKey) {
-    return rdbEngine.getTextType(charLength, isKey);
-  }
-
-  private String getBooleanType() {
-    return rdbEngine.getDataTypeForEngine(DataType.BOOLEAN);
-  }
-
-  private void insertMetadataColumn(
+  private void createIndex(
+      Connection connection,
       String schema,
       String table,
       TableMetadata metadata,
-      Connection connection,
-      int ordinalPosition,
-      String column)
+      boolean ifNotExists)
       throws SQLException {
-    KeyType keyType = null;
-    if (metadata.getPartitionKeyNames().contains(column)) {
-      keyType = KeyType.PARTITION;
+    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
+      createIndex(connection, schema, table, indexedColumn, ifNotExists);
     }
-    if (metadata.getClusteringKeyNames().contains(column)) {
-      keyType = KeyType.CLUSTERING;
-    }
-
-    String insertStatement =
-        getInsertStatement(
-            schema,
-            table,
-            column,
-            metadata.getColumnDataType(column),
-            keyType,
-            metadata.getClusteringOrder(column),
-            metadata.getSecondaryIndexNames().contains(column),
-            ordinalPosition);
-    execute(connection, insertStatement);
-  }
-
-  private String getInsertStatement(
-      String schema,
-      String table,
-      String columnName,
-      DataType dataType,
-      @Nullable KeyType keyType,
-      @Nullable Ordering.Order ckOrder,
-      boolean indexed,
-      int ordinalPosition) {
-
-    return String.format(
-        "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
-        encloseFullTableName(metadataSchema, METADATA_TABLE),
-        getFullTableName(schema, table),
-        columnName,
-        dataType.toString(),
-        keyType != null ? "'" + keyType + "'" : "NULL",
-        ckOrder != null ? "'" + ckOrder + "'" : "NULL",
-        computeBooleanValue(indexed),
-        ordinalPosition);
-  }
-
-  private String computeBooleanValue(boolean value) {
-    return rdbEngine.computeBooleanValue(value);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       dropTableInternal(connection, namespace, table);
-      deleteTableMetadata(connection, namespace, table);
-      deleteNamespacesTableAndMetadataSchemaIfEmpty(connection);
+      tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
     } catch (SQLException e) {
       throw new ExecutionException(
           "Dropping the " + getFullTableName(namespace, table) + " table failed", e);
@@ -366,67 +214,40 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, dropTableStatement);
   }
 
-  private void deleteTableMetadata(Connection connection, String namespace, String table)
-      throws SQLException {
-    try {
-      execute(connection, getDeleteTableMetadataStatement(namespace, table));
-      deleteMetadataTableIfEmpty(connection);
-    } catch (SQLException e) {
-      if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
-        return;
-      }
-      throw e;
-    }
-  }
-
-  private String getDeleteTableMetadataStatement(String schema, String table) {
-    return "DELETE FROM "
-        + encloseFullTableName(metadataSchema, METADATA_TABLE)
-        + " WHERE "
-        + enclose(METADATA_COL_FULL_TABLE_NAME)
-        + " = '"
-        + getFullTableName(schema, table)
-        + "'";
-  }
-
-  private void deleteMetadataTableIfEmpty(Connection connection) throws SQLException {
-    if (isMetadataTableEmpty(connection)) {
-      deleteTable(connection, encloseFullTableName(metadataSchema, METADATA_TABLE));
-    }
-  }
-
-  private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
-    String selectAllTables =
-        "SELECT DISTINCT "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + " FROM "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE);
-    try (Statement statement = connection.createStatement();
-        ResultSet results = statement.executeQuery(selectAllTables)) {
-      return !results.next();
-    }
-  }
-
-  private void deleteTable(Connection connection, String fullTableName) throws SQLException {
-    String dropTableStatement = "DROP TABLE " + fullTableName;
-
-    execute(connection, dropTableStatement);
-  }
-
-  private void deleteMetadataSchema(Connection connection) throws SQLException {
-    String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
-    execute(connection, sql);
-  }
-
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      Set<String> remainingTables = getInternalTableNames(connection, namespace);
+      if (!remainingTables.isEmpty()) {
+        throw new IllegalArgumentException(
+            CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
+                namespace, remainingTables));
+      }
       execute(connection, rdbEngine.dropNamespaceSql(namespace));
-      deleteFromNamespacesTable(connection, namespace);
-      deleteNamespacesTableAndMetadataSchemaIfEmpty(connection);
+      namespaceMetadataService.deleteFromNamespacesTable(connection, namespace);
+      namespaceMetadataService.deleteNamespacesTableIfEmpty(connection);
+      deleteMetadataSchemaIfEmpty(connection);
     } catch (SQLException e) {
       rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
     }
+  }
+
+  private Set<String> getInternalTableNames(Connection connection, String namespace)
+      throws SQLException {
+    String sql = rdbEngine.getTableNamesInNamespaceSql();
+    if (Strings.isNullOrEmpty(sql)) {
+      return Collections.emptySet();
+    }
+    Set<String> tableNames = new HashSet<>();
+    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, namespace);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        while (resultSet.next()) {
+          tableNames.add(resultSet.getString(1));
+        }
+      }
+    }
+    return tableNames;
   }
 
   @Override
@@ -442,80 +263,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    TableMetadata.Builder builder = TableMetadata.newBuilder();
-    boolean tableExists = false;
-
     try (Connection connection = dataSource.getConnection()) {
       rdbEngine.setConnectionToReadOnly(connection, true);
-
-      try (PreparedStatement preparedStatement =
-          connection.prepareStatement(getSelectColumnsStatement())) {
-        preparedStatement.setString(1, getFullTableName(namespace, table));
-
-        try (ResultSet resultSet = preparedStatement.executeQuery()) {
-          while (resultSet.next()) {
-            tableExists = true;
-
-            String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
-            DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
-            builder.addColumn(columnName, dataType);
-
-            boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
-            if (indexed) {
-              builder.addSecondaryIndex(columnName);
-            }
-
-            String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
-            if (keyType == null) {
-              continue;
-            }
-
-            switch (KeyType.valueOf(keyType)) {
-              case PARTITION:
-                builder.addPartitionKey(columnName);
-                break;
-              case CLUSTERING:
-                Scan.Ordering.Order clusteringOrder =
-                    Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
-                builder.addClusteringKey(columnName, clusteringOrder);
-                break;
-              default:
-                throw new AssertionError("Invalid key type: " + keyType);
-            }
-          }
-        }
-      }
+      return tableMetadataService.getTableMetadata(connection, namespace, table);
     } catch (SQLException e) {
-      // An exception will be thrown if the namespace table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return null;
-      }
       throw new ExecutionException(
           "Getting a table metadata for the "
               + getFullTableName(namespace, table)
               + " table failed",
           e);
     }
-
-    if (!tableExists) {
-      return null;
-    }
-
-    return builder.build();
   }
 
-  @Override
-  public TableMetadata getImportTableMetadata(
+  @VisibleForTesting
+  TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean primaryKeyExists = false;
-
-    if (!rdbEngine.isImportable()) {
-      throw new UnsupportedOperationException(
-          CoreError.JDBC_IMPORT_NOT_SUPPORTED.buildMessage(rdbEngine.getClass().getName()));
-    }
 
     try (Connection connection = dataSource.getConnection()) {
       rdbEngine.setConnectionToReadOnly(connection, true);
@@ -523,7 +288,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String catalogName = rdbEngine.getCatalogName(namespace);
       String schemaName = rdbEngine.getSchemaName(namespace);
 
-      if (!tableExistsInternal(connection, namespace, table)) {
+      if (!internalTableExists(connection, namespace, table)) {
         throw new IllegalArgumentException(
             CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
       }
@@ -574,8 +339,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Map<String, String> options,
       Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
+    rdbEngine.throwIfImportNotSupported();
+
     try (Connection connection = dataSource.getConnection()) {
       TableMetadata tableMetadata = getImportTableMetadata(namespace, table, overrideColumnsType);
+      createMetadataSchemaIfNotExists(connection);
       createNamespacesTableIfNotExists(connection);
       upsertIntoNamespacesTable(connection, namespace);
       addTableMetadata(connection, namespace, table, tableMetadata, true, false);
@@ -585,59 +353,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String getSelectColumnsStatement() {
-    return "SELECT "
-        + enclose(METADATA_COL_COLUMN_NAME)
-        + ","
-        + enclose(METADATA_COL_DATA_TYPE)
-        + ","
-        + enclose(METADATA_COL_KEY_TYPE)
-        + ","
-        + enclose(METADATA_COL_CLUSTERING_ORDER)
-        + ","
-        + enclose(METADATA_COL_INDEXED)
-        + " FROM "
-        + encloseFullTableName(metadataSchema, METADATA_TABLE)
-        + " WHERE "
-        + enclose(METADATA_COL_FULL_TABLE_NAME)
-        + "=? ORDER BY "
-        + enclose(METADATA_COL_ORDINAL_POSITION)
-        + " ASC";
-  }
-
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    String selectTablesOfNamespaceStatement =
-        "SELECT DISTINCT "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + " FROM "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE)
-            + " WHERE "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + " LIKE ?";
     try (Connection connection = dataSource.getConnection()) {
       rdbEngine.setConnectionToReadOnly(connection, true);
-
-      try (PreparedStatement preparedStatement =
-          connection.prepareStatement(selectTablesOfNamespaceStatement)) {
-        String prefix = namespace + ".";
-        preparedStatement.setString(1, prefix + "%");
-        try (ResultSet results = preparedStatement.executeQuery()) {
-          Set<String> tableNames = new HashSet<>();
-          while (results.next()) {
-            String tableName =
-                results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
-            tableNames.add(tableName);
-          }
-          return tableNames;
-        }
-      }
+      return tableMetadataService.getNamespaceTableNames(connection, namespace);
     } catch (SQLException e) {
-      // An exception will be thrown if the metadata table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return Collections.emptySet();
-      }
       throw new ExecutionException(
           "Getting the list of tables of the " + namespace + " schema failed", e);
     }
@@ -645,27 +366,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    String selectQuery =
-        "SELECT 1 FROM "
-            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
-            + " WHERE "
-            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
-            + " = ?";
     try (Connection connection = dataSource.getConnection()) {
       rdbEngine.setConnectionToReadOnly(connection, true);
-
-      try (PreparedStatement statement = connection.prepareStatement(selectQuery)) {
-        statement.setString(1, namespace);
-        try (ResultSet resultSet = statement.executeQuery()) {
-          return resultSet.next();
-        }
-      }
+      return namespaceMetadataService.namespaceExists(connection, namespace);
     } catch (SQLException e) {
-      // An exception will be thrown if the namespaces table does not exist when executing the
-      // select query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
       throw new ExecutionException("Checking if the " + namespace + " schema exists failed", e);
     }
   }
@@ -702,25 +406,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private static boolean hasDescClusteringOrder(TableMetadata metadata) {
-    return metadata.getClusteringKeyNames().stream()
-        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
-  }
-
-  @VisibleForTesting
-  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
-    boolean hasAscOrder = false;
-    boolean hasDescOrder = false;
-    for (Order order : metadata.getClusteringOrders().values()) {
-      if (order == Order.ASC) {
-        hasAscOrder = true;
-      } else {
-        hasDescOrder = true;
-      }
-    }
-    return hasAscOrder && hasDescOrder;
-  }
-
   @Override
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
@@ -728,7 +413,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       alterToIndexColumnTypeIfNecessary(connection, namespace, table, columnName);
       createIndex(connection, namespace, table, columnName, false);
-      updateTableMetadata(connection, namespace, table, columnName, true);
+      tableMetadataService.updateTableMetadata(connection, namespace, table, columnName, true);
     } catch (ExecutionException | SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -748,8 +433,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
-    execute(connection, sql);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -764,8 +451,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String columnType = rdbEngine.getDataTypeForEngine(indexType);
-    String sql = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
-    execute(connection, sql);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
   }
 
   @Override
@@ -774,7 +463,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       dropIndex(connection, namespace, table, columnName);
       alterToRegularColumnTypeIfNecessary(connection, namespace, table, columnName);
-      updateTableMetadata(connection, namespace, table, columnName, false);
+      tableMetadataService.updateTableMetadata(connection, namespace, table, columnName, false);
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -784,35 +473,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private boolean tableExistsInternal(Connection connection, String namespace, String table)
-      throws ExecutionException {
-    String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.tableExistsInternalTableCheckSql(fullTableName);
-    try {
-      execute(connection, sql);
-      return true;
-    } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
-      throw new ExecutionException(
-          String.format(
-              "Checking if the %s table exists failed", getFullTableName(namespace, table)),
-          e);
-    }
-  }
-
   @Override
   public void repairNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    if (!rdbEngine.isValidNamespaceOrTableName(namespace)) {
-      throw new IllegalArgumentException(
-          CoreError.JDBC_NAMESPACE_NAME_NOT_ACCEPTABLE.buildMessage(namespace));
-    }
+    rdbEngine.throwIfInvalidNamespaceName(namespace);
+
     try (Connection connection = dataSource.getConnection()) {
       createSchemaIfNotExists(connection, namespace);
+      createMetadataSchemaIfNotExists(connection);
       createNamespacesTableIfNotExists(connection);
       upsertIntoNamespacesTable(connection, namespace);
     } catch (SQLException e) {
@@ -825,6 +493,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
+      createMetadataSchemaIfNotExists(connection);
       createTableInternal(connection, namespace, table, metadata, true);
       addTableMetadata(connection, namespace, table, metadata, true, true);
     } catch (SQLException e) {
@@ -862,45 +531,157 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void addRawColumnToTable(
-      String namespace, String table, String columnName, DataType columnType)
+  public void dropColumnFromTable(String namespace, String table, String columnName)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+      String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
+      try (Connection connection = dataSource.getConnection()) {
+        for (String dropColumnStatement : dropColumnStatements) {
+          execute(connection, dropColumnStatement);
+        }
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
       }
-
-      String addNewColumnStatement =
-          "ALTER TABLE "
-              + encloseFullTableName(namespace, table)
-              + " ADD "
-              + enclose(columnName)
-              + " "
-              + rdbEngine.getDataTypeForEngine(columnType);
-
-      execute(connection, addNewColumnStatement);
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
-              "Adding the new %s column to the %s table failed",
+              "Dropping the %s column from the %s table failed",
               columnName, getFullTableName(namespace, table)),
           e);
     }
   }
 
-  private void createIndex(
+  @Override
+  public void renameColumn(
+      String namespace, String table, String oldColumnName, String newColumnName)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      assert currentTableMetadata != null;
+      rdbEngine.throwIfRenameColumnNotSupported(oldColumnName, currentTableMetadata);
+      TableMetadata.Builder tableMetadataBuilder =
+          TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
+      if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
+        tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
+      }
+      if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+        tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
+      }
+      if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+        tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
+      }
+      TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
+      String renameColumnStatement =
+          rdbEngine.renameColumnSql(
+              namespace,
+              table,
+              oldColumnName,
+              newColumnName,
+              getVendorDbColumnType(updatedTableMetadata, newColumnName));
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameColumnStatement);
+        if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+          String oldIndexName = getIndexName(namespace, table, oldColumnName);
+          String newIndexName = getIndexName(namespace, table, newColumnName);
+          renameIndexInternal(
+              connection, namespace, table, newColumnName, oldIndexName, newIndexName);
+        }
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s column to %s in the %s table failed",
+              oldColumnName, newColumnName, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void alterColumnType(
+      String namespace, String table, String columnName, DataType newColumnType)
+      throws ExecutionException {
+    try {
+      TableMetadata currentTableMetadata = getTableMetadata(namespace, table);
+      assert currentTableMetadata != null;
+      DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
+      rdbEngine.throwIfAlterColumnTypeNotSupported(currentColumnType, newColumnType);
+
+      TableMetadata updatedTableMetadata =
+          TableMetadata.newBuilder(currentTableMetadata)
+              .removeColumn(columnName)
+              .addColumn(columnName, newColumnType)
+              .build();
+      String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
+      String[] alterColumnTypeStatements =
+          rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
+
+      try (Connection connection = dataSource.getConnection()) {
+        for (String alterColumnTypeStatement : alterColumnTypeStatements) {
+          execute(connection, alterColumnTypeStatement);
+        }
+        addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Altering the %s column type to %s in the %s table failed",
+              columnName, newColumnType, getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  @Override
+  public void renameTable(String namespace, String oldTableName, String newTableName)
+      throws ExecutionException {
+    rdbEngine.throwIfInvalidTableName(newTableName);
+
+    try {
+      TableMetadata tableMetadata = getTableMetadata(namespace, oldTableName);
+      assert tableMetadata != null;
+      String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
+      try (Connection connection = dataSource.getConnection()) {
+        execute(connection, renameTableStatement);
+        tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
+        for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
+          String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
+          String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
+          renameIndexInternal(
+              connection, namespace, newTableName, indexedColumnName, oldIndexName, newIndexName);
+        }
+        addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "Renaming the %s table to %s failed",
+              getFullTableName(namespace, oldTableName), getFullTableName(namespace, newTableName)),
+          e);
+    }
+  }
+
+  private void renameIndexInternal(
+      Connection connection,
+      String schema,
+      String table,
+      String column,
+      String oldIndexName,
+      String newIndexName)
+      throws SQLException {
+    String[] sqls = rdbEngine.renameIndexSqls(schema, table, column, oldIndexName, newIndexName);
+    for (String sql : sqls) {
+      execute(connection, sql);
+    }
+  }
+
+  @VisibleForTesting
+  void createIndex(
       Connection connection, String schema, String table, String indexedColumn, boolean ifNotExists)
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
-    String createIndexStatement =
-        "CREATE INDEX "
-            + enclose(indexName)
-            + " ON "
-            + encloseFullTableName(schema, table)
-            + " ("
-            + enclose(indexedColumn)
-            + ")";
+    String createIndexStatement = rdbEngine.createIndexSql(schema, table, indexName, indexedColumn);
     if (ifNotExists) {
       createIndexStatement = rdbEngine.tryAddIfNotExistsToCreateIndexSql(createIndexStatement);
     }
@@ -928,26 +709,137 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
   }
 
-  private void updateTableMetadata(
-      Connection connection, String schema, String table, String columnName, boolean indexed)
+  @Override
+  public Set<String> getNamespaceNames() throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      rdbEngine.setConnectionToReadOnly(connection, true);
+      return namespaceMetadataService.getNamespaceNames(connection);
+    } catch (SQLException e) {
+      throw new ExecutionException("Getting the existing schema names failed", e);
+    }
+  }
+
+  @Override
+  public void upgrade(Map<String, String> options) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      Set<String> namespaceNamesOfExistingTables =
+          tableMetadataService.getNamespaceNamesOfExistingTables(connection);
+      if (namespaceNamesOfExistingTables.isEmpty()) {
+        // No existing tables, so no need to upgrade
+        return;
+      }
+
+      createMetadataSchemaIfNotExists(connection);
+      createNamespacesTableIfNotExists(connection);
+      for (String namespace : namespaceNamesOfExistingTables) {
+        upsertIntoNamespacesTable(connection, namespace);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
+    }
+  }
+
+  @Override
+  public StorageInfo getStorageInfo(String namespace) {
+    return STORAGE_INFO;
+  }
+
+  @VisibleForTesting
+  void addTableMetadata(
+      Connection connection,
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean createMetadataTable,
+      boolean overwriteMetadata)
       throws SQLException {
-    String updateStatement =
-        "UPDATE "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE)
-            + " SET "
-            + enclose(METADATA_COL_INDEXED)
-            + "="
-            + computeBooleanValue(indexed)
-            + " WHERE "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + "='"
-            + getFullTableName(schema, table)
-            + "' AND "
-            + enclose(METADATA_COL_COLUMN_NAME)
-            + "='"
-            + columnName
-            + "'";
-    execute(connection, updateStatement);
+    tableMetadataService.addTableMetadata(
+        connection, namespace, table, metadata, createMetadataTable, overwriteMetadata);
+  }
+
+  @VisibleForTesting
+  void createTableMetadataTableIfNotExists(Connection connection) throws SQLException {
+    tableMetadataService.createTableMetadataTableIfNotExists(connection);
+  }
+
+  @VisibleForTesting
+  void createNamespacesTableIfNotExists(Connection connection) throws SQLException {
+    namespaceMetadataService.createNamespacesTableIfNotExists(connection);
+  }
+
+  @VisibleForTesting
+  void upsertIntoNamespacesTable(Connection connection, String namespace) throws SQLException {
+    namespaceMetadataService.upsertIntoNamespacesTable(connection, namespace);
+  }
+
+  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
+    createSchemaIfNotExists(connection, metadataSchema);
+  }
+
+  private void deleteMetadataSchemaIfEmpty(Connection connection) throws SQLException {
+    Set<String> internalTableNames = getInternalTableNames(connection, metadataSchema);
+    if (!internalTableNames.isEmpty()) {
+      return;
+    }
+
+    String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
+    execute(connection, sql);
+  }
+
+  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
+      throws SQLException {
+    String stmt = createTableStatement;
+    if (ifNotExists) {
+      stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
+    }
+    try {
+      execute(connection, stmt);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the table already exists
+      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
+        throw e;
+      }
+    }
+  }
+
+  private boolean internalTableExists(Connection connection, String namespace, String table)
+      throws ExecutionException {
+    String fullTableName = encloseFullTableName(namespace, table);
+    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
+    try {
+      execute(connection, sql);
+      return true;
+    } catch (SQLException e) {
+      // An exception will be thrown if the table does not exist when executing the select
+      // query
+      if (rdbEngine.isUndefinedTableError(e)) {
+        return false;
+      }
+      throw new ExecutionException(
+          String.format(
+              "Checking if the %s table exists failed", getFullTableName(namespace, table)),
+          e);
+    }
+  }
+
+  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
+    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
+    try {
+      execute(connection, sqls);
+    } catch (SQLException e) {
+      // Suppress exceptions indicating the duplicate metadata schema
+      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
+        throw e;
+      }
+    }
+  }
+
+  private String enclose(String name) {
+    return rdbEngine.enclose(name);
+  }
+
+  private String encloseFullTableName(String schema, String table) {
+    return rdbEngine.encloseFullTableName(schema, table);
   }
 
   static void execute(Connection connection, String sql) throws SQLException {
@@ -987,192 +879,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     for (String sql : sqls) {
       execute(connection, sql, warningHandler);
     }
-  }
-
-  private String enclose(String name) {
-    return rdbEngine.enclose(name);
-  }
-
-  private String encloseFullTableName(String schema, String table) {
-    return rdbEngine.encloseFullTableName(schema, table);
-  }
-
-  @Override
-  public Set<String> getNamespaceNames() throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
-
-      String selectQuery =
-          "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
-      Set<String> namespaces = new HashSet<>();
-      try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
-          ResultSet resultSet = preparedStatement.executeQuery()) {
-        while (resultSet.next()) {
-          namespaces.add(resultSet.getString(NAMESPACE_COL_NAMESPACE_NAME));
-        }
-        return namespaces;
-      }
-    } catch (SQLException e) {
-      // An exception will be thrown if the namespace table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return Collections.emptySet();
-      }
-      throw new ExecutionException("Getting the existing schema names failed", e);
-    }
-  }
-
-  @VisibleForTesting
-  void createNamespacesTableIfNotExists(Connection connection) throws ExecutionException {
-    if (tableExistsInternal(connection, metadataSchema, NAMESPACES_TABLE)) {
-      return;
-    }
-
-    try {
-      createSchemaIfNotExists(connection, metadataSchema);
-      String createTableStatement =
-          "CREATE TABLE "
-              + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
-              + "("
-              + enclose(NAMESPACE_COL_NAMESPACE_NAME)
-              + " "
-              + getTextType(128, true)
-              + ", "
-              + "PRIMARY KEY ("
-              + enclose(NAMESPACE_COL_NAMESPACE_NAME)
-              + "))";
-      createTable(connection, createTableStatement, true);
-
-      // Insert the system namespace to the namespaces table
-      insertIntoNamespacesTable(connection, metadataSchema);
-    } catch (SQLException e) {
-      throw new ExecutionException("Creating the namespace table failed", e);
-    }
-  }
-
-  private void insertIntoNamespacesTable(Connection connection, String namespaceName)
-      throws SQLException {
-    String insertStatement =
-        "INSERT INTO " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE) + " VALUES (?)";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement)) {
-      preparedStatement.setString(1, namespaceName);
-      preparedStatement.execute();
-    }
-  }
-
-  @VisibleForTesting
-  void upsertIntoNamespacesTable(Connection connection, String namespace) throws SQLException {
-    try {
-      insertIntoNamespacesTable(connection, namespace);
-    } catch (SQLException e) {
-      // ignore if the schema already exists
-      if (!rdbEngine.isDuplicateKeyError(e)) {
-        throw e;
-      }
-    }
-  }
-
-  private void deleteFromNamespacesTable(Connection connection, String namespaceName)
-      throws SQLException {
-    String deleteStatement =
-        "DELETE FROM "
-            + encloseFullTableName(metadataSchema, NAMESPACES_TABLE)
-            + " WHERE "
-            + enclose(NAMESPACE_COL_NAMESPACE_NAME)
-            + " = ?";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(deleteStatement)) {
-      preparedStatement.setString(1, namespaceName);
-      preparedStatement.execute();
-    }
-  }
-
-  private void deleteNamespacesTableAndMetadataSchemaIfEmpty(Connection connection)
-      throws SQLException {
-    if (areNamespacesTableAndMetadataSchemaEmpty(connection)) {
-      deleteTable(connection, encloseFullTableName(metadataSchema, NAMESPACES_TABLE));
-      deleteMetadataSchema(connection);
-    }
-  }
-
-  private boolean areNamespacesTableAndMetadataSchemaEmpty(Connection connection)
-      throws SQLException {
-    String selectAllTables =
-        "SELECT * FROM " + encloseFullTableName(metadataSchema, NAMESPACES_TABLE);
-
-    Set<String> namespaces = new HashSet<>();
-    try (Statement statement = connection.createStatement();
-        ResultSet results = statement.executeQuery(selectAllTables)) {
-      int count = 0;
-      while (results.next()) {
-        namespaces.add(results.getString(NAMESPACE_COL_NAMESPACE_NAME));
-        // Only need to fetch the first two rows
-        if (count++ == 2) {
-          break;
-        }
-      }
-    }
-
-    boolean onlyMetadataNamespaceLeft =
-        namespaces.size() == 1 && namespaces.contains(metadataSchema);
-    if (!onlyMetadataNamespaceLeft) {
-      return false;
-    }
-
-    // Check if the metadata table exists. If it does not, the metadata schema is empty.
-    String sql =
-        rdbEngine.tableExistsInternalTableCheckSql(
-            encloseFullTableName(metadataSchema, METADATA_TABLE));
-    try {
-      execute(connection, sql);
-      return false;
-    } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return true;
-      }
-      throw e;
-    }
-  }
-
-  @Override
-  public void upgrade(Map<String, String> options) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
-        createNamespacesTableIfNotExists(connection);
-        importNamespaceNamesOfExistingTables(connection);
-      }
-    } catch (SQLException e) {
-      throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
-    }
-  }
-
-  private void importNamespaceNamesOfExistingTables(Connection connection)
-      throws ExecutionException {
-    String selectAllTableNames =
-        "SELECT DISTINCT "
-            + enclose(METADATA_COL_FULL_TABLE_NAME)
-            + " FROM "
-            + encloseFullTableName(metadataSchema, METADATA_TABLE);
-    try (Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
-      Set<String> namespaceOfExistingTables = new HashSet<>();
-      while (rs.next()) {
-        String fullTableName = rs.getString(METADATA_COL_FULL_TABLE_NAME);
-        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
-        namespaceOfExistingTables.add(namespaceName);
-      }
-      for (String namespace : namespaceOfExistingTables) {
-        upsertIntoNamespacesTable(connection, namespace);
-      }
-    } catch (SQLException e) {
-      throw new ExecutionException("Importing the namespace names of existing tables failed", e);
-    }
-  }
-
-  @Override
-  public StorageInfo getStorageInfo(String namespace) {
-    return STORAGE_INFO;
   }
 
   @FunctionalInterface

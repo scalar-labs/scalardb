@@ -175,10 +175,308 @@ public interface AuthAdmin {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
+  /**
+   * Creates a role with the given role name.
+   *
+   * @param roleName the role name
+   * @throws IllegalArgumentException if the role already exists
+   * @throws ExecutionException if the operation fails
+   */
+  default void createRole(String roleName) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Drops a role with the given role name.
+   *
+   * @param roleName the role name
+   * @throws IllegalArgumentException if the role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void dropRole(String roleName) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Retrieves a list of {@link Role}s.
+   *
+   * @return a list of {@link Role}s
+   * @throws ExecutionException if the operation fails
+   */
+  default List<Role> getRoles() throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Retrieves a list of {@link RoleForUser}s for the given user.
+   *
+   * @param username the username
+   * @return a list of {@link RoleForUser}s for the given user
+   * @throws ExecutionException if the operation fails
+   */
+  default List<RoleForUser> getRolesForUser(String username) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Grants a role to a user.
+   *
+   * @param username the username
+   * @param roleName the role name
+   * @param withAdminOption if true, the user can grant the role to other users or roles
+   * @throws IllegalArgumentException if the user does not exist or the role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void grantRoleToUser(String username, String roleName, boolean withAdminOption)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Revokes a role from a user.
+   *
+   * @param username the username
+   * @param roleName the role name
+   * @throws IllegalArgumentException if the user does not exist or the role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void revokeRoleFromUser(String username, String roleName) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Revokes admin option from a user for a role.
+   *
+   * @param username the username
+   * @param roleName the role name
+   * @throws IllegalArgumentException if the user does not exist or the role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void revokeAdminOptionFromUser(String username, String roleName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Retrieves a list of {@link GranteeUserRef}s for the given role.
+   *
+   * @param roleName the role name
+   * @return a list of {@link GranteeUserRef}s for the given role
+   * @throws ExecutionException if the operation fails
+   */
+  default List<GranteeUserRef> getGranteeUsersForRole(String roleName) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Grants a member role to a role. Users or roles that have the role will inherit all privileges
+   * from the member role.
+   *
+   * @param roleName the role name
+   * @param memberRoleName the member role name to be granted to the role
+   * @param withAdminOption if true, users or roles that have the role can grant the member role to
+   *     other users or roles
+   * @throws IllegalArgumentException if the role does not exist or the member role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void grantRoleToRole(String roleName, String memberRoleName, boolean withAdminOption)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Revokes a role from another role.
+   *
+   * @param roleName the role name
+   * @param memberRoleName the member role name
+   * @throws IllegalArgumentException if the role does not exist or the member role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void revokeRoleFromRole(String roleName, String memberRoleName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Revokes admin option from a role for another role.
+   *
+   * @param roleName the role name
+   * @param memberRoleName the member role name
+   * @throws IllegalArgumentException if the role does not exist or the member role does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void revokeAdminOptionFromRole(String roleName, String memberRoleName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Retrieves privileges for the given role and namespace.
+   *
+   * @param roleName the role name
+   * @param namespaceName the namespace name
+   * @return a set of privileges for the given role and namespace
+   * @throws ExecutionException if the operation fails
+   */
+  default Set<Privilege> getRolePrivileges(String roleName, String namespaceName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Retrieves privileges for the given role, namespace, and table.
+   *
+   * @param roleName the role name
+   * @param namespaceName the namespace name
+   * @param tableName the table name
+   * @return a set of privileges for the given role, namespace, and table
+   * @throws ExecutionException if the operation fails
+   */
+  default Set<Privilege> getRolePrivileges(String roleName, String namespaceName, String tableName)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Grants privileges to a role for all tables in the given namespace.
+   *
+   * @param roleName the role name
+   * @param namespaceName the namespace name
+   * @param privileges the privileges
+   * @throws IllegalArgumentException if the role does not exist or the namespace does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void grantPrivilegeToRole(String roleName, String namespaceName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Grants privileges to a role for the given table.
+   *
+   * @param roleName the role name
+   * @param namespaceName the namespace name of the table
+   * @param tableName the table name
+   * @param privileges the privileges
+   * @throws IllegalArgumentException if the role does not exist or the table does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void grantPrivilegeToRole(
+      String roleName, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Revokes privileges from a role for all tables in the given namespace.
+   *
+   * @param roleName the role name
+   * @param namespaceName the namespace name
+   * @param privileges the privileges
+   * @throws IllegalArgumentException if the role does not exist or the namespace does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void revokePrivilegeFromRole(
+      String roleName, String namespaceName, Privilege... privileges) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Revokes privileges from a role for the given table.
+   *
+   * @param roleName the role name
+   * @param namespaceName the namespace name of the table
+   * @param tableName the table name
+   * @param privileges the privileges
+   * @throws IllegalArgumentException if the role does not exist or the table does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void revokePrivilegeFromRole(
+      String roleName, String namespaceName, String tableName, Privilege... privileges)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /** Represents a user. */
   interface User {
+    /**
+     * Returns the username.
+     *
+     * @return the username
+     */
     String getName();
 
+    /**
+     * Returns whether the user is a superuser.
+     *
+     * @return whether the user is a superuser
+     */
     boolean isSuperuser();
+  }
+
+  /** Represents a role, including its granted roles. */
+  interface Role {
+    /**
+     * Returns the role name.
+     *
+     * @return the role name
+     */
+    String getName();
+
+    /**
+     * Returns the roles granted to the role.
+     *
+     * @return the roles granted to the role
+     */
+    List<GrantedRoleRef> getGrantedRoles();
+  }
+
+  /**
+   * Represents a role granted to a specific user, including whether the user has admin option for
+   * this role.
+   */
+  interface RoleForUser extends Role {
+    /**
+     * Returns whether the user has admin option for this role. This is distinct from the admin
+     * option in role hierarchies, which applies to role-to-role grants.
+     *
+     * @return whether the user has admin option for this role
+     */
+    boolean hasAdminOptionOnUser();
+  }
+
+  /** A reference to a grantee user of a role. */
+  interface GranteeUserRef {
+    /**
+     * Returns the username.
+     *
+     * @return the username
+     */
+    String getName();
+
+    /**
+     * Returns whether admin option is granted for this assignment.
+     *
+     * @return whether admin option is granted for this assignment
+     */
+    boolean hasAdminOption();
+  }
+
+  /** A reference to a granted role. */
+  interface GrantedRoleRef {
+    /**
+     * Returns the granted role name.
+     *
+     * @return the granted role name
+     */
+    String getName();
+
+    /**
+     * Returns whether admin option is granted for this role grant.
+     *
+     * @return whether admin option is granted for this role grant
+     */
+    boolean hasAdminOption();
   }
 
   /** The user options. */

@@ -1,9 +1,9 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTask;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
@@ -11,7 +11,8 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidati
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidator;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.util.TableMetadataUtil;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -34,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public abstract class ExportManager {
   private static final Logger logger = LoggerFactory.getLogger(ExportManager.class);
 
-  private final DistributedStorage storage;
+  private final DistributedTransactionManager manager;
   private final ScalarDbDao dao;
   private final ProducerTaskFactory producerTaskFactory;
   private final Object lock = new Object();
@@ -74,19 +75,16 @@ public abstract class ExportManager {
     try {
       validateExportOptions(exportOptions, tableMetadata);
       Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
-      handleTransactionMetadata(exportOptions, tableMetadata);
       processHeader(exportOptions, tableMetadata, writer);
 
-      int maxThreadCount =
-          exportOptions.getMaxThreadCount() == 0
-              ? Runtime.getRuntime().availableProcessors()
-              : exportOptions.getMaxThreadCount();
-      ExecutorService executorService = Executors.newFixedThreadPool(maxThreadCount);
+      ExecutorService executorService =
+          Executors.newFixedThreadPool(exportOptions.getMaxThreadCount());
 
-      BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
-      try (Scanner scanner = createScanner(exportOptions, dao, storage)) {
+      try (TransactionManagerCrudOperable.Scanner scanner =
+              createScanner(exportOptions, dao, manager);
+          BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -108,15 +106,20 @@ public abstract class ExportManager {
         executorService.shutdown();
         if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
           logger.info("All tasks completed");
+          processFooter(exportOptions, tableMetadata, bufferedWriter);
         } else {
           logger.error("Timeout occurred while waiting for tasks to complete");
           // TODO: handle this
         }
-        processFooter(exportOptions, tableMetadata, bufferedWriter);
-      } catch (InterruptedException | IOException e) {
-        logger.error("Error during export: {}", e.getMessage());
+      } catch (InterruptedException
+          | IOException
+          | UnknownTransactionStatusException
+          | CrudException e) {
+        logger.error("Error during export: ", e);
       } finally {
-        bufferedWriter.flush();
+        if (!executorService.isShutdown()) {
+          executorService.shutdownNow();
+        }
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
@@ -196,32 +199,16 @@ public abstract class ExportManager {
   }
 
   /**
-   * To update projection columns of export options if include metadata options is enabled
-   *
-   * @param exportOptions export options
-   * @param tableMetadata metadata of the table
-   */
-  private void handleTransactionMetadata(ExportOptions exportOptions, TableMetadata tableMetadata) {
-    if (exportOptions.isIncludeTransactionMetadata()
-        && !exportOptions.getProjectionColumns().isEmpty()) {
-      List<String> projectionMetadata =
-          TableMetadataUtil.populateProjectionsWithMetadata(
-              tableMetadata, exportOptions.getProjectionColumns());
-      exportOptions.setProjectionColumns(projectionMetadata);
-    }
-  }
-
-  /**
    * To create a scanner object
    *
    * @param exportOptions export options
    * @param dao ScalarDB dao object
-   * @param storage distributed storage object
+   * @param manager DistributedTransactionManager object
    * @return created scanner
    * @throws ScalarDbDaoException throws if any issue occurs in creating scanner object
    */
-  private Scanner createScanner(
-      ExportOptions exportOptions, ScalarDbDao dao, DistributedStorage storage)
+  private TransactionManagerCrudOperable.Scanner createScanner(
+      ExportOptions exportOptions, ScalarDbDao dao, DistributedTransactionManager manager)
       throws ScalarDbDaoException {
     boolean isScanAll = exportOptions.getScanPartitionKey() == null;
     if (isScanAll) {
@@ -230,7 +217,7 @@ public abstract class ExportManager {
           exportOptions.getTableName(),
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
-          storage);
+          manager);
     } else {
       return dao.createScanner(
           exportOptions.getNamespace(),
@@ -240,7 +227,7 @@ public abstract class ExportManager {
           exportOptions.getSortOrders(),
           exportOptions.getProjectionColumns(),
           exportOptions.getLimit(),
-          storage);
+          manager);
     }
   }
 }

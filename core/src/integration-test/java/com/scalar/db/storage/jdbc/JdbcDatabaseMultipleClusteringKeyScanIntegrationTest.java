@@ -94,9 +94,14 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   @Override
   protected List<DataType> getDataTypes() {
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
+    // BLOB type cannot be used as a clustering key in Db2
     return JdbcTestUtils.filterDataTypes(
         super.getDataTypes(),
         rdbEngine,
-        ImmutableMap.of(RdbEngineOracle.class, ImmutableList.of(DataType.TIMESTAMPTZ)));
+        ImmutableMap.of(
+            RdbEngineOracle.class,
+            ImmutableList.of(DataType.TIMESTAMPTZ, DataType.BLOB),
+            RdbEngineDb2.class,
+            ImmutableList.of(DataType.BLOB)));
   }
 }

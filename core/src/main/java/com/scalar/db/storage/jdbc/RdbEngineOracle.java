@@ -3,23 +3,32 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.LikeExpression;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.query.MergeIntoQuery;
+import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -128,25 +137,62 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+  public String renameTableSql(String namespace, String oldTableName, String newTableName) {
     return "ALTER TABLE "
-        + encloseFullTableName(namespace, table)
-        + " MODIFY ( "
-        + enclose(columnName)
-        + " "
-        + columnType
-        + " )";
+        + encloseFullTableName(namespace, oldTableName)
+        + " RENAME TO "
+        + enclose(newTableName);
   }
 
   @Override
-  public String tableExistsInternalTableCheckSql(String fullTableName) {
+  public String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnType) {
+    return new String[] {
+      "ALTER TABLE "
+          + encloseFullTableName(namespace, table)
+          + " MODIFY ( "
+          + enclose(columnName)
+          + " "
+          + columnType
+          + " )"
+    };
+  }
+
+  @Override
+  public String internalTableExistsCheckSql(String fullTableName) {
     return "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
   }
 
   @Override
+  public String createIndexSql(
+      String schema, String table, String indexName, String indexedColumn) {
+    return "CREATE INDEX "
+        + enclose(schema)
+        + "."
+        + enclose(indexName)
+        + " ON "
+        + encloseFullTableName(schema, table)
+        + " ("
+        + enclose(indexedColumn)
+        + ")";
+  }
+
+  @Override
   public String dropIndexSql(String schema, String table, String indexName) {
-    return "DROP INDEX " + enclose(indexName);
+    return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+  }
+
+  @Override
+  public String[] renameIndexSqls(
+      String schema, String table, String column, String oldIndexName, String newIndexName) {
+    return new String[] {
+      "ALTER INDEX "
+          + enclose(schema)
+          + "."
+          + enclose(oldIndexName)
+          + " RENAME TO "
+          + enclose(newIndexName)
+    };
   }
 
   @Override
@@ -155,13 +201,13 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
+  public SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithFetchFirstNRowsOnly(builder, limit);
   }
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return MergeIntoQuery.createForOracle(builder);
+    return new MergeQuery(builder, "DUAL");
   }
 
   @Override
@@ -206,7 +252,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
       case BIGINT:
         return "NUMBER(16)";
       case BLOB:
-        return "RAW(2000)";
+        return "BLOB";
       case BOOLEAN:
         return "NUMBER(1)";
       case DOUBLE:
@@ -237,7 +283,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
       case TEXT:
         return "VARCHAR2(" + keyColumnSize + ")";
       case BLOB:
-        return "RAW(" + keyColumnSize + ")";
+        throw new UnsupportedOperationException(
+            CoreError.JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
       default:
         return null;
     }
@@ -401,8 +448,96 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
+  public String getDataTypeForSecondaryIndex(DataType dataType) {
+    if (dataType == DataType.BLOB) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_INDEX_OR_KEY_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage());
+    } else {
+      return super.getDataTypeForSecondaryIndex(dataType);
+    }
+  }
+
+  @Override
+  public void throwIfCrossPartitionScanOrderingOnBlobColumnNotSupported(
+      ScanAll scanAll, TableMetadata metadata) {
+    Optional<Scan.Ordering> orderingOnBlobColumn =
+        scanAll.getOrderings().stream()
+            .filter(
+                ordering -> metadata.getColumnDataType(ordering.getColumnName()) == DataType.BLOB)
+            .findFirst();
+    if (orderingOnBlobColumn.isPresent()) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED
+              .buildMessage(orderingOnBlobColumn.get()));
+    }
+  }
+
+  @Override
+  public void throwIfConjunctionsColumnNotSupported(
+      Set<Conjunction> conjunctions, TableMetadata metadata) {
+    Optional<ConditionalExpression> conditionalExpression =
+        conjunctions.stream()
+            .flatMap(conjunction -> conjunction.getConditions().stream())
+            .filter(
+                condition ->
+                    metadata.getColumnDataType(condition.getColumn().getName()) == DataType.BLOB)
+            .findFirst();
+    if (conditionalExpression.isPresent()) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED.buildMessage(
+              conditionalExpression.get()));
+    }
+  }
+
+  @Override
   public RdbEngineTimeTypeStrategy<LocalDate, LocalDateTime, LocalDateTime, OffsetDateTime>
       getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public void throwIfAlterColumnTypeNotSupported(DataType from, DataType to) {
+    if (!(from == DataType.INT && to == DataType.BIGINT)) {
+      throw new UnsupportedOperationException(
+          CoreError.JDBC_ORACLE_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
+              from.toString(), to.toString()));
+    }
+  }
+
+  @Override
+  public void bindBlobColumnToPreparedStatement(
+      PreparedStatement preparedStatement, int index, byte[] bytes) throws SQLException {
+    // When writing to the BLOB data type with a BLOB size greater than 32766 using a MERGE INTO
+    // statement, an internal error ORA-03137 on the server side occurs so we needed to use a
+    // workaround. This has been confirmed to be a limitation by AWS support.
+    // Below is a detailed explanation of the workaround.
+    //
+    // Depending on the byte array size, the JDBC driver automatically chooses one the following
+    // mode to transfer the BLOB data to the server:
+    // - DIRECT: the most efficient mode. It's used when the byte array length is less than 32767.
+    // - STREAM: this mode is less efficient. It's used when the byte array length is greater than
+    // 32766.
+    // - LOB BINDING: this mode is the least efficient. It's used when an input stream without
+    // specifying the length is specified.
+    //
+    // When the driver selects the STREAM mode, the error
+    // ORA-03137 occurs. So, we work around the issue by making sure to use the driver in a way so
+    // that it should never select the STREAM mode.
+    // For more details about the modes, see the following documentation:
+    // https://docs.oracle.com/en/database/oracle/oracle-database/23/jjdbc/LOBs-and-BFiles.html#GUID-8FD40D53-8D64-4187-9F6F-FF78242188AD
+    if (bytes.length <= 32766) {
+      // the DIRECT mode is used to send BLOB data of small size
+      preparedStatement.setBytes(index, bytes);
+    } else {
+      // the LOB BINDING mode is used to send BLOB data of large size
+      InputStream inputStream = new ByteArrayInputStream(bytes);
+      preparedStatement.setBinaryStream(index, inputStream);
+    }
+  }
+
+  @Override
+  public String getTableNamesInNamespaceSql() {
+    return "SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = ?";
   }
 }

@@ -1,11 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.buildTransactionTableMetadata;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getBeforeImageColumnName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
@@ -603,6 +602,95 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void dropColumnFromTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String targetColumn = "col2";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(targetColumn, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.dropColumnFromTable(NAMESPACE, TABLE, targetColumn);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).dropColumnFromTable(NAMESPACE, TABLE, targetColumn);
+    verify(distributedStorageAdmin)
+        .dropColumnFromTable(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + targetColumn);
+  }
+
+  @Test
+  public void renameColumn_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String existingColumnName = "col2";
+    String newColumnName = "col3";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(existingColumnName, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.renameColumn(NAMESPACE, TABLE, existingColumnName, newColumnName);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin)
+        .renameColumn(NAMESPACE, TABLE, existingColumnName, newColumnName);
+    verify(distributedStorageAdmin)
+        .renameColumn(
+            NAMESPACE,
+            TABLE,
+            Attribute.BEFORE_PREFIX + existingColumnName,
+            Attribute.BEFORE_PREFIX + newColumnName);
+  }
+
+  @Test
+  public void alterColumnType_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String columnName = "col2";
+    DataType columnType = DataType.BIGINT;
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn(columnName, DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(any(), any()))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    admin.alterColumnType(NAMESPACE, TABLE, columnName, columnType);
+
+    // Assert
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).alterColumnType(NAMESPACE, TABLE, columnName, columnType);
+    verify(distributedStorageAdmin)
+        .alterColumnType(NAMESPACE, TABLE, Attribute.BEFORE_PREFIX + columnName, columnType);
+  }
+
+  @Test
+  public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+    // Arrange
+    String existingTableName = "tbl1";
+    String newTableName = "tbl2";
+
+    // Act
+    admin.renameTable(NAMESPACE, existingTableName, newTableName);
+
+    // Assert
+    verify(distributedStorageAdmin).renameTable(NAMESPACE, existingTableName, newTableName);
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
@@ -615,87 +703,30 @@ public abstract class ConsensusCommitAdminTestBase {
             .addColumn(column, DataType.INT)
             .addPartitionKey(primaryKeyColumn)
             .build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(null);
-    when(distributedStorageAdmin.getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType))
-        .thenReturn(metadata);
     doNothing()
         .when(distributedStorageAdmin)
-        .addRawColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
+        .importTable(anyString(), anyString(), anyMap(), anyMap());
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
+    doNothing()
+        .when(distributedStorageAdmin)
+        .addNewColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
 
     // Act
     admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType);
 
     // Assert
-    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
-    verify(distributedStorageAdmin).getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType);
+    verify(distributedStorageAdmin).importTable(NAMESPACE, TABLE, options, overrideColumnsType);
     for (Entry<String, DataType> entry :
         ConsensusCommitUtils.getTransactionMetaColumns().entrySet()) {
       verify(distributedStorageAdmin)
-          .addRawColumnToTable(NAMESPACE, TABLE, entry.getKey(), entry.getValue());
+          .addNewColumnToTable(NAMESPACE, TABLE, entry.getKey(), entry.getValue());
     }
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
     verify(distributedStorageAdmin)
-        .addRawColumnToTable(
+        .addNewColumnToTable(
             NAMESPACE, TABLE, getBeforeImageColumnName(column, metadata), DataType.INT);
     verify(distributedStorageAdmin, never())
-        .addRawColumnToTable(NAMESPACE, TABLE, primaryKeyColumn, DataType.INT);
-    verify(distributedStorageAdmin).repairNamespace(NAMESPACE, options);
-    verify(distributedStorageAdmin)
-        .repairTable(NAMESPACE, TABLE, buildTransactionTableMetadata(metadata), options);
-  }
-
-  @Test
-  public void importTable_WithStorageTableAlreadyExists_ShouldThrowIllegalArgumentException()
-      throws ExecutionException {
-    // Arrange
-    String primaryKeyColumn = "pk";
-    String column = "col";
-    TableMetadata metadata =
-        TableMetadata.newBuilder()
-            .addColumn(primaryKeyColumn, DataType.INT)
-            .addColumn(column, DataType.INT)
-            .addPartitionKey(primaryKeyColumn)
-            .build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
-
-    // Act
-    Throwable thrown =
-        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void importTable_WithTransactionTableAlreadyExists_ShouldThrowIllegalArgumentException()
-      throws ExecutionException {
-    // Arrange
-    String primaryKeyColumn = "pk";
-    String column = "col";
-    TableMetadata metadata =
-        TableMetadata.newBuilder()
-            .addColumn(primaryKeyColumn, DataType.INT)
-            .addColumn(column, DataType.INT)
-            .addColumn(Attribute.ID, DataType.TEXT)
-            .addColumn(Attribute.STATE, DataType.INT)
-            .addColumn(Attribute.VERSION, DataType.INT)
-            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
-            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
-            .addColumn(Attribute.BEFORE_PREFIX + column, DataType.INT)
-            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
-            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
-            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
-            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
-            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
-            .addPartitionKey(primaryKeyColumn)
-            .build();
-    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(metadata);
-
-    // Act
-    Throwable thrown =
-        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+        .addNewColumnToTable(NAMESPACE, TABLE, primaryKeyColumn, DataType.INT);
   }
 
   @Test

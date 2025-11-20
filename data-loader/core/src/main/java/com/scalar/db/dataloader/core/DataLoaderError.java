@@ -210,6 +210,20 @@ public enum DataLoaderError implements ScalarDbError {
       Category.USER_ERROR, "0055", "Transaction size must be greater than 0", "", ""),
   INVALID_MAX_THREADS(
       Category.USER_ERROR, "0056", "Number of max threads must be greater than 0", "", ""),
+  DEPRECATED_AND_NEW_OPTION_BOTH_SPECIFIED(
+      Category.USER_ERROR,
+      "0057",
+      "Cannot specify both deprecated option '%s' and new option '%s'. Please use only '%s'",
+      "",
+      ""),
+  INVALID_TRANSACTION_MODE(
+      Category.USER_ERROR,
+      "0058",
+      "TRANSACTION mode is not compatible with the current configuration. Please try with STORAGE mode or check your ScalarDB configuration. Details: %s",
+      "",
+      ""),
+  TRANSACTION_MODE_VALIDATION_FAILED(
+      Category.USER_ERROR, "0059", "Failed to validate TRANSACTION mode. Details: %s", "", ""),
 
   //
   // Errors for the internal error category

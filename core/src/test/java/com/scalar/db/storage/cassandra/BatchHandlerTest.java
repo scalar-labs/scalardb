@@ -16,15 +16,15 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.WriteTimeoutException;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIfExists;
-import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -79,26 +79,38 @@ public class BatchHandlerTest {
   }
 
   private List<Mutation> prepareNonConditionalPuts() {
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey1 = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey1 = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
     Put put1 =
-        new Put(partitionKey, clusteringKey1)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    Key clusteringKey2 = new Key(ANY_NAME_2, ANY_TEXT_3);
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey1)
+            .intValue(ANY_NAME_3, ANY_INT_1)
+            .build();
+    Key clusteringKey2 = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
     Put put2 =
-        new Put(partitionKey, clusteringKey2)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_NAMESPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey2)
+            .intValue(ANY_NAME_3, ANY_INT_1)
+            .build();
     return Arrays.asList(put1, put2);
   }
 
   private List<Mutation> prepareConditionalPuts() {
-    List<Mutation> mutations = prepareNonConditionalPuts();
-    mutations.forEach(m -> m.withCondition(new PutIfNotExists()));
-    return mutations;
+    return prepareNonConditionalPuts().stream()
+        .map(
+            m -> {
+              if (m instanceof Put) {
+                return Put.newBuilder((Put) m).condition(ConditionBuilder.putIfNotExists()).build();
+              }
+              return m;
+            })
+        .collect(Collectors.toList());
   }
 
   private BatchHandler prepareSpiedBatchHandler() {
@@ -146,7 +158,9 @@ public class BatchHandlerTest {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
-    mutations.get(1).withCondition(new PutIfExists());
+    mutations.set(
+        1,
+        Put.newBuilder((Put) mutations.get(1)).condition(ConditionBuilder.putIfExists()).build());
     when(session.execute(any(Statement.class))).thenReturn(results);
     when(results.wasApplied()).thenReturn(true);
 
@@ -165,7 +179,11 @@ public class BatchHandlerTest {
     // Arrange
     configureBehavior();
     mutations = prepareNonConditionalPuts();
-    mutations.get(1).withCondition(new PutIfNotExists());
+    mutations.set(
+        1,
+        Put.newBuilder((Put) mutations.get(1))
+            .condition(ConditionBuilder.putIfNotExists())
+            .build());
     when(session.execute(any(Statement.class))).thenReturn(results);
     when(results.wasApplied()).thenReturn(true);
     spy = prepareSpiedBatchHandler();
@@ -178,7 +196,7 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_WTEThrownInLoggingInBatchExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_WTEThrownInLoggingInBatchExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -188,7 +206,7 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 
@@ -206,7 +224,7 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_WTEThrownInCasInBatchExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_WTEThrownInCasInBatchExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -216,13 +234,12 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 
   @Test
-  public void
-      handle_WTEThrownInSimpleWriteInBatchExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_WTEThrownInSimpleWriteInBatchExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -232,12 +249,12 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 
   @Test
-  public void handle_DriverExceptionThrownInExecution_ShouldThrowRetriableExecutionException() {
+  public void handle_DriverExceptionThrownInExecution_ShouldThrowExecutionException() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();
@@ -246,7 +263,7 @@ public class BatchHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> batch.handle(mutations))
-        .isInstanceOf(RetriableExecutionException.class)
+        .isInstanceOf(ExecutionException.class)
         .hasCause(e);
   }
 

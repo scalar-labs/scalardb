@@ -49,26 +49,26 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_col_val";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private static final String TABLE = "test_table";
-  private static final String PARTITION_KEY = "pkey";
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
+  protected static final String TABLE = "test_table";
+  protected static final String PARTITION_KEY = "pkey";
+  protected static final String COL_NAME1 = "c1";
+  protected static final String COL_NAME2 = "c2";
+  protected static final String COL_NAME3 = "c3";
+  protected static final String COL_NAME4 = "c4";
+  protected static final String COL_NAME5 = "c5";
+  protected static final String COL_NAME6 = "c6";
+  protected static final String COL_NAME7 = "c7";
+  protected static final String COL_NAME8 = "c8";
+  protected static final String COL_NAME9 = "c9";
+  protected static final String COL_NAME10 = "c10";
+  protected static final String COL_NAME11 = "c11";
 
   private static final int ATTEMPT_COUNT = 50;
-  private static final Random random = new Random();
+  protected static final Random random = new Random();
 
-  private DistributedStorageAdmin admin;
-  private DistributedStorage storage;
-  private String namespace;
+  protected DistributedStorageAdmin admin;
+  protected DistributedStorage storage;
+  protected String namespace;
 
   private long seed;
 
@@ -76,7 +76,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getAdmin();
+    admin = factory.getStorageAdmin();
     namespace = getNamespace();
     createTable();
     storage = factory.getStorage();
@@ -685,7 +685,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
     }
   }
 
-  private void assertResult(
+  protected void assertResult(
       IntColumn partitionKeyValue,
       BooleanColumn col1Value,
       IntColumn col2Value,

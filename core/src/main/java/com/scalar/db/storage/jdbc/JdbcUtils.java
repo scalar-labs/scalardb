@@ -36,8 +36,6 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
-      // if transactional, the default isolation level is SERIALIZABLE
-      dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
 
     config
@@ -128,10 +126,6 @@ public final class JdbcUtils {
       dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
     }
     return dataSource;
-  }
-
-  public static boolean isSqlite(JdbcConfig config) {
-    return config.getJdbcUrl().startsWith("jdbc:sqlite:");
   }
 
   /**

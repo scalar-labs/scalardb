@@ -1,11 +1,10 @@
 package com.scalar.db.dataloader.core.dataexport;
 
-import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.dataexport.producer.ProducerTaskFactory;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.util.CsvUtil;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Iterator;
@@ -15,16 +14,23 @@ import java.util.List;
 public class CsvExportManager extends ExportManager {
 
   /**
-   * Constructs a {@code CsvExportManager} with the specified {@link DistributedStorage}, {@link
-   * ScalarDbDao}, and {@link ProducerTaskFactory}.
+   * Constructs a {@code CsvExportManager} for exporting data using a {@link
+   * DistributedTransactionManager}.
    *
-   * @param storage the {@code DistributedStorage} instance used to read data from the database
-   * @param dao the {@code ScalarDbDao} used to execute export-related database operations
-   * @param producerTaskFactory the factory used to create producer tasks for exporting data
+   * <p>This constructor is used when exporting data in transactional mode, allowing data to be read
+   * from ScalarDB within a distributed transaction context.
+   *
+   * @param manager the {@link DistributedTransactionManager} used to read data in transactional
+   *     mode
+   * @param dao the {@link ScalarDbDao} used to interact with ScalarDB for export operations
+   * @param producerTaskFactory the {@link ProducerTaskFactory} used to create producer tasks for
+   *     exporting data
    */
   public CsvExportManager(
-      DistributedStorage storage, ScalarDbDao dao, ProducerTaskFactory producerTaskFactory) {
-    super(storage, dao, producerTaskFactory);
+      DistributedTransactionManager manager,
+      ScalarDbDao dao,
+      ProducerTaskFactory producerTaskFactory) {
+    super(manager, dao, producerTaskFactory);
   }
 
   /**
@@ -38,9 +44,11 @@ public class CsvExportManager extends ExportManager {
   @Override
   void processHeader(ExportOptions exportOptions, TableMetadata tableMetadata, Writer writer)
       throws IOException {
-    String header = createCsvHeaderRow(exportOptions, tableMetadata);
-    writer.append(header);
-    writer.flush();
+    if (!exportOptions.isExcludeHeaderRow()) {
+      String header = createCsvHeaderRow(exportOptions, tableMetadata);
+      writer.append(header);
+      writer.flush();
+    }
   }
 
   /**
@@ -68,8 +76,7 @@ public class CsvExportManager extends ExportManager {
     Iterator<String> iterator = tableMetadata.getColumnNames().iterator();
     while (iterator.hasNext()) {
       String columnName = iterator.next();
-      if (shouldIgnoreColumn(
-          exportOptions.isIncludeTransactionMetadata(), columnName, tableMetadata, projections)) {
+      if (!projections.isEmpty() && !projections.contains(columnName)) {
         continue;
       }
       headerRow.append(columnName);
@@ -80,25 +87,5 @@ public class CsvExportManager extends ExportManager {
     CsvUtil.removeTrailingDelimiter(headerRow, exportOptions.getDelimiter());
     headerRow.append("\n");
     return headerRow.toString();
-  }
-
-  /**
-   * To ignore a column or not based on conditions such as if it is a metadata column or if it is
-   * not include in selected projections
-   *
-   * @param isIncludeTransactionMetadata to include transaction metadata or not
-   * @param columnName column name
-   * @param tableMetadata table metadata
-   * @param projections selected columns for projection
-   * @return ignore the column or not
-   */
-  private boolean shouldIgnoreColumn(
-      boolean isIncludeTransactionMetadata,
-      String columnName,
-      TableMetadata tableMetadata,
-      List<String> projections) {
-    return (!isIncludeTransactionMetadata
-            && ConsensusCommitUtils.isTransactionMetaColumn(columnName, tableMetadata))
-        || (!projections.isEmpty() && !projections.contains(columnName));
   }
 }

@@ -59,9 +59,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.get(get);
@@ -75,9 +81,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.get(get);
@@ -92,9 +104,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.get(get);
@@ -108,8 +126,9 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Scan scan = new Scan(partitionKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Scan scan =
+        Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build();
 
     // Act
     multiStorage.scan(scan);
@@ -122,8 +141,9 @@ public class MultiStorageTest {
   public void whenScanDataFromTable2_DataShouldBeScannedFromStorage2() throws ExecutionException {
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Scan scan = new Scan(partitionKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Scan scan =
+        Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build();
 
     // Act
     multiStorage.scan(scan);
@@ -138,8 +158,9 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Scan scan = new Scan(partitionKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Scan scan =
+        Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build();
 
     // Act
     multiStorage.scan(scan);
@@ -153,13 +174,16 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     // Act
     multiStorage.put(put);
@@ -173,13 +197,16 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     // Act
     multiStorage.put(put);
@@ -194,13 +221,16 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     // Act
     multiStorage.put(put);
@@ -214,9 +244,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.delete(delete);
@@ -230,9 +266,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.delete(delete);
@@ -247,9 +289,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.delete(delete);
@@ -263,18 +311,26 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME2, 2);
-    Key clusteringKey2 = new Key(COL_NAME2, 3);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME2, 2);
+    Key clusteringKey2 = Key.ofInt(COL_NAME2, 3);
 
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
     verify(storage1).mutate(anyList());
@@ -285,18 +341,26 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME2, 2);
-    Key clusteringKey2 = new Key(COL_NAME2, 3);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME2, 2);
+    Key clusteringKey2 = Key.ofInt(COL_NAME2, 3);
 
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
     verify(storage2).mutate(anyList());
@@ -307,18 +371,26 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME2, 2);
-    Key clusteringKey2 = new Key(COL_NAME2, 3);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME2, 2);
+    Key clusteringKey2 = Key.ofInt(COL_NAME2, 3);
 
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
     verify(storage3).mutate(anyList());
@@ -337,9 +409,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Get get = new Get(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Get get =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.get(get);
@@ -354,8 +432,9 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Scan scan = new Scan(partitionKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Scan scan =
+        Scan.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey).build();
 
     // Act
     multiStorage.scan(scan);
@@ -370,13 +449,16 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
     Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(COL_NAME3, 3)
-            .forNamespace(namespace)
-            .forTable(table);
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(COL_NAME3, 3)
+            .build();
 
     // Act
     multiStorage.put(put);
@@ -391,9 +473,15 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey = new Key(COL_NAME2, 2);
-    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace(namespace).forTable(table);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey = Key.ofInt(COL_NAME2, 2);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .build();
 
     // Act
     multiStorage.delete(delete);
@@ -408,18 +496,26 @@ public class MultiStorageTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(COL_NAME1, 1);
-    Key clusteringKey1 = new Key(COL_NAME2, 2);
-    Key clusteringKey2 = new Key(COL_NAME2, 3);
+    Key partitionKey = Key.ofInt(COL_NAME1, 1);
+    Key clusteringKey1 = Key.ofInt(COL_NAME2, 2);
+    Key clusteringKey2 = Key.ofInt(COL_NAME2, 3);
 
     // Act
     multiStorage.mutate(
         Arrays.asList(
-            new Put(partitionKey, clusteringKey2)
-                .withValue(COL_NAME3, 3)
-                .forNamespace(namespace)
-                .forTable(table),
-            new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey2)
+                .intValue(COL_NAME3, 3)
+                .build(),
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey1)
+                .build()));
 
     // Assert
     verify(storage2).mutate(anyList());

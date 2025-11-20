@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -123,16 +122,6 @@ public class Snapshot {
     this.scannerSet = scannerSet;
   }
 
-  @Nonnull
-  public String getId() {
-    return id;
-  }
-
-  @Nonnull
-  public Isolation getIsolation() {
-    return isolation;
-  }
-
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
   // is a concurrent map
   public void putIntoReadSet(Key key, Optional<TransactionResult> result) {
@@ -163,14 +152,16 @@ public class Snapshot {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(originalPut);
-      put.getColumns().values().forEach(putBuilder::value);
+      for (Column<?> value : put.getColumns().values()) {
+        putBuilder = putBuilder.value(value);
+      }
 
       // If the implicit pre-read is enabled for the new put, it should also be enabled for the
       // merged put. However, if the previous put is in insert mode, this doesn’t apply. This is
       // because, in insert mode, the read set is not used during the preparation phase. Therefore,
       // we only need to enable the implicit pre-read if the previous put is not in insert mode
       if (isImplicitPreReadEnabled(put) && !isInsertModeEnabled(originalPut)) {
-        putBuilder.enableImplicitPreRead();
+        putBuilder = putBuilder.enableImplicitPreRead();
       }
 
       writeSet.put(key, putBuilder.build());
@@ -197,16 +188,24 @@ public class Snapshot {
     scannerSet.add(new ScannerInfo(scan, results));
   }
 
-  public List<Put> getPutsInWriteSet() {
-    return new ArrayList<>(writeSet.values());
+  public Collection<Map.Entry<Key, Put>> getWriteSet() {
+    return new ArrayList<>(writeSet.entrySet());
   }
 
-  public List<Delete> getDeletesInDeleteSet() {
-    return new ArrayList<>(deleteSet.values());
+  public Collection<Map.Entry<Key, Delete>> getDeleteSet() {
+    return new ArrayList<>(deleteSet.entrySet());
   }
 
-  public ReadWriteSets getReadWriteSets() {
-    return new ReadWriteSets(id, readSet, writeSet.entrySet(), deleteSet.entrySet());
+  public Collection<Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>>> getScanSet() {
+    return new ArrayList<>(scanSet.entrySet());
+  }
+
+  public Collection<ScannerInfo> getScannerSet() {
+    return new ArrayList<>(scannerSet);
+  }
+
+  public Collection<Map.Entry<Get, Optional<TransactionResult>>> getGetSet() {
+    return new ArrayList<>(getSet.entrySet());
   }
 
   public boolean containsKeyInReadSet(Key key) {
@@ -248,7 +247,7 @@ public class Snapshot {
     return mergeResult(key, result, get.getConjunctions());
   }
 
-  public Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> getResults(Scan scan) {
+  public Optional<LinkedHashMap<Key, TransactionResult>> getResults(Scan scan) {
     if (!scanSet.containsKey(scan)) {
       return Optional.empty();
     }
@@ -524,7 +523,7 @@ public class Snapshot {
   @VisibleForTesting
   void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (!isSerializable()) {
+    if (isolation != Isolation.SERIALIZABLE) {
       return;
     }
 
@@ -543,10 +542,11 @@ public class Snapshot {
     // Get set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
+      TableMetadata metadata = getTableMetadata(get);
 
-      if (ScalarDbUtils.isSecondaryIndexSpecified(get, getTableMetadata(get))) {
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
         // For Get with index
-        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue()));
+        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue(), metadata));
       } else {
         // For other Get
 
@@ -555,11 +555,11 @@ public class Snapshot {
           continue;
         }
 
-        tasks.add(() -> validateGetResult(storage, get, entry.getValue()));
+        tasks.add(() -> validateGetResult(storage, get, entry.getValue(), metadata));
       }
     }
 
-    parallelExecutor.validateRecords(tasks, getId());
+    parallelExecutor.validateRecords(tasks, id);
   }
 
   /**
@@ -592,20 +592,12 @@ public class Snapshot {
       throws ExecutionException, ValidationConflictException {
     Scanner scanner = null;
     try {
-      // Only get tx_id and primary key columns because we use only them to compare
-      scan.clearProjections();
-      scan.withProjection(Attribute.ID);
-      ScalarDbUtils.addProjectionsForKeys(scan, getTableMetadata(scan));
+      TableMetadata metadata = getTableMetadata(scan);
 
-      if (scan.getLimit() == 0) {
-        scanner = storage.scan(scan);
-      } else {
-        // Get a scanner without the limit if the scan has a limit
-        scanner = storage.scan(Scan.newBuilder(scan).limit(0).build());
-      }
+      scanner = storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata));
 
       // Initialize the iterator for the latest scan results
-      Optional<Result> latestResult = scanner.one();
+      Optional<Result> latestResult = getNextResult(scanner, scan);
 
       // Initialize the iterator for the original scan results
       Iterator<Entry<Key, TransactionResult>> originalResultIterator =
@@ -616,13 +608,13 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult);
+        Key key = new Key(scan, latestTxResult, metadata);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
 
           // Skip the record of the latest scan results
-          latestResult = scanner.one();
+          latestResult = getNextResult(scanner, scan);
 
           if (originalResultEntry.getKey().equals(key)) {
             // The record is updated by this transaction
@@ -656,7 +648,7 @@ public class Snapshot {
         }
 
         // Proceed to the next record
-        latestResult = scanner.one();
+        latestResult = getNextResult(scanner, scan);
         originalResultEntry = Iterators.getNext(originalResultIterator, null);
       }
 
@@ -695,7 +687,7 @@ public class Snapshot {
           // The record is inserted/deleted by this transaction
 
           // Skip the record
-          latestResult = scanner.one();
+          latestResult = getNextResult(scanner, scan);
         } else {
           // The record is inserted by another transaction
           throwExceptionDueToAntiDependency();
@@ -706,14 +698,36 @@ public class Snapshot {
         try {
           scanner.close();
         } catch (IOException e) {
-          logger.warn("Failed to close the scanner", e);
+          logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
         }
       }
     }
   }
 
+  private Optional<Result> getNextResult(Scanner scanner, Scan scan) throws ExecutionException {
+    Optional<Result> next = scanner.one();
+    if (!next.isPresent()) {
+      return next;
+    }
+
+    if (!scan.getConjunctions().isEmpty()) {
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
+      next =
+          next.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), scan.getConjunctions()));
+    }
+
+    return next.isPresent() ? next : getNextResult(scanner, scan);
+  }
+
   private void validateGetWithIndexResult(
-      DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
+      DistributedStorage storage,
+      Get get,
+      Optional<TransactionResult> originalResult,
+      TableMetadata metadata)
       throws ExecutionException, ValidationConflictException {
     assert get.forNamespace().isPresent() && get.forTable().isPresent();
 
@@ -734,21 +748,34 @@ public class Snapshot {
             .build();
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r), r));
+    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false);
   }
 
   private void validateGetResult(
-      DistributedStorage storage, Get get, Optional<TransactionResult> originalResult)
+      DistributedStorage storage,
+      Get get,
+      Optional<TransactionResult> originalResult,
+      TableMetadata metadata)
       throws ExecutionException, ValidationConflictException {
-    // Only get the tx_id column because we use only them to compare
-    get.clearProjections();
-    get.withProjection(Attribute.ID);
-
     // Check if a read record is not changed
-    Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
+    Optional<TransactionResult> latestResult =
+        storage
+            .get(ConsensusCommitUtils.prepareGetForStorage(get, metadata))
+            .map(TransactionResult::new);
+
+    if (!get.getConjunctions().isEmpty()) {
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
+      latestResult =
+          latestResult.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), get.getConjunctions()));
+    }
+
     if (isChanged(latestResult, originalResult)) {
       throwExceptionDueToAntiDependency();
     }
@@ -780,18 +807,6 @@ public class Snapshot {
         CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
   }
 
-  private boolean isSerializable() {
-    return isolation == Isolation.SERIALIZABLE;
-  }
-
-  public boolean isSnapshotReadRequired() {
-    return isolation != Isolation.READ_COMMITTED;
-  }
-
-  public boolean isValidationRequired() {
-    return isSerializable();
-  }
-
   @Immutable
   public static final class Key implements Comparable<Key> {
     private final String namespace;
@@ -803,11 +818,11 @@ public class Snapshot {
       this((Operation) get);
     }
 
-    public Key(Get get, Result result) {
+    public Key(Get get, Result result, TableMetadata tableMetadata) {
       this.namespace = get.forNamespace().get();
       this.table = get.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     public Key(Put put) {
@@ -818,11 +833,11 @@ public class Snapshot {
       this((Operation) delete);
     }
 
-    public Key(Scan scan, Result result) {
+    public Key(Scan scan, Result result, TableMetadata tableMetadata) {
       this.namespace = scan.forNamespace().get();
       this.table = scan.forTable().get();
-      this.partitionKey = result.getPartitionKey().get();
-      this.clusteringKey = result.getClusteringKey();
+      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
+      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
     }
 
     private Key(Operation operation) {
@@ -889,40 +904,6 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
-    }
-  }
-
-  public static class ReadWriteSets {
-    public final String transactionId;
-    public final Map<Key, Optional<TransactionResult>> readSetMap;
-    public final List<Entry<Key, Put>> writeSet;
-    public final List<Entry<Key, Delete>> deleteSet;
-
-    public ReadWriteSets(
-        String transactionId,
-        Map<Key, Optional<TransactionResult>> readSetMap,
-        Collection<Entry<Key, Put>> writeSet,
-        Collection<Entry<Key, Delete>> deleteSet) {
-      this.transactionId = transactionId;
-      this.readSetMap = new HashMap<>(readSetMap);
-      this.writeSet = new ArrayList<>(writeSet);
-      this.deleteSet = new ArrayList<>(deleteSet);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof ReadWriteSets)) return false;
-      ReadWriteSets that = (ReadWriteSets) o;
-      return Objects.equals(transactionId, that.transactionId)
-          && Objects.equals(readSetMap, that.readSetMap)
-          && Objects.equals(writeSet, that.writeSet)
-          && Objects.equals(deleteSet, that.deleteSet);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(transactionId, readSetMap, writeSet, deleteSet);
     }
   }
 

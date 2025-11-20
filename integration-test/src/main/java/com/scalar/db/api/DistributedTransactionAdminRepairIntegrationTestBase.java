@@ -42,10 +42,10 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
   protected static final String COL_NAME9 = "c9";
   protected static final String COL_NAME10 = "c10";
   protected static final String COL_NAME11 = "c11";
-  private static final String COL_NAME12 = "c12";
-  private static final String COL_NAME13 = "c13";
-  private static final String COL_NAME14 = "c14";
-  private static final String COL_NAME15 = "c15";
+  protected static final String COL_NAME12 = "c12";
+  protected static final String COL_NAME13 = "c13";
+  protected static final String COL_NAME14 = "c14";
+  protected static final String COL_NAME15 = "c15";
 
   protected DistributedTransactionAdmin admin;
   protected DistributedStorageAdmin storageAdmin;

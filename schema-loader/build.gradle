@@ -3,7 +3,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
     id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
     id 'maven-publish'
-    id 'signing'
     id 'base'
 }
 
@@ -18,9 +17,9 @@ dependencies {
     implementation "org.slf4j:slf4j-simple:${slf4jVersion}"
     implementation "com.google.code.gson:gson:${gsonVersion}"
     implementation "info.picocli:picocli:${picocliVersion}"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
-    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
@@ -135,18 +134,7 @@ publishing {
     }
     repositories {
         maven {
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.properties['ossrhUsername'] ?: ""
-                password = project.properties['ossrhPassword'] ?: ""
-            }
+            url = layout.buildDirectory.dir('staging-deploy')
         }
     }
-}
-
-signing {
-    required { project.gradle.taskGraph.hasTask("publish") }
-    sign publishing.publications.mavenJava
 }

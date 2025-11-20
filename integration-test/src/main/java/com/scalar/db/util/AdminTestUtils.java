@@ -57,6 +57,15 @@ public abstract class AdminTestUtils {
   public abstract void corruptMetadata(String namespace, String table) throws Exception;
 
   /**
+   * Deletes the metadata for the specified table.
+   *
+   * @param namespace the namespace
+   * @param table the table name
+   * @throws Exception if an error occurs
+   */
+  public abstract void deleteMetadata(String namespace, String table) throws Exception;
+
+  /**
    * Returns whether the table and the table metadata for the coordinator tables are present or not.
    *
    * @return whether the table and the table metadata for the coordinator tables are present or not

@@ -1,10 +1,13 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.spy;
@@ -561,5 +564,215 @@ public class ParallelExecutorTest {
     // Act Assert
     assertThatThrownBy(() -> parallelExecutor.executeImplicitPreRead(tasks, TX_ID))
         .isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void executeTasks_SingleTaskAndNoWaitFalse_ShouldExecuteDirectly()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    List<ParallelExecutorTask> tasks = Collections.singletonList(task);
+    boolean parallel = true; // Should be ignored
+    boolean noWait = false;
+    boolean stopOnError = true;
+
+    // Act
+    parallelExecutor.executeTasks(tasks, parallel, noWait, stopOnError, "test", TX_ID);
+
+    // Assert
+    verify(task).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void executeTasks_SingleTaskAndNoWaitTrue_ShouldUseParallelExecution()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    when(config.isParallelPreparationEnabled()).thenReturn(true);
+
+    List<ParallelExecutorTask> tasks = Collections.singletonList(task);
+    boolean parallel = true;
+    boolean noWait = true;
+    boolean stopOnError = false;
+
+    // Act
+    parallelExecutor.executeTasks(tasks, parallel, noWait, stopOnError, "test", TX_ID);
+
+    // Assert
+    verify(parallelExecutorService).execute(any());
+  }
+
+  @Test
+  public void executeTasks_ParallelTrue_ShouldExecuteTasksInParallel()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = true;
+    boolean noWait = false;
+    boolean stopOnError = false;
+
+    // Act
+    parallelExecutor.executeTasks(tasks, parallel, noWait, stopOnError, "test", TX_ID);
+
+    // Assert
+    verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void executeTasks_ParallelFalse_ShouldExecuteTasksSerially()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = false;
+    boolean noWait = false;
+    boolean stopOnError = false;
+
+    // Act
+    parallelExecutor.executeTasks(tasks, parallel, noWait, stopOnError, "test", TX_ID);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void executeTasks_ParallelTrueAndStopOnErrorTrue_ExceptionThrown_ShouldStopExecution()
+      throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = true;
+    boolean noWait = false;
+    boolean stopOnError = true;
+
+    doThrow(new ExecutionException("Test exception")).when(task).run();
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                parallelExecutor.executeTasks(tasks, parallel, noWait, stopOnError, "test", TX_ID))
+        .isInstanceOf(ExecutionException.class)
+        .hasMessage("Test exception");
+
+    verify(parallelExecutorService, times(tasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      executeTasks_ParallelTrueAndStopOnErrorFalse_ExceptionThrown_ShouldContinueOtherTasks()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = true;
+    boolean noWait = false;
+    boolean stopOnError = false;
+
+    ParallelExecutorTask failingTask = mock(ParallelExecutorTask.class);
+    doThrow(new ExecutionException("Test exception")).when(failingTask).run();
+
+    List<ParallelExecutorTask> mixedTasks = Arrays.asList(failingTask, task);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                parallelExecutor.executeTasks(
+                    mixedTasks, parallel, noWait, stopOnError, "test", TX_ID))
+        .isInstanceOf(ExecutionException.class);
+
+    verify(parallelExecutorService, times(mixedTasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      executeTasks_ParallelTrueAndStopOnErrorFalse_ExceptionThrownByMultipleTasks_ShouldContinueOtherTasks()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = true;
+    boolean noWait = false;
+    boolean stopOnError = false;
+
+    ExecutionException executionException1 = new ExecutionException("Test exception1");
+    ParallelExecutorTask failingTask1 = mock(ParallelExecutorTask.class);
+    doThrow(executionException1).when(failingTask1).run();
+
+    ExecutionException executionException2 = new ExecutionException("Test exception2");
+    ParallelExecutorTask failingTask2 = mock(ParallelExecutorTask.class);
+    doThrow(executionException2).when(failingTask2).run();
+
+    List<ParallelExecutorTask> mixedTasks = Arrays.asList(failingTask1, failingTask2, task);
+
+    // Act
+    Exception exception =
+        catchException(
+            () ->
+                parallelExecutor.executeTasks(
+                    mixedTasks, parallel, noWait, stopOnError, "test", TX_ID));
+
+    // Assert
+    assertThat(exception)
+        .satisfiesAnyOf(
+            e ->
+                assertThat(e)
+                    .isEqualTo(executionException1)
+                    .hasSuppressedException(executionException2),
+            e ->
+                assertThat(e)
+                    .isEqualTo(executionException2)
+                    .hasSuppressedException(executionException1));
+
+    verify(parallelExecutorService, times(mixedTasks.size())).execute(any());
+  }
+
+  @Test
+  public void
+      executeTasks_ParallelFalseAndStopOnErrorFalse_ExceptionThrown_ShouldContinueOtherTasks()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = false;
+    boolean noWait = false;
+    boolean stopOnError = false;
+
+    ParallelExecutorTask failingTask = mock(ParallelExecutorTask.class);
+    doThrow(new ExecutionException("Test exception")).when(failingTask).run();
+
+    List<ParallelExecutorTask> mixedTasks = Arrays.asList(failingTask, task);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                parallelExecutor.executeTasks(
+                    mixedTasks, parallel, noWait, stopOnError, "test", TX_ID))
+        .isInstanceOf(ExecutionException.class);
+
+    verify(failingTask, only()).run();
+    verify(task, only()).run();
+    verify(parallelExecutorService, never()).execute(any());
+  }
+
+  @Test
+  public void
+      executeTasks_ParallelFalseAndStopOnErrorFalse_ExceptionThrownByMultipleTasks_ShouldContinueOtherTasks()
+          throws ExecutionException, ValidationConflictException, CrudException {
+    // Arrange
+    boolean parallel = false;
+    boolean noWait = false;
+    boolean stopOnError = false;
+
+    ExecutionException executionException1 = new ExecutionException("Test exception1");
+    ParallelExecutorTask failingTask1 = mock(ParallelExecutorTask.class);
+    doThrow(executionException1).when(failingTask1).run();
+
+    ExecutionException executionException2 = new ExecutionException("Test exception2");
+    ParallelExecutorTask failingTask2 = mock(ParallelExecutorTask.class);
+    doThrow(executionException2).when(failingTask2).run();
+
+    List<ParallelExecutorTask> mixedTasks = Arrays.asList(failingTask1, failingTask2, task);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                parallelExecutor.executeTasks(
+                    mixedTasks, parallel, noWait, stopOnError, "test", TX_ID))
+        .isEqualTo(executionException1)
+        .hasSuppressedException(executionException2);
+
+    verify(failingTask1, only()).run();
+    verify(failingTask2, only()).run();
+    verify(task, only()).run();
+    verify(parallelExecutorService, never()).execute(any());
   }
 }
