@@ -590,7 +590,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               virtualTableInfo.getLeftSourceTableName(),
               columnName,
               leftSourceTableMetadata.getColumnDataType(columnName));
-          return;
         }
 
         TableMetadata rightSourceTableMetadata =
@@ -687,7 +686,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               virtualTableInfo.getLeftSourceTableName(),
               columnName,
               leftSourceTableMetadata.getColumnDataType(columnName));
-          return;
         }
 
         TableMetadata rightSourceTableMetadata =

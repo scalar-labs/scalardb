@@ -3088,11 +3088,20 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("pk1")
             .addColumn("pk1", DataType.TEXT)
-            .addColumn("col1", DataType.BOOLEAN)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
             .build();
 
     when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
         .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
 
     Statement statement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(statement);
@@ -3145,14 +3154,14 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("pk1")
             .addColumn("pk1", DataType.TEXT)
-            .addColumn("col1", DataType.BOOLEAN)
+            .addColumn("col1", DataType.INT)
             .build();
 
     TableMetadata rightSourceTableMetadata =
         TableMetadata.newBuilder()
             .addPartitionKey("pk1")
             .addColumn("pk1", DataType.TEXT)
-            .addColumn("col2", DataType.BOOLEAN)
+            .addColumn("col2", DataType.INT)
             .build();
 
     when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
@@ -3180,6 +3189,82 @@ public class JdbcAdminTest {
     verify(statement).execute(captor.capture());
     assertThat(captor.getValue())
         .isEqualTo("CREATE INDEX `index_ns_right_table_col2` ON `ns`.`right_table` (`col2`)");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(columnName),
+            eq(true));
+  }
+
+  @Test
+  public void createIndex_VirtualTableWithPrimaryKeyColumn_ShouldCreateIndexOnBothSourceTables()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "pk1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.createIndex(namespace, table, columnName, Collections.emptyMap());
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(rightSourceNamespace), eq(rightSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(2)).execute(captor.capture());
+    assertThat(captor.getAllValues())
+        .containsExactly(
+            "CREATE INDEX `index_ns_left_table_pk1` ON `ns`.`left_table` (`pk1`)",
+            "CREATE INDEX `index_ns_right_table_pk1` ON `ns`.`right_table` (`pk1`)");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection), eq(leftSourceNamespace), eq(leftSourceTable), eq(columnName), eq(true));
     verify(tableMetadataService)
         .updateTableMetadata(
             eq(connection),
@@ -3479,11 +3564,20 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("pk1")
             .addColumn("pk1", DataType.TEXT)
-            .addColumn("col1", DataType.BOOLEAN)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
             .build();
 
     when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
         .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
 
     Statement statement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(statement);
@@ -3539,14 +3633,14 @@ public class JdbcAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("pk1")
             .addColumn("pk1", DataType.TEXT)
-            .addColumn("col1", DataType.BOOLEAN)
+            .addColumn("col1", DataType.INT)
             .build();
 
     TableMetadata rightSourceTableMetadata =
         TableMetadata.newBuilder()
             .addPartitionKey("pk1")
             .addColumn("pk1", DataType.TEXT)
-            .addColumn("col2", DataType.BOOLEAN)
+            .addColumn("col2", DataType.INT)
             .build();
 
     when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
@@ -3574,6 +3668,86 @@ public class JdbcAdminTest {
     verify(statement).execute(captor.capture());
     assertThat(captor.getValue())
         .isEqualTo("DROP INDEX `index_ns_right_table_col2` ON `ns`.`right_table`");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(columnName),
+            eq(false));
+  }
+
+  @Test
+  public void dropIndex_VirtualTableWithPrimaryKeyColumn_ShouldDropIndexOnBothSourceTables()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "pk1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.dropIndex(namespace, table, columnName);
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(rightSourceNamespace), eq(rightSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(2)).execute(captor.capture());
+    assertThat(captor.getAllValues())
+        .containsExactly(
+            "DROP INDEX `index_ns_left_table_pk1` ON `ns`.`left_table`",
+            "DROP INDEX `index_ns_right_table_pk1` ON `ns`.`right_table`");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(leftSourceNamespace),
+            eq(leftSourceTable),
+            eq(columnName),
+            eq(false));
     verify(tableMetadataService)
         .updateTableMetadata(
             eq(connection),
