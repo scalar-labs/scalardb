@@ -311,7 +311,7 @@ class ColumnUtilsTest {
   }
 
   /**
-   * Tests that when the string value custom null value "/n" is provided for TEXT columns, it is
+   * Tests that when the string value has custom null value "/N" is provided for TEXT columns, it is
    * treated as an actual null value
    */
   @Test
