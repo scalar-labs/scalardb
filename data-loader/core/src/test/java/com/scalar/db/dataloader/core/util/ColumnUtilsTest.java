@@ -315,12 +315,12 @@ class ColumnUtilsTest {
    * treated as an actual null value
    */
   @Test
-  void createColumnFromValue_valueIsCustomNullValue_shouldRemainLiteralForTextType()
+  void createColumnFromValue_customNullValueForText_shouldBeConvertedToNull()
       throws ColumnParsingException {
     String columnName = "textColumn";
     ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
 
-    Column<?> textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "/N");
+    Column<?> textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "\\N");
     assertEquals(TextColumn.ofNull(columnName), textCol);
   }
 }

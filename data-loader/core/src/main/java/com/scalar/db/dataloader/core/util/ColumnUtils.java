@@ -84,7 +84,7 @@ public final class ColumnUtils {
       throws ColumnParsingException {
     String columnName = columnInfo.getColumnName();
     if (value != null && (!dataType.equals(DataType.TEXT) && value.equalsIgnoreCase("null"))
-        || (dataType.equals(DataType.TEXT) && "/N".equals(value))) {
+        || (dataType.equals(DataType.TEXT) && "\\N".equals(value))) {
       value = null;
     }
     try {
