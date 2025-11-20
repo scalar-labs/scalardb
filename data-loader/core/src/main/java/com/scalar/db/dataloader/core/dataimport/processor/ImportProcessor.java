@@ -32,6 +32,7 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -317,16 +318,24 @@ public abstract class ImportProcessor {
 
     } catch (TransactionException e) {
       isSuccess = false;
-      logger.error(e.getMessage());
-      try {
-        if (transaction != null) {
-          transaction.abort(); // Ensure transaction is aborted
-        }
-      } catch (TransactionException abortException) {
-        logger.error(
-            "Failed to abort transaction: {}", abortException.getMessage(), abortException);
-      }
+      logger.error(
+          "Transaction failed for batch {} in data chunk {}: {}",
+          transactionBatch.getTransactionBatchId(),
+          dataChunkId,
+          e.getMessage(),
+          e);
+      abortTransactionSafely(transaction);
       error = e.getMessage();
+    } catch (Exception e) {
+      // Catch unchecked exceptions
+      isSuccess = false;
+      logger.error(
+          "Unexpected exception occurred while processing transaction batch {} in data chunk {}.",
+          transactionBatch.getTransactionBatchId(),
+          dataChunkId,
+          e);
+      abortTransactionSafely(transaction);
+      error = "Unexpected error: " + e.getClass().getSimpleName() + " - " + e.getMessage();
     }
     ImportTransactionBatchResult importTransactionBatchResult =
         ImportTransactionBatchResult.builder()
@@ -338,6 +347,22 @@ public abstract class ImportProcessor {
             .build();
     notifyTransactionBatchCompleted(importTransactionBatchResult);
     return importTransactionBatchResult;
+  }
+
+  /**
+   * Safely aborts the provided distributed transaction. If the transaction is null, this method
+   * takes no action. If an exception occurs during the abort operation, it is logged as an error.
+   *
+   * @param transaction the {@link DistributedTransaction} to be aborted, may be null
+   */
+  private void abortTransactionSafely(@Nullable DistributedTransaction transaction) {
+    try {
+      if (transaction != null) {
+        transaction.abort();
+      }
+    } catch (Exception e) {
+      logger.error("Failed to abort transaction: {}", e.getMessage(), e);
+    }
   }
 
   /**
@@ -360,7 +385,7 @@ public abstract class ImportProcessor {
             .dao(params.getDao())
             .build();
     ImportTaskResult importRecordResult =
-        new ImportStorageTask(taskParams, params.getDistributedStorage()).execute();
+        new ImportStorageTask(taskParams, params.getDistributedTransactionManager()).execute();
 
     ImportTaskResult modifiedTaskResult =
         ImportTaskResult.builder()

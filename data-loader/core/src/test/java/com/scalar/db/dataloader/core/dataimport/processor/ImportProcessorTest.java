@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.core.dataimport.processor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -10,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
@@ -43,6 +43,7 @@ import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -62,7 +63,6 @@ class ImportProcessorTest {
   @Mock private ImportProcessorParams params;
   @Mock private ImportOptions importOptions;
   @Mock private ScalarDbDao dao;
-  @Mock private DistributedStorage distributedStorage;
   @Mock private DistributedTransactionManager distributedTransactionManager;
   @Mock private DistributedTransaction distributedTransaction;
   @Mock private TableColumnDataTypes tableColumnDataTypes;
@@ -87,7 +87,6 @@ class ImportProcessorTest {
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
     when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
 
     TestImportProcessor processor = new TestImportProcessor(params);
@@ -150,7 +149,6 @@ class ImportProcessorTest {
     final int maxThreads = 4;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
@@ -205,7 +203,6 @@ class ImportProcessorTest {
     final int maxThreads = 2;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
@@ -235,7 +232,6 @@ class ImportProcessorTest {
     // Arrange
     when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
     when(params.getDao()).thenReturn(dao);
-    when(params.getDistributedStorage()).thenReturn(distributedStorage);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
@@ -254,6 +250,36 @@ class ImportProcessorTest {
     // Verify that all data chunks were processed and executors were shut down gracefully
     verify(eventListener, times(1)).onAllDataChunksCompleted();
     assertEquals(3, processor.getProcessedChunksCount().get(), "All chunks should be processed");
+  }
+
+  @Test
+  void process_withUnexpectedExceptionInTransaction_shouldHandleGracefully()
+      throws TransactionException {
+    // Arrange
+    BufferedReader reader = new BufferedReader(new StringReader("test data"));
+    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.TRANSACTION);
+    when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
+    when(distributedTransactionManager.start()).thenThrow(new RuntimeException("Unexpected error"));
+
+    TestImportProcessor processor = new TestImportProcessor(params);
+    processor.addListener(eventListener);
+
+    // Act
+    processor.process(2, 1, reader);
+
+    // Assert
+    verify(eventListener, times(1)).onAllDataChunksCompleted();
+
+    // Capture and verify the transaction batch result
+    ArgumentCaptor<ImportTransactionBatchResult> resultCaptor =
+        ArgumentCaptor.forClass(ImportTransactionBatchResult.class);
+    verify(eventListener, times(1)).onTransactionBatchCompleted(resultCaptor.capture());
+
+    ImportTransactionBatchResult result = resultCaptor.getValue();
+    assertFalse(result.isSuccess());
+    assertEquals(0, result.getTransactionBatchId());
+    assertEquals(1, result.getDataChunkId());
+    assertTrue(result.getErrors().get(0).contains("Unexpected error"));
   }
 
   /**

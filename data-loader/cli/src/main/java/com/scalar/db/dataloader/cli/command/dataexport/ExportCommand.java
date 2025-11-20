@@ -55,6 +55,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
   public Integer call() throws Exception {
     validateDeprecatedOptions();
     applyDeprecatedOptions();
+    warnAboutIgnoredDeprecatedOptions();
     String scalarDbPropertiesFilePath = getScalarDbPropertiesFilePath();
 
     try {
@@ -141,6 +142,28 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         MAX_THREADS_OPTION_SHORT);
   }
 
+  /** Warns about deprecated options that are no longer used and have been completely ignored. */
+  private void warnAboutIgnoredDeprecatedOptions() {
+    CommandLine.ParseResult parseResult = spec.commandLine().getParseResult();
+    boolean hasIncludeMetadata =
+        parseResult.hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION)
+            || parseResult.hasMatchedOption(DEPRECATED_INCLUDE_METADATA_OPTION_SHORT);
+
+    if (hasIncludeMetadata) {
+      // Use picocli's ANSI support for colored warning output
+      CommandLine.Help.Ansi ansi = CommandLine.Help.Ansi.AUTO;
+      String warning =
+          ansi.string(
+              "@|bold,yellow The "
+                  + DEPRECATED_INCLUDE_METADATA_OPTION
+                  + " option is deprecated and no longer has any effect. "
+                  + "Use the 'scalar.db.consensus_commit.include_metadata.enabled' configuration property "
+                  + "in your ScalarDB properties file to control whether transaction metadata is included in scan operations.|@");
+
+      logger.warn(warning);
+    }
+  }
+
   private String getScalarDbPropertiesFilePath() {
     if (StringUtils.isBlank(configFilePath)) {
       throw new IllegalArgumentException(DataLoaderError.CONFIG_FILE_PATH_BLANK.buildMessage());
@@ -160,8 +183,7 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
 
   private ExportManager createExportManager(
       TransactionFactory transactionFactory, ScalarDbDao scalarDbDao, FileFormat fileFormat) {
-    ProducerTaskFactory taskFactory =
-        new ProducerTaskFactory(delimiter, includeTransactionMetadata, prettyPrintJson);
+    ProducerTaskFactory taskFactory = new ProducerTaskFactory(delimiter, prettyPrintJson);
     DistributedTransactionManager manager = transactionFactory.getTransactionManager();
     switch (fileFormat) {
       case JSON:
@@ -180,7 +202,6 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
         ExportOptions.builder(namespace, table, partitionKey, outputFormat)
             .sortOrders(sortOrders)
             .excludeHeaderRow(excludeHeader)
-            .includeTransactionMetadata(includeTransactionMetadata)
             .delimiter(delimiter)
             .limit(limit)
             .maxThreadCount(maxThreads)

@@ -154,6 +154,10 @@ public class ObjectStorage extends AbstractDistributedStorage {
 
   @Override
   public void close() {
-    wrapper.close();
+    try {
+      wrapper.close();
+    } catch (ObjectStorageWrapperException e) {
+      logger.warn("Failed to close the ObjectStorageWrapper", e);
+    }
   }
 }
