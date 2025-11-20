@@ -80,11 +80,11 @@ public abstract class ExportManager {
       ExecutorService executorService =
           Executors.newFixedThreadPool(exportOptions.getMaxThreadCount());
 
-      BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
       try (TransactionManagerCrudOperable.Scanner scanner =
-          createScanner(exportOptions, dao, manager)) {
+              createScanner(exportOptions, dao, manager);
+          BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -103,32 +103,22 @@ public abstract class ExportManager {
                       isFirstBatch,
                       exportReport));
         }
-      } catch (UnknownTransactionStatusException | CrudException e) {
+        executorService.shutdown();
+        if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
+          logger.info("All tasks completed");
+          processFooter(exportOptions, tableMetadata, bufferedWriter);
+        } else {
+          logger.error("Timeout occurred while waiting for tasks to complete");
+          // TODO: handle this
+        }
+      } catch (InterruptedException
+          | IOException
+          | UnknownTransactionStatusException
+          | CrudException e) {
         logger.error("Error during export: ", e);
       } finally {
-        executorService.shutdown();
-        try {
-          if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
-            logger.info("All tasks completed");
-            // Process footer after all tasks are complete
-            try {
-              processFooter(exportOptions, tableMetadata, bufferedWriter);
-            } catch (IOException e) {
-              logger.error("Error processing footer", e);
-            }
-          } else {
-            logger.error("Timeout occurred while waiting for tasks to complete");
-          }
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          logger.error("Interrupted while waiting for executor termination", e);
-        }
-
-        // Flush buffered writer
-        try {
-          bufferedWriter.flush();
-        } catch (IOException e) {
-          logger.error("Error flushing writer", e);
+        if (!executorService.isShutdown()) {
+          executorService.shutdownNow();
         }
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
