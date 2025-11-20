@@ -219,11 +219,11 @@ public enum DataLoaderError implements ScalarDbError {
   INVALID_TRANSACTION_MODE(
       Category.USER_ERROR,
       "0058",
-      "TRANSACTION mode is not compatible with the current configuration. %s",
+      "TRANSACTION mode is not compatible with the current configuration. Please try with STORAGE mode or check your ScalarDB configuration. Details: %s",
       "",
       ""),
   TRANSACTION_MODE_VALIDATION_FAILED(
-      Category.USER_ERROR, "0059", "Failed to validate TRANSACTION mode. %s", "", ""),
+      Category.USER_ERROR, "0059", "Failed to validate TRANSACTION mode. Details: %s", "", ""),
 
   //
   // Errors for the internal error category

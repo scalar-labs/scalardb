@@ -69,14 +69,14 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
     ImportOptions importOptions = createImportOptions(controlFile);
-    ImportLoggerConfig config =
+    ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .logDirectoryPath(logDirectory)
             .isLogRawSourceRecordsEnabled(importOptions.isLogRawRecord())
             .isLogSuccessRecordsEnabled(importOptions.isLogSuccessRecords())
             .prettyPrint(prettyPrint)
             .build();
-    LogWriterFactory logWriterFactory = createLogWriterFactory(config);
+    LogWriterFactory logWriterFactory = createLogWriterFactory(importLoggerConfig);
     File configFile = new File(configFilePath);
     TransactionFactory transactionFactory = TransactionFactory.create(configFile);
 
@@ -92,8 +92,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               importOptions,
               tableMetadataMap,
               reader,
+              importLoggerConfig,
               logWriterFactory,
-              config,
               transactionFactory);
       importManager.startImport();
     }
@@ -149,8 +149,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param importOptions import options
    * @param tableMetadataMap table metadata map
    * @param reader buffered reader with source data
+   * @param importLoggerConfig import logging config
    * @param logWriterFactory log writer factory object
-   * @param config import logging config
    * @param transactionFactory transaction factory to use
    * @return ImportManager object
    */
@@ -158,8 +158,8 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       ImportOptions importOptions,
       Map<String, TableMetadata> tableMetadataMap,
       BufferedReader reader,
+      ImportLoggerConfig importLoggerConfig,
       LogWriterFactory logWriterFactory,
-      ImportLoggerConfig config,
       TransactionFactory transactionFactory)
       throws IOException {
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
@@ -172,9 +172,10 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             scalarDbMode,
             transactionFactory.getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
-      importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
+      importManager.addListener(
+          new SplitByDataChunkImportLogger(importLoggerConfig, logWriterFactory));
     } else {
-      importManager.addListener(new SingleFileImportLogger(config, logWriterFactory));
+      importManager.addListener(new SingleFileImportLogger(importLoggerConfig, logWriterFactory));
     }
     return importManager;
   }
@@ -275,18 +276,14 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       // Transaction mode is not supported by the configured transaction manager
       throw new ParameterException(
           spec.commandLine(),
-          DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(
-              "Please try with STORAGE mode or check your ScalarDB configuration. "
-                  + "Error: "
-                  + e.getClass().getSimpleName()
-                  + " - "
-                  + e.getMessage()));
+          DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(e.getMessage()),
+          e);
     } catch (Exception e) {
       // Other exceptions - configuration or runtime error
       throw new ParameterException(
           spec.commandLine(),
-          DataLoaderError.TRANSACTION_MODE_VALIDATION_FAILED.buildMessage(
-              "Error: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
+          DataLoaderError.TRANSACTION_MODE_VALIDATION_FAILED.buildMessage(e.getMessage()),
+          e);
     } finally {
       // Ensure transaction is aborted
       if (transaction != null) {

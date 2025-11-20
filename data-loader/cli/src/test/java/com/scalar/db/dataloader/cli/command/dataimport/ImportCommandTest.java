@@ -307,7 +307,6 @@ public class ImportCommandTest {
             () -> command.validateTransactionMode(mockFactory));
 
     assertTrue(thrown.getMessage().contains("TRANSACTION mode is not compatible"));
-    assertTrue(thrown.getMessage().contains("UnsupportedOperationException"));
   }
 
   @Test
@@ -331,7 +330,6 @@ public class ImportCommandTest {
             () -> command.validateTransactionMode(mockFactory));
 
     assertTrue(thrown.getMessage().contains("Failed to validate TRANSACTION mode"));
-    assertTrue(thrown.getMessage().contains("RuntimeException"));
     assertTrue(thrown.getMessage().contains("Connection failed"));
   }
 }
