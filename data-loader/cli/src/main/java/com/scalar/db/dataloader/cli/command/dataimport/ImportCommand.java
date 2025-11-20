@@ -4,10 +4,12 @@ import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validateDe
 import static com.scalar.db.dataloader.cli.util.CommandLineInputUtils.validatePositiveValue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
@@ -67,20 +69,32 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
         spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
     ImportOptions importOptions = createImportOptions(controlFile);
-    ImportLoggerConfig config =
+    ImportLoggerConfig importLoggerConfig =
         ImportLoggerConfig.builder()
             .logDirectoryPath(logDirectory)
             .isLogRawSourceRecordsEnabled(importOptions.isLogRawRecord())
             .isLogSuccessRecordsEnabled(importOptions.isLogSuccessRecords())
             .prettyPrint(prettyPrint)
             .build();
-    LogWriterFactory logWriterFactory = createLogWriterFactory(config);
+    LogWriterFactory logWriterFactory = createLogWriterFactory(importLoggerConfig);
+    File configFile = new File(configFilePath);
+    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+
+    // Validate transaction mode configuration before proceeding
+    validateTransactionMode(transactionFactory);
+
     Map<String, TableMetadata> tableMetadataMap =
-        createTableMetadataMap(controlFile, namespace, tableName);
+        createTableMetadataMap(controlFile, namespace, tableName, transactionFactory);
     try (BufferedReader reader =
         Files.newBufferedReader(Paths.get(sourceFilePath), Charset.defaultCharset())) {
       ImportManager importManager =
-          createImportManager(importOptions, tableMetadataMap, reader, logWriterFactory, config);
+          createImportManager(
+              importOptions,
+              tableMetadataMap,
+              reader,
+              importLoggerConfig,
+              logWriterFactory,
+              transactionFactory);
       importManager.startImport();
     }
     return 0;
@@ -101,14 +115,16 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param controlFile control file
    * @param namespace Namespace
    * @param tableName Single table name
+   * @param transactionFactory transaction factory to use
    * @return {@code Map<String, TableMetadata>} a table metadata map
    * @throws ParameterException if one of the argument values is wrong
    */
   private Map<String, TableMetadata> createTableMetadataMap(
-      ControlFile controlFile, String namespace, String tableName)
-      throws IOException, TableMetadataException {
-    File configFile = new File(configFilePath);
-    TransactionFactory transactionFactory = TransactionFactory.create(configFile);
+      ControlFile controlFile,
+      String namespace,
+      String tableName,
+      TransactionFactory transactionFactory)
+      throws TableMetadataException {
     try (DistributedTransactionAdmin transactionAdmin = transactionFactory.getTransactionAdmin()) {
       TableMetadataService tableMetadataService = new TableMetadataService(transactionAdmin);
       Map<String, TableMetadata> tableMetadataMap = new HashMap<>();
@@ -133,18 +149,19 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
    * @param importOptions import options
    * @param tableMetadataMap table metadata map
    * @param reader buffered reader with source data
+   * @param importLoggerConfig import logging config
    * @param logWriterFactory log writer factory object
-   * @param config import logging config
+   * @param transactionFactory transaction factory to use
    * @return ImportManager object
    */
   private ImportManager createImportManager(
       ImportOptions importOptions,
       Map<String, TableMetadata> tableMetadataMap,
       BufferedReader reader,
+      ImportLoggerConfig importLoggerConfig,
       LogWriterFactory logWriterFactory,
-      ImportLoggerConfig config)
+      TransactionFactory transactionFactory)
       throws IOException {
-    File configFile = new File(configFilePath);
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
     ImportManager importManager =
         new ImportManager(
@@ -153,11 +170,12 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             importOptions,
             importProcessorFactory,
             scalarDbMode,
-            TransactionFactory.create(configFile).getTransactionManager());
+            transactionFactory.getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
-      importManager.addListener(new SplitByDataChunkImportLogger(config, logWriterFactory));
+      importManager.addListener(
+          new SplitByDataChunkImportLogger(importLoggerConfig, logWriterFactory));
     } else {
-      importManager.addListener(new SingleFileImportLogger(config, logWriterFactory));
+      importManager.addListener(new SingleFileImportLogger(importLoggerConfig, logWriterFactory));
     }
     return importManager;
   }
@@ -233,6 +251,48 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
           spec.commandLine(),
           DataLoaderError.LOG_DIRECTORY_WRITE_ACCESS_DENIED.buildMessage(
               logDirectoryPath.toAbsolutePath()));
+    }
+  }
+
+  /**
+   * Validate transaction mode configuration by attempting to start and abort a transaction
+   *
+   * @param transactionFactory transaction factory to test
+   * @throws ParameterException if transaction mode is incompatible with the configured transaction
+   *     manager
+   */
+  void validateTransactionMode(TransactionFactory transactionFactory) {
+    // Only validate when in TRANSACTION mode
+    if (scalarDbMode != ScalarDbMode.TRANSACTION) {
+      return;
+    }
+
+    DistributedTransaction transaction = null;
+    try {
+      // Try to start a read only transaction to verify the transaction manager is properly
+      // configured
+      transaction = transactionFactory.getTransactionManager().startReadOnly();
+    } catch (UnsupportedOperationException e) {
+      // Transaction mode is not supported by the configured transaction manager
+      throw new ParameterException(
+          spec.commandLine(),
+          DataLoaderError.INVALID_TRANSACTION_MODE.buildMessage(e.getMessage()),
+          e);
+    } catch (Exception e) {
+      // Other exceptions - configuration or runtime error
+      throw new ParameterException(
+          spec.commandLine(),
+          DataLoaderError.TRANSACTION_MODE_VALIDATION_FAILED.buildMessage(e.getMessage()),
+          e);
+    } finally {
+      // Ensure transaction is aborted
+      if (transaction != null) {
+        try {
+          transaction.abort();
+        } catch (Exception ignored) {
+          // Ignore errors during cleanup
+        }
+      }
     }
   }
 
