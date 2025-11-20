@@ -6,6 +6,8 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
@@ -389,6 +391,25 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
     // Currently, nothing needs to be upgraded. Do nothing.
+  }
+
+  @Override
+  public void createVirtualTable(
+      String namespace,
+      String table,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      VirtualTableJoinType joinType,
+      Map<String, String> options) {
+    throw new AssertionError("CommonDistributedStorageAdmin should not call this method");
+  }
+
+  @Override
+  public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table) {
+    // Virtual tables are not supported.
+    return Optional.empty();
   }
 
   private Map<String, ObjectStorageNamespaceMetadata> getNamespaceMetadataTable()
