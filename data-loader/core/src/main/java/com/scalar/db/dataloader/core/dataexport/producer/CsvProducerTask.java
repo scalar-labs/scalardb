@@ -118,6 +118,8 @@ public class CsvProducerTask extends ProducerTask {
    */
   private String convertToString(Result result, String columnName, DataType dataType) {
     if (result.isNull(columnName)) {
+      // "/N" is added when a column of text data type has null value. This is only converted for
+      // CSV files
       if (dataType.equals(DataType.TEXT)) {
         return "/N";
       }
