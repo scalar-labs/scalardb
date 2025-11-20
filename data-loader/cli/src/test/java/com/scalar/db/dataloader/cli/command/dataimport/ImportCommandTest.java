@@ -3,9 +3,14 @@ package com.scalar.db.dataloader.cli.command.dataimport;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.dataloader.core.FileFormat;
+import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
+import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -278,5 +283,53 @@ public class ImportCommandTest {
 
     // Verify it was set to available processors
     assertEquals(Runtime.getRuntime().availableProcessors(), command.maxThreads);
+  }
+
+  @Test
+  void validateTransactionMode_withUnsupportedOperation_shouldThrowException() throws Exception {
+    // Arrange - Mock TransactionFactory to throw UnsupportedOperationException
+    TransactionFactory mockFactory = mock(TransactionFactory.class);
+    DistributedTransactionManager mockManager = mock(DistributedTransactionManager.class);
+
+    when(mockFactory.getTransactionManager()).thenReturn(mockManager);
+    when(mockManager.startReadOnly())
+        .thenThrow(new UnsupportedOperationException("Transaction mode is not supported"));
+
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    command.spec = cmd.getCommandSpec();
+    command.scalarDbMode = ScalarDbMode.TRANSACTION;
+
+    // Act & Assert
+    CommandLine.ParameterException thrown =
+        assertThrows(
+            CommandLine.ParameterException.class,
+            () -> command.validateTransactionMode(mockFactory));
+
+    assertTrue(thrown.getMessage().contains("TRANSACTION mode is not compatible"));
+  }
+
+  @Test
+  void validateTransactionMode_withOtherException_shouldThrowException() throws Exception {
+    // Arrange - Mock TransactionFactory to throw a different exception
+    TransactionFactory mockFactory = mock(TransactionFactory.class);
+    DistributedTransactionManager mockManager = mock(DistributedTransactionManager.class);
+
+    when(mockFactory.getTransactionManager()).thenReturn(mockManager);
+    when(mockManager.startReadOnly()).thenThrow(new RuntimeException("Connection failed"));
+
+    ImportCommand command = new ImportCommand();
+    CommandLine cmd = new CommandLine(command);
+    command.spec = cmd.getCommandSpec();
+    command.scalarDbMode = ScalarDbMode.TRANSACTION;
+
+    // Act & Assert
+    CommandLine.ParameterException thrown =
+        assertThrows(
+            CommandLine.ParameterException.class,
+            () -> command.validateTransactionMode(mockFactory));
+
+    assertTrue(thrown.getMessage().contains("Failed to validate TRANSACTION mode"));
+    assertTrue(thrown.getMessage().contains("Connection failed"));
   }
 }
