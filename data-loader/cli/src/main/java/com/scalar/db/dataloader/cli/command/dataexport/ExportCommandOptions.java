@@ -94,7 +94,7 @@ public class ExportCommandOptions {
   protected Integer maxThreads;
 
   /**
-   * @deprecated As of release 3.6.2. Will be removed in release 4.0.0. Use --max-threads instead
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --max-threads instead
    */
   @Deprecated
   @CommandLine.Option(
@@ -118,7 +118,10 @@ public class ExportCommandOptions {
   // TODO: test that -si false, works
   protected boolean scanStartInclusive;
 
-  // Deprecated option - kept for backward compatibility
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --start-inclusive
+   *     instead (inverted logic).
+   */
   @CommandLine.Option(
       names = {DEPRECATED_START_EXCLUSIVE_OPTION},
       description = "Deprecated: Use --start-inclusive instead (inverted logic)",
@@ -139,7 +142,10 @@ public class ExportCommandOptions {
       defaultValue = "true")
   protected boolean scanEndInclusive;
 
-  // Deprecated option - kept for backward compatibility
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --end-inclusive instead
+   *     (inverted logic).
+   */
   @CommandLine.Option(
       names = {DEPRECATED_END_EXCLUSIVE_OPTION},
       description = "Deprecated: Use --end-inclusive instead (inverted logic)",
