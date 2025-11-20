@@ -146,10 +146,15 @@ public abstract class DistributedTransactionIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
     admin.truncateCoordinatorTables();
+    waitToAvoidRateLimiting();
   }
 
   @AfterAll

@@ -144,9 +144,14 @@ public abstract class DistributedStorageIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     truncateTable();
+    waitToAvoidRateLimiting();
   }
 
   private void truncateTable() throws ExecutionException {

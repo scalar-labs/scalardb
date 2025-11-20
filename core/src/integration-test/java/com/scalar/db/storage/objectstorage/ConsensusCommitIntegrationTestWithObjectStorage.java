@@ -1,9 +1,11 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitIntegrationTestWithObjectStorage
@@ -29,6 +31,13 @@ public class ConsensusCommitIntegrationTestWithObjectStorage
         .addPartitionKey(ACCOUNT_ID)
         .addClusteringKey(ACCOUNT_TYPE)
         .build();
+  }
+
+  @Override
+  protected void waitToAvoidRateLimiting() {
+    if (ObjectStorageEnv.isCloudStorage()) {
+      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+    }
   }
 
   @Override

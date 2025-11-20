@@ -141,9 +141,14 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
+    waitToAvoidRateLimiting();
   }
 
   @AfterAll

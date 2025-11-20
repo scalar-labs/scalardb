@@ -101,11 +101,16 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     admin.truncateTable(namespace, TABLE);
     admin.truncateTable(namespace, TABLE_WITH_TEXT);
     admin.truncateCoordinatorTables();
+    waitToAvoidRateLimiting();
   }
 
   @AfterAll

@@ -51,6 +51,7 @@ import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -160,11 +161,21 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     admin1.truncateTable(namespace1, TABLE_1);
     admin1.truncateCoordinatorTables();
     admin2.truncateTable(namespace2, TABLE_2);
+    waitToAvoidRateLimiting();
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception {
+    waitToAvoidRateLimiting();
   }
 
   @AfterAll

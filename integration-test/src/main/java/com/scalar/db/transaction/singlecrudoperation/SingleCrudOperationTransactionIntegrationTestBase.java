@@ -46,6 +46,7 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
                 .clusteringKey(clusteringKey);
         prepareNonKeyColumns(i, j).forEach(insert::value);
         manager.insert(insert.build());
+        waitToAvoidRateLimiting();
       }
     }
   }

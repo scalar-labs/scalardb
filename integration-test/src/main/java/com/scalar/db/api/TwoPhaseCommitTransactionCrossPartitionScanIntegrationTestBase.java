@@ -112,11 +112,16 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     admin1.truncateTable(namespace1, TABLE_1);
     admin1.truncateCoordinatorTables();
     admin2.truncateTable(namespace2, TABLE_2);
+    waitToAvoidRateLimiting();
   }
 
   @AfterAll

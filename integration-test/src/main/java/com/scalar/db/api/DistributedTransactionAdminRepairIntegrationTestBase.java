@@ -153,14 +153,20 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     admin.dropCoordinatorTables(true);
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   protected void setUp() throws Exception {
     createTable();
+    waitToAvoidRateLimiting();
   }
 
   @AfterEach
   protected void afterEach() throws Exception {
     dropTable();
+    waitToAvoidRateLimiting();
   }
 
   @Test

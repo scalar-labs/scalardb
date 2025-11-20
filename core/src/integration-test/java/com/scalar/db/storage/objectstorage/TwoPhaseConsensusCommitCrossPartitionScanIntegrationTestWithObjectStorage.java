@@ -1,8 +1,10 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBase;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +16,13 @@ public class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestWithObjectS
     Properties properties = ConsensusCommitObjectStorageEnv.getProperties(testName);
     properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     return properties;
+  }
+
+  @Override
+  protected void waitToAvoidRateLimiting() {
+    if (ObjectStorageEnv.isCloudStorage()) {
+      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+    }
   }
 
   @Test
