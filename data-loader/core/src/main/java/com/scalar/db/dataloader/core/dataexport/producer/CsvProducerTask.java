@@ -118,6 +118,9 @@ public class CsvProducerTask extends ProducerTask {
    */
   private String convertToString(Result result, String columnName, DataType dataType) {
     if (result.isNull(columnName)) {
+      if (dataType.equals(DataType.TEXT)) {
+        return "/N";
+      }
       return null;
     }
     String value = "";

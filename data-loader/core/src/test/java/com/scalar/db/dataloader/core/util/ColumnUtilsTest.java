@@ -309,4 +309,18 @@ class ColumnUtilsTest {
     textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "nuLL");
     assertEquals(TextColumn.of(columnName, "nuLL"), textCol);
   }
+
+  /**
+   * Tests that when the string value custom null value "/n" is provided for TEXT columns, it is
+   * treated as an actual null value
+   */
+  @Test
+  void createColumnFromValue_valueIsCustomNullValue_shouldRemainLiteralForTextType()
+      throws ColumnParsingException {
+    String columnName = "textColumn";
+    ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
+
+    Column<?> textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "/N");
+    assertEquals(TextColumn.ofNull(columnName), textCol);
+  }
 }
