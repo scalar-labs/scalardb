@@ -1,7 +1,9 @@
 package com.scalar.db.storage.multistorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -10,12 +12,15 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -884,5 +889,146 @@ public class MultiStorageAdminTest {
     verify(admin1).getStorageInfo("ns1");
     verify(admin2).getStorageInfo("ns2");
     verify(admin3).getStorageInfo("ns3");
+  }
+
+  @Test
+  public void createVirtualTable_ProperArgumentsGiven_ShouldCallAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = "vtable";
+    String leftSourceNamespace = NAMESPACE2;
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = NAMESPACE2;
+    String rightSourceTable = "right_table";
+    VirtualTableJoinType joinType = VirtualTableJoinType.INNER;
+    Map<String, String> options = Collections.emptyMap();
+
+    // Mock getStorageInfo to return the same storage for all namespaces
+    StorageInfo storageInfo =
+        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+    when(admin2.getStorageInfo(namespace)).thenReturn(storageInfo);
+    when(admin2.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
+    when(admin2.getStorageInfo(rightSourceNamespace)).thenReturn(storageInfo);
+
+    // Act
+    multiStorageAdmin.createVirtualTable(
+        namespace,
+        table,
+        leftSourceNamespace,
+        leftSourceTable,
+        rightSourceNamespace,
+        rightSourceTable,
+        joinType,
+        options);
+
+    // Assert
+    verify(admin2)
+        .createVirtualTable(
+            namespace,
+            table,
+            leftSourceNamespace,
+            leftSourceTable,
+            rightSourceNamespace,
+            rightSourceTable,
+            joinType,
+            options);
+  }
+
+  @Test
+  public void
+      createVirtualTable_VirtualTableInDifferentStorageFromSourceTables_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE3;
+    String table = "vtable";
+    String leftSourceNamespace = NAMESPACE2;
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = NAMESPACE2;
+    String rightSourceTable = "right_table";
+    VirtualTableJoinType joinType = VirtualTableJoinType.INNER;
+    Map<String, String> options = Collections.emptyMap();
+
+    // Mock getStorageInfo - virtual table in s3, both sources in s2
+    StorageInfo storageInfoForNamespace =
+        new StorageInfoImpl("s3", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+    StorageInfo storageInfoForSources =
+        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+    when(admin3.getStorageInfo(namespace)).thenReturn(storageInfoForNamespace);
+    when(admin2.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfoForSources);
+    when(admin2.getStorageInfo(rightSourceNamespace)).thenReturn(storageInfoForSources);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                multiStorageAdmin.createVirtualTable(
+                    namespace,
+                    table,
+                    leftSourceNamespace,
+                    leftSourceTable,
+                    rightSourceNamespace,
+                    rightSourceTable,
+                    joinType,
+                    options))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("virtual table must be in the same storage as its source tables");
+  }
+
+  @Test
+  public void
+      createVirtualTable_SourceTablesInDifferentStorages_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = "vtable";
+    String leftSourceNamespace = NAMESPACE2;
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = NAMESPACE3;
+    String rightSourceTable = "right_table";
+    VirtualTableJoinType joinType = VirtualTableJoinType.INNER;
+    Map<String, String> options = Collections.emptyMap();
+
+    // Mock getStorageInfo to return different storages for left and right sources
+    StorageInfo storageInfo1 =
+        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+    StorageInfo storageInfo2 =
+        new StorageInfoImpl("s3", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+    when(admin2.getStorageInfo(namespace)).thenReturn(storageInfo1);
+    when(admin2.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo1);
+    when(admin3.getStorageInfo(rightSourceNamespace)).thenReturn(storageInfo2);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                multiStorageAdmin.createVirtualTable(
+                    namespace,
+                    table,
+                    leftSourceNamespace,
+                    leftSourceTable,
+                    rightSourceNamespace,
+                    rightSourceTable,
+                    joinType,
+                    options))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("source tables must be in the same storage");
+  }
+
+  @Test
+  public void getVirtualTableInfo_ProperArgumentsGiven_ShouldCallAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String table = TABLE1;
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(admin1.getVirtualTableInfo(namespace, table)).thenReturn(Optional.of(virtualTableInfo));
+
+    // Act
+    Optional<VirtualTableInfo> result = multiStorageAdmin.getVirtualTableInfo(namespace, table);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(virtualTableInfo);
+    verify(admin1).getVirtualTableInfo(namespace, table);
   }
 }

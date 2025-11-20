@@ -34,9 +34,12 @@ import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.JDBCType;
@@ -49,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +102,8 @@ public class JdbcAdminTest {
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
   @Mock private JdbcConfig config;
+  @Mock private TableMetadataService tableMetadataService;
+  @Mock private VirtualTableMetadataService virtualTableMetadataService;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -112,7 +118,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(rdbEngine);
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
       mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
-      return new JdbcAdmin(dataSource, config);
+      return new JdbcAdmin(dataSource, config, virtualTableMetadataService);
     }
   }
 
@@ -122,7 +128,16 @@ public class JdbcAdminTest {
       mocked
           .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
           .thenReturn(rdbEngineStrategy);
-      return new JdbcAdmin(dataSource, config);
+      return new JdbcAdmin(dataSource, config, virtualTableMetadataService);
+    }
+  }
+
+  private JdbcAdmin createJdbcAdmin() {
+    // Arrange
+    RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL);
+    try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
+      mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
+      return new JdbcAdmin(dataSource, config, tableMetadataService, virtualTableMetadataService);
     }
   }
 
@@ -152,6 +167,28 @@ public class JdbcAdminTest {
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
+  }
+
+  private ResultSet mockResultSet(SelectAllFromMetadataTableResultSetMocker.Row... rows)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
+    // mocked to return the current row data
+    doAnswer(new SelectAllFromMetadataTableResultSetMocker(Arrays.asList(rows)))
+        .when(resultSet)
+        .next();
+    return resultSet;
+  }
+
+  private ResultSet mockResultSet(SelectFullTableNameFromMetadataTableResultSetMocker.Row... rows)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
+    // mocked to return the current row data
+    doAnswer(new SelectFullTableNameFromMetadataTableResultSetMocker(Arrays.asList(rows)))
+        .when(resultSet)
+        .next();
+    return resultSet;
   }
 
   @Test
@@ -283,28 +320,6 @@ public class JdbcAdminTest {
     verify(connection).prepareStatement(expectedSelectStatements);
   }
 
-  public ResultSet mockResultSet(SelectAllFromMetadataTableResultSetMocker.Row... rows)
-      throws SQLException {
-    ResultSet resultSet = mock(ResultSet.class);
-    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
-    // mocked to return the current row data
-    doAnswer(new SelectAllFromMetadataTableResultSetMocker(Arrays.asList(rows)))
-        .when(resultSet)
-        .next();
-    return resultSet;
-  }
-
-  public ResultSet mockResultSet(SelectFullTableNameFromMetadataTableResultSetMocker.Row... rows)
-      throws SQLException {
-    ResultSet resultSet = mock(ResultSet.class);
-    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
-    // mocked to return the current row data
-    doAnswer(new SelectFullTableNameFromMetadataTableResultSetMocker(Arrays.asList(rows)))
-        .when(resultSet)
-        .next();
-    return resultSet;
-  }
-
   @Test
   public void getTableMetadata_MetadataSchemaNotExistsForX_ShouldReturnNull()
       throws SQLException, ExecutionException {
@@ -332,6 +347,108 @@ public class JdbcAdminTest {
 
     // Assert
     assertThat(actual).isNull();
+  }
+
+  @Test
+  public void getTableMetadata_VirtualTableExists_ShouldReturnMergedTableMetadata()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Mock tableMetadataService to return null (not a regular table)
+    when(tableMetadataService.getTableMetadata(any(Connection.class), eq(namespace), eq(table)))
+        .thenReturn(null);
+
+    // Mock virtualTableMetadataService to return virtual table info
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getNamespaceName()).thenReturn(namespace);
+    when(virtualTableInfo.getTableName()).thenReturn(table);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+    when(virtualTableInfo.getJoinType()).thenReturn(VirtualTableJoinType.INNER);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(
+            any(Connection.class), eq(namespace), eq(table)))
+        .thenReturn(virtualTableInfo);
+
+    // Mock source table metadata
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addPartitionKey("pk2")
+            .addClusteringKey("ck1", Order.ASC)
+            .addClusteringKey("ck2", Order.DESC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("pk2", DataType.TEXT)
+            .addColumn("ck1", DataType.BIGINT)
+            .addColumn("ck2", DataType.TEXT)
+            .addColumn("col1", DataType.BOOLEAN)
+            .addColumn("col2", DataType.DOUBLE)
+            .addColumn("col3", DataType.BLOB)
+            .addSecondaryIndex("ck1")
+            .addSecondaryIndex("col1")
+            .addSecondaryIndex("col2")
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addPartitionKey("pk2")
+            .addClusteringKey("ck1", Order.ASC)
+            .addClusteringKey("ck2", Order.DESC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("pk2", DataType.TEXT)
+            .addColumn("ck1", DataType.BIGINT)
+            .addColumn("ck2", DataType.TEXT)
+            .addColumn("col4", DataType.FLOAT)
+            .addColumn("col5", DataType.DATE)
+            .addColumn("col6", DataType.TIMESTAMP)
+            .addSecondaryIndex("ck2")
+            .addSecondaryIndex("col4")
+            .build();
+
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(leftSourceNamespace), eq(leftSourceTable)))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(rightSourceNamespace), eq(rightSourceTable)))
+        .thenReturn(rightSourceTableMetadata);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    TableMetadata result = admin.getTableMetadata(namespace, table);
+
+    // Assert
+    assertThat(result).isNotNull();
+    assertThat(result.getPartitionKeyNames()).containsExactly("pk1", "pk2");
+    assertThat(result.getClusteringKeyNames()).containsExactly("ck1", "ck2");
+    assertThat(result.getClusteringOrder("ck1")).isEqualTo(Order.ASC);
+    assertThat(result.getClusteringOrder("ck2")).isEqualTo(Order.DESC);
+    assertThat(result.getColumnNames())
+        .containsExactlyInAnyOrder(
+            "pk1", "pk2", "ck1", "ck2", "col1", "col2", "col3", "col4", "col5", "col6");
+    assertThat(result.getColumnDataType("pk1")).isEqualTo(DataType.INT);
+    assertThat(result.getColumnDataType("pk2")).isEqualTo(DataType.TEXT);
+    assertThat(result.getColumnDataType("ck1")).isEqualTo(DataType.BIGINT);
+    assertThat(result.getColumnDataType("ck2")).isEqualTo(DataType.TEXT);
+    assertThat(result.getColumnDataType("col1")).isEqualTo(DataType.BOOLEAN);
+    assertThat(result.getColumnDataType("col2")).isEqualTo(DataType.DOUBLE);
+    assertThat(result.getColumnDataType("col3")).isEqualTo(DataType.BLOB);
+    assertThat(result.getColumnDataType("col4")).isEqualTo(DataType.FLOAT);
+    assertThat(result.getColumnDataType("col5")).isEqualTo(DataType.DATE);
+    assertThat(result.getColumnDataType("col6")).isEqualTo(DataType.TIMESTAMP);
+    assertThat(result.getSecondaryIndexNames())
+        .containsExactlyInAnyOrder("ck1", "ck2", "col1", "col2", "col4");
   }
 
   @Test
@@ -1706,6 +1823,80 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void truncateTable_VirtualTableExists_ShouldTruncateSourceTables() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.truncateTable(namespace, table);
+
+    // Assert
+    verify(statement, times(2)).execute(sqlCaptor.capture());
+    List<String> executedSqls = sqlCaptor.getAllValues();
+    assertThat(executedSqls).hasSize(2);
+    assertThat(executedSqls.get(0)).isEqualTo("TRUNCATE TABLE `ns`.`left_table`");
+    assertThat(executedSqls.get(1)).isEqualTo("TRUNCATE TABLE `ns`.`right_table`");
+  }
+
+  @Test
+  public void truncateTable_SQLExceptionThrown_ShouldThrowExecutionException() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+    when(statement.execute(anyString())).thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.truncateTable(namespace, table))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+  }
+
+  @Test
   public void dropTable_forMysqlWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata()
       throws Exception {
     dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
@@ -1956,6 +2147,108 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void dropTable_VirtualTableExists_ShouldDropViewAndDeleteMetadata() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    doNothing()
+        .when(virtualTableMetadataService)
+        .deleteFromVirtualTablesTable(any(Connection.class), eq(namespace), eq(table));
+    doNothing()
+        .when(virtualTableMetadataService)
+        .deleteVirtualTablesTableIfEmpty(any(Connection.class));
+
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.dropTable(namespace, table);
+
+    // Assert
+    verify(statement).execute(sqlCaptor.capture());
+    String executedSql = sqlCaptor.getValue();
+    assertThat(executedSql).isEqualTo("DROP VIEW `ns`.`vtable`");
+    verify(virtualTableMetadataService)
+        .deleteFromVirtualTablesTable(eq(connection), eq(namespace), eq(table));
+    verify(virtualTableMetadataService).deleteVirtualTablesTableIfEmpty(eq(connection));
+  }
+
+  @Test
+  public void dropTable_SourceTableUsedByVirtualTable_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "source_table";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Not a virtual table itself
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(null);
+
+    // But used as a source table
+    VirtualTableInfo virtualTableInfo1 = mock(VirtualTableInfo.class);
+    when(virtualTableInfo1.getNamespaceName()).thenReturn("ns");
+    when(virtualTableInfo1.getTableName()).thenReturn("vtable1");
+
+    VirtualTableInfo virtualTableInfo2 = mock(VirtualTableInfo.class);
+    when(virtualTableInfo2.getNamespaceName()).thenReturn("ns");
+    when(virtualTableInfo2.getTableName()).thenReturn("vtable2");
+
+    List<VirtualTableInfo> virtualTableInfos = Arrays.asList(virtualTableInfo1, virtualTableInfo2);
+
+    when(virtualTableMetadataService.getVirtualTableInfosBySourceTable(
+            connection, namespace, table))
+        .thenReturn(virtualTableInfos);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropTable(namespace, table))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ns.source_table")
+        .hasMessageContaining("ns.vtable1")
+        .hasMessageContaining("ns.vtable2");
+  }
+
+  @Test
+  public void dropTable_SQLExceptionThrown_ShouldThrowExecutionException() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+    when(statement.execute(anyString())).thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropTable(namespace, table))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+  }
+
+  @Test
   public void dropNamespace_forMysql_shouldDropNamespace() throws Exception {
     dropSchema_forX_shouldDropSchema(RdbEngine.MYSQL, "DROP SCHEMA `my_ns`");
   }
@@ -2078,8 +2371,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void getNamespaceTables_forMysql_ShouldReturnTableNames() throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
+  public void getNamespaceTableNames_forMysql_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
         RdbEngine.MYSQL,
         "SELECT DISTINCT `full_table_name` FROM `"
             + METADATA_SCHEMA
@@ -2087,8 +2380,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void getNamespaceTables_forPostgresql_ShouldReturnTableNames() throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
+  public void getNamespaceTableNames_forPostgresql_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
         RdbEngine.POSTGRESQL,
         "SELECT DISTINCT \"full_table_name\" FROM \""
             + METADATA_SCHEMA
@@ -2096,8 +2389,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void getNamespaceTables_forSqlServer_ShouldReturnTableNames() throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
+  public void getNamespaceTableNames_forSqlServer_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
         RdbEngine.SQL_SERVER,
         "SELECT DISTINCT [full_table_name] FROM ["
             + METADATA_SCHEMA
@@ -2105,8 +2398,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void getNamespaceTables_forOracle_ShouldReturnTableNames() throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
+  public void getNamespaceTableNames_forOracle_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
         RdbEngine.ORACLE,
         "SELECT DISTINCT \"full_table_name\" FROM \""
             + METADATA_SCHEMA
@@ -2114,8 +2407,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void getNamespaceTables_forSqlite_ShouldReturnTableNames() throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
+  public void getNamespaceTableNames_forSqlite_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
         RdbEngine.SQLITE,
         "SELECT DISTINCT \"full_table_name\" FROM \""
             + METADATA_SCHEMA
@@ -2123,15 +2416,15 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void getNamespaceTables_forDb2_ShouldReturnTableNames() throws Exception {
-    getNamespaceTables_forX_ShouldReturnTableNames(
+  public void getNamespaceTableNames_forDb2_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
         RdbEngine.DB2,
         "SELECT DISTINCT \"full_table_name\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
-  private void getNamespaceTables_forX_ShouldReturnTableNames(
+  private void getNamespaceTableNames_forX_ShouldReturnTableNames(
       RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
     String namespace = "ns1";
@@ -2168,6 +2461,134 @@ public class JdbcAdminTest {
     verify(connection).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
     verify(preparedStatement).setString(1, namespace + ".%");
+  }
+
+  @Test
+  public void getNamespaceTableNames_RegularAndVirtualTablesExist_ShouldReturnBoth()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    Set<String> regularTables = new HashSet<>(Arrays.asList("table1", "table2"));
+    Set<String> virtualTables = new HashSet<>(Arrays.asList("vtable1", "vtable2"));
+
+    when(tableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(regularTables);
+    when(virtualTableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(virtualTables);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    Set<String> result = admin.getNamespaceTableNames(namespace);
+
+    // Assert
+    assertThat(result).containsExactlyInAnyOrder("table1", "table2", "vtable1", "vtable2");
+    verify(tableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+    verify(virtualTableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+  }
+
+  @Test
+  public void getNamespaceTableNames_OnlyRegularTablesExist_ShouldReturnRegularTablesOnly()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    Set<String> regularTables = new HashSet<>(Arrays.asList("table1", "table2"));
+    Set<String> virtualTables = Collections.emptySet();
+
+    when(tableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(regularTables);
+    when(virtualTableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(virtualTables);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    Set<String> result = admin.getNamespaceTableNames(namespace);
+
+    // Assert
+    assertThat(result).containsExactlyInAnyOrder("table1", "table2");
+    verify(tableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+    verify(virtualTableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+  }
+
+  @Test
+  public void getNamespaceTableNames_OnlyVirtualTablesExist_ShouldReturnVirtualTablesOnly()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    Set<String> regularTables = Collections.emptySet();
+    Set<String> virtualTables = new HashSet<>(Arrays.asList("vtable1", "vtable2"));
+
+    when(tableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(regularTables);
+    when(virtualTableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(virtualTables);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    Set<String> result = admin.getNamespaceTableNames(namespace);
+
+    // Assert
+    assertThat(result).containsExactlyInAnyOrder("vtable1", "vtable2");
+    verify(tableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+    verify(virtualTableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+  }
+
+  @Test
+  public void getNamespaceTableNames_NoTablesExist_ShouldReturnEmptySet() throws Exception {
+    // Arrange
+    String namespace = "ns";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    Set<String> regularTables = Collections.emptySet();
+    Set<String> virtualTables = Collections.emptySet();
+
+    when(tableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(regularTables);
+    when(virtualTableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenReturn(virtualTables);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    Set<String> result = admin.getNamespaceTableNames(namespace);
+
+    // Assert
+    assertThat(result).isEmpty();
+    verify(tableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+    verify(virtualTableMetadataService).getNamespaceTableNames(eq(connection), eq(namespace));
+  }
+
+  @Test
+  public void getNamespaceTableNames_SQLExceptionThrown_ShouldThrowExecutionException()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+
+    when(tableMetadataService.getNamespaceTableNames(connection, namespace))
+        .thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getNamespaceTableNames(namespace))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
   }
 
   @Test
@@ -2518,6 +2939,245 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void
+      createIndex_VirtualTableWithColumnInLeftSourceTable_ShouldCreateIndexOnLeftSourceTable()
+          throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "col1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.createIndex(namespace, table, columnName, Collections.emptyMap());
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement).execute(captor.capture());
+    assertThat(captor.getValue())
+        .isEqualTo("CREATE INDEX `index_ns_left_table_col1` ON `ns`.`left_table` (`col1`)");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection), eq(leftSourceNamespace), eq(leftSourceTable), eq(columnName), eq(true));
+  }
+
+  @Test
+  public void
+      createIndex_VirtualTableWithColumnInRightSourceTable_ShouldCreateIndexOnRightSourceTable()
+          throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "col2";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.createIndex(namespace, table, columnName, Collections.emptyMap());
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(rightSourceNamespace), eq(rightSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement).execute(captor.capture());
+    assertThat(captor.getValue())
+        .isEqualTo("CREATE INDEX `index_ns_right_table_col2` ON `ns`.`right_table` (`col2`)");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(columnName),
+            eq(true));
+  }
+
+  @Test
+  public void createIndex_VirtualTableWithPrimaryKeyColumn_ShouldCreateIndexOnBothSourceTables()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "pk1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.createIndex(namespace, table, columnName, Collections.emptyMap());
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(rightSourceNamespace), eq(rightSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(2)).execute(captor.capture());
+    assertThat(captor.getAllValues())
+        .containsExactly(
+            "CREATE INDEX `index_ns_left_table_pk1` ON `ns`.`left_table` (`pk1`)",
+            "CREATE INDEX `index_ns_right_table_pk1` ON `ns`.`right_table` (`pk1`)");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection), eq(leftSourceNamespace), eq(leftSourceTable), eq(columnName), eq(true));
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(columnName),
+            eq(true));
+  }
+
+  @Test
+  public void createIndex_SQLExceptionThrown_ShouldThrowExecutionException() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String columnName = "col1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.createIndex(namespace, table, columnName, Collections.emptyMap()))
+        .isInstanceOf(ExecutionException.class)
+        .hasMessageContaining("Creating the secondary index")
+        .hasMessageContaining(columnName)
+        .hasMessageContaining(getFullTableName(namespace, table))
+        .hasCause(sqlException);
+  }
+
+  @Test
   public void dropIndex_forColumnTypeWithoutRequiredAlterationForMysql_ShouldDropIndexProperly()
       throws Exception {
     dropIndex_forColumnTypeWithoutRequiredAlterationForX_ShouldDropIndexProperly(
@@ -2753,6 +3413,251 @@ public class JdbcAdminTest {
     }
     assertThat(captor.getAllValues().get(expectedAlterColumnStatements.length + 1))
         .isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void dropIndex_VirtualTableWithColumnInLeftSourceTable_ShouldDropIndexOnLeftSourceTable()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "col1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.dropIndex(namespace, table, columnName);
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement).execute(captor.capture());
+    assertThat(captor.getValue())
+        .isEqualTo("DROP INDEX `index_ns_left_table_col1` ON `ns`.`left_table`");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(leftSourceNamespace),
+            eq(leftSourceTable),
+            eq(columnName),
+            eq(false));
+  }
+
+  @Test
+  public void dropIndex_VirtualTableWithColumnInRightSourceTable_ShouldDropIndexOnRightSourceTable()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "col2";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.dropIndex(namespace, table, columnName);
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(rightSourceNamespace), eq(rightSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement).execute(captor.capture());
+    assertThat(captor.getValue())
+        .isEqualTo("DROP INDEX `index_ns_right_table_col2` ON `ns`.`right_table`");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(columnName),
+            eq(false));
+  }
+
+  @Test
+  public void dropIndex_VirtualTableWithPrimaryKeyColumn_ShouldDropIndexOnBothSourceTables()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    String columnName = "pk1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfo.getLeftSourceNamespaceName()).thenReturn(leftSourceNamespace);
+    when(virtualTableInfo.getLeftSourceTableName()).thenReturn(leftSourceTable);
+    when(virtualTableInfo.getRightSourceNamespaceName()).thenReturn(rightSourceNamespace);
+    when(virtualTableInfo.getRightSourceTableName()).thenReturn(rightSourceTable);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(virtualTableInfo);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addColumn("pk1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(connection, leftSourceNamespace, leftSourceTable))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    admin.dropIndex(namespace, table, columnName);
+
+    // Assert
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(leftSourceNamespace), eq(leftSourceTable));
+    verify(tableMetadataService)
+        .getTableMetadata(eq(connection), eq(rightSourceNamespace), eq(rightSourceTable));
+
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(statement, times(2)).execute(captor.capture());
+    assertThat(captor.getAllValues())
+        .containsExactly(
+            "DROP INDEX `index_ns_left_table_pk1` ON `ns`.`left_table`",
+            "DROP INDEX `index_ns_right_table_pk1` ON `ns`.`right_table`");
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(leftSourceNamespace),
+            eq(leftSourceTable),
+            eq(columnName),
+            eq(false));
+    verify(tableMetadataService)
+        .updateTableMetadata(
+            eq(connection),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(columnName),
+            eq(false));
+  }
+
+  @Test
+  public void dropIndex_VirtualTableWithSQLException_ShouldThrowExecutionException()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String columnName = "col1";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropIndex(namespace, table, columnName))
+        .isInstanceOf(ExecutionException.class)
+        .hasMessageContaining("Dropping the secondary index")
+        .hasMessageContaining(columnName)
+        .hasMessageContaining(getFullTableName(namespace, table))
+        .hasCause(sqlException);
   }
 
   @Test
@@ -4181,6 +5086,392 @@ public class JdbcAdminTest {
             () -> admin.createIndex(namespace, table, indexColumn, Collections.emptyMap()))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContainingAll("BLOB", "index");
+  }
+
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  @Test
+  public void createVirtualTable_WithInnerJoin_ShouldCreateViewWithInnerJoin() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    VirtualTableJoinType joinType = VirtualTableJoinType.INNER;
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1", Order.ASC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("ck1", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1", Order.ASC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("ck1", DataType.TEXT)
+            .addColumn("col2", DataType.TEXT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(leftSourceNamespace), eq(leftSourceTable)))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(rightSourceNamespace), eq(rightSourceTable)))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+    doNothing()
+        .when(virtualTableMetadataService)
+        .createVirtualTablesTableIfNotExists(any(Connection.class));
+    doNothing()
+        .when(virtualTableMetadataService)
+        .insertIntoVirtualTablesTable(
+            any(Connection.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            any(VirtualTableJoinType.class),
+            anyString());
+
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    // Build expected SQL (MySQL)
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(RdbEngine.MYSQL);
+    String expectedSql =
+        "CREATE VIEW "
+            + rdbEngineStrategy.encloseFullTableName(namespace, table)
+            + " AS SELECT t1."
+            + rdbEngineStrategy.enclose("pk1")
+            + " AS "
+            + rdbEngineStrategy.enclose("pk1")
+            + ", t1."
+            + rdbEngineStrategy.enclose("ck1")
+            + " AS "
+            + rdbEngineStrategy.enclose("ck1")
+            + ", t1."
+            + rdbEngineStrategy.enclose("col1")
+            + " AS "
+            + rdbEngineStrategy.enclose("col1")
+            + ", t2."
+            + rdbEngineStrategy.enclose("col2")
+            + " AS "
+            + rdbEngineStrategy.enclose("col2")
+            + " FROM "
+            + rdbEngineStrategy.encloseFullTableName(leftSourceNamespace, leftSourceTable)
+            + " t1 INNER JOIN "
+            + rdbEngineStrategy.encloseFullTableName(rightSourceNamespace, rightSourceTable)
+            + " t2 ON t1."
+            + rdbEngineStrategy.enclose("pk1")
+            + " = t2."
+            + rdbEngineStrategy.enclose("pk1")
+            + " AND t1."
+            + rdbEngineStrategy.enclose("ck1")
+            + " = t2."
+            + rdbEngineStrategy.enclose("ck1");
+
+    JdbcAdmin admin = createJdbcAdmin();
+    JdbcAdmin spyAdmin = spy(admin);
+    doNothing().when(spyAdmin).createMetadataSchemaIfNotExists(any(Connection.class));
+
+    // Act
+    spyAdmin.createVirtualTable(
+        namespace,
+        table,
+        leftSourceNamespace,
+        leftSourceTable,
+        rightSourceNamespace,
+        rightSourceTable,
+        joinType,
+        Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute(sqlCaptor.capture());
+    String executedSql = sqlCaptor.getValue();
+    assertThat(executedSql).isEqualTo(expectedSql);
+    verify(spyAdmin).createMetadataSchemaIfNotExists(eq(connection));
+    verify(virtualTableMetadataService).createVirtualTablesTableIfNotExists(eq(connection));
+    verify(virtualTableMetadataService)
+        .insertIntoVirtualTablesTable(
+            any(Connection.class),
+            eq(namespace),
+            eq(table),
+            eq(leftSourceNamespace),
+            eq(leftSourceTable),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(joinType),
+            eq(""));
+  }
+
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  @Test
+  public void createVirtualTable_WithLeftOuterJoin_ShouldCreateViewWithLeftOuterJoin()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    VirtualTableJoinType joinType = VirtualTableJoinType.LEFT_OUTER;
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1", Order.ASC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("ck1", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1", Order.ASC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("ck1", DataType.TEXT)
+            .addColumn("col2", DataType.TEXT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(leftSourceNamespace), eq(leftSourceTable)))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(rightSourceNamespace), eq(rightSourceTable)))
+        .thenReturn(rightSourceTableMetadata);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+    doNothing()
+        .when(virtualTableMetadataService)
+        .createVirtualTablesTableIfNotExists(any(Connection.class));
+    doNothing()
+        .when(virtualTableMetadataService)
+        .insertIntoVirtualTablesTable(
+            any(Connection.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            any(VirtualTableJoinType.class),
+            anyString());
+
+    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+
+    // Build expected SQL (MySQL)
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(RdbEngine.MYSQL);
+    String expectedSql =
+        "CREATE VIEW "
+            + rdbEngineStrategy.encloseFullTableName(namespace, table)
+            + " AS SELECT t1."
+            + rdbEngineStrategy.enclose("pk1")
+            + " AS "
+            + rdbEngineStrategy.enclose("pk1")
+            + ", t1."
+            + rdbEngineStrategy.enclose("ck1")
+            + " AS "
+            + rdbEngineStrategy.enclose("ck1")
+            + ", t1."
+            + rdbEngineStrategy.enclose("col1")
+            + " AS "
+            + rdbEngineStrategy.enclose("col1")
+            + ", t2."
+            + rdbEngineStrategy.enclose("col2")
+            + " AS "
+            + rdbEngineStrategy.enclose("col2")
+            + " FROM "
+            + rdbEngineStrategy.encloseFullTableName(leftSourceNamespace, leftSourceTable)
+            + " t1 LEFT OUTER JOIN "
+            + rdbEngineStrategy.encloseFullTableName(rightSourceNamespace, rightSourceTable)
+            + " t2 ON t1."
+            + rdbEngineStrategy.enclose("pk1")
+            + " = t2."
+            + rdbEngineStrategy.enclose("pk1")
+            + " AND t1."
+            + rdbEngineStrategy.enclose("ck1")
+            + " = t2."
+            + rdbEngineStrategy.enclose("ck1");
+
+    JdbcAdmin admin = createJdbcAdmin();
+    JdbcAdmin spyAdmin = spy(admin);
+    doNothing().when(spyAdmin).createMetadataSchemaIfNotExists(any(Connection.class));
+
+    // Act
+    spyAdmin.createVirtualTable(
+        namespace,
+        table,
+        leftSourceNamespace,
+        leftSourceTable,
+        rightSourceNamespace,
+        rightSourceTable,
+        joinType,
+        Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute(sqlCaptor.capture());
+    String executedSql = sqlCaptor.getValue();
+    assertThat(executedSql).isEqualTo(expectedSql);
+    verify(spyAdmin).createMetadataSchemaIfNotExists(eq(connection));
+    verify(virtualTableMetadataService).createVirtualTablesTableIfNotExists(eq(connection));
+    verify(virtualTableMetadataService)
+        .insertIntoVirtualTablesTable(
+            eq(connection),
+            eq(namespace),
+            eq(table),
+            eq(leftSourceNamespace),
+            eq(leftSourceTable),
+            eq(rightSourceNamespace),
+            eq(rightSourceTable),
+            eq(joinType),
+            eq(""));
+  }
+
+  @Test
+  public void createVirtualTable_SQLExceptionThrown_ShouldThrowExecutionException()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+    String leftSourceNamespace = "ns";
+    String leftSourceTable = "left_table";
+    String rightSourceNamespace = "ns";
+    String rightSourceTable = "right_table";
+    VirtualTableJoinType joinType = VirtualTableJoinType.INNER;
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("ck1", DataType.TEXT)
+            .addColumn("col1", DataType.TEXT)
+            .build();
+
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1")
+            .addColumn("pk1", DataType.TEXT)
+            .addColumn("ck1", DataType.TEXT)
+            .addColumn("col2", DataType.TEXT)
+            .build();
+
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(leftSourceNamespace), eq(leftSourceTable)))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(
+            any(Connection.class), eq(rightSourceNamespace), eq(rightSourceTable)))
+        .thenReturn(rightSourceTableMetadata);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+    when(statement.execute(anyString())).thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                admin.createVirtualTable(
+                    namespace,
+                    table,
+                    leftSourceNamespace,
+                    leftSourceTable,
+                    rightSourceNamespace,
+                    rightSourceTable,
+                    joinType,
+                    Collections.emptyMap()))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+  }
+
+  @Test
+  public void getVirtualTableInfo_VirtualTableExists_ShouldReturnVirtualTableInfo()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    VirtualTableInfo expectedVirtualTableInfo = mock(VirtualTableInfo.class);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(expectedVirtualTableInfo);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    Optional<VirtualTableInfo> result = admin.getVirtualTableInfo(namespace, table);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(expectedVirtualTableInfo);
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+  }
+
+  @Test
+  public void getVirtualTableInfo_VirtualTableDoesNotExist_ShouldReturnEmptyOptional()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenReturn(null);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act
+    Optional<VirtualTableInfo> result = admin.getVirtualTableInfo(namespace, table);
+
+    // Assert
+    assertThat(result).isEmpty();
+    verify(virtualTableMetadataService)
+        .getVirtualTableInfo(eq(connection), eq(namespace), eq(table));
+  }
+
+  @Test
+  public void getVirtualTableInfo_SQLExceptionThrown_ShouldThrowExecutionException()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "vtable";
+
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    SQLException sqlException = new SQLException("SQL error occurred");
+
+    when(virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table))
+        .thenThrow(sqlException);
+
+    JdbcAdmin admin = createJdbcAdmin();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getVirtualTableInfo(namespace, table))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

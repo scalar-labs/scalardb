@@ -3,11 +3,15 @@ package com.scalar.db.common;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -473,6 +477,188 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
     } catch (ExecutionException e) {
       throw new ExecutionException(
           CoreError.GETTING_STORAGE_INFO_FAILED.buildMessage(namespace), e);
+    }
+  }
+
+  @Override
+  public void createVirtualTable(
+      String namespace,
+      String table,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      VirtualTableJoinType joinType,
+      Map<String, String> options)
+      throws ExecutionException {
+    StorageInfo storageInfo = getStorageInfo(leftSourceNamespace);
+    switch (storageInfo.getMutationAtomicityUnit()) {
+      case STORAGE:
+        break;
+      case NAMESPACE:
+        if (!leftSourceNamespace.equals(rightSourceNamespace)) {
+          throw new IllegalArgumentException(
+              CoreError.VIRTUAL_TABLE_SOURCE_TABLES_OUTSIDE_OF_ATOMICITY_UNIT.buildMessage(
+                  storageInfo.getStorageName(),
+                  storageInfo.getMutationAtomicityUnit(),
+                  ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+                  ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+        }
+        break;
+      default:
+        throw new UnsupportedOperationException(
+            CoreError.VIRTUAL_TABLE_NOT_SUPPORTED_IN_STORAGE.buildMessage(
+                storageInfo.getStorageName(), storageInfo.getMutationAtomicityUnit()));
+    }
+
+    if (checkNamespace && !namespaceExists(namespace)) {
+      throw new IllegalArgumentException(CoreError.NAMESPACE_NOT_FOUND.buildMessage(namespace));
+    }
+
+    if (tableExists(namespace, table)) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    TableMetadata leftSourceTableMetadata = getTableMetadata(leftSourceNamespace, leftSourceTable);
+    if (leftSourceTableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable)));
+    }
+
+    TableMetadata rightSourceTableMetadata =
+        getTableMetadata(rightSourceNamespace, rightSourceTable);
+    if (rightSourceTableMetadata == null) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+    }
+
+    // Check that the partition key and the clustering key names match
+    if (!leftSourceTableMetadata
+        .getPartitionKeyNames()
+        .equals(rightSourceTableMetadata.getPartitionKeyNames())) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_PRIMARY_KEY.buildMessage(
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+    }
+    if (!leftSourceTableMetadata
+        .getClusteringKeyNames()
+        .equals(rightSourceTableMetadata.getClusteringKeyNames())) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_PRIMARY_KEY.buildMessage(
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+    }
+
+    // Check that partition key data types match
+    for (String partitionKey : leftSourceTableMetadata.getPartitionKeyNames()) {
+      if (leftSourceTableMetadata.getColumnDataType(partitionKey)
+          != rightSourceTableMetadata.getColumnDataType(partitionKey)) {
+        throw new IllegalArgumentException(
+            CoreError.VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_PRIMARY_KEY_TYPES.buildMessage(
+                partitionKey,
+                ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+                ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+      }
+    }
+
+    // Check that clustering key data types and clustering orders match
+    for (String clusteringKey : leftSourceTableMetadata.getClusteringKeyNames()) {
+      if (leftSourceTableMetadata.getColumnDataType(clusteringKey)
+          != rightSourceTableMetadata.getColumnDataType(clusteringKey)) {
+        throw new IllegalArgumentException(
+            CoreError.VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_PRIMARY_KEY_TYPES.buildMessage(
+                clusteringKey,
+                ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+                ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+      }
+      if (leftSourceTableMetadata.getClusteringOrder(clusteringKey)
+          != rightSourceTableMetadata.getClusteringOrder(clusteringKey)) {
+        throw new IllegalArgumentException(
+            CoreError.VIRTUAL_TABLE_SOURCE_TABLES_HAVE_DIFFERENT_CLUSTERING_ORDERS.buildMessage(
+                clusteringKey,
+                ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+                ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+      }
+    }
+
+    // Check for non-key column name conflicts between sources
+    Set<String> primaryKeyColumns = new HashSet<>(leftSourceTableMetadata.getPartitionKeyNames());
+    primaryKeyColumns.addAll(leftSourceTableMetadata.getClusteringKeyNames());
+
+    Set<String> leftNonKeyColumns = new HashSet<>(leftSourceTableMetadata.getColumnNames());
+    leftNonKeyColumns.removeAll(primaryKeyColumns);
+
+    Set<String> rightNonKeyColumns = new HashSet<>(rightSourceTableMetadata.getColumnNames());
+    rightNonKeyColumns.removeAll(primaryKeyColumns);
+
+    Set<String> conflictingColumns = new HashSet<>(leftNonKeyColumns);
+    conflictingColumns.retainAll(rightNonKeyColumns);
+
+    if (!conflictingColumns.isEmpty()) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_SOURCE_TABLES_HAVE_CONFLICTING_COLUMN_NAMES.buildMessage(
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable),
+              conflictingColumns));
+    }
+
+    // Check that virtual tables are not used as sources
+    Optional<VirtualTableInfo> leftSourceTableInfo =
+        getVirtualTableInfo(leftSourceNamespace, leftSourceTable);
+    if (leftSourceTableInfo.isPresent()) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_CANNOT_USE_VIRTUAL_TABLE_AS_SOURCE.buildMessage(
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable)));
+    }
+
+    Optional<VirtualTableInfo> rightSourceTableInfo =
+        getVirtualTableInfo(rightSourceNamespace, rightSourceTable);
+    if (rightSourceTableInfo.isPresent()) {
+      throw new IllegalArgumentException(
+          CoreError.VIRTUAL_TABLE_CANNOT_USE_VIRTUAL_TABLE_AS_SOURCE.buildMessage(
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)));
+    }
+
+    try {
+      admin.createVirtualTable(
+          namespace,
+          table,
+          leftSourceNamespace,
+          leftSourceTable,
+          rightSourceNamespace,
+          rightSourceTable,
+          joinType,
+          options);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.CREATING_VIRTUAL_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              ScalarDbUtils.getFullTableName(leftSourceNamespace, leftSourceTable),
+              ScalarDbUtils.getFullTableName(rightSourceNamespace, rightSourceTable)),
+          e);
+    }
+  }
+
+  @Override
+  public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
+      throws ExecutionException {
+    if (!tableExists(namespace, table)) {
+      throw new IllegalArgumentException(
+          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
+    }
+
+    try {
+      return admin.getVirtualTableInfo(namespace, table);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.GETTING_VIRTUAL_TABLE_INFO_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e);
     }
   }
 
