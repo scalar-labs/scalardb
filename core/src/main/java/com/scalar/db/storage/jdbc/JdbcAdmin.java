@@ -425,9 +425,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       builder.addSecondaryIndex(secondaryIndex);
     }
     for (String secondaryIndex : rightSourceTableMetadata.getSecondaryIndexNames()) {
-      if (!primaryKeyColumns.contains(secondaryIndex)) {
-        builder.addSecondaryIndex(secondaryIndex);
-      }
+      builder.addSecondaryIndex(secondaryIndex);
     }
 
     return builder.build();

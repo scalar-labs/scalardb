@@ -412,6 +412,7 @@ public class JdbcAdminTest {
             .addColumn("col1", DataType.BOOLEAN)
             .addColumn("col2", DataType.DOUBLE)
             .addColumn("col3", DataType.BLOB)
+            .addSecondaryIndex("ck1")
             .addSecondaryIndex("col1")
             .addSecondaryIndex("col2")
             .build();
@@ -429,6 +430,7 @@ public class JdbcAdminTest {
             .addColumn("col4", DataType.FLOAT)
             .addColumn("col5", DataType.DATE)
             .addColumn("col6", DataType.TIMESTAMP)
+            .addSecondaryIndex("ck2")
             .addSecondaryIndex("col4")
             .build();
 
@@ -463,7 +465,8 @@ public class JdbcAdminTest {
     assertThat(result.getColumnDataType("col4")).isEqualTo(DataType.FLOAT);
     assertThat(result.getColumnDataType("col5")).isEqualTo(DataType.DATE);
     assertThat(result.getColumnDataType("col6")).isEqualTo(DataType.TIMESTAMP);
-    assertThat(result.getSecondaryIndexNames()).containsExactlyInAnyOrder("col1", "col2", "col4");
+    assertThat(result.getSecondaryIndexNames())
+        .containsExactlyInAnyOrder("ck1", "ck2", "col1", "col2", "col4");
   }
 
   @Test
