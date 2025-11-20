@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
@@ -61,9 +59,6 @@ public class S3Wrapper implements ObjectStorageWrapper {
     this.client =
         S3AsyncClient.builder()
             .region(Region.of(config.getRegion()))
-            .credentialsProvider(
-                StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(config.getUsername(), config.getPassword())))
             .httpClientBuilder(httpClientBuilder)
             .multipartConfiguration(multipartConfigBuilder.build())
             .overrideConfiguration(overrideConfigBuilder.build())

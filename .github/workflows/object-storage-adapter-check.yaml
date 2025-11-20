@@ -91,6 +91,7 @@ jobs:
         run: |
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
@@ -145,11 +146,17 @@ jobs:
         run: |
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Prepare Google Cloud Credentials
+        run: |
+          echo '${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}' > $HOME/gcloud_service_account.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud_service_account.json
+
       - name: Execute Gradle 'integrationTestObjectStorage' task
-        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=scalardb-test-bucket -Dscalardb.object_storage.username=${{ env.CLOUD_STORAGE_PROJECT_ID }} -Dscalardb.object_storage.password=${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }} ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=scalardb-test-bucket -Dscalardb.object_storage.username=${{ env.CLOUD_STORAGE_PROJECT_ID }} ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
         if: always()

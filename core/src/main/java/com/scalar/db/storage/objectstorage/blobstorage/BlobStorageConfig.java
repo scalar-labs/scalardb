@@ -79,11 +79,6 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   }
 
   @Override
-  public String getPassword() {
-    return password;
-  }
-
-  @Override
   public String getBucket() {
     return bucket;
   }
@@ -99,6 +94,10 @@ public class BlobStorageConfig implements ObjectStorageConfig {
 
   public String getUsername() {
     return username;
+  }
+
+  public String getPassword() {
+    return password;
   }
 
   public Optional<Long> getParallelUploadBlockSizeInBytes() {

@@ -43,8 +43,6 @@ public class S3ConfigTest {
     // Assert
     assertThat(config.getRegion()).isEqualTo(ANY_REGION);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getParallelUploadBlockSizeInBytes()).isNotEmpty();
     assertThat(config.getParallelUploadBlockSizeInBytes().get()).isEqualTo(5242880);
@@ -71,8 +69,6 @@ public class S3ConfigTest {
     // Assert
     assertThat(config.getRegion()).isEqualTo(ANY_REGION);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     assertThat(config.getParallelUploadBlockSizeInBytes()).isEmpty();

@@ -34,12 +34,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   private final Integer parallelUploadBlockSizeInBytes;
 
   public CloudStorageWrapper(CloudStorageConfig config) {
-    storage =
-        StorageOptions.newBuilder()
-            .setProjectId(config.getProjectId())
-            .setCredentials(config.getCredentials())
-            .build()
-            .getService();
+    storage = StorageOptions.newBuilder().setProjectId(config.getProjectId()).build().getService();
     bucket = config.getBucket();
     parallelUploadBlockSizeInBytes = config.getParallelUploadBlockSizeInBytes().orElse(null);
   }

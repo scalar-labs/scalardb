@@ -25,8 +25,6 @@ public class S3Config implements ObjectStorageConfig {
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
 
   private static final Logger logger = LoggerFactory.getLogger(S3Config.class);
-  private final String username;
-  private final String password;
   private final String bucket;
   private final String metadataNamespace;
   private final String region;
@@ -56,8 +54,6 @@ public class S3Config implements ObjectStorageConfig {
       throw new IllegalArgumentException(
           "Invalid contact points format. Expected: S3_REGION/BUCKET_NAME");
     }
-    username = databaseConfig.getUsername().orElse(null);
-    password = databaseConfig.getPassword().orElse(null);
     metadataNamespace = databaseConfig.getSystemNamespaceName();
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
@@ -83,11 +79,6 @@ public class S3Config implements ObjectStorageConfig {
   }
 
   @Override
-  public String getPassword() {
-    return password;
-  }
-
-  @Override
   public String getBucket() {
     return bucket;
   }
@@ -99,10 +90,6 @@ public class S3Config implements ObjectStorageConfig {
 
   public String getRegion() {
     return region;
-  }
-
-  public String getUsername() {
-    return username;
   }
 
   public Optional<Long> getParallelUploadBlockSizeInBytes() {

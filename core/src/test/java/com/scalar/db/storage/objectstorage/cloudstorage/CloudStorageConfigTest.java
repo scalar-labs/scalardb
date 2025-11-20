@@ -35,7 +35,6 @@ public class CloudStorageConfigTest {
     // Assert
     assertThat(config.getProjectId()).isEqualTo(ANY_PROJECT_ID);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getParallelUploadBlockSizeInBytes()).isNotEmpty();
     assertThat(config.getParallelUploadBlockSizeInBytes().get()).isEqualTo(5242880);
@@ -56,7 +55,6 @@ public class CloudStorageConfigTest {
     // Assert
     assertThat(config.getProjectId()).isEqualTo(ANY_PROJECT_ID);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     assertThat(config.getParallelUploadBlockSizeInBytes()).isEmpty();

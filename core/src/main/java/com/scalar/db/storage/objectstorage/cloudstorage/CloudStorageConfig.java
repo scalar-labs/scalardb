@@ -2,14 +2,8 @@ package com.scalar.db.storage.objectstorage.cloudstorage;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 
-import com.google.auth.Credentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
-import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +16,6 @@ public class CloudStorageConfig implements ObjectStorageConfig {
       PREFIX + "parallel_upload_block_size_in_bytes";
 
   private static final Logger logger = LoggerFactory.getLogger(CloudStorageConfig.class);
-  private final String password;
   private final String bucket;
   private final String metadataNamespace;
   private final String projectId;
@@ -39,7 +32,6 @@ public class CloudStorageConfig implements ObjectStorageConfig {
     }
     bucket = databaseConfig.getContactPoints().get(0);
     projectId = databaseConfig.getUsername().orElse(null);
-    password = databaseConfig.getPassword().orElse(null);
     metadataNamespace = databaseConfig.getSystemNamespaceName();
 
     if (databaseConfig.getScanFetchSize() != DatabaseConfig.DEFAULT_SCAN_FETCH_SIZE) {
@@ -59,11 +51,6 @@ public class CloudStorageConfig implements ObjectStorageConfig {
   }
 
   @Override
-  public String getPassword() {
-    return password;
-  }
-
-  @Override
   public String getBucket() {
     return bucket;
   }
@@ -75,21 +62,6 @@ public class CloudStorageConfig implements ObjectStorageConfig {
 
   public String getProjectId() {
     return projectId;
-  }
-
-  public Credentials getCredentials() {
-    String serviceAccountJson = getPassword();
-    if (serviceAccountJson == null) {
-      throw new IllegalArgumentException(
-          CoreError.OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_NOT_FOUND.buildMessage());
-    }
-    try (ByteArrayInputStream keyStream =
-        new ByteArrayInputStream(serviceAccountJson.getBytes(StandardCharsets.UTF_8))) {
-      return ServiceAccountCredentials.fromStream(keyStream);
-    } catch (IOException e) {
-      throw new IllegalArgumentException(
-          CoreError.OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_LOAD_FAILED.buildMessage());
-    }
   }
 
   public Optional<Integer> getParallelUploadBlockSizeInBytes() {

@@ -10,13 +10,6 @@ public interface ObjectStorageConfig {
   String getStorageName();
 
   /**
-   * Returns the password for authentication.
-   *
-   * @return the password
-   */
-  String getPassword();
-
-  /**
    * Returns the bucket name.
    *
    * @return the bucket name
