@@ -134,5 +134,12 @@ class CsvProducerTaskTest {
     resultList.add(result);
     String output = csvProducerTask.process(resultList);
     Assertions.assertEquals(expectedOutput, output.trim());
+
+    values.put(textColName, TextColumn.ofNull(textColName));
+    result = new ResultImpl(values, mockMetadata);
+    resultList = new ArrayList<>();
+    resultList.add(result);
+    output = csvProducerTask.process(resultList);
+    Assertions.assertEquals(expectedOutput, output.trim());
   }
 }
