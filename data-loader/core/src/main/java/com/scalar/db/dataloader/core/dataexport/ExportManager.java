@@ -11,7 +11,6 @@ import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidati
 import com.scalar.db.dataloader.core.dataexport.validation.ExportOptionsValidator;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.util.TableMetadataUtil;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
@@ -76,17 +75,16 @@ public abstract class ExportManager {
     try {
       validateExportOptions(exportOptions, tableMetadata);
       Map<String, DataType> dataTypeByColumnName = tableMetadata.getColumnDataTypes();
-      handleTransactionMetadata(exportOptions, tableMetadata);
       processHeader(exportOptions, tableMetadata, writer);
 
       ExecutorService executorService =
           Executors.newFixedThreadPool(exportOptions.getMaxThreadCount());
 
-      BufferedWriter bufferedWriter = new BufferedWriter(writer);
       boolean isJson = exportOptions.getOutputFileFormat() == FileFormat.JSON;
 
       try (TransactionManagerCrudOperable.Scanner scanner =
-          createScanner(exportOptions, dao, manager)) {
+              createScanner(exportOptions, dao, manager);
+          BufferedWriter bufferedWriter = new BufferedWriter(writer)) {
 
         Iterator<Result> iterator = scanner.iterator();
         AtomicBoolean isFirstBatch = new AtomicBoolean(true);
@@ -108,18 +106,20 @@ public abstract class ExportManager {
         executorService.shutdown();
         if (executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
           logger.info("All tasks completed");
+          processFooter(exportOptions, tableMetadata, bufferedWriter);
         } else {
           logger.error("Timeout occurred while waiting for tasks to complete");
           // TODO: handle this
         }
-        processFooter(exportOptions, tableMetadata, bufferedWriter);
       } catch (InterruptedException
           | IOException
           | UnknownTransactionStatusException
           | CrudException e) {
         logger.error("Error during export: ", e);
       } finally {
-        bufferedWriter.flush();
+        if (!executorService.isShutdown()) {
+          executorService.shutdownNow();
+        }
       }
     } catch (ExportOptionsValidationException | IOException | ScalarDbDaoException e) {
       logger.error("Error during export: {}", e.getMessage());
@@ -196,22 +196,6 @@ public abstract class ExportManager {
   private void validateExportOptions(ExportOptions exportOptions, TableMetadata tableMetadata)
       throws ExportOptionsValidationException {
     ExportOptionsValidator.validate(exportOptions, tableMetadata);
-  }
-
-  /**
-   * To update projection columns of export options if include metadata options is enabled
-   *
-   * @param exportOptions export options
-   * @param tableMetadata metadata of the table
-   */
-  private void handleTransactionMetadata(ExportOptions exportOptions, TableMetadata tableMetadata) {
-    if (exportOptions.isIncludeTransactionMetadata()
-        && !exportOptions.getProjectionColumns().isEmpty()) {
-      List<String> projectionMetadata =
-          TableMetadataUtil.populateProjectionsWithMetadata(
-              tableMetadata, exportOptions.getProjectionColumns());
-      exportOptions.setProjectionColumns(projectionMetadata);
-    }
   }
 
   /**

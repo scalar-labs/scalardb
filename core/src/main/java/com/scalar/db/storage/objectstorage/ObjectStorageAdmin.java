@@ -23,12 +23,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class ObjectStorageAdmin implements DistributedStorageAdmin {
   public static final String NAMESPACE_METADATA_TABLE = "namespaces";
   public static final String TABLE_METADATA_TABLE = "metadata";
 
+  private static final Logger logger = LoggerFactory.getLogger(ObjectStorageAdmin.class);
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
           "object_storage",
@@ -82,7 +85,11 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void close() {
-    wrapper.close();
+    try {
+      wrapper.close();
+    } catch (ObjectStorageWrapperException e) {
+      logger.warn("Failed to close the ObjectStorageWrapper", e);
+    }
   }
 
   @Override

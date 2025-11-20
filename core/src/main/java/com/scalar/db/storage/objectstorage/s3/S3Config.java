@@ -24,8 +24,6 @@ public class S3Config implements ObjectStorageConfig {
       PREFIX + "parallel_upload_threshold_in_bytes";
   public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
 
-  public static final int DEFAULT_REQUEST_TIMEOUT_IN_SECONDS = 15;
-
   private static final Logger logger = LoggerFactory.getLogger(S3Config.class);
   private final String username;
   private final String password;
@@ -85,11 +83,6 @@ public class S3Config implements ObjectStorageConfig {
   }
 
   @Override
-  public String getUsername() {
-    return username;
-  }
-
-  @Override
   public String getPassword() {
     return password;
   }
@@ -106,6 +99,10 @@ public class S3Config implements ObjectStorageConfig {
 
   public String getRegion() {
     return region;
+  }
+
+  public String getUsername() {
+    return username;
   }
 
   public Optional<Long> getParallelUploadBlockSizeInBytes() {

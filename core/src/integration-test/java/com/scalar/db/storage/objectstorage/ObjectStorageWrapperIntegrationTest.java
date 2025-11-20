@@ -28,8 +28,11 @@ public class ObjectStorageWrapperIntegrationTest {
   private static final String TEST_OBJECT2 = "test-object2";
   private static final String TEST_OBJECT3 = "test-object3";
   private static final int BLOB_STORAGE_LIST_MAX_KEYS = 5000;
+  private static final int CLOUD_STORAGE_LIST_MAX_KEYS = 1000;
+  private static final int S3_LIST_MAX_KEYS = 1000;
 
   private ObjectStorageWrapper wrapper;
+  private int listMaxKeys;
 
   @BeforeAll
   public void beforeAll() throws ObjectStorageWrapperException {
@@ -38,6 +41,16 @@ public class ObjectStorageWrapperIntegrationTest {
         ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties));
     wrapper = ObjectStorageWrapperFactory.create(objectStorageConfig);
     createObjects();
+
+    if (ObjectStorageEnv.isBlobStorage()) {
+      listMaxKeys = BLOB_STORAGE_LIST_MAX_KEYS;
+    } else if (ObjectStorageEnv.isCloudStorage()) {
+      listMaxKeys = CLOUD_STORAGE_LIST_MAX_KEYS;
+    } else if (ObjectStorageEnv.isS3()) {
+      listMaxKeys = S3_LIST_MAX_KEYS;
+    } else {
+      throw new AssertionError();
+    }
   }
 
   @AfterAll
@@ -152,14 +165,14 @@ public class ObjectStorageWrapperIntegrationTest {
     String objectKey = "non-existing-key";
 
     // Act Assert
-    assertThatCode(() -> wrapper.update(objectKey, "some-object", "some-version"))
+    assertThatCode(() -> wrapper.update(objectKey, "some-object", "123456789"))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
   @Test
   public void update_WrongVersionGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
-    String wrongVersion = "wrong-version";
+    String wrongVersion = "123456789";
 
     // Act Assert
     assertThatCode(() -> wrapper.update(TEST_KEY2, "another-object", wrongVersion))
@@ -219,7 +232,7 @@ public class ObjectStorageWrapperIntegrationTest {
     // Arrange
     Optional<ObjectStorageWrapperResponse> response1 = wrapper.get(TEST_KEY1);
     assertThat(response1.isPresent()).isTrue();
-    String wrongVersion = "wrong-version";
+    String wrongVersion = "123456789";
 
     // Act Assert
     assertThatCode(() -> wrapper.delete(TEST_KEY1, wrongVersion))
@@ -253,7 +266,7 @@ public class ObjectStorageWrapperIntegrationTest {
   public void getKeys_WithPrefixForTheNumberOfObjectsExceedingTheListLimit_ShouldReturnAllKeys()
       throws Exception {
     String prefix = "prefix-";
-    int numberOfObjects = BLOB_STORAGE_LIST_MAX_KEYS + 1;
+    int numberOfObjects = listMaxKeys + 1;
     try {
       // Arrange
       for (int i = 0; i < numberOfObjects; i++) {
@@ -313,7 +326,7 @@ public class ObjectStorageWrapperIntegrationTest {
       deleteByPrefix_WithPrefixForTheNumberOfObjectsExceedingTheListLimit_ShouldDeleteAllObjects()
           throws Exception {
     String prefix = "prefix-";
-    int numberOfObjects = BLOB_STORAGE_LIST_MAX_KEYS + 1;
+    int numberOfObjects = listMaxKeys + 1;
     try {
       // Arrange
       for (int i = 0; i < numberOfObjects; i++) {
