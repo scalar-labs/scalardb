@@ -152,10 +152,11 @@ jobs:
 
       - name: Prepare Google Cloud Credentials
         run: |
-          echo '${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}' > $HOME/gcloud_service_account.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud_service_account.json
+          echo '${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}' > ${{ runner.temp }}/gcloud_service_account.json
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcloud_service_account.json
         run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=scalardb-test-bucket -Dscalardb.object_storage.username=${{ env.CLOUD_STORAGE_PROJECT_ID }} ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
