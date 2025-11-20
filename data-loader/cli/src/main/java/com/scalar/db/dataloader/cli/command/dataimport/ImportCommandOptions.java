@@ -46,7 +46,7 @@ public class ImportCommandOptions {
   protected Integer maxThreads;
 
   /**
-   * @deprecated As of release 3.6.2. Will be removed in release 4.0.0. Use --max-threads instead
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --max-threads instead
    */
   @Deprecated
   @CommandLine.Option(
@@ -75,7 +75,7 @@ public class ImportCommandOptions {
   protected String controlFilePath;
 
   /**
-   * @deprecated As of release 3.6.2. Will be removed in release 4.0.0. Use --enable-log-success
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Use --enable-log-success
    *     instead
    */
   @Deprecated
