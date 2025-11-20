@@ -592,7 +592,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public int getMinimumIsolationLevelForConsistencyRead() {
-    // In Db2, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistency reads
+    // In Db2, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistent reads
     return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }

@@ -544,7 +544,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public int getMinimumIsolationLevelForConsistencyRead() {
-    // In Oracle, only the SERIALIZABLE isolation level guarantees the consistency read
+    // In Oracle, only the SERIALIZABLE isolation level guarantees consistent reads
     return Connection.TRANSACTION_SERIALIZABLE;
   }
 }

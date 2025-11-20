@@ -4,7 +4,7 @@ import com.scalar.db.api.DistributedStorageAtomicityUnitIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
 
-public class ObjectStorageMutationAtomicityUnitIntegrationTest
+public class ObjectStorageAtomicityUnitIntegrationTest
     extends DistributedStorageAtomicityUnitIntegrationTestBase {
 
   @Override
