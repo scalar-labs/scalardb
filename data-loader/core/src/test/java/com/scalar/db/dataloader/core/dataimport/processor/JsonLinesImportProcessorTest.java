@@ -7,7 +7,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
@@ -76,10 +76,10 @@ class JsonLinesImportProcessorTest {
   }
 
   @Test
-  void test_importProcessWithStorage() {
+  void test_importProcessWithSingleCrud() {
     params =
         ImportProcessorParams.builder()
-            .scalarDbMode(ScalarDbMode.STORAGE)
+            .transactionMode(TransactionMode.SINGLE_CRUD)
             .importOptions(importOptions)
             .dao(dao)
             .distributedTransactionManager(distributedTransactionManager)
@@ -94,10 +94,10 @@ class JsonLinesImportProcessorTest {
   }
 
   @Test
-  void test_importProcessWithTransaction() {
+  void test_importProcessWithConsensusCommit() {
     params =
         ImportProcessorParams.builder()
-            .scalarDbMode(ScalarDbMode.TRANSACTION)
+            .transactionMode(TransactionMode.CONSENSUS_COMMIT)
             .importOptions(importOptions)
             .dao(dao)
             .distributedTransactionManager(distributedTransactionManager)

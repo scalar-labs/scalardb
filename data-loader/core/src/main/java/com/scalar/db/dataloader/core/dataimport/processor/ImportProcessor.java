@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.processor;
 
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.dataloader.core.DataLoaderError;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
@@ -55,12 +55,12 @@ public abstract class ImportProcessor {
    *
    * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
    * batches transactions according to the specified sizes. The processing can be done in either
-   * transactional or storage mode, depending on the configured {@link ScalarDbMode}.
+   * single CRUD or consensus commit mode, depending on the configured {@link TransactionMode}.
    *
    * @param dataChunkSize the number of records to include in each data chunk for parallel
    *     processing
    * @param transactionBatchSize the number of records to group together in a single transaction
-   *     (only used in transaction mode)
+   *     (only used in consensus commit mode)
    * @param reader the {@link BufferedReader} used to read the source file
    */
   public void process(int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
@@ -169,11 +169,11 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Notify once the task is completed
+   * Notify once a single CRUD task is completed
    *
    * @param result task result object
    */
-  protected void notifyStorageRecordCompleted(ImportTaskResult result) {
+  protected void notifySingleCrudRecordCompleted(ImportTaskResult result) {
     // Add data to summary, success logs with/without raw data
     for (ImportEventListener listener : listeners) {
       listener.onTaskComplete(result);
@@ -366,14 +366,14 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a single record in storage mode (non-transactional). Each record is processed
+   * Processes a single record in single CRUD mode (non-transactional). Each record is processed
    * independently without transaction guarantees.
    *
    * @param dataChunkId the parent data chunk id of the chunk containing this record
    * @param importRow the record to process
    * @return an {@link ImportTaskResult} containing the processing result for the record
    */
-  private ImportTaskResult processStorageRecord(int dataChunkId, ImportRow importRow) {
+  private ImportTaskResult processSingleCrudRecord(int dataChunkId, ImportRow importRow) {
     ImportTaskParams taskParams =
         ImportTaskParams.builder()
             .sourceRecord(importRow.getSourceData())
@@ -394,16 +394,17 @@ public abstract class ImportProcessor {
             .targets(importRecordResult.getTargets())
             .dataChunkId(dataChunkId)
             .build();
-    notifyStorageRecordCompleted(modifiedTaskResult);
+    notifySingleCrudRecordCompleted(modifiedTaskResult);
     return modifiedTaskResult;
   }
 
   /**
-   * Processes a complete data chunk using parallel execution. The processing mode (transactional or
-   * storage) is determined by the configured {@link ScalarDbMode}.
+   * Processes a complete data chunk using parallel execution. The processing mode (consensus commit
+   * or single CRUD) is determined by the configured {@link TransactionMode}.
    *
    * @param dataChunk the data chunk to process
-   * @param transactionBatchSize the size of transaction batches (used only in transaction mode)
+   * @param transactionBatchSize the size of transaction batches (used only in consensus commit
+   *     mode)
    */
   private void processDataChunk(ImportDataChunk dataChunk, int transactionBatchSize) {
     ImportDataChunkStatus status =
@@ -414,23 +415,24 @@ public abstract class ImportProcessor {
             .build();
     notifyDataChunkStarted(status);
     ImportDataChunkStatus importDataChunkStatus;
-    if (params.getScalarDbMode() == ScalarDbMode.TRANSACTION) {
-      importDataChunkStatus = processDataChunkWithTransactions(dataChunk, transactionBatchSize);
+    if (params.getTransactionMode() == TransactionMode.CONSENSUS_COMMIT) {
+      importDataChunkStatus =
+          processDataChunkInConsensusCommitMode(dataChunk, transactionBatchSize);
     } else {
-      importDataChunkStatus = processDataChunkWithoutTransactions(dataChunk);
+      importDataChunkStatus = processDataChunkInSingleCrudMode(dataChunk);
     }
     notifyDataChunkCompleted(importDataChunkStatus);
   }
 
   /**
-   * Processes a data chunk using transaction mode with parallel batch processing. Multiple
+   * Processes a data chunk using consensus commit mode with parallel batch processing. Multiple
    * transaction batches are processed concurrently using a thread pool.
    *
    * @param dataChunk the data chunk to process
    * @param transactionBatchSize the number of records per transaction batch
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
-  private ImportDataChunkStatus processDataChunkWithTransactions(
+  private ImportDataChunkStatus processDataChunkInConsensusCommitMode(
       ImportDataChunk dataChunk, int transactionBatchSize) {
     Instant startTime = Instant.now();
     List<ImportTransactionBatch> transactionBatches =
@@ -464,19 +466,19 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Processes a data chunk using storage mode with parallel record processing. Individual records
-   * are processed concurrently without transaction guarantees.
+   * Processes a data chunk using single CRUD mode with parallel record processing. Individual
+   * records are processed concurrently without transaction guarantees.
    *
    * @param dataChunk the data chunk to process
    * @return an {@link ImportDataChunkStatus} containing processing results and metrics
    */
-  private ImportDataChunkStatus processDataChunkWithoutTransactions(ImportDataChunk dataChunk) {
+  private ImportDataChunkStatus processDataChunkInSingleCrudMode(ImportDataChunk dataChunk) {
     Instant startTime = Instant.now();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger failureCount = new AtomicInteger(0);
 
     for (ImportRow importRow : dataChunk.getSourceData()) {
-      ImportTaskResult result = processStorageRecord(dataChunk.getDataChunkId(), importRow);
+      ImportTaskResult result = processSingleCrudRecord(dataChunk.getDataChunkId(), importRow);
       boolean allSaved =
           result.getTargets().stream()
               .allMatch(t -> t.getStatus().equals(ImportTargetResultStatus.SAVED));
