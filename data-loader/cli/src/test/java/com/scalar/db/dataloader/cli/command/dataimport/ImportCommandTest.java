@@ -7,8 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.dataloader.cli.ScalarDbMode;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
 import com.scalar.db.service.TransactionFactory;
 import java.io.IOException;
