@@ -51,7 +51,7 @@ env:
 jobs:
   integration-test-s3:
     name: S3 integration test (${{ matrix.test_group.label }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
 
     strategy:
       fail-fast: false
@@ -82,7 +82,7 @@ jobs:
             bucket_suffix: storage-cm
             group_commit_enabled: false
           - label: storage_others
-            tests_filter: '--tests "**.ObjectStorage**" --tests "*!ObjectStorageSingle" --tests "*!ObjectStorageMultiple" --tests "*!ObjectStorageWrapper" --tests "*!ObjectStorageAdmin" --tests "*!ObjectStorageConditionalMutation"'
+            tests_filter: '--tests "**.ObjectStorage**" --tests "!**.ObjectStorageSingle**" --tests "!**.ObjectStorageMultiple**" --tests "!**.ObjectStorageWrapper**" --tests "!**.ObjectStorageAdmin**" --tests "!**.ObjectStorageConditionalMutation**"'
             bucket_suffix: storage
             group_commit_enabled: false
           - label: two_phase_consensus_commit
@@ -161,7 +161,7 @@ jobs:
             bucket_suffix: storage-cm
             group_commit_enabled: false
           - label: storage_others
-            tests_filter: '--tests "**.ObjectStorage**" --tests "*!ObjectStorageSingle" --tests "*!ObjectStorageMultiple" --tests "*!ObjectStorageWrapper" --tests "*!ObjectStorageAdmin" --tests "*!ObjectStorageConditionalMutation"'
+            tests_filter: '--tests "**.ObjectStorage**" --tests "!**.ObjectStorageSingle**" --tests "!**.ObjectStorageMultiple**" --tests "!**.ObjectStorageWrapper**" --tests "!**.ObjectStorageAdmin**" --tests "!**.ObjectStorageConditionalMutation**"'
             bucket_suffix: storage
             group_commit_enabled: false
           - label: single_crud_operation_transaction
