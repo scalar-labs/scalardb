@@ -55,12 +55,17 @@ public class StorageInfoImpl implements StorageInfo {
     StorageInfoImpl that = (StorageInfoImpl) o;
     return getMaxAtomicMutationsCount() == that.getMaxAtomicMutationsCount()
         && Objects.equals(getStorageName(), that.getStorageName())
-        && getMutationAtomicityUnit() == that.getMutationAtomicityUnit();
+        && getMutationAtomicityUnit() == that.getMutationAtomicityUnit()
+        && isConsistentVirtualTableRead() == that.isConsistentVirtualTableRead();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getStorageName(), getMutationAtomicityUnit(), getMaxAtomicMutationsCount());
+    return Objects.hash(
+        getStorageName(),
+        getMutationAtomicityUnit(),
+        getMaxAtomicMutationsCount(),
+        isConsistentVirtualTableRead());
   }
 
   @Override
@@ -69,6 +74,7 @@ public class StorageInfoImpl implements StorageInfo {
         .add("storageName", storageName)
         .add("mutationAtomicityUnit", mutationAtomicityUnit)
         .add("maxAtomicMutationsCount", maxAtomicMutationsCount)
+        .add("consistentVirtualTableRead", consistentVirtualTableRead)
         .toString();
   }
 }
