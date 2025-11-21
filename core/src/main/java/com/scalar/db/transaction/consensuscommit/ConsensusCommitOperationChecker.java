@@ -10,6 +10,7 @@ import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -17,8 +18,12 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.common.checker.ConditionChecker;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
@@ -28,12 +33,18 @@ import javax.annotation.concurrent.ThreadSafe;
 public class ConsensusCommitOperationChecker {
 
   private final TransactionTableMetadataManager transactionTableMetadataManager;
+  private final VirtualTableInfoManager virtualTableInfoManager;
+  private final StorageInfoProvider storageInfoProvider;
   private final boolean isIncludeMetadataEnabled;
 
   public ConsensusCommitOperationChecker(
       TransactionTableMetadataManager transactionTableMetadataManager,
+      VirtualTableInfoManager virtualTableInfoManager,
+      StorageInfoProvider storageInfoProvider,
       boolean isIncludeMetadataEnabled) {
     this.transactionTableMetadataManager = transactionTableMetadataManager;
+    this.virtualTableInfoManager = virtualTableInfoManager;
+    this.storageInfoProvider = storageInfoProvider;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
   }
 
@@ -46,6 +57,8 @@ public class ConsensusCommitOperationChecker {
    * @throws IllegalArgumentException when the get is invalid
    */
   public void check(Get get, TransactionContext context) throws ExecutionException {
+    throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(get);
+
     TransactionTableMetadata metadata =
         getTransactionTableMetadata(transactionTableMetadataManager, get);
 
@@ -100,6 +113,8 @@ public class ConsensusCommitOperationChecker {
    * @throws IllegalArgumentException when the scan is invalid
    */
   public void check(Scan scan, TransactionContext context) throws ExecutionException {
+    throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(scan);
+
     TransactionTableMetadata metadata =
         getTransactionTableMetadata(transactionTableMetadataManager, scan);
 
@@ -182,6 +197,8 @@ public class ConsensusCommitOperationChecker {
    * @throws IllegalArgumentException when the mutation is invalid
    */
   public void check(Mutation mutation) throws ExecutionException {
+    throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(mutation);
+
     if (mutation instanceof Put) {
       check((Put) mutation);
     } else {
@@ -252,5 +269,22 @@ public class ConsensusCommitOperationChecker {
   @VisibleForTesting
   ConditionChecker createConditionChecker(TableMetadata tableMetadata) {
     return new ConditionChecker(tableMetadata);
+  }
+
+  private void throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(
+      Operation operation) throws ExecutionException {
+    assert operation.forNamespace().isPresent();
+
+    VirtualTableInfo virtualTableInfo = virtualTableInfoManager.getVirtualTableInfo(operation);
+    if (virtualTableInfo == null) {
+      return;
+    }
+
+    StorageInfo storageInfo = storageInfoProvider.getStorageInfo(operation.forNamespace().get());
+    if (!storageInfo.isConsistentVirtualTableReadGuaranteed()) {
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_TRANSACTION_METADATA_CONSISTENT_READS_NOT_GUARANTEED_STORAGE
+              .buildMessage(storageInfo.getStorageName()));
+    }
   }
 }

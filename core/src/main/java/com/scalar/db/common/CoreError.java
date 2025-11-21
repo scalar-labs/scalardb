@@ -1009,6 +1009,19 @@ public enum CoreError implements ScalarDbError {
       "Source tables cannot be dropped while virtual tables depending on them exist. Source table: %s; Virtual tables: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_TRANSACTION_METADATA_DECOUPLING_NOT_SUPPORTED_STORAGE(
+      Category.USER_ERROR,
+      "0276",
+      "The transaction metadata decoupling feature is not supported in the storage. Storage %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_TRANSACTION_METADATA_CONSISTENT_READS_NOT_GUARANTEED_STORAGE(
+      Category.USER_ERROR,
+      "0277",
+      "The storage does not guarantee consistent reads for virtual tables. Depending on the storage configuration, "
+          + "you may be able to adjust the settings to enable consistent reads. Please refer to the storage configuration for details. Storage: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

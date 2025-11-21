@@ -85,8 +85,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   private static final String TEST_NAME = "cc";
-  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
-  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
+  private static final String NAMESPACE_BASE_NAME = "int_test_";
   private static final String TABLE_1 = "test_table1";
   private static final String TABLE_2 = "test_table2";
   protected static final String ACCOUNT_ID = "account_id";
@@ -105,8 +104,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private DatabaseConfig databaseConfig;
   private ConsensusCommitConfig consensusCommitConfig;
   private ConsensusCommitAdmin consensusCommitAdmin;
-  private String namespace1;
-  private String namespace2;
+  protected String namespace1;
+  protected String namespace2;
   private ParallelExecutor parallelExecutor;
 
   private DistributedStorage storage;
@@ -118,34 +117,37 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @BeforeAll
   void beforeAll() throws Exception {
-    initialize();
-    Properties properties = getProperties(TEST_NAME);
+    String testName = getTestName();
+    initialize(testName);
+
+    namespace1 = getNamespaceBaseName() + testName + "1";
+    namespace2 = getNamespaceBaseName() + testName + "2";
+
+    Properties properties = getProperties(testName);
 
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);
     consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
     consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
-    namespace1 = getNamespace1();
-    namespace2 = getNamespace2();
     createTables();
     originalStorage = factory.getStorage();
     parallelExecutor = new ParallelExecutor(consensusCommitConfig);
   }
 
-  protected void initialize() throws Exception {}
+  protected void initialize(String testName) throws Exception {}
+
+  protected String getTestName() {
+    return TEST_NAME;
+  }
 
   protected abstract Properties getProperties(String testName);
 
-  protected String getNamespace1() {
-    return NAMESPACE_1;
-  }
-
-  protected String getNamespace2() {
-    return NAMESPACE_2;
+  protected String getNamespaceBaseName() {
+    return NAMESPACE_BASE_NAME;
   }
 
   protected TableMetadata getTableMetadata() {

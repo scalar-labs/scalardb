@@ -32,24 +32,31 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedTransactionAdminImportTableIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "tx_admin_import_table";
-  private static final String NAMESPACE = "int_test_" + TEST_NAME;
+  private static final String TEST_NAME = "tx_import";
+  private static final String NAMESPACE_BASE_NAME = "int_test_";
   private final List<TestData> testDataList = new ArrayList<>();
 
   protected DistributedTransactionAdmin admin;
   protected DistributedTransactionManager manager;
+  protected String namespace;
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
+    String testName = getTestName();
+    initialize(testName);
+    namespace = getNamespaceBaseName() + testName;
   }
 
   protected void initialize(String testName) throws Exception {}
 
+  protected String getTestName() {
+    return TEST_NAME;
+  }
+
   protected abstract Properties getProperties(String testName);
 
-  protected String getNamespace() {
-    return NAMESPACE;
+  protected String getNamespaceBaseName() {
+    return NAMESPACE_BASE_NAME;
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -61,15 +68,19 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
       if (!testData.isImportableTable()) {
         dropNonImportableTable(testData.getTableName());
       } else {
-        admin.dropTable(getNamespace(), testData.getTableName());
+        admin.dropTable(namespace, getImportedTableName(testData.getTableName()));
       }
     }
-    if (!admin.namespaceExists(getNamespace())) {
+    if (!admin.namespaceExists(namespace)) {
       // Create metadata to be able to delete the namespace using the Admin
-      admin.repairNamespace(getNamespace(), getCreationOptions());
+      admin.repairNamespace(namespace, getCreationOptions());
     }
-    admin.dropNamespace(getNamespace());
+    admin.dropNamespace(namespace);
     admin.dropCoordinatorTables();
+  }
+
+  protected String getImportedTableName(String table) {
+    return table;
   }
 
   @BeforeEach
@@ -129,8 +140,7 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     // Act Assert
-    assertThatThrownBy(
-            () -> admin.importTable(getNamespace(), "unsupported_db", Collections.emptyMap()))
+    assertThatThrownBy(() -> admin.importTable(namespace, "unsupported_db", getCreationOptions()))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -138,39 +148,39 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
       String table, Map<String, DataType> overrideColumnsType, TableMetadata metadata)
       throws ExecutionException {
     // Act
-    admin.importTable(getNamespace(), table, Collections.emptyMap(), overrideColumnsType);
+    admin.importTable(namespace, table, getCreationOptions(), overrideColumnsType);
 
     // Assert
-    assertThat(admin.namespaceExists(getNamespace())).isTrue();
-    assertThat(admin.tableExists(getNamespace(), table)).isTrue();
-    assertThat(admin.getTableMetadata(getNamespace(), table)).isEqualTo(metadata);
+    assertThat(admin.namespaceExists(namespace)).isTrue();
+    assertThat(admin.tableExists(namespace, getImportedTableName(table))).isTrue();
+    assertThat(admin.getTableMetadata(namespace, getImportedTableName(table))).isEqualTo(metadata);
   }
 
   private void importTable_ForNonImportableTable_ShouldThrowIllegalArgumentException(String table) {
     // Act Assert
-    assertThatThrownBy(() -> admin.importTable(getNamespace(), table, Collections.emptyMap()))
+    assertThatThrownBy(() -> admin.importTable(namespace, table, getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   private void importTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Act Assert
     assertThatThrownBy(
-            () -> admin.importTable(getNamespace(), "non-existing-table", Collections.emptyMap()))
+            () -> admin.importTable(namespace, "non-existing-table", getCreationOptions()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  public void importTable_ForImportedTable_ShouldInsertThenGetCorrectly()
+  private void importTable_ForImportedTable_ShouldInsertThenGetCorrectly()
       throws TransactionException {
     // Arrange
     List<Insert> inserts =
         testDataList.stream()
             .filter(TestData::isImportableTable)
-            .map(td -> td.getInsert(getNamespace(), td.getTableName()))
+            .map(td -> td.getInsert(namespace, getImportedTableName(td.getTableName())))
             .collect(Collectors.toList());
     List<Get> gets =
         testDataList.stream()
             .filter(TestData::isImportableTable)
-            .map(td -> td.getGet(getNamespace(), td.getTableName()))
+            .map(td -> td.getGet(namespace, getImportedTableName(td.getTableName())))
             .collect(Collectors.toList());
 
     // Act
