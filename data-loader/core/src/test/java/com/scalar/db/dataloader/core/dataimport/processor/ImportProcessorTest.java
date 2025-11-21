@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.dataimport.ImportEventListener;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
@@ -51,7 +51,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * Unit tests for the ImportProcessor class.
  *
  * <p>These tests verify that the process method correctly handles different scenarios including
- * storage mode, transaction mode, empty data, and large data chunks.
+ * single CRUD mode, consensus commit mode, empty data, and large data chunks.
  *
  * <p>Additionally, this class tests the thread executor behavior in ImportProcessor, including
  * proper shutdown, waiting for tasks to complete, handling interruptions, and task distribution.
@@ -82,10 +82,10 @@ class ImportProcessorTest {
   }
 
   @Test
-  void process_withStorageMode_shouldProcessAllDataChunks() {
+  void process_withSingleCrudMode_shouldProcessAllDataChunks() {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
 
@@ -102,10 +102,10 @@ class ImportProcessorTest {
   }
 
   @Test
-  void process_withTransactionMode_shouldProcessAllDataChunks() throws TransactionException {
+  void process_withConsensusCommitMode_shouldProcessAllDataChunks() throws TransactionException {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.TRANSACTION);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
@@ -230,7 +230,7 @@ class ImportProcessorTest {
   @Test
   void process_withShutdown_shouldShutdownExecutorsGracefully() {
     // Arrange
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.STORAGE);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
@@ -257,7 +257,7 @@ class ImportProcessorTest {
       throws TransactionException {
     // Arrange
     BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getScalarDbMode()).thenReturn(ScalarDbMode.TRANSACTION);
+    when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
     when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
     when(distributedTransactionManager.start()).thenThrow(new RuntimeException("Unexpected error"));
 
