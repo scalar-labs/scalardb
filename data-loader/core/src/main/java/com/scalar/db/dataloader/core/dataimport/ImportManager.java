@@ -2,7 +2,7 @@ package com.scalar.db.dataloader.core.dataimport;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessor;
@@ -42,7 +42,7 @@ public class ImportManager implements ImportEventListener {
   @NonNull private final ImportOptions importOptions;
   private final ImportProcessorFactory importProcessorFactory;
   private final List<ImportEventListener> listeners = new ArrayList<>();
-  private final ScalarDbMode scalarDbMode;
+  private final TransactionMode transactionMode;
   private final DistributedTransactionManager distributedTransactionManager;
 
   /**
@@ -55,7 +55,7 @@ public class ImportManager implements ImportEventListener {
   public void startImport() {
     ImportProcessorParams params =
         ImportProcessorParams.builder()
-            .scalarDbMode(scalarDbMode)
+            .transactionMode(transactionMode)
             .importOptions(importOptions)
             .tableMetadataByTableName(tableMetadata)
             .dao(new ScalarDbDao())
