@@ -6,6 +6,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageBatch;
+import com.google.cloud.storage.StorageBatchResult;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.annotations.VisibleForTesting;
@@ -17,6 +18,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -183,10 +185,14 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
         int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
         List<BlobId> batch = blobIds.subList(i, endIndex);
         StorageBatch storageBatch = storage.batch();
+        List<StorageBatchResult<Boolean>> results = new ArrayList<>();
         for (BlobId blobId : batch) {
-          storageBatch.delete(blobId);
+          results.add(storageBatch.delete(blobId));
         }
         storageBatch.submit();
+        for (StorageBatchResult<Boolean> result : results) {
+          result.get();
+        }
       }
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
