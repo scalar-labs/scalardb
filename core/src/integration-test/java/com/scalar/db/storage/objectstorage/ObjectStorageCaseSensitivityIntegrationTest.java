@@ -1,10 +1,12 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorageCaseSensitivityIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Disabled;
 
 public class ObjectStorageCaseSensitivityIntegrationTest
@@ -22,6 +24,13 @@ public class ObjectStorageCaseSensitivityIntegrationTest
         .addPartitionKey(getColumnName1())
         .addClusteringKey(getColumnName4())
         .build();
+  }
+
+  @Override
+  protected void waitToAvoidRateLimiting() {
+    if (ObjectStorageEnv.isCloudStorage()) {
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+    }
   }
 
   @Override

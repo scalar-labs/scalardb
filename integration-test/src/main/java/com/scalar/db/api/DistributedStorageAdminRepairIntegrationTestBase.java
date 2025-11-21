@@ -132,14 +132,20 @@ public abstract class DistributedStorageAdminRepairIntegrationTestBase {
     admin.dropNamespace(getNamespace(), true);
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   protected void setUp() throws Exception {
     createTable();
+    waitToAvoidRateLimiting();
   }
 
   @AfterEach
   protected void afterEach() throws Exception {
     dropTable();
+    waitToAvoidRateLimiting();
   }
 
   protected void waitForDifferentSessionDdl() {

@@ -94,9 +94,14 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
     return Collections.emptyMap();
   }
 
+  protected void waitToAvoidRateLimiting() {
+    // Default do nothing
+  }
+
   @BeforeEach
   public void setUp() throws Exception {
     truncateTable();
+    waitToAvoidRateLimiting();
   }
 
   protected void truncateTable() throws ExecutionException {

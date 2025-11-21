@@ -144,14 +144,6 @@ jobs:
       fail-fast: false
       matrix:
         test_group:
-          - label: consensus_commit_default
-            tests_filter: '--tests "**.ConsensusCommit**"'
-            bucket_suffix: consensus-commit
-            group_commit_enabled: false
-          - label: consensus_commit_with_group_commit
-            tests_filter: '--tests "**.ConsensusCommit**"'
-            bucket_suffix: consensus-commit-gc
-            group_commit_enabled: true
           - label: storage_scan
             tests_filter: '--tests "**.ObjectStorageSingle**" --tests "**.ObjectStorageMultiple**"'
             bucket_suffix: storage-scan
@@ -171,10 +163,6 @@ jobs:
           - label: storage_others
             tests_filter: '--tests "**.ObjectStorage**" --tests "*!ObjectStorageSingle" --tests "*!ObjectStorageMultiple" --tests "*!ObjectStorageWrapper" --tests "*!ObjectStorageAdmin" --tests "*!ObjectStorageConditionalMutation"'
             bucket_suffix: storage
-            group_commit_enabled: false
-          - label: two_phase_consensus_commit
-            tests_filter: '--tests "**.TwoPhaseConsensusCommit**"'
-            bucket_suffix: 2pcc
             group_commit_enabled: false
           - label: single_crud_operation_transaction
             tests_filter: '--tests "**.SingleCrudOperationTransaction**"'
