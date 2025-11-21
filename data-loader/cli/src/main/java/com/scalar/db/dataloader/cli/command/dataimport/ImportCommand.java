@@ -7,9 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.dataloader.cli.ScalarDbMode;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
@@ -43,6 +44,7 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Spec;
 
+@SuppressWarnings("deprecation")
 @CommandLine.Command(name = "import", description = "Import data into a ScalarDB table")
 public class ImportCommand extends ImportCommandOptions implements Callable<Integer> {
 
@@ -144,6 +146,23 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
   }
 
   /**
+   * Converts CLI ScalarDbMode to core TransactionMode.
+   *
+   * @param scalarDbMode the ScalarDB mode from CLI
+   * @return the corresponding TransactionMode for core
+   */
+  private TransactionMode convertToTransactionMode(ScalarDbMode scalarDbMode) {
+    switch (scalarDbMode) {
+      case STORAGE:
+        return TransactionMode.SINGLE_CRUD;
+      case TRANSACTION:
+        return TransactionMode.CONSENSUS_COMMIT;
+      default:
+        throw new IllegalArgumentException("Unknown ScalarDbMode: " + scalarDbMode);
+    }
+  }
+
+  /**
    * Create ImportManager object from data
    *
    * @param importOptions import options
@@ -163,13 +182,14 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
       TransactionFactory transactionFactory)
       throws IOException {
     ImportProcessorFactory importProcessorFactory = new DefaultImportProcessorFactory();
+    TransactionMode transactionMode = convertToTransactionMode(scalarDbMode);
     ImportManager importManager =
         new ImportManager(
             tableMetadataMap,
             reader,
             importOptions,
             importProcessorFactory,
-            scalarDbMode,
+            transactionMode,
             transactionFactory.getTransactionManager());
     if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
       importManager.addListener(

@@ -1,11 +1,12 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
+import com.scalar.db.dataloader.cli.ScalarDbMode;
 import com.scalar.db.dataloader.core.FileFormat;
-import com.scalar.db.dataloader.core.ScalarDbMode;
 import com.scalar.db.dataloader.core.dataimport.ImportMode;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import picocli.CommandLine;
 
+@SuppressWarnings("deprecation")
 public class ImportCommandOptions {
 
   public static final String FILE_OPTION_NAME_LONG_FORMAT = "--file";

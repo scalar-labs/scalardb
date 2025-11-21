@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.dataloader.core.ScalarDbMode;
+import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
 import java.io.BufferedReader;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public class ImportManagerTest {
             reader,
             options,
             processorFactory,
-            ScalarDbMode.STORAGE,
+            TransactionMode.SINGLE_CRUD,
             distributedTransactionManager);
     importManager.addListener(listener1);
     importManager.addListener(listener2);
@@ -76,7 +76,7 @@ public class ImportManagerTest {
             mock(BufferedReader.class),
             mock(ImportOptions.class),
             mock(ImportProcessorFactory.class),
-            ScalarDbMode.TRANSACTION,
+            TransactionMode.CONSENSUS_COMMIT,
             distributedTransactionManager);
 
     managerWithTx.closeResources();
