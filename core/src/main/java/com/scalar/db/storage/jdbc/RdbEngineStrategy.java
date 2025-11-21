@@ -326,5 +326,5 @@ public interface RdbEngineStrategy {
 
   String getTableNamesInNamespaceSql();
 
-  int getMinimumIsolationLevelForConsistencyReads();
+  int getMinimumIsolationLevelForConsistentVirtualTableReads();
 }

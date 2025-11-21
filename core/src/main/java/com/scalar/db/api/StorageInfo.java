@@ -27,7 +27,7 @@ public interface StorageInfo {
    *
    * @return true if the storage guarantees consistent reads for virtual tables, false otherwise
    */
-  boolean isConsistentVirtualTableRead();
+  boolean isConsistentVirtualTableReadGuaranteed();
 
   /**
    * The mutation atomicity unit of the storage.

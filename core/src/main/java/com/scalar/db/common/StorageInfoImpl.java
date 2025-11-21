@@ -11,17 +11,17 @@ public class StorageInfoImpl implements StorageInfo {
   private final String storageName;
   private final MutationAtomicityUnit mutationAtomicityUnit;
   private final int maxAtomicMutationsCount;
-  private final boolean consistentVirtualTableRead;
+  private final boolean consistentVirtualTableReadGuaranteed;
 
   public StorageInfoImpl(
       String storageName,
       MutationAtomicityUnit mutationAtomicityUnit,
       int maxAtomicMutationsCount,
-      boolean consistentVirtualTableRead) {
+      boolean consistentVirtualTableReadGuaranteed) {
     this.storageName = storageName;
     this.mutationAtomicityUnit = mutationAtomicityUnit;
     this.maxAtomicMutationsCount = maxAtomicMutationsCount;
-    this.consistentVirtualTableRead = consistentVirtualTableRead;
+    this.consistentVirtualTableReadGuaranteed = consistentVirtualTableReadGuaranteed;
   }
 
   @Override
@@ -40,8 +40,8 @@ public class StorageInfoImpl implements StorageInfo {
   }
 
   @Override
-  public boolean isConsistentVirtualTableRead() {
-    return consistentVirtualTableRead;
+  public boolean isConsistentVirtualTableReadGuaranteed() {
+    return consistentVirtualTableReadGuaranteed;
   }
 
   @Override
@@ -56,7 +56,8 @@ public class StorageInfoImpl implements StorageInfo {
     return getMaxAtomicMutationsCount() == that.getMaxAtomicMutationsCount()
         && Objects.equals(getStorageName(), that.getStorageName())
         && getMutationAtomicityUnit() == that.getMutationAtomicityUnit()
-        && isConsistentVirtualTableRead() == that.isConsistentVirtualTableRead();
+        && isConsistentVirtualTableReadGuaranteed()
+            == that.isConsistentVirtualTableReadGuaranteed();
   }
 
   @Override
@@ -65,7 +66,7 @@ public class StorageInfoImpl implements StorageInfo {
         getStorageName(),
         getMutationAtomicityUnit(),
         getMaxAtomicMutationsCount(),
-        isConsistentVirtualTableRead());
+        isConsistentVirtualTableReadGuaranteed());
   }
 
   @Override
@@ -74,7 +75,7 @@ public class StorageInfoImpl implements StorageInfo {
         .add("storageName", storageName)
         .add("mutationAtomicityUnit", mutationAtomicityUnit)
         .add("maxAtomicMutationsCount", maxAtomicMutationsCount)
-        .add("consistentVirtualTableRead", consistentVirtualTableRead)
+        .add("consistentVirtualTableReadGuaranteed", consistentVirtualTableReadGuaranteed)
         .toString();
   }
 }

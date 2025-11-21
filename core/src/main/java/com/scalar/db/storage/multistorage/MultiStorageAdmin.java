@@ -306,7 +306,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
           holder.storageName,
           storageInfo.getMutationAtomicityUnit(),
           storageInfo.getMaxAtomicMutationsCount(),
-          storageInfo.isConsistentVirtualTableRead());
+          storageInfo.isConsistentVirtualTableReadGuaranteed());
     } catch (RuntimeException e) {
       if (e.getCause() instanceof ExecutionException) {
         throw (ExecutionException) e.getCause();

@@ -1006,11 +1006,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
-    boolean consistentVirtualTableRead;
+    boolean consistentVirtualTableReadGuaranteed;
     try (Connection connection = dataSource.getConnection()) {
       int isolationLevel = connection.getTransactionIsolation();
-      consistentVirtualTableRead =
-          isolationLevel >= rdbEngine.getMinimumIsolationLevelForConsistencyReads();
+      consistentVirtualTableReadGuaranteed =
+          isolationLevel >= rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableReads();
     } catch (SQLException e) {
       throw new ExecutionException("Getting the transaction isolation level failed", e);
     }
@@ -1020,7 +1020,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         StorageInfo.MutationAtomicityUnit.STORAGE,
         // No limit on the number of mutations
         Integer.MAX_VALUE,
-        consistentVirtualTableRead);
+        consistentVirtualTableReadGuaranteed);
   }
 
   @Override

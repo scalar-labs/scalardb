@@ -6219,12 +6219,12 @@ public class JdbcAdminTest {
         .isEqualTo(StorageInfo.MutationAtomicityUnit.STORAGE);
     assertThat(storageInfo.getMaxAtomicMutationsCount()).isEqualTo(Integer.MAX_VALUE);
 
-    // Check consistent read guarantee based on RDB engine
+    // Check consistent virtual table read guarantee based on RDB engine
     RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
-    boolean expectedConsistentVirtualTableRead =
-        isolationLevel >= strategy.getMinimumIsolationLevelForConsistencyReads();
-    assertThat(storageInfo.isConsistentVirtualTableRead())
-        .isEqualTo(expectedConsistentVirtualTableRead);
+    boolean expectedConsistentVirtualTableReadGuaranteed =
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableReads();
+    assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
+        .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
   }
 
   @ParameterizedTest
@@ -6246,12 +6246,12 @@ public class JdbcAdminTest {
         .isEqualTo(StorageInfo.MutationAtomicityUnit.STORAGE);
     assertThat(storageInfo.getMaxAtomicMutationsCount()).isEqualTo(Integer.MAX_VALUE);
 
-    // Check consistent read guarantee based on RDB engine
+    // Check consistent virtual table read guarantee based on RDB engine
     RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
-    boolean expectedConsistentVirtualTableRead =
-        isolationLevel >= strategy.getMinimumIsolationLevelForConsistencyReads();
-    assertThat(storageInfo.isConsistentVirtualTableRead())
-        .isEqualTo(expectedConsistentVirtualTableRead);
+    boolean expectedConsistentVirtualTableReadGuaranteed =
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableReads();
+    assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
+        .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
   }
 
   @ParameterizedTest
@@ -6273,12 +6273,12 @@ public class JdbcAdminTest {
         .isEqualTo(StorageInfo.MutationAtomicityUnit.STORAGE);
     assertThat(storageInfo.getMaxAtomicMutationsCount()).isEqualTo(Integer.MAX_VALUE);
 
-    // Check consistent read guarantee based on RDB engine
+    // Check consistent virtual table read guarantee based on RDB engine
     RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
-    boolean expectedConsistentVirtualTableRead =
-        isolationLevel >= strategy.getMinimumIsolationLevelForConsistencyReads();
-    assertThat(storageInfo.isConsistentVirtualTableRead())
-        .isEqualTo(expectedConsistentVirtualTableRead);
+    boolean expectedConsistentVirtualTableReadGuaranteed =
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableReads();
+    assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
+        .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
   }
 
   @ParameterizedTest
