@@ -1,4 +1,4 @@
-name: Test Object Storage Adapter
+name: Test Cloud Storage Adapter
 
 on:
   workflow_dispatch:

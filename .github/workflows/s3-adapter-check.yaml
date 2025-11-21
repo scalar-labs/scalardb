@@ -1,4 +1,4 @@
-name: Test Object Storage Adapter
+name: Test S3 Adapter
 
 on:
   workflow_dispatch:
