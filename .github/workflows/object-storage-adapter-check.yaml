@@ -48,7 +48,7 @@ env:
 jobs:
   integration-test-s3:
     name: S3 integration test (${{ matrix.test_group.label }})
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
