@@ -11,14 +11,17 @@ public class StorageInfoImpl implements StorageInfo {
   private final String storageName;
   private final MutationAtomicityUnit mutationAtomicityUnit;
   private final int maxAtomicMutationsCount;
+  private final boolean consistentVirtualTableRead;
 
   public StorageInfoImpl(
       String storageName,
       MutationAtomicityUnit mutationAtomicityUnit,
-      int maxAtomicMutationsCount) {
+      int maxAtomicMutationsCount,
+      boolean consistentVirtualTableRead) {
     this.storageName = storageName;
     this.mutationAtomicityUnit = mutationAtomicityUnit;
     this.maxAtomicMutationsCount = maxAtomicMutationsCount;
+    this.consistentVirtualTableRead = consistentVirtualTableRead;
   }
 
   @Override
@@ -34,6 +37,11 @@ public class StorageInfoImpl implements StorageInfo {
   @Override
   public int getMaxAtomicMutationsCount() {
     return maxAtomicMutationsCount;
+  }
+
+  @Override
+  public boolean isConsistentVirtualTableRead() {
+    return consistentVirtualTableRead;
   }
 
   @Override

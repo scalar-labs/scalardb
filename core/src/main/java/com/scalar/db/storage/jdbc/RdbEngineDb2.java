@@ -20,6 +20,7 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -587,5 +588,11 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @Override
   public String getTableNamesInNamespaceSql() {
     return "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TYPE = 'T'";
+  }
+
+  @Override
+  public int getMinimumIsolationLevelForConsistencyReads() {
+    // In Db2, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistent reads
+    return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }

@@ -915,25 +915,30 @@ public class MultiStorageAdminTest {
     when(admin1.getStorageInfo(anyString()))
         .thenReturn(
             new StorageInfoImpl(
-                "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
+                "cassandra",
+                StorageInfo.MutationAtomicityUnit.PARTITION,
+                Integer.MAX_VALUE,
+                false));
     when(admin2.getStorageInfo(anyString()))
-        .thenReturn(new StorageInfoImpl("dynamo", StorageInfo.MutationAtomicityUnit.STORAGE, 100));
+        .thenReturn(
+            new StorageInfoImpl("dynamo", StorageInfo.MutationAtomicityUnit.STORAGE, 100, false));
     when(admin3.getStorageInfo(anyString()))
         .thenReturn(
             new StorageInfoImpl(
-                "jdbc", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE));
+                "jdbc", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true));
 
     // Act Assert
     assertThat(multiStorageAdmin.getStorageInfo("ns1"))
         .isEqualTo(
             new StorageInfoImpl(
-                "s1", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE));
+                "s1", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, false));
     assertThat(multiStorageAdmin.getStorageInfo("ns2"))
-        .isEqualTo(new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.STORAGE, 100));
+        .isEqualTo(
+            new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.STORAGE, 100, false));
     assertThat(multiStorageAdmin.getStorageInfo("ns3"))
         .isEqualTo(
             new StorageInfoImpl(
-                "s3", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE));
+                "s3", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true));
 
     verify(admin1).getStorageInfo("ns1");
     verify(admin2).getStorageInfo("ns2");
@@ -955,7 +960,8 @@ public class MultiStorageAdminTest {
 
     // Mock getStorageInfo to return the same storage for all namespaces
     StorageInfo storageInfo =
-        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+        new StorageInfoImpl(
+            "s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE, true);
     when(admin2.getStorageInfo(namespace)).thenReturn(storageInfo);
     when(admin2.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin2.getStorageInfo(rightSourceNamespace)).thenReturn(storageInfo);
@@ -1000,9 +1006,11 @@ public class MultiStorageAdminTest {
 
     // Mock getStorageInfo - virtual table in s3, both sources in s2
     StorageInfo storageInfoForNamespace =
-        new StorageInfoImpl("s3", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+        new StorageInfoImpl(
+            "s3", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE, true);
     StorageInfo storageInfoForSources =
-        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+        new StorageInfoImpl(
+            "s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE, true);
     when(admin3.getStorageInfo(namespace)).thenReturn(storageInfoForNamespace);
     when(admin2.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfoForSources);
     when(admin2.getStorageInfo(rightSourceNamespace)).thenReturn(storageInfoForSources);
@@ -1039,9 +1047,11 @@ public class MultiStorageAdminTest {
 
     // Mock getStorageInfo to return different storages for left and right sources
     StorageInfo storageInfo1 =
-        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+        new StorageInfoImpl(
+            "s2", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE, true);
     StorageInfo storageInfo2 =
-        new StorageInfoImpl("s3", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE);
+        new StorageInfoImpl(
+            "s3", StorageInfo.MutationAtomicityUnit.NAMESPACE, Integer.MAX_VALUE, true);
     when(admin2.getStorageInfo(namespace)).thenReturn(storageInfo1);
     when(admin2.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo1);
     when(admin3.getStorageInfo(rightSourceNamespace)).thenReturn(storageInfo2);
