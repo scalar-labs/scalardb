@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
@@ -6197,6 +6198,103 @@ public class JdbcAdminTest {
     assertThatThrownBy(() -> admin.getVirtualTableInfo(namespace, table))
         .isInstanceOf(ExecutionException.class)
         .hasCause(sqlException);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  void getStorageInfo_WithRepeatableReadIsolationLevel_ShouldReturnCorrectInfo(RdbEngine rdbEngine)
+      throws Exception {
+    // Arrange
+    int isolationLevel = Connection.TRANSACTION_REPEATABLE_READ;
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getTransactionIsolation()).thenReturn(isolationLevel);
+
+    // Act
+    StorageInfo storageInfo = admin.getStorageInfo("namespace");
+
+    // Assert
+    assertThat(storageInfo.getStorageName()).isEqualTo("jdbc");
+    assertThat(storageInfo.getMutationAtomicityUnit())
+        .isEqualTo(StorageInfo.MutationAtomicityUnit.STORAGE);
+    assertThat(storageInfo.getMaxAtomicMutationsCount()).isEqualTo(Integer.MAX_VALUE);
+
+    // Check consistent virtual table read guarantee based on RDB engine
+    RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
+    boolean expectedConsistentVirtualTableReadGuaranteed =
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableRead();
+    assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
+        .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  void getStorageInfo_WithReadCommittedIsolationLevel_ShouldReturnCorrectInfo(RdbEngine rdbEngine)
+      throws Exception {
+    // Arrange
+    int isolationLevel = Connection.TRANSACTION_READ_COMMITTED;
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getTransactionIsolation()).thenReturn(isolationLevel);
+
+    // Act
+    StorageInfo storageInfo = admin.getStorageInfo("namespace");
+
+    // Assert
+    assertThat(storageInfo.getStorageName()).isEqualTo("jdbc");
+    assertThat(storageInfo.getMutationAtomicityUnit())
+        .isEqualTo(StorageInfo.MutationAtomicityUnit.STORAGE);
+    assertThat(storageInfo.getMaxAtomicMutationsCount()).isEqualTo(Integer.MAX_VALUE);
+
+    // Check consistent virtual table read guarantee based on RDB engine
+    RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
+    boolean expectedConsistentVirtualTableReadGuaranteed =
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableRead();
+    assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
+        .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  void getStorageInfo_WithSerializableIsolationLevel_ShouldReturnCorrectInfo(RdbEngine rdbEngine)
+      throws Exception {
+    // Arrange
+    int isolationLevel = Connection.TRANSACTION_SERIALIZABLE;
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getTransactionIsolation()).thenReturn(isolationLevel);
+
+    // Act
+    StorageInfo storageInfo = admin.getStorageInfo("namespace");
+
+    // Assert
+    assertThat(storageInfo.getStorageName()).isEqualTo("jdbc");
+    assertThat(storageInfo.getMutationAtomicityUnit())
+        .isEqualTo(StorageInfo.MutationAtomicityUnit.STORAGE);
+    assertThat(storageInfo.getMaxAtomicMutationsCount()).isEqualTo(Integer.MAX_VALUE);
+
+    // Check consistent virtual table read guarantee based on RDB engine
+    RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
+    boolean expectedConsistentVirtualTableReadGuaranteed =
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableRead();
+    assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
+        .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  void getStorageInfo_SQLExceptionThrown_ShouldThrowExecutionException(RdbEngine rdbEngine)
+      throws Exception {
+    // Arrange
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getTransactionIsolation()).thenThrow(new SQLException("Connection error"));
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getStorageInfo("namespace"))
+        .isInstanceOf(ExecutionException.class)
+        .hasMessageContaining("Getting the transaction isolation level failed")
+        .hasCauseInstanceOf(SQLException.class);
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

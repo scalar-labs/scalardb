@@ -47,6 +47,9 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
   /**
    * Returns the storage information.
    *
+   * <p>Note: This feature is primarily for internal use. Breaking changes can and will be
+   * introduced to it. Users should not depend on it.
+   *
    * @param namespace the namespace to get the storage information for
    * @return the storage information
    * @throws ExecutionException if the operation fails

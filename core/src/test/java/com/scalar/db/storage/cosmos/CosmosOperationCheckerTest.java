@@ -41,7 +41,8 @@ public class CosmosOperationCheckerTest {
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
   private static final StorageInfo STORAGE_INFO =
-      new StorageInfoImpl("cosmos", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE);
+      new StorageInfoImpl(
+          "cosmos", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, false);
 
   private static final TableMetadata TABLE_METADATA1 =
       TableMetadata.newBuilder()

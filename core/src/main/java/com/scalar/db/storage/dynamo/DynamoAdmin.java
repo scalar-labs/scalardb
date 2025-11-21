@@ -165,7 +165,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           "dynamo",
           StorageInfo.MutationAtomicityUnit.STORAGE,
           // DynamoDB has a limit of 100 items per transactional batch write operation
-          100);
+          100,
+          false);
 
   private final DynamoDbClient client;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
