@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataimport.log;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -157,6 +158,60 @@ class SingleFileImportLoggerTest {
       }
     } else {
       assertFalse(Files.exists(logFileName), "Log file should not exist");
+    }
+  }
+
+  @Test
+  void onTransactionBatchCompleted_HasErrors_ShouldWriteToFailureLogFileWithoutRawRecord()
+      throws IOException {
+    testTransactionBatchCompletedForRawRecords(false);
+  }
+
+  @Test
+  void onTransactionBatchCompleted_HasErrors_ShouldWriteToFailureLogFileWithRawRecord()
+      throws IOException {
+    testTransactionBatchCompletedForRawRecords(true);
+  }
+
+  private void testTransactionBatchCompletedForRawRecords(boolean logRawRecords)
+      throws IOException {
+    // Arrange
+    ImportLoggerConfig config =
+        ImportLoggerConfig.builder()
+            .logDirectoryPath(tempDir.toString() + "/")
+            .isLogRawSourceRecordsEnabled(logRawRecords)
+            .isLogSuccessRecordsEnabled(false)
+            .build();
+    SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
+
+    List<ImportTransactionBatchResult> batchResults = createBatchResults(1, false);
+
+    // Act
+    for (ImportTransactionBatchResult batchResult : batchResults) {
+      importLogger.onTransactionBatchCompleted(batchResult);
+      importLogger.onDataChunkCompleted(
+          ImportDataChunkStatus.builder().dataChunkId(batchResult.getDataChunkId()).build());
+    }
+    importLogger.onAllDataChunksCompleted();
+
+    // Assert
+    assertTransactionBatchResultsForRawRecords(logRawRecords);
+  }
+
+  private void assertTransactionBatchResultsForRawRecords(boolean logRawRecord) throws IOException {
+    DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
+
+    Path logFileName = tempDir.resolve(SingleFileImportLogger.FAILURE_LOG_FILE_NAME);
+    assertTrue(Files.exists(logFileName), "Log file should exist");
+    String logContent = new String(Files.readAllBytes(logFileName), StandardCharsets.UTF_8);
+    List<ImportTransactionBatchResult> logEntries =
+        objectMapper.readValue(
+            logContent, new TypeReference<List<ImportTransactionBatchResult>>() {});
+    ImportTaskResult importTaskResult = logEntries.get(0).getRecords().get(0);
+    if (logRawRecord) {
+      assertEquals(OBJECT_MAPPER.createObjectNode(), importTaskResult.getRawRecord());
+    } else {
+      assertNull(importTaskResult.getRawRecord());
     }
   }
 
