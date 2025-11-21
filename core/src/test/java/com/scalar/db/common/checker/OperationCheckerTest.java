@@ -53,7 +53,7 @@ public class OperationCheckerTest {
   private static final String COL3 = "v3";
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
-          "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE);
+          "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, false);
 
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
@@ -2059,9 +2059,11 @@ public class OperationCheckerTest {
                 .addClusteringKey(CKEY1)
                 .build());
 
-    StorageInfo storageInfo1 = new StorageInfoImpl("s1", mutationAtomicityUnit, Integer.MAX_VALUE);
+    StorageInfo storageInfo1 =
+        new StorageInfoImpl("s1", mutationAtomicityUnit, Integer.MAX_VALUE, false);
     StorageInfo storageInfo2 =
-        new StorageInfoImpl("s2", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE);
+        new StorageInfoImpl(
+            "s2", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, false);
     when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo1);
     when(storageInfoProvider.getStorageInfo("ns2")).thenReturn(storageInfo1);
     when(storageInfoProvider.getStorageInfo("other_ns")).thenReturn(storageInfo2);

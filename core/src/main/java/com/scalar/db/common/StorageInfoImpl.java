@@ -11,14 +11,17 @@ public class StorageInfoImpl implements StorageInfo {
   private final String storageName;
   private final MutationAtomicityUnit mutationAtomicityUnit;
   private final int maxAtomicMutationsCount;
+  private final boolean consistentVirtualTableReadGuaranteed;
 
   public StorageInfoImpl(
       String storageName,
       MutationAtomicityUnit mutationAtomicityUnit,
-      int maxAtomicMutationsCount) {
+      int maxAtomicMutationsCount,
+      boolean consistentVirtualTableReadGuaranteed) {
     this.storageName = storageName;
     this.mutationAtomicityUnit = mutationAtomicityUnit;
     this.maxAtomicMutationsCount = maxAtomicMutationsCount;
+    this.consistentVirtualTableReadGuaranteed = consistentVirtualTableReadGuaranteed;
   }
 
   @Override
@@ -37,6 +40,11 @@ public class StorageInfoImpl implements StorageInfo {
   }
 
   @Override
+  public boolean isConsistentVirtualTableReadGuaranteed() {
+    return consistentVirtualTableReadGuaranteed;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -47,12 +55,18 @@ public class StorageInfoImpl implements StorageInfo {
     StorageInfoImpl that = (StorageInfoImpl) o;
     return getMaxAtomicMutationsCount() == that.getMaxAtomicMutationsCount()
         && Objects.equals(getStorageName(), that.getStorageName())
-        && getMutationAtomicityUnit() == that.getMutationAtomicityUnit();
+        && getMutationAtomicityUnit() == that.getMutationAtomicityUnit()
+        && isConsistentVirtualTableReadGuaranteed()
+            == that.isConsistentVirtualTableReadGuaranteed();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getStorageName(), getMutationAtomicityUnit(), getMaxAtomicMutationsCount());
+    return Objects.hash(
+        getStorageName(),
+        getMutationAtomicityUnit(),
+        getMaxAtomicMutationsCount(),
+        isConsistentVirtualTableReadGuaranteed());
   }
 
   @Override
@@ -61,6 +75,7 @@ public class StorageInfoImpl implements StorageInfo {
         .add("storageName", storageName)
         .add("mutationAtomicityUnit", mutationAtomicityUnit)
         .add("maxAtomicMutationsCount", maxAtomicMutationsCount)
+        .add("consistentVirtualTableReadGuaranteed", consistentVirtualTableReadGuaranteed)
         .toString();
   }
 }

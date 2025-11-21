@@ -38,7 +38,8 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
           "object_storage",
           StorageInfo.MutationAtomicityUnit.PARTITION,
           // No limit on the number of mutations
-          Integer.MAX_VALUE);
+          Integer.MAX_VALUE,
+          false);
 
   private final ObjectStorageWrapper wrapper;
   private final String metadataNamespace;
