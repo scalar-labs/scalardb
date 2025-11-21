@@ -62,14 +62,14 @@ public class ConsoleExportProgressReporter {
     }
   }
 
-    /**
-     * Prints a formatted waring message to the console.
-     *
-     * @param message the error description
-     */
-    public static void reportWarning(String message) {
-        System.err.println("%n!! Warning: " + message);
-    }
+  /**
+   * Prints a formatted waring message to the console.
+   *
+   * @param message the error description
+   */
+  public static void reportWarning(String message) {
+    System.err.printf("%n⚠️  Warning: %s%n", message);
+  }
 
   /**
    * Formats elapsed time in "Xm Ys" format.

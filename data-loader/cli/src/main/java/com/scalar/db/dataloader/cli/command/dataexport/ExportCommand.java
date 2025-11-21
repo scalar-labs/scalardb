@@ -157,8 +157,8 @@ public class ExportCommand extends ExportCommandOptions implements Callable<Inte
                   + "Use the 'scalar.db.consensus_commit.include_metadata.enabled' configuration property "
                   + "in your ScalarDB properties file to control whether transaction metadata is included in scan operations.|@");
 
-//      logger.warn(warning);
-        ConsoleExportProgressReporter.reportWarning(warning);
+      //      logger.warn(warning);
+      ConsoleExportProgressReporter.reportWarning(warning);
     }
   }
 

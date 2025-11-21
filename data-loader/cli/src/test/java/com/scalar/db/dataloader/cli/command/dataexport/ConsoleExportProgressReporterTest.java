@@ -105,4 +105,52 @@ class ConsoleExportProgressReporterTest {
       System.setErr(originalErr);
     }
   }
+
+  @Test
+  void testReportWarning_shouldPrintFormattedWarningMessage() throws UnsupportedEncodingException {
+
+    ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+    PrintStream originalErr = System.err;
+    System.setErr(new PrintStream(errContent, true, "UTF-8"));
+
+    try {
+      String warningMessage = "Deprecated option detected";
+
+      ConsoleExportProgressReporter.reportWarning(warningMessage);
+
+      String output = errContent.toString("UTF-8");
+
+      // Expected core formatted message
+      assertTrue(
+          output.contains("⚠️  Warning: " + warningMessage), "Expected formatted warning message");
+
+      // Should start with a newline produced by %n
+      assertTrue(
+          output.startsWith(System.lineSeparator()), "Expected output to start with a newline");
+
+      // Should end with a newline from the trailing %n
+      assertTrue(output.endsWith(System.lineSeparator()), "Expected output to end with a newline");
+    } finally {
+      System.setErr(originalErr);
+    }
+  }
+
+  @Test
+  void testReportWarning_shouldNotIncludeErrorSpecificFields() throws UnsupportedEncodingException {
+
+    ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+    PrintStream originalErr = System.err;
+    System.setErr(new PrintStream(errContent, true, "UTF-8"));
+
+    try {
+      ConsoleExportProgressReporter.reportWarning("Check your input");
+
+      String output = errContent.toString("UTF-8");
+
+      assertFalse(output.contains("Cause:"), "Warning output must not include cause");
+      assertFalse(output.contains("❌"), "Warning output must not include error symbol");
+    } finally {
+      System.setErr(originalErr);
+    }
+  }
 }
