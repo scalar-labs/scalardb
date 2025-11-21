@@ -439,7 +439,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public int getMinimumIsolationLevelForConsistentVirtualTableReads() {
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
     // In SQL Server, REPEATABLE READ or higher isolation level guarantees consistent reads
     return Connection.TRANSACTION_REPEATABLE_READ;
   }

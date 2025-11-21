@@ -391,7 +391,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public int getMinimumIsolationLevelForConsistentVirtualTableReads() {
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
     // In SQLite, READ COMMITTED and higher isolation levels guarantee consistent reads
     return Connection.TRANSACTION_READ_COMMITTED;
   }

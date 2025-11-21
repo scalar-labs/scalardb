@@ -6222,7 +6222,7 @@ public class JdbcAdminTest {
     // Check consistent virtual table read guarantee based on RDB engine
     RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
     boolean expectedConsistentVirtualTableReadGuaranteed =
-        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableReads();
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableRead();
     assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
         .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
   }
@@ -6249,7 +6249,7 @@ public class JdbcAdminTest {
     // Check consistent virtual table read guarantee based on RDB engine
     RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
     boolean expectedConsistentVirtualTableReadGuaranteed =
-        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableReads();
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableRead();
     assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
         .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
   }
@@ -6276,7 +6276,7 @@ public class JdbcAdminTest {
     // Check consistent virtual table read guarantee based on RDB engine
     RdbEngineStrategy strategy = getRdbEngineStrategy(rdbEngine);
     boolean expectedConsistentVirtualTableReadGuaranteed =
-        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableReads();
+        isolationLevel >= strategy.getMinimumIsolationLevelForConsistentVirtualTableRead();
     assertThat(storageInfo.isConsistentVirtualTableReadGuaranteed())
         .isEqualTo(expectedConsistentVirtualTableReadGuaranteed);
   }

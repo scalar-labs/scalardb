@@ -403,7 +403,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public int getMinimumIsolationLevelForConsistentVirtualTableReads() {
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
     // In PostgreSQL, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistent reads
     return Connection.TRANSACTION_REPEATABLE_READ;
   }

@@ -326,5 +326,16 @@ public interface RdbEngineStrategy {
 
   String getTableNamesInNamespaceSql();
 
-  int getMinimumIsolationLevelForConsistentVirtualTableReads();
+  /**
+   * Returns the minimum isolation level required to ensure consistent reads across virtual tables.
+   *
+   * <p>A virtual table read involves querying multiple underlying source tables. When using a lower
+   * isolation level, there is a risk of observing an inconsistent snapshot where data from
+   * different source tables reflects different points in time. This method returns the minimum
+   * isolation level that guarantees a consistent snapshot across all source tables involved in a
+   * virtual table read.
+   *
+   * @return the minimum isolation level required for consistent virtual table reads
+   */
+  int getMinimumIsolationLevelForConsistentVirtualTableRead();
 }

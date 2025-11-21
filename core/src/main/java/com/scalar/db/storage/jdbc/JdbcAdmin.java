@@ -1010,7 +1010,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection()) {
       int isolationLevel = connection.getTransactionIsolation();
       consistentVirtualTableReadGuaranteed =
-          isolationLevel >= rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableReads();
+          isolationLevel >= rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead();
     } catch (SQLException e) {
       throw new ExecutionException("Getting the transaction isolation level failed", e);
     }

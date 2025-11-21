@@ -591,7 +591,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public int getMinimumIsolationLevelForConsistentVirtualTableReads() {
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
     // In Db2, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistent reads
     return Connection.TRANSACTION_REPEATABLE_READ;
   }
