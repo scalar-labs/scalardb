@@ -8,6 +8,8 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
 
   @Override
   protected Properties getProperties(String testName) {
-    return ConsensusCommitJdbcEnv.getProperties(testName);
+    Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
+    properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "SERIALIZABLE");
+    return properties;
   }
 }
