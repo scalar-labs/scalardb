@@ -2,6 +2,7 @@ package com.scalar.db.dataloader.core.dataexport.producer;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.dataloader.core.Constants;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.util.CsvUtil;
 import com.scalar.db.dataloader.core.util.DecimalUtil;
@@ -118,6 +119,11 @@ public class CsvProducerTask extends ProducerTask {
    */
   private String convertToString(Result result, String columnName, DataType dataType) {
     if (result.isNull(columnName)) {
+      // Special null value is added when a column of text data type has null value. This is only
+      // converted for CSV files
+      if (dataType.equals(DataType.TEXT)) {
+        return Constants.CSV_TEXT_NULL_VALUE;
+      }
       return null;
     }
     String value = "";
