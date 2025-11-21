@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.Constants;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
 import com.scalar.db.dataloader.core.exception.ColumnParsingException;
@@ -85,7 +86,7 @@ public final class ColumnUtils {
     String columnName = columnInfo.getColumnName();
     if (value != null) {
       if (dataType.equals(DataType.TEXT)) {
-        if ("\\N".equals(value)) {
+        if (Constants.CSV_TEXT_NULL_VALUE.equals(value)) {
           value = null;
         }
       } else if (value.equalsIgnoreCase("null")) {

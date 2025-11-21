@@ -8,6 +8,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.dataloader.core.ColumnInfo;
+import com.scalar.db.dataloader.core.Constants;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.UnitTestUtils;
 import com.scalar.db.dataloader.core.exception.Base64Exception;
@@ -311,7 +312,7 @@ class ColumnUtilsTest {
   }
 
   /**
-   * Tests that when the string value has custom null value "/N" is provided for TEXT columns, it is
+   * Tests that when the string value has custom null value is provided for TEXT columns, it is
    * treated as an actual null value
    */
   @Test
@@ -320,7 +321,8 @@ class ColumnUtilsTest {
     String columnName = "textColumn";
     ColumnInfo columnInfo = ColumnInfo.builder().columnName(columnName).build();
 
-    Column<?> textCol = ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, "\\N");
+    Column<?> textCol =
+        ColumnUtils.createColumnFromValue(DataType.TEXT, columnInfo, Constants.CSV_TEXT_NULL_VALUE);
     assertEquals(TextColumn.ofNull(columnName), textCol);
   }
 }
