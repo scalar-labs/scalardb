@@ -16,4 +16,12 @@ public class Constants {
    */
   public static final String ABORT_TRANSACTION_STATUS =
       "Transaction aborted as part of batch transaction aborted";
+  /**
+   * Special null value representation used for TEXT data type columns in CSV files.
+   *
+   * <p>This value is used to distinguish between an empty string and a null value in CSV exports
+   * and imports. When exporting, null TEXT values are converted to this string. When importing,
+   * this string is converted back to null for TEXT columns.
+   */
+  public static final String CSV_TEXT_NULL_VALUE = "\\N";
 }
