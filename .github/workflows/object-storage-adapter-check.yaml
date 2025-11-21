@@ -85,9 +85,13 @@ jobs:
             tests_filter: '--tests "**.ObjectStorage**" --tests "*!ObjectStorageSingle" --tests "*!ObjectStorageMultiple" --tests "*!ObjectStorageWrapper" --tests "*!ObjectStorageAdmin" --tests "*!ObjectStorageConditionalMutation"'
             bucket_suffix: storage
             group_commit_enabled: false
-          - label: others
-            tests_filter: '--tests "**.TwoPhaseConsensusCommit**" --tests "**.SingleCrudOperationTransaction**"'
-            bucket_suffix: others
+          - label: two_phase_consensus_commit
+            tests_filter: '--tests "**.TwoPhaseConsensusCommit**"'
+            bucket_suffix: 2pcc
+            group_commit_enabled: false
+          - label: single_crud_operation_transaction
+            tests_filter: '--tests "**.SingleCrudOperationTransaction**"'
+            bucket_suffix: single-crud
             group_commit_enabled: false
 
     steps:
@@ -168,9 +172,13 @@ jobs:
             tests_filter: '--tests "**.ObjectStorage**" --tests "*!ObjectStorageSingle" --tests "*!ObjectStorageMultiple" --tests "*!ObjectStorageWrapper" --tests "*!ObjectStorageAdmin" --tests "*!ObjectStorageConditionalMutation"'
             bucket_suffix: storage
             group_commit_enabled: false
-          - label: others
-            tests_filter: '--tests "**.TwoPhaseConsensusCommit**" --tests "**.SingleCrudOperationTransaction**"'
-            bucket_suffix: others
+          - label: two_phase_consensus_commit
+            tests_filter: '--tests "**.TwoPhaseConsensusCommit**"'
+            bucket_suffix: 2pcc
+            group_commit_enabled: false
+          - label: single_crud_operation_transaction
+            tests_filter: '--tests "**.SingleCrudOperationTransaction**"'
+            bucket_suffix: single-crud
             group_commit_enabled: false
 
     steps:
