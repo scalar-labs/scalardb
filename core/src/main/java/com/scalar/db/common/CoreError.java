@@ -1009,6 +1009,12 @@ public enum CoreError implements ScalarDbError {
       "Source tables cannot be dropped while virtual tables depending on them exist. Source table: %s; Virtual tables: %s",
       "",
       ""),
+  DELETE_IF_IS_NULL_FOR_RIGHT_SOURCE_TABLE_NOT_ALLOWED_FOR_LEFT_OUTER_VIRTUAL_TABLES(
+      Category.USER_ERROR,
+      "0276",
+      "The DeleteIf IS_NULL condition for right source table columns is not allowed in LEFT_OUTER virtual tables. Virtual table: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

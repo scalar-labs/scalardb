@@ -35,6 +35,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Column;
+import com.scalar.db.util.ScalarDbUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -395,7 +396,21 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           putBuilderForLeftSourceTable.condition(ConditionBuilder.putIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          putBuilderForRightSourceTable.condition(ConditionBuilder.putIf(rightExpressions));
+          if (virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+              && JdbcOperationAttributes
+                  .isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(put)
+              && rightExpressions.stream()
+                  .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL)) {
+            // In a LEFT_OUTER join, when all conditions on the right source table columns are
+            // IS_NULL, we cannot distinguish whether we should check for the existence of a
+            // right-side record with NULL values or for the case where the right-side record does
+            // not exist at all. Therefore, this behavior is controlled by the operation attribute.
+            // By default, we convert the condition to PutIfNotExists, assuming that the more common
+            // use case is to check that the right-side record does not exist.
+            putBuilderForRightSourceTable.condition(ConditionBuilder.putIfNotExists());
+          } else {
+            putBuilderForRightSourceTable.condition(ConditionBuilder.putIf(rightExpressions));
+          }
         }
       }
     }
@@ -464,7 +479,27 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           deleteBuilderForLeftSourceTable.condition(ConditionBuilder.deleteIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          deleteBuilderForRightSourceTable.condition(ConditionBuilder.deleteIf(rightExpressions));
+          if (virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+              && !JdbcOperationAttributes
+                  .isLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(delete)
+              && rightExpressions.stream()
+                  .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL)) {
+            // In a LEFT_OUTER join, when all conditions on the right source table columns are
+            // IS_NULL, we cannot distinguish whether we should check for the existence of a
+            // right-side record with NULL values or for the case where the right-side record does
+            // not exist at all. This makes the delete operation semantically ambiguous. Therefore,
+            // this behavior is controlled by the operation attribute. By default, we disallow this
+            // operation to prevent unintended behavior.
+            assert delete.forNamespace().isPresent() && delete.forTable().isPresent();
+            throw new IllegalArgumentException(
+                CoreError
+                    .DELETE_IF_IS_NULL_FOR_RIGHT_SOURCE_TABLE_NOT_ALLOWED_FOR_LEFT_OUTER_VIRTUAL_TABLES
+                    .buildMessage(
+                        ScalarDbUtils.getFullTableName(
+                            delete.forNamespace().get(), delete.forTable().get())));
+          } else {
+            deleteBuilderForRightSourceTable.condition(ConditionBuilder.deleteIf(rightExpressions));
+          }
         }
       }
     }
