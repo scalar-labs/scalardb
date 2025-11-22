@@ -20,7 +20,7 @@ public class JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
 
-    // Set the isolation level for consistency reads
+    // Set the isolation level for consistency reads for virtual tables
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(
@@ -28,14 +28,6 @@ public class JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
             .name());
 
     return properties;
-  }
-
-  @Override
-  protected void initialize(String testName) throws Exception {
-    super.initialize(testName);
-    Properties properties = getProperties(testName);
-    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = RdbEngineFactory.create(config);
   }
 
   @Override

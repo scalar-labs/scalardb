@@ -13,7 +13,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
   protected Properties getProperties(String testName) {
     Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
 
-    // Set the isolation level for consistency reads
+    // Set the isolation level for consistency reads for virtual tables
     RdbEngineStrategy rdbEngine =
         RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
     properties.setProperty(

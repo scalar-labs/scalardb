@@ -32,7 +32,7 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     rdbEngine = RdbEngineFactory.create(config);
     testUtils = new JdbcAdminImportTestUtils(properties);
 
-    // Set the isolation level for consistency reads
+    // Set the isolation level for consistency reads for virtual tables
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(
