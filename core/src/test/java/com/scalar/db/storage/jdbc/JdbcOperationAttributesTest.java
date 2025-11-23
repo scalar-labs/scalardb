@@ -171,7 +171,8 @@ public class JdbcOperationAttributesTest {
     // Assert
     assertThat(attributes)
         .containsEntry(
-            JdbcOperationAttributes.LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_FOR_RIGHT_ALLOWED,
+            JdbcOperationAttributes
+                .LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_ON_RIGHT_COLUMNS_ALLOWED,
             "true");
   }
 }

@@ -396,11 +396,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           putBuilderForLeftSourceTable.condition(ConditionBuilder.putIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          if (virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+          if (isAllIsNullOnRightColumnsInLeftOuterJoin(virtualTableInfo, rightExpressions)
               && JdbcOperationAttributes
-                  .isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(put)
-              && rightExpressions.stream()
-                  .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL)) {
+                  .isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(put)) {
             // In a LEFT_OUTER join, when all conditions on the right source table columns are
             // IS_NULL, we cannot distinguish whether we should check for the existence of a
             // right-side record with NULL values or for the case where the right-side record does
@@ -479,11 +477,9 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           deleteBuilderForLeftSourceTable.condition(ConditionBuilder.deleteIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          if (virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+          if (isAllIsNullOnRightColumnsInLeftOuterJoin(virtualTableInfo, rightExpressions)
               && !JdbcOperationAttributes
-                  .isLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(delete)
-              && rightExpressions.stream()
-                  .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL)) {
+                  .isLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(delete)) {
             // In a LEFT_OUTER join, when all conditions on the right source table columns are
             // IS_NULL, we cannot distinguish whether we should check for the existence of a
             // right-side record with NULL values or for the case where the right-side record does
@@ -507,6 +503,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Delete deleteForLeftSourceTable = deleteBuilderForLeftSourceTable.build();
     Delete deleteForRightSourceTable = deleteBuilderForRightSourceTable.build();
     return Arrays.asList(deleteForLeftSourceTable, deleteForRightSourceTable);
+  }
+
+  private boolean isAllIsNullOnRightColumnsInLeftOuterJoin(
+      VirtualTableInfo virtualTableInfo, List<ConditionalExpression> rightExpressions) {
+    return virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+        && rightExpressions.stream()
+            .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL);
   }
 
   private void close(Connection connection) {

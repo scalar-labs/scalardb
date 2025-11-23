@@ -13,7 +13,7 @@ public final class JdbcOperationAttributes {
           OPERATION_ATTRIBUTE_PREFIX
               + "left-outer-virtual-table-put-if-is-null-on-right-columns-conversion-enabled";
 
-  public static final String LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_FOR_RIGHT_ALLOWED =
+  public static final String LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_ON_RIGHT_COLUMNS_ALLOWED =
       OPERATION_ATTRIBUTE_PREFIX
           + "left-outer-virtual-table-delete-if-is-null-on-right-columns-allowed";
 
@@ -35,7 +35,7 @@ public final class JdbcOperationAttributes {
 
   public static boolean isLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(Delete delete) {
     return delete
-        .getAttribute(LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_FOR_RIGHT_ALLOWED)
+        .getAttribute(LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_ON_RIGHT_COLUMNS_ALLOWED)
         .map(Boolean::parseBoolean)
         .orElse(false);
   }
@@ -43,6 +43,7 @@ public final class JdbcOperationAttributes {
   public static void setLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(
       Map<String, String> attributes, boolean allowed) {
     attributes.put(
-        LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_FOR_RIGHT_ALLOWED, Boolean.toString(allowed));
+        LEFT_OUTER_VIRTUAL_TABLE_DELETE_IF_IS_NULL_ON_RIGHT_COLUMNS_ALLOWED,
+        Boolean.toString(allowed));
   }
 }
