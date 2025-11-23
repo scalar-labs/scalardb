@@ -27,7 +27,7 @@ jobs:
             8
 
       - name: Checkout release note scripts
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: scalar-labs/actions
           token: ${{ secrets.GH_PROJECT_ACCESS_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
           prerelease: false
 
       - name: Checkout the current repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
