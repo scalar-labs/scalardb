@@ -129,6 +129,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       String dataTableName = table + TRANSACTION_METADATA_DECOUPLING_DATA_TABLE_SUFFIX;
       String txMetadataTableName = table + TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX;
 
+      if (admin.tableExists(namespace, dataTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, dataTableName)));
+      }
+      if (admin.tableExists(namespace, txMetadataTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, txMetadataTableName)));
+      }
+
       // Create a data table
       admin.createTable(namespace, dataTableName, metadata, options);
 
@@ -405,6 +416,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
       String importedTableName = table + TRANSACTION_METADATA_DECOUPLING_IMPORTED_TABLE_SUFFIX;
       String txMetadataTableName = table + TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX;
+
+      if (admin.tableExists(namespace, txMetadataTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, txMetadataTableName)));
+      }
+      if (admin.tableExists(namespace, importedTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, importedTableName)));
+      }
 
       // import the original table as a data table
       admin.importTable(namespace, table, options, overrideColumnsType);

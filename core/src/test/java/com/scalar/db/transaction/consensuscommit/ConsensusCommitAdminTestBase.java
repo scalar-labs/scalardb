@@ -942,6 +942,57 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabledAndDataTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_data")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, tableMetadata, options))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabledAndMetadataTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_data")).thenReturn(false);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_tx_metadata")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, tableMetadata, options))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void dropTable_ForVirtualTable_ShouldDropVirtualTableAndSourceTables()
       throws ExecutionException {
     // Arrange
@@ -1133,6 +1184,45 @@ public abstract class ConsensusCommitAdminTestBase {
     StorageInfo storageInfo =
         new StorageInfoImpl("dynamodb", MutationAtomicityUnit.STORAGE, 100, false);
     when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabledAndMetadataTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_tx_metadata")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabledAndImportedTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_tx_metadata")).thenReturn(false);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_scalardb")).thenReturn(true);
 
     // Act Assert
     assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
