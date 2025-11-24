@@ -23,6 +23,13 @@ public interface StorageInfo {
   int getMaxAtomicMutationsCount();
 
   /**
+   * Returns whether the storage guarantees consistent reads for virtual tables.
+   *
+   * @return true if the storage guarantees consistent reads for virtual tables, false otherwise
+   */
+  boolean isConsistentVirtualTableReadGuaranteed();
+
+  /**
    * The mutation atomicity unit of the storage.
    *
    * <p>This enum defines the atomicity unit for mutations in the storage. It determines the scope

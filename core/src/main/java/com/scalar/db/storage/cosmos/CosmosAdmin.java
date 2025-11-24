@@ -74,7 +74,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           "cosmos",
           StorageInfo.MutationAtomicityUnit.PARTITION,
           // No limit on the number of mutations
-          Integer.MAX_VALUE);
+          Integer.MAX_VALUE,
+          false);
 
   private final CosmosClient client;
   private final String metadataDatabase;

@@ -10,6 +10,7 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
@@ -435,5 +436,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String getTableNamesInNamespaceSql() {
     return "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?";
+  }
+
+  @Override
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
+    // In SQL Server, REPEATABLE READ or higher isolation level guarantees consistent reads
+    return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }

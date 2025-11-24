@@ -57,7 +57,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           "cassandra",
           StorageInfo.MutationAtomicityUnit.PARTITION,
           // No limit on the number of mutations
-          Integer.MAX_VALUE);
+          Integer.MAX_VALUE,
+          false);
 
   private final ClusterManager clusterManager;
   private final String metadataKeyspace;
