@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
+import com.google.api.gax.retrying.RetrySettings;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.annotation.concurrent.ThreadSafe;
+import org.threeten.bp.Duration;
 
 @ThreadSafe
 public class CloudStorageWrapper implements ObjectStorageWrapper {
@@ -40,6 +42,11 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
         StorageOptions.newBuilder()
             .setProjectId(config.getProjectId())
             .setCredentials(config.getCredentials())
+            .setRetrySettings(
+                RetrySettings.newBuilder()
+                    .setInitialRetryDelay(
+                        Duration.ofSeconds(config.getInitialRetryDelayInSeconds()))
+                    .build())
             .build()
             .getService();
     bucket = config.getBucket();
