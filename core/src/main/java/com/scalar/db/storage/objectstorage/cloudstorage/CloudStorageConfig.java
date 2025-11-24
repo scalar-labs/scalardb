@@ -23,15 +23,12 @@ public class CloudStorageConfig implements ObjectStorageConfig {
   public static final String INITIAL_RETRY_DELAY_IN_SECONDS =
       PREFIX + "initial_retry_delay_in_seconds";
 
-  public static final Integer DEFAULT_INITIAL_RETRY_DELAY_IN_SECONDS = 1;
-
   private static final Logger logger = LoggerFactory.getLogger(CloudStorageConfig.class);
   private final String password;
   private final String bucket;
   private final String metadataNamespace;
   private final String projectId;
   private final Integer parallelUploadBlockSizeInBytes;
-  private final Integer initialRetryDelayInSeconds;
 
   public CloudStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -56,11 +53,6 @@ public class CloudStorageConfig implements ObjectStorageConfig {
 
     parallelUploadBlockSizeInBytes =
         getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, null);
-    initialRetryDelayInSeconds =
-        getInt(
-            databaseConfig.getProperties(),
-            INITIAL_RETRY_DELAY_IN_SECONDS,
-            DEFAULT_INITIAL_RETRY_DELAY_IN_SECONDS);
   }
 
   @Override
@@ -104,9 +96,5 @@ public class CloudStorageConfig implements ObjectStorageConfig {
 
   public Optional<Integer> getParallelUploadBlockSizeInBytes() {
     return Optional.ofNullable(parallelUploadBlockSizeInBytes);
-  }
-
-  public Integer getInitialRetryDelayInSeconds() {
-    return initialRetryDelayInSeconds;
   }
 }

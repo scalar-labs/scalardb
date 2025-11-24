@@ -15,7 +15,6 @@ public class CloudStorageConfigTest {
   private static final String CloudStorage_STORAGE = "cloud-storage";
   private static final String ANY_TABLE_METADATA_NAMESPACE = "any_namespace";
   private static final String ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = "5242880"; // 5MB
-  private static final String ANY_INITIAL_RETRY_DELAY_IN_SECONDS = "2";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -29,8 +28,6 @@ public class CloudStorageConfigTest {
     props.setProperty(
         CloudStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
         ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
-    props.setProperty(
-        CloudStorageConfig.INITIAL_RETRY_DELAY_IN_SECONDS, ANY_INITIAL_RETRY_DELAY_IN_SECONDS);
 
     // Act
     CloudStorageConfig config = new CloudStorageConfig(new DatabaseConfig(props));
@@ -42,7 +39,6 @@ public class CloudStorageConfigTest {
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getParallelUploadBlockSizeInBytes()).isNotEmpty();
     assertThat(config.getParallelUploadBlockSizeInBytes().get()).isEqualTo(5242880);
-    assertThat(config.getInitialRetryDelayInSeconds()).isEqualTo(2);
   }
 
   @Test
@@ -64,8 +60,6 @@ public class CloudStorageConfigTest {
     assertThat(config.getMetadataNamespace())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     assertThat(config.getParallelUploadBlockSizeInBytes()).isEmpty();
-    assertThat(config.getInitialRetryDelayInSeconds())
-        .isEqualTo(CloudStorageConfig.DEFAULT_INITIAL_RETRY_DELAY_IN_SECONDS);
   }
 
   @Test
