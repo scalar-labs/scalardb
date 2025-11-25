@@ -163,6 +163,7 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.USERNAME, "user");
     properties.setProperty(DatabaseConfig.PASSWORD, "oracle");
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "REPEATABLE_READ");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "200");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
@@ -182,6 +183,8 @@ public class JdbcUtilsTest {
     assertThat(tableMetadataDataSource.getUsername()).isEqualTo("user");
     assertThat(tableMetadataDataSource.getPassword()).isEqualTo("oracle");
 
+    assertThat(tableMetadataDataSource.getDefaultTransactionIsolation())
+        .isEqualTo(Connection.TRANSACTION_REPEATABLE_READ);
     assertThat(tableMetadataDataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(tableMetadataDataSource.getMinIdle()).isEqualTo(100);
@@ -199,6 +202,7 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.USERNAME, "user");
     properties.setProperty(DatabaseConfig.PASSWORD, "sqlserver");
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "READ_UNCOMMITTED");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "100");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "200");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "300");
@@ -216,6 +220,8 @@ public class JdbcUtilsTest {
     assertThat(adminDataSource.getUsername()).isEqualTo("user");
     assertThat(adminDataSource.getPassword()).isEqualTo("sqlserver");
 
+    assertThat(adminDataSource.getDefaultTransactionIsolation())
+        .isEqualTo(Connection.TRANSACTION_READ_UNCOMMITTED);
     assertThat(adminDataSource.getDefaultReadOnly()).isFalse();
 
     assertThat(adminDataSource.getMinIdle()).isEqualTo(100);
