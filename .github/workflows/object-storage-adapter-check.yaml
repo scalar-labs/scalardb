@@ -82,7 +82,7 @@ jobs:
             bucket_suffix: storage-cm
             group_commit_enabled: false
           - label: storage_others
-            tests_filter: '--tests "**.ObjectStorage**" --tests "!**.ObjectStorageSingle**" --tests "!**.ObjectStorageMultiple**" --tests "!**.ObjectStorageWrapper**" --tests "!**.ObjectStorageAdmin**" --tests "!**.ObjectStorageConditionalMutation**"'
+            tests_filter: '--tests "**.ObjectStorageCaseSensitivity**" --tests "**.ObjectStorageColumnValue**" --tests "**.ObjectStorageCrossPartition**" --tests "**.ObjectStorageIntegrationTest" --tests "**.ObjectStorageJapanese**" --tests "**.ObjectStorageMutationAtomicity**" --tests "**.ObjectStorageWithReservedKeyword**"'
             bucket_suffix: storage
             group_commit_enabled: false
           - label: two_phase_consensus_commit
@@ -169,7 +169,7 @@ jobs:
             bucket_suffix: storage-cm
             group_commit_enabled: false
           - label: storage_others
-            tests_filter: '--tests "**.ObjectStorage**" --tests "!**.ObjectStorageSingle**" --tests "!**.ObjectStorageMultiple**" --tests "!**.ObjectStorageWrapper**" --tests "!**.ObjectStorageAdmin**" --tests "!**.ObjectStorageConditionalMutation**"'
+            tests_filter: '--tests "**.ObjectStorageCaseSensitivity**" --tests "**.ObjectStorageColumnValue**" --tests "**.ObjectStorageCrossPartition**" --tests "**.ObjectStorageIntegrationTest" --tests "**.ObjectStorageJapanese**" --tests "**.ObjectStorageMutationAtomicity**" --tests "**.ObjectStorageWithReservedKeyword**"'
             bucket_suffix: storage
             group_commit_enabled: false
           - label: two_phase_consensus_commit
