@@ -848,7 +848,7 @@ public class CommitHandler {
       return Iterables.elementsEqual(getSet, that.getSet)
           && Iterables.elementsEqual(scanSet, that.scanSet)
           && Iterables.elementsEqual(scannerSet, that.scannerSet)
-          && Iterables.elementsEqual(updatedRecordKeys, that.updatedRecordKeys);
+          && Objects.equals(updatedRecordKeys, that.updatedRecordKeys);
     }
 
     @Override
