@@ -2,7 +2,6 @@ package com.scalar.db.schemaloader;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mockStatic;
@@ -1576,7 +1575,7 @@ public class SchemaLoaderTest {
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList(), eq(options));
+    verify(operator).importTables(anyList());
   }
 
   @Test
@@ -1590,7 +1589,7 @@ public class SchemaLoaderTest {
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList(), eq(options));
+    verify(operator).importTables(anyList());
   }
 
   @Test
@@ -1604,7 +1603,7 @@ public class SchemaLoaderTest {
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList(), eq(options));
+    verify(operator).importTables(anyList());
   }
 
   @Test
@@ -1617,6 +1616,6 @@ public class SchemaLoaderTest {
 
     // Assert
     verify(importSchemaParser).parse();
-    verify(operator).importTables(anyList(), eq(options));
+    verify(operator).importTables(anyList());
   }
 }

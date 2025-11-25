@@ -468,10 +468,6 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
-    if (checkNamespace && !namespaceExists(namespace)) {
-      throw new IllegalArgumentException(CoreError.NAMESPACE_NOT_FOUND.buildMessage(namespace));
-    }
-
     try {
       return admin.getStorageInfo(namespace);
     } catch (ExecutionException e) {

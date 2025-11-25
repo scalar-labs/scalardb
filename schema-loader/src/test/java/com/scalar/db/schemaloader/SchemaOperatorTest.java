@@ -583,9 +583,10 @@ public class SchemaOperatorTest {
     when(importTableSchema.getTable()).thenReturn("tb");
     Map<String, DataType> overrideColumnsType = ImmutableMap.of("c1", DataType.INT);
     when(importTableSchema.getOverrideColumnsType()).thenReturn(overrideColumnsType);
+    when(importTableSchema.getOptions()).thenReturn(options);
 
     // Act
-    operator.importTables(tableSchemaList, options);
+    operator.importTables(tableSchemaList);
 
     // Assert
     verify(transactionAdmin, times(3)).importTable("ns", "tb", options, overrideColumnsType);
@@ -602,9 +603,10 @@ public class SchemaOperatorTest {
     when(importTableSchema.getTable()).thenReturn("tb");
     Map<String, DataType> overrideColumnsType = ImmutableMap.of("c1", DataType.INT);
     when(importTableSchema.getOverrideColumnsType()).thenReturn(overrideColumnsType);
+    when(importTableSchema.getOptions()).thenReturn(options);
 
     // Act
-    operator.importTables(tableSchemaList, options);
+    operator.importTables(tableSchemaList);
 
     // Assert
     verify(storageAdmin, times(3)).importTable("ns", "tb", options, overrideColumnsType);

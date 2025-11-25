@@ -33,27 +33,28 @@ import org.slf4j.LoggerFactory;
 public abstract class SchemaLoaderImportIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
+
   private static final String TEST_NAME = "schema_loader_import";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
       Paths.get("import_schema.json").toAbsolutePath();
 
-  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
-  private static final String TABLE_1 = "test_table1";
-  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_2 = "test_table2";
+  private static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String TABLE_1 = "test_table1";
+  protected static final String TABLE_2 = "test_table2";
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;
-  private String namespace1;
-  private String namespace2;
+  protected String namespace1;
+  protected String namespace2;
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
-    Properties properties = getProperties(TEST_NAME);
-    namespace1 = getNamespace1();
-    namespace2 = getNamespace2();
+    String testName = getTestName();
+    initialize(testName);
+    namespace1 = getNamespaceBaseName() + testName + "1";
+    namespace2 = getNamespaceBaseName() + testName + "2";
+    Properties properties = getProperties(testName);
     writeConfigFile(properties);
     writeSchemaFile(IMPORT_SCHEMA_FILE_PATH, getImportSchemaJsonMap());
     StorageFactory factory = StorageFactory.create(properties);
@@ -69,6 +70,10 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
   protected void initialize(String testName) throws Exception {}
 
+  protected String getTestName() {
+    return TEST_NAME;
+  }
+
   protected abstract Properties getProperties(String testName);
 
   protected void writeConfigFile(Properties properties) throws IOException {
@@ -77,12 +82,8 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     }
   }
 
-  protected String getNamespace1() {
-    return NAMESPACE_1;
-  }
-
-  protected String getNamespace2() {
-    return NAMESPACE_2;
+  protected String getNamespaceBaseName() {
+    return NAMESPACE_BASE_NAME;
   }
 
   protected abstract AdminTestUtils getAdminTestUtils(String testName);
@@ -145,7 +146,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   }
 
   private void dropTablesIfExist() throws Exception {
-    transactionAdmin.dropTable(namespace1, TABLE_1, true);
+    transactionAdmin.dropTable(namespace1, getImportedTableName1(), true);
     transactionAdmin.dropNamespace(namespace1, true);
     storageAdmin.dropTable(namespace2, TABLE_2, true);
     storageAdmin.dropNamespace(namespace2, true);
@@ -191,9 +192,9 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
-    assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
+    assertThat(transactionAdmin.tableExists(namespace1, getImportedTableName1())).isTrue();
     assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
-    assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
+    assertThat(transactionAdmin.getTableMetadata(namespace1, getImportedTableName1()))
         .isEqualTo(getImportableTableMetadata(true));
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
         .isEqualTo(getImportableTableMetadata(false));
@@ -230,7 +231,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
       // Assert
       assertThat(exitCode).isEqualTo(0);
-      assertThat(transactionAdmin.tableExists(namespace1, TABLE_1)).isTrue();
+      assertThat(transactionAdmin.tableExists(namespace1, getImportedTableName1())).isTrue();
       assertThat(storageAdmin.tableExists(namespace2, TABLE_2)).isTrue();
       assertThat(transactionAdmin.coordinatorTablesExist()).isFalse();
     } finally {
@@ -273,6 +274,10 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     assertThat(exitCode).isEqualTo(1);
     dropNonImportableTable(namespace1, TABLE_1);
     dropNonImportableTable(namespace2, TABLE_2);
+  }
+
+  protected String getImportedTableName1() {
+    return TABLE_1;
   }
 
   protected int executeWithArgs(List<String> args) {

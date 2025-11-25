@@ -41,25 +41,8 @@ public final class JdbcUtils {
     config
         .getIsolation()
         .ifPresent(
-            isolation -> {
-              switch (isolation) {
-                case READ_UNCOMMITTED:
-                  dataSource.setDefaultTransactionIsolation(
-                      Connection.TRANSACTION_READ_UNCOMMITTED);
-                  break;
-                case READ_COMMITTED:
-                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-                  break;
-                case REPEATABLE_READ:
-                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
-                  break;
-                case SERIALIZABLE:
-                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-                  break;
-                default:
-                  throw new AssertionError();
-              }
-            });
+            isolation ->
+                dataSource.setDefaultTransactionIsolation(toJdbcTransactionIsolation(isolation)));
 
     dataSource.setDefaultReadOnly(false);
 
@@ -90,6 +73,12 @@ public final class JdbcUtils {
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
 
+    config
+        .getIsolation()
+        .ifPresent(
+            isolation ->
+                dataSource.setDefaultTransactionIsolation(toJdbcTransactionIsolation(isolation)));
+
     dataSource.setDefaultReadOnly(false);
 
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
@@ -117,6 +106,12 @@ public final class JdbcUtils {
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
 
+    config
+        .getIsolation()
+        .ifPresent(
+            isolation ->
+                dataSource.setDefaultTransactionIsolation(toJdbcTransactionIsolation(isolation)));
+
     dataSource.setDefaultReadOnly(false);
 
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
@@ -126,6 +121,21 @@ public final class JdbcUtils {
       dataSource.addConnectionProperty(entry.getKey(), entry.getValue());
     }
     return dataSource;
+  }
+
+  private static int toJdbcTransactionIsolation(Isolation isolation) {
+    switch (isolation) {
+      case READ_UNCOMMITTED:
+        return Connection.TRANSACTION_READ_UNCOMMITTED;
+      case READ_COMMITTED:
+        return Connection.TRANSACTION_READ_COMMITTED;
+      case REPEATABLE_READ:
+        return Connection.TRANSACTION_REPEATABLE_READ;
+      case SERIALIZABLE:
+        return Connection.TRANSACTION_SERIALIZABLE;
+      default:
+        throw new AssertionError();
+    }
   }
 
   public static boolean isSqlite(JdbcConfig config) {

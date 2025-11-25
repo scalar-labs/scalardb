@@ -841,7 +841,7 @@ public class SchemaLoader {
 
     // Import tables
     try (SchemaOperator operator = getSchemaOperator(config)) {
-      operator.importTables(tableSchemaList, options);
+      operator.importTables(tableSchemaList);
     }
   }
 

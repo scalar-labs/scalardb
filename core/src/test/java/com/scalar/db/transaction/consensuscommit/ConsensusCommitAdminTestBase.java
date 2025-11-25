@@ -14,7 +14,12 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.StorageInfo;
+import com.scalar.db.api.StorageInfo.MutationAtomicityUnit;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
+import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -866,5 +871,406 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin).getNamespaceNames();
     assertThat(actual).containsOnly("ns1", "ns2");
+  }
+
+  @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabled_ShouldCreateDataTableAndMetadataTableAndVirtualTable()
+          throws ExecutionException {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    TableMetadata expectedTxMetadataTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act
+    admin.createTable(NAMESPACE, TABLE, tableMetadata, options);
+
+    // Assert
+    verify(distributedStorageAdmin).getStorageInfo(NAMESPACE);
+    verify(distributedStorageAdmin).createTable(NAMESPACE, TABLE + "_data", tableMetadata, options);
+    verify(distributedStorageAdmin)
+        .createTable(NAMESPACE, TABLE + "_tx_metadata", expectedTxMetadataTableMetadata, options);
+    verify(distributedStorageAdmin)
+        .createVirtualTable(
+            NAMESPACE,
+            TABLE,
+            NAMESPACE,
+            TABLE + "_data",
+            NAMESPACE,
+            TABLE + "_tx_metadata",
+            VirtualTableJoinType.INNER,
+            options);
+  }
+
+  @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabledAndUnsupportedStorage_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    // Unsupported atomicity unit (RECORD)
+    StorageInfo storageInfo =
+        new StorageInfoImpl("cassandra", MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, tableMetadata, options))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabledAndConsistentReadsNotGuaranteed_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("dynamodb", MutationAtomicityUnit.STORAGE, 100, false);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, tableMetadata, options))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabledAndDataTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_data")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, tableMetadata, options))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      createTable_WithTransactionMetadataDecouplingEnabledAndMetadataTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_data")).thenReturn(false);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_tx_metadata")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(NAMESPACE, TABLE, tableMetadata, options))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void dropTable_ForVirtualTable_ShouldDropVirtualTableAndSourceTables()
+      throws ExecutionException {
+    // Arrange
+    VirtualTableInfo virtualTableInfo =
+        createVirtualTableInfo(
+            NAMESPACE,
+            TABLE,
+            NAMESPACE,
+            TABLE + "_data",
+            NAMESPACE,
+            TABLE + "_tx_metadata",
+            VirtualTableJoinType.INNER);
+    when(distributedStorageAdmin.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(Optional.of(virtualTableInfo));
+
+    // Act
+    admin.dropTable(NAMESPACE, TABLE);
+
+    // Assert
+    verify(distributedStorageAdmin).getVirtualTableInfo(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE + "_data");
+    verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE + "_tx_metadata");
+  }
+
+  @Test
+  public void dropTable_ForImportedVirtualTable_ShouldDropVirtualTableAndSourceTables()
+      throws ExecutionException {
+    // Arrange
+    String importedTableName = TABLE + "_scalardb";
+    VirtualTableInfo virtualTableInfo =
+        createVirtualTableInfo(
+            NAMESPACE,
+            importedTableName,
+            NAMESPACE,
+            TABLE,
+            NAMESPACE,
+            TABLE + "_tx_metadata",
+            VirtualTableJoinType.LEFT_OUTER);
+    when(distributedStorageAdmin.getVirtualTableInfo(NAMESPACE, importedTableName))
+        .thenReturn(Optional.of(virtualTableInfo));
+
+    // Act
+    admin.dropTable(NAMESPACE, importedTableName);
+
+    // Assert
+    verify(distributedStorageAdmin).getVirtualTableInfo(NAMESPACE, importedTableName);
+    verify(distributedStorageAdmin).dropTable(NAMESPACE, importedTableName);
+    verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE + "_tx_metadata");
+  }
+
+  private VirtualTableInfo createVirtualTableInfo(
+      String namespace,
+      String table,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      VirtualTableJoinType joinType) {
+    return new VirtualTableInfo() {
+      @Override
+      public String getNamespaceName() {
+        return namespace;
+      }
+
+      @Override
+      public String getTableName() {
+        return table;
+      }
+
+      @Override
+      public String getLeftSourceNamespaceName() {
+        return leftSourceNamespace;
+      }
+
+      @Override
+      public String getLeftSourceTableName() {
+        return leftSourceTable;
+      }
+
+      @Override
+      public String getRightSourceNamespaceName() {
+        return rightSourceNamespace;
+      }
+
+      @Override
+      public String getRightSourceTableName() {
+        return rightSourceTable;
+      }
+
+      @Override
+      public VirtualTableJoinType getJoinType() {
+        return joinType;
+      }
+    };
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabled_ShouldImportAndCreateMetadataTableAndVirtualTable()
+          throws ExecutionException {
+    // Arrange
+    String primaryKeyColumn = "pk";
+    String column = "col";
+    TableMetadata dataTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(primaryKeyColumn, DataType.INT)
+            .addColumn(column, DataType.INT)
+            .addPartitionKey(primaryKeyColumn)
+            .build();
+
+    TableMetadata expectedTxMetadataTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(primaryKeyColumn, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + column, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(primaryKeyColumn)
+            .build();
+
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(dataTableMetadata);
+
+    // Act
+    admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType);
+
+    // Assert
+    verify(distributedStorageAdmin).getStorageInfo(NAMESPACE);
+    verify(distributedStorageAdmin).importTable(NAMESPACE, TABLE, options, overrideColumnsType);
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin)
+        .createTable(NAMESPACE, TABLE + "_tx_metadata", expectedTxMetadataTableMetadata, options);
+    verify(distributedStorageAdmin)
+        .createVirtualTable(
+            NAMESPACE,
+            TABLE + "_scalardb",
+            NAMESPACE,
+            TABLE,
+            NAMESPACE,
+            TABLE + "_tx_metadata",
+            VirtualTableJoinType.LEFT_OUTER,
+            options);
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabledAndUnsupportedStorage_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    // Unsupported atomicity unit (PARTITION)
+    StorageInfo storageInfo =
+        new StorageInfoImpl("cassandra", MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabledAndConsistentReadsNotGuaranteed_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("dynamodb", MutationAtomicityUnit.STORAGE, 100, false);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabledAndMetadataTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_tx_metadata")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      importTable_WithTransactionMetadataDecouplingEnabledAndImportedTableAlreadyExists_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    Map<String, DataType> overrideColumnsType = Collections.emptyMap();
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_tx_metadata")).thenReturn(false);
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE + "_scalardb")).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.importTable(NAMESPACE, TABLE, options, overrideColumnsType))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

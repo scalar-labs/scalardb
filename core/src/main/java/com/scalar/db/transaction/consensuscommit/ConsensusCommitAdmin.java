@@ -9,7 +9,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -26,6 +28,13 @@ import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
+
+  public static final String TRANSACTION_METADATA_DECOUPLING = "transaction-metadata-decoupling";
+
+  private static final String TRANSACTION_METADATA_DECOUPLING_DATA_TABLE_SUFFIX = "_data";
+  private static final String TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX =
+      "_tx_metadata";
+  private static final String TRANSACTION_METADATA_DECOUPLING_IMPORTED_TABLE_SUFFIX = "_scalardb";
 
   private final ConsensusCommitConfig config;
   private final DistributedStorageAdmin admin;
@@ -113,6 +122,48 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       throws ExecutionException {
     checkNamespace(namespace);
 
+    if (isTransactionMetadataDecouplingEnabled(options)) {
+      // For transaction metadata decoupling mode
+
+      throwIfTransactionMetadataDecouplingUnsupported(namespace);
+
+      String dataTableName = table + TRANSACTION_METADATA_DECOUPLING_DATA_TABLE_SUFFIX;
+      String txMetadataTableName = table + TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX;
+
+      if (admin.tableExists(namespace, dataTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, dataTableName)));
+      }
+      if (admin.tableExists(namespace, txMetadataTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, txMetadataTableName)));
+      }
+
+      // Create a data table
+      admin.createTable(namespace, dataTableName, metadata, options);
+
+      // Create a transaction metadata table
+      admin.createTable(
+          namespace,
+          txMetadataTableName,
+          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(metadata),
+          options);
+
+      // Create a virtual table based on the data table and the transaction metadata table
+      admin.createVirtualTable(
+          namespace,
+          table,
+          namespace,
+          dataTableName,
+          namespace,
+          txMetadataTableName,
+          VirtualTableJoinType.INNER,
+          options);
+      return;
+    }
+
     admin.createTable(namespace, table, buildTransactionTableMetadata(metadata), options);
   }
 
@@ -120,6 +171,35 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     checkNamespace(namespace);
 
+    if (admin.getVirtualTableInfo(namespace, table).isPresent()) {
+      // For transaction metadata decoupling tables
+
+      // Drop a virtual table
+      admin.dropTable(namespace, table);
+
+      if (table.endsWith(TRANSACTION_METADATA_DECOUPLING_IMPORTED_TABLE_SUFFIX)) {
+        // For imported tables
+
+        String originalTableName =
+            table.substring(
+                0, table.length() - TRANSACTION_METADATA_DECOUPLING_IMPORTED_TABLE_SUFFIX.length());
+
+        // Drop the original data table and the transaction metadata table
+        admin.dropTable(namespace, originalTableName);
+        admin.dropTable(
+            namespace, originalTableName + TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX);
+        return;
+      } else {
+        // For created tables
+
+        // Drop the data table and the transaction metadata table
+        admin.dropTable(namespace, table + TRANSACTION_METADATA_DECOUPLING_DATA_TABLE_SUFFIX);
+        admin.dropTable(namespace, table + TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX);
+      }
+      return;
+    }
+
+    // For normal tables
     admin.dropTable(namespace, table);
   }
 
@@ -204,6 +284,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, table, "repairTable()");
 
     admin.repairTable(namespace, table, buildTransactionTableMetadata(metadata), options);
   }
@@ -219,6 +300,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
     checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, table, "addNewColumnToTable()");
 
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
@@ -235,6 +317,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void dropColumnFromTable(String namespace, String table, String columnName)
       throws ExecutionException {
     checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, table, "dropColumnFromTable()");
 
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
@@ -252,6 +335,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String oldColumnName, String newColumnName)
       throws ExecutionException {
     checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, table, "renameColumn()");
 
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
@@ -275,6 +359,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       String namespace, String table, String columnName, DataType newColumnType)
       throws ExecutionException {
     checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, table, "alterColumnType()");
 
     TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
@@ -296,6 +381,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void renameTable(String namespace, String oldTableName, String newTableName)
       throws ExecutionException {
     checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, oldTableName, "renameTable()");
 
     admin.renameTable(namespace, oldTableName, newTableName);
   }
@@ -308,6 +394,51 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     checkNamespace(namespace);
+
+    if (isTransactionMetadataDecouplingEnabled(options)) {
+      // For transaction metadata decoupling mode
+
+      throwIfTransactionMetadataDecouplingUnsupported(namespace);
+
+      String importedTableName = table + TRANSACTION_METADATA_DECOUPLING_IMPORTED_TABLE_SUFFIX;
+      String txMetadataTableName = table + TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX;
+
+      if (admin.tableExists(namespace, txMetadataTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, txMetadataTableName)));
+      }
+      if (admin.tableExists(namespace, importedTableName)) {
+        throw new IllegalArgumentException(
+            CoreError.TABLE_ALREADY_EXISTS.buildMessage(
+                ScalarDbUtils.getFullTableName(namespace, importedTableName)));
+      }
+
+      // import the original table as a data table
+      admin.importTable(namespace, table, options, overrideColumnsType);
+
+      TableMetadata dataTableMetadata = admin.getTableMetadata(namespace, table);
+      assert dataTableMetadata != null;
+
+      // create a transaction metadata table
+      admin.createTable(
+          namespace,
+          txMetadataTableName,
+          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(dataTableMetadata),
+          options);
+
+      // create a virtual table based on the data table and the transaction metadata table
+      admin.createVirtualTable(
+          namespace,
+          importedTableName,
+          namespace,
+          table,
+          namespace,
+          txMetadataTableName,
+          VirtualTableJoinType.LEFT_OUTER,
+          options);
+      return;
+    }
 
     // import the original table
     admin.importTable(namespace, table, options, overrideColumnsType);
@@ -354,6 +485,38 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       return Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
     } else {
       return Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
+    }
+  }
+
+  private boolean isTransactionMetadataDecouplingEnabled(Map<String, String> options) {
+    return options.containsKey(TRANSACTION_METADATA_DECOUPLING)
+        && options.get(TRANSACTION_METADATA_DECOUPLING).equalsIgnoreCase("true");
+  }
+
+  private void throwIfTransactionMetadataDecouplingUnsupported(String namespace)
+      throws ExecutionException {
+    StorageInfo storageInfo = admin.getStorageInfo(namespace);
+    if ((storageInfo.getMutationAtomicityUnit() != StorageInfo.MutationAtomicityUnit.STORAGE
+        && storageInfo.getMutationAtomicityUnit() != StorageInfo.MutationAtomicityUnit.NAMESPACE)) {
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_TRANSACTION_METADATA_DECOUPLING_NOT_SUPPORTED_STORAGE
+              .buildMessage(storageInfo.getStorageName()));
+    }
+    if (!storageInfo.isConsistentVirtualTableReadGuaranteed()) {
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_TRANSACTION_METADATA_CONSISTENT_READS_NOT_GUARANTEED_STORAGE
+              .buildMessage(storageInfo.getStorageName()));
+    }
+  }
+
+  private void throwIfTransactionMetadataDecouplingApplied(
+      String namespace, String table, String method) throws ExecutionException {
+    if (admin.tableExists(namespace, table)
+        && admin.getVirtualTableInfo(namespace, table).isPresent()) {
+      throw new UnsupportedOperationException(
+          "Currently, "
+              + method
+              + " is not supported for tables that applies transaction metadata decoupling");
     }
   }
 }

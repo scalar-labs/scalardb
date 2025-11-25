@@ -5,7 +5,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.schemaloader.SchemaLoaderImportIntegrationTestBase;
+import com.scalar.db.schemaloader.SchemaLoaderImportWithMetadataDecouplingIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
@@ -16,11 +16,12 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("isSqlite")
-public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
+@DisabledIf("isSqliteOrOracle")
+public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
+    extends SchemaLoaderImportWithMetadataDecouplingIntegrationTestBase {
 
   private static final Logger logger =
-      LoggerFactory.getLogger(JdbcSchemaLoaderImportIntegrationTest.class);
+      LoggerFactory.getLogger(JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest.class);
 
   private JdbcAdminImportTestUtils testUtils;
   private RdbEngineStrategy rdbEngine;
@@ -31,6 +32,14 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     testUtils = new JdbcAdminImportTestUtils(properties);
+
+    // Set the isolation level for consistency reads for virtual tables
+    properties.setProperty(
+        JdbcConfig.ISOLATION_LEVEL,
+        JdbcTestUtils.getIsolationLevel(
+                rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
+            .name());
+
     return properties;
   }
 
@@ -200,8 +209,8 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   }
 
   @SuppressWarnings("unused")
-  private static boolean isSqlite() {
-    return JdbcEnv.isSqlite();
+  private static boolean isSqliteOrOracle() {
+    return JdbcEnv.isSqlite() || JdbcEnv.isOracle();
   }
 
   @Override
