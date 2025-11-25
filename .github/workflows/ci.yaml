@@ -48,7 +48,7 @@ jobs:
     name: Gradle check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -140,7 +140,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -205,7 +205,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -270,7 +270,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -335,7 +335,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -396,7 +396,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -496,7 +496,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -556,7 +556,7 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -616,7 +616,7 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -676,7 +676,7 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -741,7 +741,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -806,7 +806,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -871,7 +871,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -936,7 +936,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1001,7 +1001,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1066,7 +1066,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1138,7 +1138,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1223,7 +1223,7 @@ jobs:
           done
           echo "Container is ready"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1288,7 +1288,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Sql Server 2017
         uses: rails-sqlserver/setup-mssql@v1
@@ -1376,7 +1376,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Create database with Japanese collation for integration test
         run: |
@@ -1447,7 +1447,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Create database with Japanese collation for integration test
         run: |
@@ -1507,7 +1507,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1570,7 +1570,7 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1630,7 +1630,7 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:11.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1690,7 +1690,7 @@ jobs:
         run: |
           docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.21.0.0-b545 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1763,7 +1763,7 @@ jobs:
             group_commit_enabled: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
@@ -1814,7 +1814,7 @@ jobs:
         run: |
           docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
         uses: actions/setup-java@v5
