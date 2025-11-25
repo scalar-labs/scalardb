@@ -65,9 +65,13 @@ jobs:
             tests_filter: '--tests "**.ConsensusCommit**"'
             bucket_suffix: consensus-commit-gc
             group_commit_enabled: true
-          - label: storage_scan
-            tests_filter: '--tests "**.ObjectStorageSingle**" --tests "**.ObjectStorageMultiple**"'
-            bucket_suffix: storage-scan
+          - label: storage_scan_single
+            tests_filter: '--tests "**.ObjectStorageSingle**"'
+            bucket_suffix: storage-scan-single
+            group_commit_enabled: false
+          - label: storage_scan_multiple
+            tests_filter: '--tests "**.ObjectStorageMultiple**"'
+            bucket_suffix: storage-scan-multiple
             group_commit_enabled: false
           - label: storage_wrapper
             tests_filter: '--tests "**.ObjectStorageWrapper**"'
@@ -152,9 +156,13 @@ jobs:
             tests_filter: '--tests "**.ConsensusCommit**"'
             bucket_suffix: consensus-commit-gc
             group_commit_enabled: true
-          - label: storage_scan
-            tests_filter: '--tests "**.ObjectStorageSingle**" --tests "**.ObjectStorageMultiple**"'
-            bucket_suffix: storage-scan
+          - label: storage_scan_single
+            tests_filter: '--tests "**.ObjectStorageSingle**"'
+            bucket_suffix: storage-scan-single
+            group_commit_enabled: false
+          - label: storage_scan_multiple
+            tests_filter: '--tests "**.ObjectStorageMultiple**"'
+            bucket_suffix: storage-scan-multiple
             group_commit_enabled: false
           - label: storage_wrapper
             tests_filter: '--tests "**.ObjectStorageWrapper**"'
