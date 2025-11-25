@@ -18,7 +18,7 @@ public abstract class SchemaLoaderImportWithMetadataDecouplingIntegrationTestBas
         ImmutableMap.<String, Object>builder()
             .put("transaction", true)
             .put("override-columns-type", getImportableTableOverrideColumnsType())
-            .put("transaction_metadata_decoupling", true)
+            .put("transaction-metadata-decoupling", true)
             .build(),
         namespace2 + "." + TABLE_2,
         ImmutableMap.<String, Object>builder().put("transaction", false).build());

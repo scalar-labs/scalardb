@@ -14,7 +14,7 @@ public abstract class ConsensusCommitAdminImportTableWithMetadataDecouplingInteg
   @Override
   protected Map<String, String> getCreationOptions() {
     Map<String, String> options = new HashMap<>(super.getCreationOptions());
-    options.put("transaction_metadata_decoupling", "true");
+    options.put("transaction-metadata-decoupling", "true");
     return options;
   }
 

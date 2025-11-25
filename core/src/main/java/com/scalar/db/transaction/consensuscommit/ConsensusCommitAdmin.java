@@ -31,7 +31,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
-  public static final String TRANSACTION_METADATA_DECOUPLING = "transaction_metadata_decoupling";
+  public static final String TRANSACTION_METADATA_DECOUPLING = "transaction-metadata-decoupling";
 
   private static final String TRANSACTION_METADATA_DECOUPLING_DATA_TABLE_SUFFIX = "_data";
   private static final String TRANSACTION_METADATA_DECOUPLING_METADATA_TABLE_SUFFIX =

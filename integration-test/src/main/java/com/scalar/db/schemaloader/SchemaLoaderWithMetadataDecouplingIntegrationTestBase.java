@@ -44,7 +44,7 @@ public abstract class SchemaLoaderWithMetadataDecouplingIntegrationTestBase
                             : ImmutableMap.of("col10", "TIMESTAMPTZ"))
                     .build())
             .put("secondary-index", Arrays.asList("col1", "col5"))
-            .put("transaction_metadata_decoupling", true)
+            .put("transaction-metadata-decoupling", true)
             .build(),
         namespace2 + "." + TABLE_2,
         ImmutableMap.<String, Object>builder()
