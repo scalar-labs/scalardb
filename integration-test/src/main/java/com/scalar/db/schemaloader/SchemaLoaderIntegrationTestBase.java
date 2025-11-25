@@ -37,21 +37,21 @@ import org.slf4j.LoggerFactory;
 public abstract class SchemaLoaderIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(SchemaLoaderIntegrationTestBase.class);
+
   private static final String TEST_NAME = "schema_loader";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path SCHEMA_FILE_PATH = Paths.get("schema.json").toAbsolutePath();
   private static final Path ALTERED_SCHEMA_FILE_PATH =
       Paths.get("altered_schema.json").toAbsolutePath();
 
-  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
-  private static final String TABLE_1 = "test_table1";
-  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_2 = "test_table2";
+  private static final String NAMESPACE_BASE_NAME = "int_test_";
+  protected static final String TABLE_1 = "test_table1";
+  protected static final String TABLE_2 = "test_table2";
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;
-  private String namespace1;
-  private String namespace2;
+  protected String namespace1;
+  protected String namespace2;
   private AdminTestUtils adminTestUtils;
 
   private TableMetadata getTable1Metadata() {
@@ -95,10 +95,11 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize(TEST_NAME);
-    Properties properties = getProperties(TEST_NAME);
-    namespace1 = getNamespace1();
-    namespace2 = getNamespace2();
+    String testName = getTestName();
+    initialize(testName);
+    namespace1 = getNamespaceBaseName() + testName + "1";
+    namespace2 = getNamespaceBaseName() + testName + "2";
+    Properties properties = getProperties(testName);
     writeConfigFile(properties);
     writeSchemaFile(SCHEMA_FILE_PATH, getSchemaJsonMap());
     writeSchemaFile(ALTERED_SCHEMA_FILE_PATH, getAlteredSchemaJsonMap());
@@ -106,7 +107,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
     transactionAdmin = transactionFactory.getTransactionAdmin();
-    adminTestUtils = getAdminTestUtils(TEST_NAME);
+    adminTestUtils = getAdminTestUtils(testName);
   }
 
   @BeforeEach
@@ -116,6 +117,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected void initialize(String testName) throws Exception {}
 
+  protected String getTestName() {
+    return TEST_NAME;
+  }
+
   protected abstract Properties getProperties(String testName);
 
   protected void writeConfigFile(Properties properties) throws IOException {
@@ -124,12 +129,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     }
   }
 
-  protected String getNamespace1() {
-    return NAMESPACE_1;
-  }
-
-  protected String getNamespace2() {
-    return NAMESPACE_2;
+  protected String getNamespaceBaseName() {
+    return NAMESPACE_BASE_NAME;
   }
 
   protected abstract AdminTestUtils getAdminTestUtils(String testName);

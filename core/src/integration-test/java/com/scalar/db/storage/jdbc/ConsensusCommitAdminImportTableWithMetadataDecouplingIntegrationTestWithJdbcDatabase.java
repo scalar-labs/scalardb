@@ -1,30 +1,52 @@
-package com.scalar.db.transaction.jdbc;
+package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
-import com.scalar.db.api.DistributedTransactionAdminImportTableIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.jdbc.JdbcAdminImportTestUtils;
-import com.scalar.db.storage.jdbc.JdbcEnv;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestBase;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class JdbcTransactionAdminImportTableIntegrationTest
-    extends DistributedTransactionAdminImportTableIntegrationTestBase {
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
+public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+    extends ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestBase {
+  private static final Logger logger =
+      LoggerFactory.getLogger(
+          ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+              .class);
 
   private JdbcAdminImportTestUtils testUtils;
 
   @Override
-  protected Properties getProperties(String testName) {
-    Properties properties = new Properties();
-    properties.putAll(JdbcEnv.getProperties(testName));
-    properties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
+  protected Properties getProps(String testName) {
+    Properties properties = JdbcEnv.getProperties(testName);
+
+    // Set the isolation level for consistency reads for virtual tables
+    RdbEngineStrategy rdbEngine =
+        RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
+    properties.setProperty(
+        JdbcConfig.ISOLATION_LEVEL,
+        JdbcTestUtils.getIsolationLevel(
+                rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
+            .name());
+
     testUtils = new JdbcAdminImportTestUtils(properties);
     return properties;
+  }
+
+  @Override
+  public void afterAll() {
+    try {
+      super.afterAll();
+    } catch (Exception e) {
+      logger.warn("Failed to call super.afterAll", e);
+    }
   }
 
   @Override

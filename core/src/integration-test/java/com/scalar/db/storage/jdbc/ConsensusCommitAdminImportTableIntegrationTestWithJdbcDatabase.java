@@ -37,12 +37,12 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
 
   @Override
   protected List<TestData> createExistingDatabaseWithAllDataTypes() throws SQLException {
-    return testUtils.createExistingDatabaseWithAllDataTypes(getNamespace());
+    return testUtils.createExistingDatabaseWithAllDataTypes(namespace);
   }
 
   @Override
   protected void dropNonImportableTable(String table) throws SQLException {
-    testUtils.dropTable(getNamespace(), table);
+    testUtils.dropTable(namespace, table);
   }
 
   @SuppressWarnings("unused")

@@ -37,12 +37,7 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     // the coordinator namespace to cassandra
     props.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
-        getNamespace1()
-            + ":cassandra,"
-            + getNamespace2()
-            + ":jdbc,"
-            + Coordinator.NAMESPACE
-            + ":cassandra");
+        namespace1 + ":cassandra," + namespace2 + ":jdbc," + Coordinator.NAMESPACE + ":cassandra");
 
     // The default storage is cassandra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
