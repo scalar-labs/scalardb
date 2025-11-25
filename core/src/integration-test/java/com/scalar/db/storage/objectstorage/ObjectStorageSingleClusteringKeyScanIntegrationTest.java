@@ -17,6 +17,16 @@ public class ObjectStorageSingleClusteringKeyScanIntegrationTest
   }
 
   @Override
+  protected Column<?> getColumnWithMinValue(String columnName, DataType dataType) {
+    if (dataType == DataType.TEXT && ObjectStorageEnv.isS3()) {
+      // Since S3 and Cloud Storage can't handle "\u0001" character correctly, we use " " as the min
+      // value
+      return TextColumn.of(columnName, " ");
+    }
+    return super.getColumnWithMinValue(columnName, dataType);
+  }
+
+  @Override
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     if (dataType == DataType.TEXT
         && (ObjectStorageEnv.isCloudStorage() || ObjectStorageEnv.isS3())) {
