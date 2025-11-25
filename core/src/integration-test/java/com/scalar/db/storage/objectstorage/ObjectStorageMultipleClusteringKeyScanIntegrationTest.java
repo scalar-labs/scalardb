@@ -1,7 +1,12 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.TextColumn;
+import com.scalar.db.util.TestUtils;
 import java.util.Properties;
+import java.util.stream.IntStream;
 
 public class ObjectStorageMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
@@ -12,12 +17,18 @@ public class ObjectStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
-  protected int getThreadNum() {
-    return 3;
+  protected boolean isParallelDdlSupported() {
+    return false;
   }
 
   @Override
-  protected boolean isParallelDdlSupported() {
-    return false;
+  protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
+    if (dataType == DataType.TEXT && ObjectStorageEnv.isCloudStorage()) {
+      // Since Cloud Storage can't handle 0xFF character correctly, we use "ZZZ..." as the max value
+      StringBuilder builder = new StringBuilder();
+      IntStream.range(0, TestUtils.MAX_TEXT_COUNT).forEach(i -> builder.append('Z'));
+      return TextColumn.of(columnName, builder.toString());
+    }
+    return super.getColumnWithMaxValue(columnName, dataType);
   }
 }
