@@ -439,8 +439,7 @@ public class SchemaOperator implements AutoCloseable {
     }
   }
 
-  public void importTables(List<ImportTableSchema> tableSchemaList, Map<String, String> options)
-      throws SchemaLoaderException {
+  public void importTables(List<ImportTableSchema> tableSchemaList) throws SchemaLoaderException {
     for (ImportTableSchema tableSchema : tableSchemaList) {
       String namespace = tableSchema.getNamespace();
       String table = tableSchema.getTable();
@@ -448,11 +447,13 @@ public class SchemaOperator implements AutoCloseable {
         if (tableSchema.isTransactionTable()) {
           transactionAdmin
               .get()
-              .importTable(namespace, table, options, tableSchema.getOverrideColumnsType());
+              .importTable(
+                  namespace, table, tableSchema.getOptions(), tableSchema.getOverrideColumnsType());
         } else {
           storageAdmin
               .get()
-              .importTable(namespace, table, options, tableSchema.getOverrideColumnsType());
+              .importTable(
+                  namespace, table, tableSchema.getOptions(), tableSchema.getOverrideColumnsType());
         }
         logger.info("Importing the table {} in the namespace {} succeeded", table, namespace);
       } catch (ExecutionException e) {

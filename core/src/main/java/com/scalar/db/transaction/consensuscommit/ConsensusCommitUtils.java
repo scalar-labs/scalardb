@@ -83,6 +83,41 @@ public final class ConsensusCommitUtils {
     return builder.build();
   }
 
+  /**
+   * Build a table metadata of a decoupled transaction metadata table based on the specified table
+   * metadata. This is for the transaction metadata decoupling feature.
+   *
+   * @param tableMetadata the table metadata of the data table
+   * @return the table metadata of a transaction metadata table
+   */
+  public static TableMetadata buildTransactionMetadataTableMetadata(TableMetadata tableMetadata) {
+    checkIsNotTransactionMetaColumn(tableMetadata.getColumnNames());
+    Set<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
+    checkBeforeColumnsDoNotAlreadyExist(nonPrimaryKeyColumns, tableMetadata);
+
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+
+    // Add primary key columns
+    for (String partitionKeyName : tableMetadata.getPartitionKeyNames()) {
+      builder.addColumn(partitionKeyName, tableMetadata.getColumnDataType(partitionKeyName));
+      builder.addPartitionKey(partitionKeyName);
+    }
+    for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
+      builder.addColumn(clusteringKeyName, tableMetadata.getColumnDataType(clusteringKeyName));
+      builder.addClusteringKey(
+          clusteringKeyName, tableMetadata.getClusteringOrder(clusteringKeyName));
+    }
+
+    // Add transaction meta columns
+    TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
+
+    // Add before image columns for non-primary key columns
+    nonPrimaryKeyColumns.forEach(
+        c -> builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
+
+    return builder.build();
+  }
+
   private static void checkIsNotTransactionMetaColumn(Set<String> columnNames) {
     TRANSACTION_META_COLUMNS
         .keySet()

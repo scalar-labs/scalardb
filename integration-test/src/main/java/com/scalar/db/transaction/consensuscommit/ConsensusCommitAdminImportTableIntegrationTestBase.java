@@ -7,6 +7,11 @@ public abstract class ConsensusCommitAdminImportTableIntegrationTestBase
     extends DistributedTransactionAdminImportTableIntegrationTestBase {
 
   @Override
+  protected String getTestName() {
+    return "tx_cc_import";
+  }
+
+  @Override
   protected final Properties getProperties(String testName) {
     Properties properties = new Properties();
     properties.putAll(getProps(testName));
