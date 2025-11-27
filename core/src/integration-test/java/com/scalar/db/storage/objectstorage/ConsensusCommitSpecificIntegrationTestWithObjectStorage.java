@@ -19,7 +19,7 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
   protected void setUp() throws Exception {
     truncateTables();
     if (ObjectStorageEnv.isCloudStorage()) {
-      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     }
   }
 
@@ -31,7 +31,7 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
       groupCommitter.close();
     }
     if (ObjectStorageEnv.isCloudStorage()) {
-      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     }
   }
 

@@ -19,14 +19,14 @@ public class ConsensusCommitIntegrationTestWithObjectStorage
     admin.truncateTable(namespace, TABLE);
     admin.truncateCoordinatorTables();
     if (ObjectStorageEnv.isCloudStorage()) {
-      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     }
   }
 
   @AfterEach
   void tearDown() {
     if (ObjectStorageEnv.isCloudStorage()) {
-      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     }
   }
 
