@@ -58,12 +58,28 @@ jobs:
       matrix:
         test_group:
           - label: consensus_commit_default
-            tests_filter: '--tests "**.ConsensusCommit**"'
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
             bucket_suffix: consensus-commit
             group_commit_enabled: false
           - label: consensus_commit_with_group_commit
-            tests_filter: '--tests "**.ConsensusCommit**"'
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
             bucket_suffix: consensus-commit-gc
+            group_commit_enabled: true
+          - label: consensus_commit_admin
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin
+            group_commit_enabled: false
+          - label: consensus_commit_admin_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin-gc
+            group_commit_enabled: true
+          - label: consensus_commit_specific
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific
+            group_commit_enabled: false
+          - label: consensus_commit_specific_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific-gc
             group_commit_enabled: true
           - label: storage_scan_single
             tests_filter: '--tests "**.ObjectStorageSingle**"'
@@ -149,12 +165,28 @@ jobs:
       matrix:
         test_group:
           - label: consensus_commit_default
-            tests_filter: '--tests "**.ConsensusCommit**"'
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
             bucket_suffix: consensus-commit
             group_commit_enabled: false
           - label: consensus_commit_with_group_commit
-            tests_filter: '--tests "**.ConsensusCommit**"'
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
             bucket_suffix: consensus-commit-gc
+            group_commit_enabled: true
+          - label: consensus_commit_admin
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin
+            group_commit_enabled: false
+          - label: consensus_commit_admin_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin-gc
+            group_commit_enabled: true
+          - label: consensus_commit_specific
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific
+            group_commit_enabled: false
+          - label: consensus_commit_specific_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific-gc
             group_commit_enabled: true
           - label: storage_scan_single
             tests_filter: '--tests "**.ObjectStorageSingle**"'
