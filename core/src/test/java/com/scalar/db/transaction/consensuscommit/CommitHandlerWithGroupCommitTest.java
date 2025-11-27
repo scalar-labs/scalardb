@@ -230,6 +230,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   public void
       onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
           throws ExecutionException {
+
     super.onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException();
 
     // Assert
@@ -330,6 +331,245 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
           throws CommitException, UnknownTransactionStatusException {
     super
         .commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ReadSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_ReadSetNotChanged_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ReadSetUpdated_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    super.toSerializable_ReadSetUpdated_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ReadSetExtended_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    super.toSerializable_ReadSetExtended_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_GetSetWithGetWithIndex_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_GetSetWithGetWithIndex_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_GetSetWithGetWithIndex_RecordInserted_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    super
+        .toSerializable_GetSetWithGetWithIndex_RecordInserted_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_GetSetWithGetWithIndex_RecordInsertedByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    super
+        .toSerializable_GetSetWithGetWithIndex_RecordInsertedByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_ScanSetNotChanged_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanSetUpdated_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    super.toSerializable_ScanSetUpdated_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanSetUpdatedByMyself_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_ScanSetUpdatedByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanSetExtended_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    super.toSerializable_ScanSetExtended_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanSetWithMultipleRecordsExtended_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanSetWithMultipleRecordsExtended_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanSetExtendedByMyself_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_ScanSetExtendedByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanSetWithMultipleRecordsExtendedByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanSetWithMultipleRecordsExtendedByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanSetDeleted_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    super.toSerializable_ScanSetDeleted_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanSetWithMultipleRecordsDeleted_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    super.toSerializable_ScanSetWithMultipleRecordsDeleted_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_MultipleScansInScanSetExist_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_MultipleScansInScanSetExist_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_NullMetadataInReadSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_NullMetadataInReadSetNotChanged_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_NullMetadataInReadSetChanged_ShouldThrowValidationConflictException()
+      throws ExecutionException {
+    super.toSerializable_NullMetadataInReadSetChanged_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScanWithLimitInScanSet_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_ScanWithLimitInScanSet_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRange_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRange_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRange_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRange_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecords_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecords_ShouldThrowValidationConflictException();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecordsByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecordsByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenDeletingRecordsByMyself_ShouldProcessWithoutExceptions()
+          throws ExecutionException {
+    super
+        .toSerializable_ScanWithIndexInScanSet_WhenDeletingRecordsByMyself_ShouldProcessWithoutExceptions();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void toSerializable_ScannerSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    super.toSerializable_ScannerSetNotChanged_ShouldProcessWithoutExceptions();
     groupCommitter.remove(anyId());
   }
 }
