@@ -26,6 +26,7 @@ import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -84,11 +85,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             parallelExecutor);
-    commit = createCommitHandler(config);
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+    commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
-            tableMetadataManager, config.isIncludeMetadataEnabled());
+            tableMetadataManager,
+            virtualTableInfoManager,
+            storageInfoProvider,
+            config.isIncludeMetadataEnabled());
   }
 
   protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -113,11 +120,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             parallelExecutor);
-    commit = createCommitHandler(config);
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+    commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
-            tableMetadataManager, config.isIncludeMetadataEnabled());
+            tableMetadataManager,
+            virtualTableInfoManager,
+            storageInfoProvider,
+            config.isIncludeMetadataEnabled());
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -147,14 +160,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.commit = commit;
     this.groupCommitter = groupCommitter;
     this.isolation = isolation;
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     this.operationChecker =
         new ConsensusCommitOperationChecker(
-            tableMetadataManager, config.isIncludeMetadataEnabled());
+            tableMetadataManager,
+            virtualTableInfoManager,
+            storageInfoProvider,
+            config.isIncludeMetadataEnabled());
   }
 
   // `groupCommitter` must be set before calling this method.
-  private CommitHandler createCommitHandler(ConsensusCommitConfig config) {
-    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+  private CommitHandler createCommitHandler(
+      ConsensusCommitConfig config, StorageInfoProvider storageInfoProvider) {
+    MutationsGrouper mutationsGrouper = new MutationsGrouper(storageInfoProvider);
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
           storage,

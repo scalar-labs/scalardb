@@ -45,6 +45,19 @@ updates:
       timezone: "Asia/Tokyo"
 
   - package-ecosystem: "github-actions"
+    target-branch: "3.17"
+    groups:
+      actions on branch 3.17:
+        patterns:
+          - "*"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "01:00"
+      timezone: "Asia/Tokyo"
+
+  - package-ecosystem: "github-actions"
     target-branch: "3.16"
     groups:
       actions on branch 3.16:
@@ -74,19 +87,6 @@ updates:
     target-branch: "3.14"
     groups:
       actions on branch 3.14:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "github-actions"
-    target-branch: "3.13"
-    groups:
-      actions on branch 3.13:
         patterns:
           - "*"
     directory: "/"
