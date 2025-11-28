@@ -50,8 +50,8 @@ public class SingleCrudOperationTransactionIntegrationTestWithObjectStorage
                 .clusteringKey(clusteringKey);
         prepareNonKeyColumns(i, j).forEach(insert::value);
         manager.insert(insert.build());
-        // Sleep to avoid Cloud Storage's request rate limit (1 write per second)
         if (ObjectStorageEnv.isCloudStorage()) {
+          // Sleep to mitigate rate limit errors
           Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
         }
       }

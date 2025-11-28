@@ -16,9 +16,9 @@ public class ConsensusCommitIntegrationTestWithObjectStorage
   @Override
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
-    admin.truncateCoordinatorTables();
+    super.setUp();
     if (ObjectStorageEnv.isCloudStorage()) {
+      // Sleep to mitigate rate limit errors
       Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     }
   }
@@ -26,6 +26,7 @@ public class ConsensusCommitIntegrationTestWithObjectStorage
   @AfterEach
   void tearDown() {
     if (ObjectStorageEnv.isCloudStorage()) {
+      // Sleep to mitigate rate limit errors
       Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     }
   }
