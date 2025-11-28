@@ -111,9 +111,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
-  private RecoveryExecutor recoveryExecutor;
+  protected RecoveryExecutor recoveryExecutor;
   private CommitHandler commit;
-  @Nullable private CoordinatorGroupCommitter groupCommitter;
+  @Nullable protected CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
   void beforeAll() throws Exception {
@@ -176,7 +176,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @BeforeEach
-  void setUp() throws Exception {
+  protected void setUp() throws Exception {
     truncateTables();
   }
 
@@ -188,7 +188,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
   }
 
-  private void truncateTables() throws ExecutionException {
+  protected void truncateTables() throws ExecutionException {
     consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
     consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
     consensusCommitAdmin.truncateCoordinatorTables();

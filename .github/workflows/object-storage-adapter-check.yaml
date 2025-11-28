@@ -42,25 +42,77 @@ env:
   INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
   AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-  S3_REGION: ap-northeast-1
-  S3_BUCKET_NAME: scalardb-test-bucket
+  S3_REGION: us-east-1
+  S3_BUCKET_BASE_NAME: s3-scalardb-test-bucket
   CLOUD_STORAGE_PROJECT_ID: ${{ secrets.CLOUD_STORAGE_PROJECT_ID }}
   CLOUD_STORAGE_SERVICE_ACCOUNT_KEY: ${{ secrets.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}
-  CLOUD_STORAGE_BUCKET_NAME: scalardb-test-bucket
+  CLOUD_STORAGE_BUCKET_BASE_NAME: scalardb-test-bucket
 
 jobs:
   integration-test-s3:
-    name: S3 integration test (${{ matrix.mode.label }})
+    name: S3 integration test (${{ matrix.test_group.label }})
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        mode:
-          - label: default
+        test_group:
+          - label: consensus_commit_default
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit
             group_commit_enabled: false
-          - label: with_group_commit
+          - label: consensus_commit_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-gc
             group_commit_enabled: true
+          - label: consensus_commit_admin
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin
+            group_commit_enabled: false
+          - label: consensus_commit_admin_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin-gc
+            group_commit_enabled: true
+          - label: consensus_commit_specific
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific
+            group_commit_enabled: false
+          - label: consensus_commit_specific_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific-gc
+            group_commit_enabled: true
+          - label: storage_scan_single
+            tests_filter: '--tests "**.ObjectStorageSingle**"'
+            bucket_suffix: storage-scan-single
+            group_commit_enabled: false
+          - label: storage_scan_multiple
+            tests_filter: '--tests "**.ObjectStorageMultiple**"'
+            bucket_suffix: storage-scan-multiple
+            group_commit_enabled: false
+          - label: storage_wrapper
+            tests_filter: '--tests "**.ObjectStorageWrapper**"'
+            bucket_suffix: storage-wrapper
+            group_commit_enabled: false
+          - label: storage_admin
+            tests_filter: '--tests "**.ObjectStorageAdmin**"'
+            bucket_suffix: storage-admin
+            group_commit_enabled: false
+          - label: storage_cm
+            tests_filter: '--tests "**.ObjectStorageConditionalMutation**"'
+            bucket_suffix: storage-cm
+            group_commit_enabled: false
+          - label: storage_others
+            tests_filter: '--tests "**.ObjectStorageCaseSensitivity**" --tests "**.ObjectStorageColumnValue**" --tests "**.ObjectStorageCrossPartition**" --tests "**.ObjectStorageIntegrationTest" --tests "**.ObjectStorageJapanese**" --tests "**.ObjectStorageMutationAtomicity**" --tests "**.ObjectStorageWithReservedKeyword**"'
+            bucket_suffix: storage
+            group_commit_enabled: false
+          - label: two_phase_consensus_commit
+            tests_filter: '--tests "**.TwoPhaseConsensusCommit**"'
+            bucket_suffix: 2pcc
+            group_commit_enabled: false
+          - label: single_crud_operation_transaction
+            tests_filter: '--tests "**.SingleCrudOperationTransaction**"'
+            bucket_suffix: single-crud
+            group_commit_enabled: false
 
     steps:
       - uses: actions/checkout@v6
@@ -95,26 +147,79 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
-        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=s3 -Dscalardb.object_storage.endpoint=${{ env.S3_REGION }}/${{ env.S3_BUCKET_NAME }} ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=s3 -Dscalardb.object_storage.endpoint=${{ env.S3_REGION }}/${{ env.S3_BUCKET_BASE_NAME }}-${{ matrix.test_group.bucket_suffix }} -Dscalardb.object_storage.username='${{ env.AWS_ACCESS_KEY_ID }}' -Dscalardb.object_storage.password='${{ env.AWS_SECRET_ACCESS_KEY }}' ${{ matrix.test_group.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }} ${{ matrix.test_group.tests_filter }}
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: s3_integration_test_reports_${{ matrix.mode.label }}
+          name: s3_integration_test_reports_${{ matrix.test_group.label }}
           path: core/build/reports/tests/integrationTestObjectStorage
+
   integration-test-cloud-storage:
-    name: Cloud Storage integration test (${{ matrix.mode.label }})
+    name: Cloud Storage integration test (${{ matrix.test_group.label }})
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        mode:
-          - label: default
+        test_group:
+          - label: consensus_commit_default
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit
             group_commit_enabled: false
-          - label: with_group_commit
+          - label: consensus_commit_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-gc
             group_commit_enabled: true
+          - label: consensus_commit_admin
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin
+            group_commit_enabled: false
+          - label: consensus_commit_admin_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitAdminIntegrationTestWithObjectStorage" --tests "**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-admin-gc
+            group_commit_enabled: true
+          - label: consensus_commit_specific
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific
+            group_commit_enabled: false
+          - label: consensus_commit_specific_with_group_commit
+            tests_filter: '--tests "**.ConsensusCommitSpecificIntegrationTestWithObjectStorage"'
+            bucket_suffix: consensus-commit-specific-gc
+            group_commit_enabled: true
+          - label: storage_scan_single
+            tests_filter: '--tests "**.ObjectStorageSingle**"'
+            bucket_suffix: storage-scan-single
+            group_commit_enabled: false
+          - label: storage_scan_multiple
+            tests_filter: '--tests "**.ObjectStorageMultiple**"'
+            bucket_suffix: storage-scan-multiple
+            group_commit_enabled: false
+          - label: storage_wrapper
+            tests_filter: '--tests "**.ObjectStorageWrapper**"'
+            bucket_suffix: storage-wrapper
+            group_commit_enabled: false
+          - label: storage_admin
+            tests_filter: '--tests "**.ObjectStorageAdmin**"'
+            bucket_suffix: storage-admin
+            group_commit_enabled: false
+          - label: storage_cm
+            tests_filter: '--tests "**.ObjectStorageConditionalMutation**"'
+            bucket_suffix: storage-cm
+            group_commit_enabled: false
+          - label: storage_others
+            tests_filter: '--tests "**.ObjectStorageCaseSensitivity**" --tests "**.ObjectStorageColumnValue**" --tests "**.ObjectStorageCrossPartition**" --tests "**.ObjectStorageIntegrationTest" --tests "**.ObjectStorageJapanese**" --tests "**.ObjectStorageMutationAtomicity**" --tests "**.ObjectStorageWithReservedKeyword**"'
+            bucket_suffix: storage
+            group_commit_enabled: false
+          - label: two_phase_consensus_commit
+            tests_filter: '--tests "**.TwoPhaseConsensusCommit**"'
+            bucket_suffix: 2pcc
+            group_commit_enabled: false
+          - label: single_crud_operation_transaction
+            tests_filter: '--tests "**.SingleCrudOperationTransaction**"'
+            bucket_suffix: single-crud
+            group_commit_enabled: false
 
     steps:
       - uses: actions/checkout@v6
@@ -149,11 +254,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
-        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=scalardb-test-bucket -Dscalardb.object_storage.username=${{ env.CLOUD_STORAGE_PROJECT_ID }} -Dscalardb.object_storage.password=${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }} ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+        run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=${{ env.CLOUD_STORAGE_BUCKET_BASE_NAME }}-${{ matrix.test_group.bucket_suffix }} -Dscalardb.object_storage.username='${{ env.CLOUD_STORAGE_PROJECT_ID }}' -Dscalardb.object_storage.password='${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}' ${{ matrix.test_group.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }} ${{ matrix.test_group.tests_filter }}
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: cloud_storage_integration_test_reports_${{ matrix.mode.label }}
+          name: cloud_storage_integration_test_reports_${{ matrix.test_group.label }}
           path: core/build/reports/tests/integrationTestObjectStorage
