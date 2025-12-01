@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,7 +15,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ThrowableFunction;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ public class TableMetadataManagerTest {
   @Mock private DistributedStorageAdmin admin;
 
   @Mock
-  private ThrowableFunction<TableMetadataManager.TableKey, Optional<TableMetadata>, Exception>
+  private ThrowableFunction<TableMetadataManager.TableKey, TableMetadata, Exception>
       getTableMetadataFunc;
 
   @BeforeEach
@@ -117,19 +117,79 @@ public class TableMetadataManagerTest {
   }
 
   @Test
+  public void getTableMetadata_TableNotFound_ShouldReturnNull() throws ExecutionException {
+    // Arrange
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, -1);
+
+    when(admin.getTableMetadata("ns", "tbl")).thenReturn(null);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    TableMetadata actualTableMetadata = tableMetadataManager.getTableMetadata(get);
+
+    // Assert
+    verify(admin).getTableMetadata("ns", "tbl");
+    assertThat(actualTableMetadata).isNull();
+  }
+
+  @Test
+  public void getTableMetadata_TableNotFoundCalledTwice_ShouldCallDistributedStorageAdminTwice()
+      throws ExecutionException {
+    // Arrange
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, -1);
+
+    when(admin.getTableMetadata("ns", "tbl")).thenReturn(null);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    tableMetadataManager.getTableMetadata(get);
+    TableMetadata actualTableMetadata = tableMetadataManager.getTableMetadata(get);
+
+    // Assert
+    verify(admin, times(2)).getTableMetadata("ns", "tbl");
+    assertThat(actualTableMetadata).isNull();
+  }
+
+  @Test
   public void getTableMetadata_ExecutionExceptionThrownByAdmin_ShouldThrowExecutionException()
       throws ExecutionException {
     // Arrange
     TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, 1L); // one second
 
-    when(admin.getTableMetadata("ns", "tbl")).thenThrow(ExecutionException.class);
+    ExecutionException expectedException = mock(ExecutionException.class);
+    when(admin.getTableMetadata("ns", "tbl")).thenThrow(expectedException);
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
 
     // Act
     assertThatThrownBy(() -> tableMetadataManager.getTableMetadata(get))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(expectedException);
+
+    // Assert
+    verify(admin).getTableMetadata("ns", "tbl");
+  }
+
+  @Test
+  public void getTableMetadata_RuntimeExceptionThrownByAdmin_ShouldThrowRuntimeException()
+      throws ExecutionException {
+    // Arrange
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, 1L); // one second
+
+    IllegalArgumentException illegalArgumentException = mock(IllegalArgumentException.class);
+    when(admin.getTableMetadata("ns", "tbl")).thenThrow(illegalArgumentException);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    assertThatThrownBy(() -> tableMetadataManager.getTableMetadata(get))
+        .isEqualTo(illegalArgumentException);
 
     // Assert
     verify(admin).getTableMetadata("ns", "tbl");
@@ -150,7 +210,7 @@ public class TableMetadataManagerTest {
             .build();
 
     when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
-        .thenReturn(Optional.of(expectedTableMetadata));
+        .thenReturn(expectedTableMetadata);
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
@@ -178,7 +238,7 @@ public class TableMetadataManagerTest {
             .build();
 
     when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
-        .thenReturn(Optional.of(expectedTableMetadata));
+        .thenReturn(expectedTableMetadata);
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
@@ -208,7 +268,7 @@ public class TableMetadataManagerTest {
             .build();
 
     when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
-        .thenReturn(Optional.of(expectedTableMetadata));
+        .thenReturn(expectedTableMetadata);
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
@@ -225,21 +285,88 @@ public class TableMetadataManagerTest {
   }
 
   @Test
+  public void getTableMetadata_WithGetTableMetadataFunc_TableNotFound_ShouldReturnNull()
+      throws Exception {
+    // Arrange
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(getTableMetadataFunc, -1);
+
+    when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
+        .thenReturn(null);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    TableMetadata actualTableMetadata = tableMetadataManager.getTableMetadata(get);
+
+    // Assert
+    verify(getTableMetadataFunc).apply(new TableMetadataManager.TableKey("ns", "tbl"));
+    assertThat(actualTableMetadata).isNull();
+  }
+
+  @Test
+  public void
+      getTableMetadata_WithGetTableMetadataFunc_TableNotFoundCalledTwice_ShouldCallGetTableMetadataFuncTwice()
+          throws Exception {
+    // Arrange
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(getTableMetadataFunc, -1);
+
+    when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
+        .thenReturn(null);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    tableMetadataManager.getTableMetadata(get);
+    TableMetadata actualTableMetadata = tableMetadataManager.getTableMetadata(get);
+
+    // Assert
+    verify(getTableMetadataFunc, times(2)).apply(new TableMetadataManager.TableKey("ns", "tbl"));
+    assertThat(actualTableMetadata).isNull();
+  }
+
+  @Test
   public void getTableMetadata_ExceptionThrownByGetTableMetadataFunc_ShouldThrowExecutionException()
       throws Exception {
     // Arrange
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(getTableMetadataFunc, 1L); // one second
 
+    ExecutionException expectedException = mock(ExecutionException.class);
     when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
-        .thenThrow(Exception.class);
+        .thenThrow(expectedException);
 
     Get get =
         Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
 
     // Act
     assertThatThrownBy(() -> tableMetadataManager.getTableMetadata(get))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(expectedException);
+
+    // Assert
+    verify(getTableMetadataFunc).apply(new TableMetadataManager.TableKey("ns", "tbl"));
+  }
+
+  @Test
+  public void
+      getTableMetadata_RuntimeExceptionThrownByGetTableMetadataFunc_ShouldThrowRuntimeException()
+          throws Exception {
+    // Arrange
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(getTableMetadataFunc, 1L); // one second
+
+    IllegalArgumentException illegalArgumentException = mock(IllegalArgumentException.class);
+    when(getTableMetadataFunc.apply(new TableMetadataManager.TableKey("ns", "tbl")))
+        .thenThrow(illegalArgumentException);
+
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofText("c1", "aaa")).build();
+
+    // Act
+    assertThatThrownBy(() -> tableMetadataManager.getTableMetadata(get))
+        .isEqualTo(illegalArgumentException);
 
     // Assert
     verify(getTableMetadataFunc).apply(new TableMetadataManager.TableKey("ns", "tbl"));
