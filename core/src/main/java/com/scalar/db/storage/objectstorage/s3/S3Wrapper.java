@@ -43,19 +43,21 @@ public class S3Wrapper implements ObjectStorageWrapper {
 
   public S3Wrapper(S3Config config) {
     AwsCrtAsyncHttpClient.Builder httpClientBuilder = AwsCrtAsyncHttpClient.builder();
-    if (config.getParallelUploadMaxParallelism().isPresent()) {
-      httpClientBuilder.maxConcurrency(config.getParallelUploadMaxParallelism().get());
+    if (config.getMultipartUploadMaxConcurrency().isPresent()) {
+      httpClientBuilder.maxConcurrency(config.getMultipartUploadMaxConcurrency().get());
     }
     MultipartConfiguration.Builder multipartConfigBuilder = MultipartConfiguration.builder();
-    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
-      multipartConfigBuilder.minimumPartSizeInBytes(
-          config.getParallelUploadBlockSizeInBytes().get());
+    if (config.getMultipartUploadPartSizeBytes().isPresent()) {
+      multipartConfigBuilder.minimumPartSizeInBytes(config.getMultipartUploadPartSizeBytes().get());
+    }
+    if (config.getMultipartUploadThresholdSizeBytes().isPresent()) {
+      multipartConfigBuilder.thresholdInBytes(config.getMultipartUploadThresholdSizeBytes().get());
     }
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
         ClientOverrideConfiguration.builder();
-    if (config.getRequestTimeoutInSeconds().isPresent()) {
+    if (config.getRequestTimeoutSecs().isPresent()) {
       overrideConfigBuilder.apiCallTimeout(
-          Duration.ofSeconds(config.getRequestTimeoutInSeconds().get()));
+          Duration.ofSeconds(config.getRequestTimeoutSecs().get()));
     }
 
     this.client =
