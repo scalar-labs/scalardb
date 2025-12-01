@@ -198,6 +198,16 @@ public interface AuthAdmin {
   }
 
   /**
+   * Retrieves a {@link Role}.
+   *
+   * @return a {@link Role}
+   * @throws ExecutionException if the operation fails
+   */
+  default Optional<Role> getRole(String roleName) throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
    * Retrieves a list of {@link Role}s.
    *
    * @return a list of {@link Role}s
