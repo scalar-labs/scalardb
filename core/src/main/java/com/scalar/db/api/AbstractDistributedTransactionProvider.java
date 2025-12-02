@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.StateManagedDistributedTransactionManager;
+import com.scalar.db.common.StateManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import javax.annotation.Nullable;
 
@@ -12,10 +13,13 @@ public abstract class AbstractDistributedTransactionProvider
   @Override
   public DistributedTransactionManager createDistributedTransactionManager(DatabaseConfig config) {
     DistributedTransactionManager transactionManager =
-        new StateManagedDistributedTransactionManager(
-            createRawDistributedTransactionManager(config));
+        createRawDistributedTransactionManager(config);
+
+    // Wrap the transaction manager for state management
+    transactionManager = new StateManagedDistributedTransactionManager(transactionManager);
 
     if (config.isActiveTransactionManagementEnabled()) {
+      // Wrap the transaction manager for active transaction management
       transactionManager =
           new ActiveTransactionManagedDistributedTransactionManager(
               transactionManager, config.getActiveTransactionManagementExpirationTimeMillis());
@@ -38,7 +42,11 @@ public abstract class AbstractDistributedTransactionProvider
       return null;
     }
 
+    // Wrap the transaction manager for state management
+    transactionManager = new StateManagedTwoPhaseCommitTransactionManager(transactionManager);
+
     if (config.isActiveTransactionManagementEnabled()) {
+      // Wrap the transaction manager for active transaction management
       transactionManager =
           new ActiveTransactionManagedTwoPhaseCommitTransactionManager(
               transactionManager, config.getActiveTransactionManagementExpirationTimeMillis());
