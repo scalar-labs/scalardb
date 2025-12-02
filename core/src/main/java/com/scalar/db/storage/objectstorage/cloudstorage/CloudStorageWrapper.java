@@ -31,7 +31,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
 
   private final Storage storage;
   private final String bucket;
-  @VisibleForTesting protected final Integer uploadMaxChunkSizeBytes;
+  private final Integer uploadChunkSizeBytes;
 
   public CloudStorageWrapper(CloudStorageConfig config) {
     storage =
@@ -41,7 +41,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
             .build()
             .getService();
     bucket = config.getBucket();
-    uploadMaxChunkSizeBytes = config.getUploadChunkSizeBytes().orElse(null);
+    uploadChunkSizeBytes = config.getUploadChunkSizeBytes().orElse(null);
   }
 
   @VisibleForTesting
@@ -49,7 +49,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   public CloudStorageWrapper(CloudStorageConfig config, Storage storage) {
     this.storage = storage;
     this.bucket = config.getBucket();
-    uploadMaxChunkSizeBytes = config.getUploadChunkSizeBytes().orElse(null);
+    uploadChunkSizeBytes = config.getUploadChunkSizeBytes().orElse(null);
   }
 
   @Override
@@ -209,8 +209,8 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
     BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
 
     try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
-      if (uploadMaxChunkSizeBytes != null) {
-        writer.setChunkSize(uploadMaxChunkSizeBytes);
+      if (uploadChunkSizeBytes != null) {
+        writer.setChunkSize(uploadChunkSizeBytes);
       }
       ByteBuffer buffer = ByteBuffer.wrap(data);
       while (buffer.hasRemaining()) {

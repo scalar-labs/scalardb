@@ -26,7 +26,7 @@ public class CloudStorageConfig implements ObjectStorageConfig {
   private final String bucket;
   private final String metadataNamespace;
   private final String projectId;
-  private final Integer uploadMaxChunkSizeBytes;
+  private final Integer uploadChunkSizeBytes;
 
   public CloudStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -49,7 +49,7 @@ public class CloudStorageConfig implements ObjectStorageConfig {
               + "\" is not applicable to Cloud Storage and will be ignored.");
     }
 
-    uploadMaxChunkSizeBytes = getInt(databaseConfig.getProperties(), UPLOAD_CHUNK_SIZE_BYTES, null);
+    uploadChunkSizeBytes = getInt(databaseConfig.getProperties(), UPLOAD_CHUNK_SIZE_BYTES, null);
   }
 
   @Override
@@ -92,6 +92,6 @@ public class CloudStorageConfig implements ObjectStorageConfig {
   }
 
   public Optional<Integer> getUploadChunkSizeBytes() {
-    return Optional.ofNullable(uploadMaxChunkSizeBytes);
+    return Optional.ofNullable(uploadChunkSizeBytes);
   }
 }
