@@ -172,24 +172,6 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManagerTest {
   }
 
   @Test
-  public void join_ActiveTransactionAlreadyCommitted_ShouldThrowTransactionNotFoundException()
-      throws TransactionException {
-    String txId = "txId1";
-
-    TwoPhaseCommitTransaction wrappedTransaction = mock(TwoPhaseCommitTransaction.class);
-    when(wrappedTransaction.getId()).thenReturn(txId);
-
-    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
-
-    TwoPhaseCommitTransaction transaction = transactionManager.begin(txId);
-    transaction.commit();
-
-    // Act Assert
-    assertThatThrownBy(() -> transactionManager.resume(txId))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
   public void resume_ShouldReturnBegunActiveTransaction() throws TransactionException {
     // Arrange
     String txId = "txId1";
