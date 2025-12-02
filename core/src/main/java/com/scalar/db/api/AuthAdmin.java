@@ -200,7 +200,8 @@ public interface AuthAdmin {
   /**
    * Retrieves a {@link Role}.
    *
-   * @return a {@link Role}
+   * @param roleName the role name
+   * @return a {@link Role} for the given role name
    * @throws ExecutionException if the operation fails
    */
   default Optional<Role> getRole(String roleName) throws ExecutionException {
