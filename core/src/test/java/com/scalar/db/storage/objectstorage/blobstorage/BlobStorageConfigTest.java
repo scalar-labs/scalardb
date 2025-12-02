@@ -48,13 +48,17 @@ public class BlobStorageConfigTest {
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getParallelUploadBlockSizeBytes()).isNotEmpty();
-    assertThat(config.getParallelUploadBlockSizeBytes().get()).isEqualTo(5242880);
+    assertThat(config.getParallelUploadBlockSizeBytes().get())
+        .isEqualTo(Long.parseLong(ANY_PARALLEL_UPLOAD_BLOCK_SIZE_BYTES));
     assertThat(config.getParallelUploadMaxConcurrency()).isNotEmpty();
-    assertThat(config.getParallelUploadMaxConcurrency().get()).isEqualTo(4);
+    assertThat(config.getParallelUploadMaxConcurrency().get())
+        .isEqualTo(Integer.parseInt(ANY_PARALLEL_UPLOAD_MAX_CONCURRENCY));
     assertThat(config.getParallelUploadThresholdSizeBytes()).isNotEmpty();
-    assertThat(config.getParallelUploadThresholdSizeBytes().get()).isEqualTo(10485760);
+    assertThat(config.getParallelUploadThresholdSizeBytes().get())
+        .isEqualTo(Long.parseLong(ANY_PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES));
     assertThat(config.getRequestTimeoutSecs()).isNotEmpty();
-    assertThat(config.getRequestTimeoutSecs().get()).isEqualTo(30);
+    assertThat(config.getRequestTimeoutSecs().get())
+        .isEqualTo(Integer.parseInt(ANY_REQUEST_TIMEOUT_SECS));
   }
 
   @Test

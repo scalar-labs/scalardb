@@ -47,13 +47,17 @@ public class S3ConfigTest {
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
     assertThat(config.getMultipartUploadPartSizeBytes()).isNotEmpty();
-    assertThat(config.getMultipartUploadPartSizeBytes().get()).isEqualTo(5242880);
+    assertThat(config.getMultipartUploadPartSizeBytes().get())
+        .isEqualTo(Long.parseLong(ANY_MULTIPART_UPLOAD_PART_SIZE_BYTES));
     assertThat(config.getMultipartUploadMaxConcurrency()).isNotEmpty();
-    assertThat(config.getMultipartUploadMaxConcurrency().get()).isEqualTo(4);
+    assertThat(config.getMultipartUploadMaxConcurrency().get())
+        .isEqualTo(Integer.parseInt(ANY_MULTIPART_UPLOAD_MAX_CONCURRENCY));
     assertThat(config.getMultipartUploadThresholdSizeBytes()).isNotEmpty();
-    assertThat(config.getMultipartUploadThresholdSizeBytes().get()).isEqualTo(10485760);
+    assertThat(config.getMultipartUploadThresholdSizeBytes().get())
+        .isEqualTo(Long.parseLong(ANY_MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES));
     assertThat(config.getRequestTimeoutSecs()).isNotEmpty();
-    assertThat(config.getRequestTimeoutSecs().get()).isEqualTo(30);
+    assertThat(config.getRequestTimeoutSecs().get())
+        .isEqualTo(Integer.parseInt(ANY_REQUEST_TIMEOUT_SECS));
   }
 
   @Test
