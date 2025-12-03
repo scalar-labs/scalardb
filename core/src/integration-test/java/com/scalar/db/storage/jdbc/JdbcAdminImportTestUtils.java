@@ -957,6 +957,81 @@ public class JdbcAdminImportTestUtils {
     }
   }
 
+  public Map<String, DataType> getSupportedDataTypeMapForPrimaryKey() {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("BOOLEAN", DataType.BOOLEAN)
+          .put("INT", DataType.INT)
+          .put("INT UNSIGNED", DataType.BIGINT)
+          .put("TINYINT", DataType.INT)
+          .put("SMALLINT", DataType.INT)
+          .put("MEDIUMINT", DataType.INT)
+          .put("BIGINT", DataType.BIGINT)
+          .put("FLOAT", DataType.FLOAT)
+          .put("DOUBLE", DataType.DOUBLE)
+          .put("CHAR(8)", DataType.TEXT)
+          .put("VARCHAR(512)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("boolean", DataType.BOOLEAN)
+          .put("smallint", DataType.INT)
+          .put("integer", DataType.INT)
+          .put("bigint", DataType.BIGINT)
+          .put("real", DataType.FLOAT)
+          .put("double precision", DataType.DOUBLE)
+          .put("char(3)", DataType.TEXT)
+          .put("varchar(512)", DataType.TEXT)
+          .put("text", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("NUMERIC(15,0)", DataType.BIGINT)
+          .put("NUMERIC(15,2)", DataType.DOUBLE)
+          .put("FLOAT(53)", DataType.DOUBLE)
+          .put("BINARY_FLOAT", DataType.FLOAT)
+          .put("BINARY_DOUBLE", DataType.DOUBLE)
+          .put("CHAR(3)", DataType.TEXT)
+          .put("VARCHAR2(512)", DataType.TEXT)
+          .put("NCHAR(3)", DataType.TEXT)
+          .put("NVARCHAR2(512)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("bit", DataType.BOOLEAN)
+          .put("tinyint", DataType.INT)
+          .put("smallint", DataType.INT)
+          .put("int", DataType.INT)
+          .put("bigint", DataType.BIGINT)
+          .put("real", DataType.FLOAT)
+          .put("float", DataType.DOUBLE)
+          .put("char(3)", DataType.TEXT)
+          .put("varchar(512)", DataType.TEXT)
+          .put("nchar(3)", DataType.TEXT)
+          .put("nvarchar(512)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("SMALLINT", DataType.INT)
+          .put("INT", DataType.INT)
+          .put("BIGINT", DataType.BIGINT)
+          .put("REAL", DataType.FLOAT)
+          .put("FLOAT(24)", DataType.FLOAT)
+          .put("DOUBLE", DataType.DOUBLE)
+          .put("FLOAT", DataType.DOUBLE)
+          .put("FLOAT(25)", DataType.DOUBLE)
+          .put("CHAR(3)", DataType.TEXT)
+          .put("VARCHAR(512)", DataType.TEXT)
+          .put("GRAPHIC(3)", DataType.TEXT)
+          .put("VARGRAPHIC(32)", DataType.TEXT)
+          .put("NCHAR(3)", DataType.TEXT)
+          .put("NVARCHAR(32)", DataType.TEXT)
+          .build();
+    } else {
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
+    }
+  }
+
   public void close() throws SQLException {
     dataSource.close();
   }

@@ -34,9 +34,9 @@ public abstract class DistributedStorageVirtualTablesIntegrationTestBase {
   private static final String RIGHT_SOURCE_TABLE = "right_source_table";
   private static final String VIRTUAL_TABLE = "virtual_table";
 
-  private DistributedStorageAdmin admin;
-  private DistributedStorage storage;
-  private String namespace;
+  protected DistributedStorageAdmin admin;
+  protected DistributedStorage storage;
+  protected String namespace;
 
   @BeforeAll
   public void beforeAll() throws Exception {
