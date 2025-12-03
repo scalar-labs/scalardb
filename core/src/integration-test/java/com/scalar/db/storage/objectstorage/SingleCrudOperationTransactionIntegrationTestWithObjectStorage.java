@@ -1,9 +1,15 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.InsertBuilder;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.Key;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionIntegrationTestBase;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class SingleCrudOperationTransactionIntegrationTestWithObjectStorage
     extends SingleCrudOperationTransactionIntegrationTestBase {
@@ -28,6 +34,28 @@ public class SingleCrudOperationTransactionIntegrationTestWithObjectStorage
         .addPartitionKey(ACCOUNT_ID)
         .addClusteringKey(ACCOUNT_TYPE)
         .build();
+  }
+
+  @Override
+  protected void populateRecords() throws TransactionException {
+    for (int i = 0; i < NUM_ACCOUNTS; i++) {
+      for (int j = 0; j < NUM_TYPES; j++) {
+        Key partitionKey = Key.ofInt(ACCOUNT_ID, i);
+        Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, j);
+        InsertBuilder.Buildable insert =
+            Insert.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(partitionKey)
+                .clusteringKey(clusteringKey);
+        prepareNonKeyColumns(i, j).forEach(insert::value);
+        manager.insert(insert.build());
+        if (ObjectStorageEnv.isCloudStorage()) {
+          // Sleep to mitigate rate limit errors
+          Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+        }
+      }
+    }
   }
 
   @Override
