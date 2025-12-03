@@ -62,6 +62,7 @@ public class S3Wrapper implements ObjectStorageWrapper {
 
     this.client =
         S3AsyncClient.builder()
+            .multipartEnabled(true)
             .region(Region.of(config.getRegion()))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
