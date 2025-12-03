@@ -26,9 +26,6 @@ import org.slf4j.LoggerFactory;
 public class JdbcDatabaseVirtualTablesIntegrationTest
     extends DistributedStorageVirtualTablesIntegrationTestBase {
 
-  private static final Logger logger =
-      LoggerFactory.getLogger(JdbcDatabaseVirtualTablesIntegrationTest.class);
-
   private JdbcAdminImportTestUtils testUtils;
   private RdbEngineStrategy rdbEngine;
 
