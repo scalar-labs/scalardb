@@ -13,6 +13,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,9 @@ import org.slf4j.LoggerFactory;
 public class JdbcDatabaseVirtualTablesIntegrationTest
     extends DistributedStorageVirtualTablesIntegrationTestBase {
 
+  private static final Logger logger =
+      LoggerFactory.getLogger(JdbcDatabaseVirtualTablesIntegrationTest.class);
+
   private JdbcAdminImportTestUtils testUtils;
   private RdbEngineStrategy rdbEngine;
 
@@ -38,6 +42,24 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
     return properties;
   }
 
+  @Override
+  public void afterAll() {
+    try {
+      super.afterAll();
+    } catch (Exception e) {
+      logger.warn("Failed to call super.afterAll", e);
+    }
+
+    try {
+      if (testUtils != null) {
+        testUtils.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close test utils", e);
+    }
+  }
+
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSqlite")
   @Test
   public void createVirtualTable_WithImportedTableHavingVariousPrimaryKeyTypes_ShouldWorkProperly()
