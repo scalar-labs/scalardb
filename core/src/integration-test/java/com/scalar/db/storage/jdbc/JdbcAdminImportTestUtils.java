@@ -957,6 +957,14 @@ public class JdbcAdminImportTestUtils {
     }
   }
 
+  /**
+   * Returns the supported data types for primary key columns in the current database engine.
+   *
+   * <p>Currently, this method returns only those data types that are mapped to the ScalarDB
+   * primitive types: INT, BIGINT, FLOAT, DOUBLE, and TEXT.
+   *
+   * @return a map of supported data types for primary key columns
+   */
   public Map<String, DataType> getSupportedDataTypeMapForPrimaryKey() {
     if (JdbcTestUtils.isMysql(rdbEngine)) {
       return ImmutableMap.<String, DataType>builder()
