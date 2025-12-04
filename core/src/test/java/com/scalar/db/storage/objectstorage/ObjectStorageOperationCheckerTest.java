@@ -26,6 +26,8 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -805,6 +807,78 @@ public class ObjectStorageOperationCheckerTest {
                                 .build()),
                         delete)))
         .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_PutGiven_WhenTextColumnExceedsMaxLength_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
+    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
+    field.setAccessible(true);
+
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+    Integer originalValue = (Integer) field.get(null);
+    try {
+      field.set(null, 10);
+
+      Put put =
+          Put.newBuilder()
+              .namespace(NAMESPACE_NAME)
+              .table(TABLE_NAME)
+              .partitionKey(Key.ofInt(PKEY1, 0))
+              .clusteringKey(Key.ofInt(CKEY1, 0))
+              .textValue(COL3, "12345678901") // 11 characters, exceeds limit of 10
+              .build();
+
+      // Act Assert
+      assertThatThrownBy(() -> operationChecker.check(put))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      field.set(null, originalValue);
+    }
+  }
+
+  @Test
+  public void check_PutGiven_WhenBlobColumnExceedsMaxLength_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
+    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
+    field.setAccessible(true);
+
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+    Integer originalValue = (Integer) field.get(null);
+    try {
+      field.set(null, 10);
+
+      // 9 bytes -> Base64 encoded length = ((9 + 2) / 3) * 4 = 12, which exceeds limit of 10
+      byte[] blob = new byte[9];
+      Put put =
+          Put.newBuilder()
+              .namespace(NAMESPACE_NAME)
+              .table(TABLE_NAME)
+              .partitionKey(Key.ofInt(PKEY1, 0))
+              .clusteringKey(Key.ofInt(CKEY1, 0))
+              .blobValue(COL4, blob)
+              .build();
+
+      // Act Assert
+      assertThatThrownBy(() -> operationChecker.check(put))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      field.set(null, originalValue);
+    }
   }
 
   private Put buildPutWithCondition(MutationCondition condition) {

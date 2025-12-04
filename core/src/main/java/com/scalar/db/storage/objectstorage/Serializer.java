@@ -8,13 +8,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public class Serializer {
+  public static final Integer MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
   private static final ObjectMapper mapper = new ObjectMapper();
 
   static {
     mapper
         .getFactory()
         .setStreamReadConstraints(
-            StreamReadConstraints.builder().maxStringLength(Integer.MAX_VALUE).build());
+            StreamReadConstraints.builder().maxStringLength(MAX_STRING_LENGTH_ALLOWED).build());
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
     mapper.registerModule(new JavaTimeModule());
