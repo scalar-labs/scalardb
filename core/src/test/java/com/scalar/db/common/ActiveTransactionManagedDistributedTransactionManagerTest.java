@@ -4,13 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +56,55 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
     assertThat(transaction2)
         .isInstanceOf(
             ActiveTransactionManagedDistributedTransactionManager.ActiveTransaction.class);
+  }
+
+  @Test
+  public void begin_TransactionAlreadyExists_ShouldRollbackAndThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+
+    DistributedTransaction wrappedTransaction1 = mock(DistributedTransaction.class);
+    when(wrappedTransaction1.getId()).thenReturn(txId);
+
+    DistributedTransaction wrappedTransaction2 = mock(DistributedTransaction.class);
+    when(wrappedTransaction2.getId()).thenReturn(txId);
+
+    when(wrappedTransactionManager.begin(txId))
+        .thenReturn(wrappedTransaction1)
+        .thenReturn(wrappedTransaction2);
+
+    transactionManager.begin(txId);
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.begin(txId))
+        .isInstanceOf(TransactionException.class);
+    verify(wrappedTransaction2).rollback();
+  }
+
+  @Test
+  public void begin_TransactionAlreadyExistsAndRollbackFails_ShouldThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+
+    DistributedTransaction wrappedTransaction1 = mock(DistributedTransaction.class);
+    when(wrappedTransaction1.getId()).thenReturn(txId);
+
+    DistributedTransaction wrappedTransaction2 = mock(DistributedTransaction.class);
+    when(wrappedTransaction2.getId()).thenReturn(txId);
+    doThrow(new RollbackException("rollback failed", txId)).when(wrappedTransaction2).rollback();
+
+    when(wrappedTransactionManager.begin(txId))
+        .thenReturn(wrappedTransaction1)
+        .thenReturn(wrappedTransaction2);
+
+    transactionManager.begin(txId);
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.begin(txId))
+        .isInstanceOf(TransactionException.class);
+    verify(wrappedTransaction2).rollback();
   }
 
   @Test
