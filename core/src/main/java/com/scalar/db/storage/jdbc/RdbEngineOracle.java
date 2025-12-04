@@ -308,6 +308,9 @@ class RdbEngineOracle extends AbstractRdbEngine {
                   numericTypeDescription, columnDescription));
         }
         if (digits == 0) {
+          if (columnSize == 1 && overrideDataType == DataType.BOOLEAN) {
+            return DataType.BOOLEAN;
+          }
           logger.info(
               "Data type larger than that of underlying database is assigned: {} to BIGINT",
               numericTypeDescription);
