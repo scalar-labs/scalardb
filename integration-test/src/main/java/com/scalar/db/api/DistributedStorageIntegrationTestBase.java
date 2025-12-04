@@ -1377,6 +1377,29 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
+  public void put_PutWithLargeTextValue_ShouldStoreProperly() throws ExecutionException {
+    // Arrange
+    int payloadSizeBytes = 100 * 1024 * 1024; // 100 MiB
+    StringBuilder builder = new StringBuilder();
+    for (long i = 0; i < payloadSizeBytes; i++) {
+      builder.append("a");
+    }
+    String largeText = builder.toString();
+    Put put = preparePuts().get(0);
+    put = Put.newBuilder(put).textValue(getColumnName2(), largeText).build();
+
+    // Act
+    storage.put(put);
+
+    // Assert
+    Get get = prepareGet(0, 0);
+    Optional<Result> actual = storage.get(get);
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().contains(getColumnName2())).isTrue();
+    assertThat(actual.get().getText(getColumnName2())).isEqualTo(largeText);
+  }
+
+  @Test
   public void delete_DeleteWithIfExistsGivenWhenNoSuchRecord_ShouldThrowNoMutationException() {
     // Arrange
     populateRecords();
