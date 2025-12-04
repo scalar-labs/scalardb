@@ -1380,11 +1380,9 @@ public abstract class DistributedStorageIntegrationTestBase {
   public void put_PutWithLargeTextValue_ShouldStoreProperly() throws ExecutionException {
     // Arrange
     int payloadSizeBytes = 100 * 1024 * 1024; // 100 MiB
-    StringBuilder builder = new StringBuilder();
-    for (long i = 0; i < payloadSizeBytes; i++) {
-      builder.append("a");
-    }
-    String largeText = builder.toString();
+    char[] chars = new char[payloadSizeBytes];
+    Arrays.fill(chars, 'a');
+    String largeText = new String(chars);
     Put put = preparePuts().get(0);
     put = Put.newBuilder(put).textValue(getColumnName2(), largeText).build();
 

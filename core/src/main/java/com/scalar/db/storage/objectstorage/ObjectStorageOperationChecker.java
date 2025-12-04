@@ -50,7 +50,9 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         @Override
         public void visit(TextColumn column) {
           String value = column.getTextValue();
-          assert value != null;
+          if (value == null) {
+            return;
+          }
 
           if (Serializer.MAX_STRING_LENGTH_ALLOWED < value.length()) {
             throw new IllegalArgumentException(
@@ -62,12 +64,11 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         @Override
         public void visit(BlobColumn column) {
           ByteBuffer buffer = column.getBlobValue();
-          assert buffer != null;
+          if (buffer == null) {
+            return;
+          }
           // Calculate the length after Base64 encoding.
-          int base64EncodedLength =
-              buffer.capacity() % 3 == 0
-                  ? (buffer.capacity() / 3) * 4
-                  : (buffer.capacity() / 3 + 1) * 4;
+          int base64EncodedLength = ((buffer.capacity() + 2) / 3) * 4;
           if (Serializer.MAX_STRING_LENGTH_ALLOWED < base64EncodedLength) {
             throw new IllegalArgumentException(
                 CoreError.OBJECT_STORAGE_EXCEEDS_MAX_VALUE_LENGTH_ALLOWED.buildMessage(
