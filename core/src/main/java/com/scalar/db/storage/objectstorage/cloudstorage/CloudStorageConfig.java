@@ -16,17 +16,17 @@ import org.slf4j.LoggerFactory;
 
 public class CloudStorageConfig implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "cloud-storage";
-  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
+  public static final String STORAGE_NAME_IN_PREFIX = "cloud_storage";
+  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME_IN_PREFIX + ".";
 
-  public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
-      PREFIX + "parallel_upload_block_size_in_bytes";
+  public static final String UPLOAD_CHUNK_SIZE_BYTES = PREFIX + "upload_chunk_size_bytes";
 
   private static final Logger logger = LoggerFactory.getLogger(CloudStorageConfig.class);
   private final String password;
   private final String bucket;
   private final String metadataNamespace;
   private final String projectId;
-  private final Integer parallelUploadBlockSizeInBytes;
+  private final Integer uploadChunkSizeBytes;
 
   public CloudStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -49,8 +49,7 @@ public class CloudStorageConfig implements ObjectStorageConfig {
               + "\" is not applicable to Cloud Storage and will be ignored.");
     }
 
-    parallelUploadBlockSizeInBytes =
-        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, null);
+    uploadChunkSizeBytes = getInt(databaseConfig.getProperties(), UPLOAD_CHUNK_SIZE_BYTES, null);
   }
 
   @Override
@@ -92,7 +91,7 @@ public class CloudStorageConfig implements ObjectStorageConfig {
     }
   }
 
-  public Optional<Integer> getParallelUploadBlockSizeInBytes() {
-    return Optional.ofNullable(parallelUploadBlockSizeInBytes);
+  public Optional<Integer> getUploadChunkSizeBytes() {
+    return Optional.ofNullable(uploadChunkSizeBytes);
   }
 }

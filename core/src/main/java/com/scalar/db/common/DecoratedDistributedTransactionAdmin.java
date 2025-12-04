@@ -394,6 +394,11 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public Optional<Role> getRole(String roleName) throws ExecutionException {
+    return distributedTransactionAdmin.getRole(roleName);
+  }
+
+  @Override
   public List<Role> getRoles() throws ExecutionException {
     return distributedTransactionAdmin.getRoles();
   }

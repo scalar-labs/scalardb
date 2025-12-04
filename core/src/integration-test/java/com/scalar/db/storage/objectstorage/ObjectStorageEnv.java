@@ -53,17 +53,17 @@ public class ObjectStorageEnv {
     Properties properties = getProperties(testName);
 
     // For Blob Storage
-    properties.setProperty(BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, "5242880"); // 5MB
-    properties.setProperty(BlobStorageConfig.PARALLEL_UPLOAD_MAX_PARALLELISM, "4");
+    properties.setProperty(BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_BYTES, "5242880"); // 5MB
+    properties.setProperty(BlobStorageConfig.PARALLEL_UPLOAD_MAX_CONCURRENCY, "4");
     properties.setProperty(
-        BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, "10485760"); // 10MB
-    properties.setProperty(BlobStorageConfig.REQUEST_TIMEOUT_IN_SECONDS, "30");
+        BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES, "10485760"); // 10MB
+    properties.setProperty(BlobStorageConfig.REQUEST_TIMEOUT_SECS, "30");
 
     // For S3
-    properties.setProperty(S3Config.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, "5242880"); // 5MB
-    properties.setProperty(S3Config.PARALLEL_UPLOAD_MAX_PARALLELISM, "4");
-    properties.setProperty(S3Config.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, "10485760"); // 10MB
-    properties.setProperty(S3Config.REQUEST_TIMEOUT_IN_SECONDS, "30");
+    properties.setProperty(S3Config.MULTIPART_UPLOAD_PART_SIZE_BYTES, "5242880"); // 5MB
+    properties.setProperty(S3Config.MULTIPART_UPLOAD_MAX_CONCURRENCY, "4");
+    properties.setProperty(S3Config.MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES, "10485760"); // 10MB
+    properties.setProperty(S3Config.REQUEST_TIMEOUT_SECS, "30");
 
     return properties;
   }

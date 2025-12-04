@@ -16,13 +16,13 @@ public class S3Config implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "s3";
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
 
-  public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
-      PREFIX + "parallel_upload_block_size_in_bytes";
-  public static final String PARALLEL_UPLOAD_MAX_PARALLELISM =
-      PREFIX + "parallel_upload_max_parallelism";
-  public static final String PARALLEL_UPLOAD_THRESHOLD_IN_BYTES =
-      PREFIX + "parallel_upload_threshold_in_bytes";
-  public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
+  public static final String MULTIPART_UPLOAD_PART_SIZE_BYTES =
+      PREFIX + "multipart_upload_part_size_bytes";
+  public static final String MULTIPART_UPLOAD_MAX_CONCURRENCY =
+      PREFIX + "multipart_upload_max_concurrency";
+  public static final String MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES =
+      PREFIX + "multipart_upload_threshold_size_bytes";
+  public static final String REQUEST_TIMEOUT_SECS = PREFIX + "request_timeout_secs";
 
   private static final Logger logger = LoggerFactory.getLogger(S3Config.class);
   private final String username;
@@ -31,10 +31,10 @@ public class S3Config implements ObjectStorageConfig {
   private final String metadataNamespace;
   private final String region;
 
-  private final Long parallelUploadBlockSizeInBytes;
-  private final Integer parallelUploadMaxParallelism;
-  private final Long parallelUploadThresholdInBytes;
-  private final Integer requestTimeoutInSeconds;
+  private final Long multipartUploadPartSizeBytes;
+  private final Integer multipartUploadMaxConcurrency;
+  private final Long multipartUploadThresholdSizeBytes;
+  private final Integer requestTimeoutSecs;
 
   public S3Config(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -67,14 +67,13 @@ public class S3Config implements ObjectStorageConfig {
               + "\" is not applicable to S3 and will be ignored.");
     }
 
-    parallelUploadBlockSizeInBytes =
-        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, null);
-    parallelUploadMaxParallelism =
-        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_MAX_PARALLELISM, null);
-    parallelUploadThresholdInBytes =
-        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, null);
-    requestTimeoutInSeconds =
-        getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_IN_SECONDS, null);
+    multipartUploadPartSizeBytes =
+        getLong(databaseConfig.getProperties(), MULTIPART_UPLOAD_PART_SIZE_BYTES, null);
+    multipartUploadMaxConcurrency =
+        getInt(databaseConfig.getProperties(), MULTIPART_UPLOAD_MAX_CONCURRENCY, null);
+    multipartUploadThresholdSizeBytes =
+        getLong(databaseConfig.getProperties(), MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES, null);
+    requestTimeoutSecs = getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_SECS, null);
   }
 
   @Override
@@ -105,19 +104,19 @@ public class S3Config implements ObjectStorageConfig {
     return username;
   }
 
-  public Optional<Long> getParallelUploadBlockSizeInBytes() {
-    return Optional.ofNullable(parallelUploadBlockSizeInBytes);
+  public Optional<Long> getMultipartUploadPartSizeBytes() {
+    return Optional.ofNullable(multipartUploadPartSizeBytes);
   }
 
-  public Optional<Integer> getParallelUploadMaxParallelism() {
-    return Optional.ofNullable(parallelUploadMaxParallelism);
+  public Optional<Integer> getMultipartUploadMaxConcurrency() {
+    return Optional.ofNullable(multipartUploadMaxConcurrency);
   }
 
-  public Optional<Long> getParallelUploadThresholdInBytes() {
-    return Optional.ofNullable(parallelUploadThresholdInBytes);
+  public Optional<Long> getMultipartUploadThresholdSizeBytes() {
+    return Optional.ofNullable(multipartUploadThresholdSizeBytes);
   }
 
-  public Optional<Integer> getRequestTimeoutInSeconds() {
-    return Optional.ofNullable(requestTimeoutInSeconds);
+  public Optional<Integer> getRequestTimeoutSecs() {
+    return Optional.ofNullable(requestTimeoutSecs);
   }
 }
