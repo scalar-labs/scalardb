@@ -810,6 +810,76 @@ public class ObjectStorageOperationCheckerTest {
   }
 
   @Test
+  public void check_PutGiven_WhenTextColumnLengthIsWithinLimit_ShouldNotThrowException()
+      throws Exception {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
+    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
+    field.setAccessible(true);
+
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+    Integer originalValue = (Integer) field.get(null);
+    try {
+      field.set(null, 10);
+
+      Put put =
+          Put.newBuilder()
+              .namespace(NAMESPACE_NAME)
+              .table(TABLE_NAME)
+              .partitionKey(Key.ofInt(PKEY1, 0))
+              .clusteringKey(Key.ofInt(CKEY1, 0))
+              .textValue(COL3, "1234567890") // 10 characters, exactly at the limit
+              .build();
+
+      // Act Assert
+      assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+    } finally {
+      field.set(null, originalValue);
+    }
+  }
+
+  @Test
+  public void check_PutGiven_WhenBlobColumnLengthIsWithinLimit_ShouldNotThrowException()
+      throws Exception {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
+    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
+    field.setAccessible(true);
+
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+    Integer originalValue = (Integer) field.get(null);
+    try {
+      field.set(null, 10);
+
+      // 6 bytes -> Base64 encoded length = ((6 + 2) / 3) * 4 = 8, which is within the limit of 10
+      byte[] blob = new byte[6];
+      Put put =
+          Put.newBuilder()
+              .namespace(NAMESPACE_NAME)
+              .table(TABLE_NAME)
+              .partitionKey(Key.ofInt(PKEY1, 0))
+              .clusteringKey(Key.ofInt(CKEY1, 0))
+              .blobValue(COL4, blob)
+              .build();
+
+      // Act Assert
+      assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+    } finally {
+      field.set(null, originalValue);
+    }
+  }
+
+  @Test
   public void check_PutGiven_WhenTextColumnExceedsMaxLength_ShouldThrowIllegalArgumentException()
       throws Exception {
     // Arrange
