@@ -32,6 +32,7 @@ public class DatabaseConfig {
   private String storage;
   private String transactionManager;
   private long metadataCacheExpirationTimeSecs;
+  private boolean activeTransactionManagementEnabled;
   private long activeTransactionManagementExpirationTimeMillis;
   @Nullable private String defaultNamespaceName;
   private boolean crossPartitionScanEnabled;
@@ -49,6 +50,8 @@ public class DatabaseConfig {
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String METADATA_CACHE_EXPIRATION_TIME_SECS =
       PREFIX + "metadata.cache_expiration_time_secs";
+  public static final String ACTIVE_TRANSACTION_MANAGEMENT_ENABLED =
+      PREFIX + "active_transaction_management.enabled";
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
       PREFIX + "active_transaction_management.expiration_time_millis";
   public static final String DEFAULT_NAMESPACE_NAME = PREFIX + "default_namespace_name";
@@ -103,6 +106,8 @@ public class DatabaseConfig {
     password = getString(getProperties(), PASSWORD, null);
     transactionManager = getTransactionManager(getProperties());
     metadataCacheExpirationTimeSecs = getMetadataCacheExpirationTimeSecs(getProperties());
+    activeTransactionManagementEnabled =
+        getBoolean(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, true);
     activeTransactionManagementExpirationTimeMillis =
         getActiveTransactionManagementExpirationTimeMillis(getProperties());
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
@@ -151,6 +156,10 @@ public class DatabaseConfig {
 
   public long getMetadataCacheExpirationTimeSecs() {
     return metadataCacheExpirationTimeSecs;
+  }
+
+  public boolean isActiveTransactionManagementEnabled() {
+    return activeTransactionManagementEnabled;
   }
 
   public long getActiveTransactionManagementExpirationTimeMillis() {
