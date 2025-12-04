@@ -11,9 +11,14 @@ env:
   DYNAMO_SECRET_ACCESS_KEY: ${{ secrets.DYNAMO_SECRET_ACCESS_KEY }}
 
 jobs:
-  integration-test-permission-cassandra-3-0:
-    name: Cassandra 3.0 Permission Integration Test
+  integration-test-permission-cassandra:
+    name: Cassandra ${{ matrix.cassandra_version }} Permission Integration Test
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cassandra_version: ['3.0', '3.11', '4.1', '5.0']
 
     steps:
       - uses: actions/checkout@v6
@@ -27,15 +32,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Start Cassandra with authentication enabled
+      - name: Start Cassandra container
         run: |
-          docker run -d --name cassandra \
-            -p 9042:9042 \
-            -e CASSANDRA_PASSWORD_SEEDER=yes \
-            -e CASSANDRA_PASSWORD=cassandra \
-            -e CASSANDRA_AUTHENTICATOR=PasswordAuthenticator \
-            -e CASSANDRA_AUTHORIZER=CassandraAuthorizer \
-            bitnami/cassandra:3.0
+          docker create --name cassandra -p 9042:9042 cassandra:${{ matrix.cassandra_version }}
+          docker cp cassandra:/etc/cassandra/cassandra.yaml ./cassandra.yaml
+          sed -i 's/^authenticator:.*/authenticator: org.apache.cassandra.auth.PasswordAuthenticator/' ./cassandra.yaml
+          sed -i 's/^authorizer:.*/authorizer: org.apache.cassandra.auth.CassandraAuthorizer/' ./cassandra.yaml
+          docker cp ./cassandra.yaml cassandra:/etc/cassandra/cassandra.yaml
+          docker start cassandra
 
       - name: Wait for Cassandra to be ready
         run: sleep 30
@@ -47,46 +51,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: cassandra_3.0_permission_integration_test_reports
-          path: core/build/reports/tests/integrationTestCassandraPermission
-
-  integration-test-permission-cassandra-3-11:
-    name: Cassandra 3.11 Permission Integration Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Start Cassandra with authentication enabled
-        run: |
-          docker run -d --name cassandra \
-            -p 9042:9042 \
-            -e CASSANDRA_PASSWORD_SEEDER=yes \
-            -e CASSANDRA_PASSWORD=cassandra \
-            -e CASSANDRA_AUTHENTICATOR=PasswordAuthenticator \
-            -e CASSANDRA_AUTHORIZER=CassandraAuthorizer \
-            bitnami/cassandra:3.11
-
-      - name: Wait for Cassandra to be ready
-        run: sleep 30
-
-      - name: Execute Gradle 'integrationTestCassandraPermission' task
-        run: ./gradlew integrationTestCassandraPermission
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: cassandra_3.11_permission_integration_test_reports
+          name: cassandra_${{ matrix.cassandra_version }}_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestCassandraPermission
 
   integration-test-permission-dynamo:
@@ -816,4 +781,95 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: db2_12.1_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-alloydb:
+    name: AlloyDB ${{ matrix.alloydb_version }} Permission Integration Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        alloydb_version: ['15', '16']
+
+    services:
+      alloydb:
+        image: google/alloydbomni:${{ matrix.alloydb_version }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_INITDB_ARGS: "--icu-locale=en-US-u-va-posix"
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: alloydb_${{ matrix.alloydb_version }}_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
+  integration-test-permission-tidb:
+    name: TiDB ${{ matrix.tidb_version }} Permission Integration Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        tidb_version: ['6.5', '7.5', '8.5']
+
+    steps:
+      - name: Install TiUP
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+          echo "$HOME/.tiup/bin" >> $GITHUB_PATH
+
+      - name: Start TiDB with TiUP Playground
+        timeout-minutes: 3
+        run: |
+          tiup playground v${{ matrix.tidb_version }} --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
+          # Check if TiDB is running
+          while true; do
+            if mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1" > /dev/null 2>&1; then
+              echo "TiDB is ready"
+              break
+            fi
+            echo "Waiting for TiDB to be ready..."
+            sleep 5
+          done
+
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: tidb_${{ matrix.tidb_version }}_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
