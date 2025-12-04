@@ -54,7 +54,7 @@ public class CloudStorageWrapperTest {
     when(config.getMetadataNamespace()).thenReturn(METADATA_NAMESPACE);
     when(config.getProjectId()).thenReturn(PROJECT_ID);
     when(config.getBucket()).thenReturn(BUCKET);
-    when(config.getParallelUploadBlockSizeInBytes()).thenReturn(Optional.empty());
+    when(config.getUploadChunkSizeBytes()).thenReturn(Optional.empty());
     wrapper = new CloudStorageWrapper(config, storage);
   }
 
