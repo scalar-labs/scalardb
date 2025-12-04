@@ -16,7 +16,7 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("isSqlite")
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSqlite")
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
 
   private static final Logger logger =
@@ -197,11 +197,6 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     } catch (Exception e) {
       logger.warn("Failed to call super.afterAll", e);
     }
-  }
-
-  @SuppressWarnings("unused")
-  private static boolean isSqlite() {
-    return JdbcEnv.isSqlite();
   }
 
   @Override
