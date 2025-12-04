@@ -330,12 +330,20 @@ public class JdbcAdminImportTestUtils {
     columns.put("col19", "TIMESTAMP"); // override to TIME
     columns.put("col20", "TIMESTAMP WITH TIME ZONE");
     columns.put("col21", "TIMESTAMP WITH LOCAL TIME ZONE");
+    columns.put("col22", "NUMBER(1)"); // override to BOOLEAN
     return columns;
   }
 
   private Map<String, DataType> prepareOverrideColumnsTypeForOracle() {
     return ImmutableMap.of(
-        "col16", DataType.TIME, "col17", DataType.TIMESTAMP, "col19", DataType.TIME);
+        "col16",
+        DataType.TIME,
+        "col17",
+        DataType.TIMESTAMP,
+        "col19",
+        DataType.TIME,
+        "col22",
+        DataType.BOOLEAN);
   }
 
   private TableMetadata prepareTableMetadataForOracle() {
@@ -363,6 +371,7 @@ public class JdbcAdminImportTestUtils {
         .addColumn("col19", DataType.TIME)
         .addColumn("col20", DataType.TIMESTAMPTZ)
         .addColumn("col21", DataType.TIMESTAMPTZ)
+        .addColumn("col22", DataType.BOOLEAN)
         .addPartitionKey("pk1")
         .addPartitionKey("pk2")
         .build();
