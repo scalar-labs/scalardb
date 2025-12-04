@@ -13,16 +13,17 @@ import org.slf4j.LoggerFactory;
 
 public class BlobStorageConfig implements ObjectStorageConfig {
   public static final String STORAGE_NAME = "blob-storage";
-  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
+  public static final String STORAGE_NAME_IN_PREFIX = "blob_storage";
+  public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME_IN_PREFIX + ".";
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
-  public static final String PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES =
-      PREFIX + "parallel_upload_block_size_in_bytes";
-  public static final String PARALLEL_UPLOAD_MAX_PARALLELISM =
-      PREFIX + "parallel_upload_max_parallelism";
-  public static final String PARALLEL_UPLOAD_THRESHOLD_IN_BYTES =
-      PREFIX + "parallel_upload_threshold_in_bytes";
-  public static final String REQUEST_TIMEOUT_IN_SECONDS = PREFIX + "request_timeout_in_seconds";
+  public static final String PARALLEL_UPLOAD_BLOCK_SIZE_BYTES =
+      PREFIX + "parallel_upload_block_size_bytes";
+  public static final String PARALLEL_UPLOAD_MAX_CONCURRENCY =
+      PREFIX + "parallel_upload_max_concurrency";
+  public static final String PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES =
+      PREFIX + "parallel_upload_threshold_size_bytes";
+  public static final String REQUEST_TIMEOUT_SECS = PREFIX + "request_timeout_secs";
 
   private static final Logger logger = LoggerFactory.getLogger(BlobStorageConfig.class);
   private final String endpoint;
@@ -31,10 +32,10 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   private final String bucket;
   private final String metadataNamespace;
 
-  private final Long parallelUploadBlockSizeInBytes;
-  private final Integer parallelUploadMaxParallelism;
-  private final Long parallelUploadThresholdInBytes;
-  private final Integer requestTimeoutInSeconds;
+  private final Long parallelUploadBlockSizeBytes;
+  private final Integer parallelUploadMaxConcurrency;
+  private final Long parallelUploadThresholdSizeBytes;
+  private final Integer requestTimeoutSecs;
 
   public BlobStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -69,14 +70,13 @@ public class BlobStorageConfig implements ObjectStorageConfig {
               + "\" is not applicable to Blob Storage and will be ignored.");
     }
 
-    parallelUploadBlockSizeInBytes =
-        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, null);
-    parallelUploadMaxParallelism =
-        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_MAX_PARALLELISM, null);
-    parallelUploadThresholdInBytes =
-        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, null);
-    requestTimeoutInSeconds =
-        getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_IN_SECONDS, null);
+    parallelUploadBlockSizeBytes =
+        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_BLOCK_SIZE_BYTES, null);
+    parallelUploadMaxConcurrency =
+        getInt(databaseConfig.getProperties(), PARALLEL_UPLOAD_MAX_CONCURRENCY, null);
+    parallelUploadThresholdSizeBytes =
+        getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES, null);
+    requestTimeoutSecs = getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_SECS, null);
   }
 
   @Override
@@ -107,19 +107,19 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     return username;
   }
 
-  public Optional<Long> getParallelUploadBlockSizeInBytes() {
-    return Optional.ofNullable(parallelUploadBlockSizeInBytes);
+  public Optional<Long> getParallelUploadBlockSizeBytes() {
+    return Optional.ofNullable(parallelUploadBlockSizeBytes);
   }
 
-  public Optional<Integer> getParallelUploadMaxParallelism() {
-    return Optional.ofNullable(parallelUploadMaxParallelism);
+  public Optional<Integer> getParallelUploadMaxConcurrency() {
+    return Optional.ofNullable(parallelUploadMaxConcurrency);
   }
 
-  public Optional<Long> getParallelUploadThresholdInBytes() {
-    return Optional.ofNullable(parallelUploadThresholdInBytes);
+  public Optional<Long> getParallelUploadThresholdSizeBytes() {
+    return Optional.ofNullable(parallelUploadThresholdSizeBytes);
   }
 
-  public Optional<Integer> getRequestTimeoutInSeconds() {
-    return Optional.ofNullable(requestTimeoutInSeconds);
+  public Optional<Integer> getRequestTimeoutSecs() {
+    return Optional.ofNullable(requestTimeoutSecs);
   }
 }
