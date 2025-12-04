@@ -36,38 +36,34 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
   @BeforeAll
   public void beforeAll() throws ObjectStorageWrapperException {
     Properties properties = getProperties(TEST_NAME);
-    long parallelUploadThresholdInBytes;
+    long payloadSizeBytes;
 
     if (ObjectStorageEnv.isBlobStorage()) {
       // Minimum block size must be greater than or equal to 256KB for Blob Storage
-      Long parallelUploadUnit = 256 * 1024L; // 256KB
+      Long uploadUnit = 256 * 1024L; // 256KB
       properties.setProperty(
-          BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
-          String.valueOf(parallelUploadUnit));
+          BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_BYTES, String.valueOf(uploadUnit));
       properties.setProperty(
-          BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
-          String.valueOf(parallelUploadUnit * 2));
-      parallelUploadThresholdInBytes = parallelUploadUnit * 2;
+          BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES, String.valueOf(uploadUnit * 2));
+      payloadSizeBytes = uploadUnit * 2 + 1;
     } else if (ObjectStorageEnv.isCloudStorage()) {
       // Minimum block size must be greater than or equal to 256KB for Cloud Storage
-      Long parallelUploadUnit = 256 * 1024L; // 256KB
+      Long uploadUnit = 256 * 1024L; // 256KB
       properties.setProperty(
-          CloudStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
-          String.valueOf(parallelUploadUnit));
-      parallelUploadThresholdInBytes = parallelUploadUnit * 2;
+          CloudStorageConfig.UPLOAD_CHUNK_SIZE_BYTES, String.valueOf(uploadUnit));
+      payloadSizeBytes = uploadUnit * 2 + 1;
     } else if (ObjectStorageEnv.isS3()) {
       // Minimum part size must be greater than or equal to 5MB for S3
-      Long parallelUploadUnit = 5 * 1024 * 1024L; // 5MB
+      Long uploadUnit = 5 * 1024 * 1024L; // 5MB
+      properties.setProperty(S3Config.MULTIPART_UPLOAD_PART_SIZE_BYTES, String.valueOf(uploadUnit));
       properties.setProperty(
-          S3Config.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES, String.valueOf(parallelUploadUnit));
-      properties.setProperty(
-          S3Config.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES, String.valueOf(parallelUploadUnit * 2));
-      parallelUploadThresholdInBytes = parallelUploadUnit * 2;
+          S3Config.MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES, String.valueOf(uploadUnit * 2));
+      payloadSizeBytes = uploadUnit * 2 + 1;
     } else {
       throw new AssertionError();
     }
 
-    char[] charArray = new char[(int) parallelUploadThresholdInBytes + 1];
+    char[] charArray = new char[(int) payloadSizeBytes];
     Arrays.fill(charArray, 'a');
     testObject1 = new String(charArray);
     Arrays.fill(charArray, 'b');

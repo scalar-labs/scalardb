@@ -14,7 +14,7 @@ public class CloudStorageConfigTest {
   private static final String ANY_CONTACT_POINT = ANY_BUCKET;
   private static final String CloudStorage_STORAGE = "cloud-storage";
   private static final String ANY_TABLE_METADATA_NAMESPACE = "any_namespace";
-  private static final String ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = "5242880"; // 5MB
+  private static final String ANY_UPLOAD_CHUNK_SIZE_BYTES = "5242880"; // 5MB
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -25,9 +25,7 @@ public class CloudStorageConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, CloudStorage_STORAGE);
     props.setProperty(CloudStorageConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
-    props.setProperty(
-        CloudStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
-        ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+    props.setProperty(CloudStorageConfig.UPLOAD_CHUNK_SIZE_BYTES, ANY_UPLOAD_CHUNK_SIZE_BYTES);
 
     // Act
     CloudStorageConfig config = new CloudStorageConfig(new DatabaseConfig(props));
@@ -37,8 +35,9 @@ public class CloudStorageConfigTest {
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
-    assertThat(config.getParallelUploadBlockSizeInBytes()).isNotEmpty();
-    assertThat(config.getParallelUploadBlockSizeInBytes().get()).isEqualTo(5242880);
+    assertThat(config.getUploadChunkSizeBytes()).isNotEmpty();
+    assertThat(config.getUploadChunkSizeBytes().get())
+        .isEqualTo(Integer.parseInt(ANY_UPLOAD_CHUNK_SIZE_BYTES));
   }
 
   @Test
@@ -59,7 +58,7 @@ public class CloudStorageConfigTest {
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getMetadataNamespace())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
-    assertThat(config.getParallelUploadBlockSizeInBytes()).isEmpty();
+    assertThat(config.getUploadChunkSizeBytes()).isEmpty();
   }
 
   @Test
