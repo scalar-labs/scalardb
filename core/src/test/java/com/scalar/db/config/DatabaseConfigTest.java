@@ -37,6 +37,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
+    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -65,6 +66,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
+    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
@@ -94,6 +96,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
+    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
@@ -125,6 +128,7 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
+    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
@@ -327,6 +331,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, "false");
     props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, "3600");
 
     // Act
@@ -339,6 +344,7 @@ public class DatabaseConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.isActiveTransactionManagementEnabled()).isFalse();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(3600);
   }
 
