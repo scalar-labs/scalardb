@@ -48,18 +48,7 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         public void visit(DoubleColumn column) {}
 
         @Override
-        public void visit(TextColumn column) {
-          String value = column.getTextValue();
-          if (value == null) {
-            return;
-          }
-
-          if (Serializer.MAX_STRING_LENGTH_ALLOWED < value.length()) {
-            throw new IllegalArgumentException(
-                CoreError.OBJECT_STORAGE_EXCEEDS_MAX_VALUE_LENGTH_ALLOWED.buildMessage(
-                    Serializer.MAX_STRING_LENGTH_ALLOWED, column.getName(), value.length()));
-          }
-        }
+        public void visit(TextColumn column) {}
 
         @Override
         public void visit(BlobColumn column) {
@@ -68,11 +57,11 @@ public class ObjectStorageOperationChecker extends OperationChecker {
             return;
           }
           // Calculate the length after Base64 encoding.
-          int base64EncodedLength = ((buffer.capacity() + 2) / 3) * 4;
-          if (Serializer.MAX_STRING_LENGTH_ALLOWED < base64EncodedLength) {
+          int allowedLength = Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
+          if (buffer.remaining() > allowedLength) {
             throw new IllegalArgumentException(
-                CoreError.OBJECT_STORAGE_EXCEEDS_MAX_VALUE_LENGTH_ALLOWED.buildMessage(
-                    Serializer.MAX_STRING_LENGTH_ALLOWED, column.getName(), base64EncodedLength));
+                CoreError.OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED.buildMessage(
+                    Serializer.MAX_STRING_LENGTH_ALLOWED, column.getName(), buffer.remaining()));
           }
         }
 

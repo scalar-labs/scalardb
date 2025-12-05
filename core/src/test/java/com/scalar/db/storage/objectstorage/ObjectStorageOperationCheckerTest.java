@@ -9,6 +9,8 @@ import static com.scalar.db.api.ConditionBuilder.putIfNotExists;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 
@@ -24,11 +26,14 @@ import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -810,145 +815,54 @@ public class ObjectStorageOperationCheckerTest {
   }
 
   @Test
-  public void check_PutGiven_WhenTextColumnLengthIsWithinLimit_ShouldNotThrowException()
-      throws Exception {
+  public void check_PutGiven_WhenBlobColumnIsWithinLimit_ShouldNotThrowException()
+      throws ExecutionException {
     // Arrange
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
 
-    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
-    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
-    field.setAccessible(true);
+    byte[] blob = new byte[100];
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .blobValue(COL4, blob)
+            .build();
 
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
-    Integer originalValue = (Integer) field.get(null);
-    try {
-      field.set(null, 10);
-
-      Put put =
-          Put.newBuilder()
-              .namespace(NAMESPACE_NAME)
-              .table(TABLE_NAME)
-              .partitionKey(Key.ofInt(PKEY1, 0))
-              .clusteringKey(Key.ofInt(CKEY1, 0))
-              .textValue(COL3, "1234567890") // 10 characters, exactly at the limit
-              .build();
-
-      // Act Assert
-      assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
-    } finally {
-      field.set(null, originalValue);
-    }
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
   }
 
   @Test
-  public void check_PutGiven_WhenBlobColumnLengthIsWithinLimit_ShouldNotThrowException()
-      throws Exception {
+  public void check_PutGiven_WhenBlobColumnExceedsLimit_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
     // Arrange
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
 
-    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
-    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
-    field.setAccessible(true);
+    int allowedLength = Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
+    ByteBuffer mockBuffer = mock(ByteBuffer.class);
+    when(mockBuffer.remaining()).thenReturn(allowedLength + 1);
 
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+    BlobColumn blobColumn = mock(BlobColumn.class);
+    when(blobColumn.getName()).thenReturn(COL4);
+    when(blobColumn.getBlobValue()).thenReturn(mockBuffer);
 
-    Integer originalValue = (Integer) field.get(null);
-    try {
-      field.set(null, 10);
+    Put put =
+        spy(
+            Put.newBuilder()
+                .namespace(NAMESPACE_NAME)
+                .table(TABLE_NAME)
+                .partitionKey(Key.ofInt(PKEY1, 0))
+                .clusteringKey(Key.ofInt(CKEY1, 0))
+                .build());
+    Map<String, Column<?>> columns = new LinkedHashMap<>();
+    columns.put(COL4, blobColumn);
+    when(put.getColumns()).thenReturn(columns);
 
-      // 6 bytes -> Base64 encoded length = ((6 + 2) / 3) * 4 = 8, which is within the limit of 10
-      byte[] blob = new byte[6];
-      Put put =
-          Put.newBuilder()
-              .namespace(NAMESPACE_NAME)
-              .table(TABLE_NAME)
-              .partitionKey(Key.ofInt(PKEY1, 0))
-              .clusteringKey(Key.ofInt(CKEY1, 0))
-              .blobValue(COL4, blob)
-              .build();
-
-      // Act Assert
-      assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
-    } finally {
-      field.set(null, originalValue);
-    }
-  }
-
-  @Test
-  public void check_PutGiven_WhenTextColumnExceedsMaxLength_ShouldThrowIllegalArgumentException()
-      throws Exception {
-    // Arrange
-    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
-
-    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
-    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
-    field.setAccessible(true);
-
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
-    Integer originalValue = (Integer) field.get(null);
-    try {
-      field.set(null, 10);
-
-      Put put =
-          Put.newBuilder()
-              .namespace(NAMESPACE_NAME)
-              .table(TABLE_NAME)
-              .partitionKey(Key.ofInt(PKEY1, 0))
-              .clusteringKey(Key.ofInt(CKEY1, 0))
-              .textValue(COL3, "12345678901") // 11 characters, exceeds limit of 10
-              .build();
-
-      // Act Assert
-      assertThatThrownBy(() -> operationChecker.check(put))
-          .isInstanceOf(IllegalArgumentException.class);
-    } finally {
-      field.set(null, originalValue);
-    }
-  }
-
-  @Test
-  public void check_PutGiven_WhenBlobColumnExceedsMaxLength_ShouldThrowIllegalArgumentException()
-      throws Exception {
-    // Arrange
-    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
-
-    // Temporarily set MAX_STRING_LENGTH_ALLOWED to a small value for testing
-    Field field = Serializer.class.getDeclaredField("MAX_STRING_LENGTH_ALLOWED");
-    field.setAccessible(true);
-
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
-    Integer originalValue = (Integer) field.get(null);
-    try {
-      field.set(null, 10);
-
-      // 9 bytes -> Base64 encoded length = ((9 + 2) / 3) * 4 = 12, which exceeds limit of 10
-      byte[] blob = new byte[9];
-      Put put =
-          Put.newBuilder()
-              .namespace(NAMESPACE_NAME)
-              .table(TABLE_NAME)
-              .partitionKey(Key.ofInt(PKEY1, 0))
-              .clusteringKey(Key.ofInt(CKEY1, 0))
-              .blobValue(COL4, blob)
-              .build();
-
-      // Act Assert
-      assertThatThrownBy(() -> operationChecker.check(put))
-          .isInstanceOf(IllegalArgumentException.class);
-    } finally {
-      field.set(null, originalValue);
-    }
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   private Put buildPutWithCondition(MutationCondition condition) {
