@@ -97,6 +97,9 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BIT, "BIT", 1, 0), DataType.BOOLEAN);
     DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.BIT, "bool", 1, 0), DataType.BOOLEAN);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.BIT, "bit", 1, 0), DataType.BOOLEAN);
+    DATA_TYPE_MAP
+        .get(ORACLE)
+        .put(new Column(JDBCType.NUMERIC, "NUMBER", 1, 0, DataType.BOOLEAN), DataType.BOOLEAN);
 
     // INT
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.TINYINT, "TINYINT"), DataType.INT);
@@ -180,6 +183,7 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 15, 0), DataType.BIGINT);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 15, 2), DataType.DOUBLE);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 16, 0), null);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 1, 0), DataType.BIGINT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NUMERIC, "numeric"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DECIMAL, "decimal"), null);
 
