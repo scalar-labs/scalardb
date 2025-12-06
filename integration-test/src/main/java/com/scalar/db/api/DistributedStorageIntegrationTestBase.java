@@ -2396,7 +2396,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     puts.forEach(p -> assertThatCode(() -> storage.put(p)).doesNotThrowAnyException());
   }
 
-  private Get prepareGet(int pKey, int cKey) {
+  protected Get prepareGet(int pKey, int cKey) {
     Key partitionKey = Key.ofInt(getColumnName1(), pKey);
     Key clusteringKey = Key.ofInt(getColumnName4(), cKey);
     return Get.newBuilder()
@@ -2407,7 +2407,7 @@ public abstract class DistributedStorageIntegrationTestBase {
         .build();
   }
 
-  private List<Put> preparePuts() {
+  protected List<Put> preparePuts() {
     List<Put> puts = new ArrayList<>();
 
     IntStream.range(0, 5)
