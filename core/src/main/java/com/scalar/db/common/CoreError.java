@@ -1028,6 +1028,12 @@ public enum CoreError implements ScalarDbError {
           + "you may be able to adjust the settings to enable consistent reads. Please refer to the storage configuration for details. Storage: %s",
       "",
       ""),
+  OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED(
+      Category.USER_ERROR,
+      "0279",
+      "The size of a BLOB column value exceeds the maximum allowed size of %d bytes. Column: %s; Size: %d bytes",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

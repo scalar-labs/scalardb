@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,9 +8,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public class Serializer {
+  public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
   private static final ObjectMapper mapper = new ObjectMapper();
 
   static {
+    mapper
+        .getFactory()
+        .setStreamReadConstraints(
+            StreamReadConstraints.builder().maxStringLength(MAX_STRING_LENGTH_ALLOWED).build());
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
     mapper.registerModule(new JavaTimeModule());
