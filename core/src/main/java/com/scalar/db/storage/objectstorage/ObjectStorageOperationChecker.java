@@ -56,8 +56,8 @@ public class ObjectStorageOperationChecker extends OperationChecker {
           if (buffer == null) {
             return;
           }
-          // Calculate the length after Base64 encoding.
-          int allowedLength = Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
+          // Calculate the maximum allowed blob length after Base64 encoding.
+          long allowedLength = (long) Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
           if (buffer.remaining() > allowedLength) {
             throw new IllegalArgumentException(
                 CoreError.OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED.buildMessage(
