@@ -23,11 +23,60 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import java.nio.ByteBuffer;
 
 public class ObjectStorageOperationChecker extends OperationChecker {
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
     ObjectStorageUtils.OBJECT_KEY_DELIMITER, ObjectStorageUtils.CONCATENATED_KEY_DELIMITER,
   };
+
+  private static final ColumnVisitor COMMON_COLUMN_CHECKER =
+      new ColumnVisitor() {
+        @Override
+        public void visit(BooleanColumn column) {}
+
+        @Override
+        public void visit(IntColumn column) {}
+
+        @Override
+        public void visit(BigIntColumn column) {}
+
+        @Override
+        public void visit(FloatColumn column) {}
+
+        @Override
+        public void visit(DoubleColumn column) {}
+
+        @Override
+        public void visit(TextColumn column) {}
+
+        @Override
+        public void visit(BlobColumn column) {
+          ByteBuffer buffer = column.getBlobValue();
+          if (buffer == null) {
+            return;
+          }
+          // Calculate the maximum allowed blob length after Base64 encoding.
+          long allowedLength = (long) Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
+          if (buffer.remaining() > allowedLength) {
+            throw new IllegalArgumentException(
+                CoreError.OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED.buildMessage(
+                    Serializer.MAX_STRING_LENGTH_ALLOWED, column.getName(), buffer.remaining()));
+          }
+        }
+
+        @Override
+        public void visit(DateColumn column) {}
+
+        @Override
+        public void visit(TimeColumn column) {}
+
+        @Override
+        public void visit(TimestampColumn column) {}
+
+        @Override
+        public void visit(TimestampTZColumn column) {}
+      };
 
   private static final ColumnVisitor PRIMARY_KEY_COLUMN_CHECKER =
       new ColumnVisitor() {
@@ -104,6 +153,7 @@ public class ObjectStorageOperationChecker extends OperationChecker {
   @Override
   public void check(Put put) throws ExecutionException {
     super.check(put);
+    put.getColumns().values().forEach(column -> column.accept(COMMON_COLUMN_CHECKER));
     checkPrimaryKey(put);
   }
 
