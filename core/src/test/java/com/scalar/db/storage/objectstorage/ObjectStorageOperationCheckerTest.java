@@ -9,6 +9,8 @@ import static com.scalar.db.api.ConditionBuilder.putIfNotExists;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 
@@ -24,9 +26,14 @@ import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -805,6 +812,57 @@ public class ObjectStorageOperationCheckerTest {
                                 .build()),
                         delete)))
         .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_PutGiven_WhenBlobColumnIsWithinLimit_ShouldNotThrowException()
+      throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    byte[] blob = new byte[100];
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofInt(PKEY1, 0))
+            .clusteringKey(Key.ofInt(CKEY1, 0))
+            .blobValue(COL4, blob)
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_PutGiven_WhenBlobColumnExceedsLimit_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    int allowedLength = Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
+    ByteBuffer mockBuffer = mock(ByteBuffer.class);
+    when(mockBuffer.remaining()).thenReturn(allowedLength + 1);
+
+    BlobColumn blobColumn = mock(BlobColumn.class);
+    when(blobColumn.getName()).thenReturn(COL4);
+    when(blobColumn.getBlobValue()).thenReturn(mockBuffer);
+
+    Put put =
+        spy(
+            Put.newBuilder()
+                .namespace(NAMESPACE_NAME)
+                .table(TABLE_NAME)
+                .partitionKey(Key.ofInt(PKEY1, 0))
+                .clusteringKey(Key.ofInt(CKEY1, 0))
+                .build());
+    Map<String, Column<?>> columns = new LinkedHashMap<>();
+    columns.put(COL4, blobColumn);
+    when(put.getColumns()).thenReturn(columns);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   private Put buildPutWithCondition(MutationCondition condition) {
