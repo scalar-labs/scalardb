@@ -61,7 +61,7 @@ public class ObjectStorageOperationChecker extends OperationChecker {
           if (buffer.remaining() > allowedLength) {
             throw new IllegalArgumentException(
                 CoreError.OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED.buildMessage(
-                    Serializer.MAX_STRING_LENGTH_ALLOWED, column.getName(), buffer.remaining()));
+                    allowedLength, column.getName(), buffer.remaining()));
           }
         }
 
