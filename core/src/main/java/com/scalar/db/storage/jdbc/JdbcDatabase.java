@@ -68,6 +68,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   private final TableMetadataManager tableMetadataManager;
   private final VirtualTableInfoManager virtualTableInfoManager;
   private final JdbcService jdbcService;
+  private final boolean requiresExplicitCommit;
 
   @Inject
   public JdbcDatabase(DatabaseConfig databaseConfig) {
@@ -91,6 +92,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     virtualTableInfoManager =
         new VirtualTableInfoManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+
+    try (Connection connection = dataSource.getConnection()) {
+      requiresExplicitCommit =
+          rdbEngine.requiresExplicitCommit(connection.getTransactionIsolation());
+    } catch (SQLException e) {
+      throw new RuntimeException("Failed to get transaction isolation level", e);
+    }
   }
 
   @VisibleForTesting
@@ -101,7 +109,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       BasicDataSource tableMetadataDataSource,
       TableMetadataManager tableMetadataManager,
       VirtualTableInfoManager virtualTableInfoManager,
-      JdbcService jdbcService) {
+      JdbcService jdbcService,
+      boolean requiresExplicitCommit) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
@@ -109,6 +118,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     this.rdbEngine = rdbEngine;
     this.tableMetadataManager = tableMetadataManager;
     this.virtualTableInfoManager = virtualTableInfoManager;
+    this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
   @Override
@@ -117,9 +127,23 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
       rdbEngine.setConnectionToReadOnly(connection, true);
-      return jdbcService.get(get, connection);
+      Optional<Result> result = jdbcService.get(get, connection);
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
+      return result;
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     } finally {
@@ -178,11 +202,24 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
       if (!jdbcService.put(put, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
@@ -210,11 +247,24 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
       if (!jdbcService.delete(delete, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
