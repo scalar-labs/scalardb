@@ -15,7 +15,7 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("isSqliteOrOracle")
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSqlite")
 public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     extends SchemaLoaderImportWithMetadataDecouplingIntegrationTestBase {
 
@@ -38,6 +38,18 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
         JdbcTestUtils.getIsolationLevel(
                 rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
             .name());
+
+    // Disable connection pooling for Oracle to avoid test failures.
+    // Oracle's SERIALIZABLE isolation level uses snapshot isolation, and reusing connections can
+    // cause unexpected behavior due to stale snapshot state from previous transactions.
+    if (JdbcEnv.isOracle()) {
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "0");
+    }
 
     return properties;
   }
@@ -203,11 +215,6 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     } catch (Exception e) {
       logger.warn("Failed to close test utils", e);
     }
-  }
-
-  @SuppressWarnings("unused")
-  private static boolean isSqliteOrOracle() {
-    return JdbcEnv.isSqlite() || JdbcEnv.isOracle();
   }
 
   @Override

@@ -338,4 +338,13 @@ public interface RdbEngineStrategy {
    * @return the minimum isolation level required for consistent virtual table reads
    */
   int getMinimumIsolationLevelForConsistentVirtualTableRead();
+
+  /**
+   * Returns the maximum isolation level supported by the underlying database.
+   *
+   * @return the maximum isolation level
+   */
+  default int getMaximumIsolationLevel() {
+    return Connection.TRANSACTION_SERIALIZABLE;
+  }
 }

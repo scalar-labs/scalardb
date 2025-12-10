@@ -13,7 +13,6 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
 public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestBase {
   private static final Logger logger =
@@ -35,6 +34,18 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
         JdbcTestUtils.getIsolationLevel(
                 rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
             .name());
+
+    // Disable connection pooling for Oracle to avoid test failures.
+    // Oracle's SERIALIZABLE isolation level uses snapshot isolation, and reusing connections can
+    // cause unexpected behavior due to stale snapshot state from previous transactions.
+    if (JdbcEnv.isOracle()) {
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "0");
+    }
 
     testUtils = new JdbcAdminImportTestUtils(properties);
     return properties;

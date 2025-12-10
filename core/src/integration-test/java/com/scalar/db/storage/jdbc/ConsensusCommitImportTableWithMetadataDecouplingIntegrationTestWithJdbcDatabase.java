@@ -6,7 +6,7 @@ import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("isSqliteOrOracle")
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSqlite")
 public class ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestBase {
 
@@ -23,16 +23,23 @@ public class ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWith
                 rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
             .name());
 
+    // Disable connection pooling for Oracle to avoid test failures.
+    // Oracle's SERIALIZABLE isolation level uses snapshot isolation, and reusing connections can
+    // cause unexpected behavior due to stale snapshot state from previous transactions.
+    if (JdbcEnv.isOracle()) {
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "0");
+    }
+
     return properties;
   }
 
   @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new JdbcAdminTestUtils(getProperties(testName));
-  }
-
-  @SuppressWarnings("unused")
-  private static boolean isSqliteOrOracle() {
-    return JdbcEnv.isSqlite() || JdbcEnv.isOracle();
   }
 }

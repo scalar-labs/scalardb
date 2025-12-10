@@ -7,9 +7,7 @@ import com.scalar.db.schemaloader.SchemaLoaderWithMetadataDecouplingIntegrationT
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
 public class JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
     extends SchemaLoaderWithMetadataDecouplingIntegrationTestBase {
   @LazyInit private RdbEngineStrategy rdbEngine;
@@ -26,6 +24,18 @@ public class JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
         JdbcTestUtils.getIsolationLevel(
                 rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
             .name());
+
+    // Disable connection pooling for Oracle to avoid test failures.
+    // Oracle's SERIALIZABLE isolation level uses snapshot isolation, and reusing connections can
+    // cause unexpected behavior due to stale snapshot state from previous transactions.
+    if (JdbcEnv.isOracle()) {
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "0");
+    }
 
     return properties;
   }

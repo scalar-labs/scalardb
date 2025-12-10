@@ -3,9 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase;
 import java.util.Properties;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
 public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase {
 
@@ -21,6 +19,18 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
         JdbcTestUtils.getIsolationLevel(
                 rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
             .name());
+
+    // Disable connection pooling for Oracle to avoid test failures.
+    // Oracle's SERIALIZABLE isolation level uses snapshot isolation, and reusing connections can
+    // cause unexpected behavior due to stale snapshot state from previous transactions.
+    if (JdbcEnv.isOracle()) {
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "0");
+      properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "0");
+    }
 
     return properties;
   }
