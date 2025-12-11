@@ -236,7 +236,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public boolean isConflict(SQLException e) {
     // ORA-08177: can't serialize access for this transaction
     // ORA-00060: deadlock detected while waiting for resource
-    return e.getErrorCode() == 8177 || e.getErrorCode() == 60;
+    // ORA-08176: consistent read failure; rollback data not available
+    return e.getErrorCode() == 8177 || e.getErrorCode() == 60 || e.getErrorCode() == 8176;
   }
 
   @Override

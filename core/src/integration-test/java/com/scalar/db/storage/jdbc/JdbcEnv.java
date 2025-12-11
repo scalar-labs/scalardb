@@ -10,9 +10,9 @@ public final class JdbcEnv {
   private static final String PROP_JDBC_NORMAL_USERNAME = "scalardb.jdbc.normal_username";
   private static final String PROP_JDBC_NORMAL_PASSWORD = "scalardb.jdbc.normal_password";
 
-  private static final String DEFAULT_JDBC_URL = "jdbc:postgresql://localhost:5432/";
-  private static final String DEFAULT_JDBC_USERNAME = "postgres";
-  private static final String DEFAULT_JDBC_PASSWORD = "postgres";
+  private static final String DEFAULT_JDBC_URL = "jdbc:oracle:thin:@//localhost:1521/FREEPDB1";
+  private static final String DEFAULT_JDBC_USERNAME = "SYSTEM";
+  private static final String DEFAULT_JDBC_PASSWORD = "Oracle";
   private static final String DEFAULT_JDBC_NORMAL_USERNAME = "test";
   private static final String DEFAULT_JDBC_NORMAL_PASSWORD = "test";
 
