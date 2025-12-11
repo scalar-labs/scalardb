@@ -309,7 +309,7 @@ public final class ScalarDbUtils {
             c -> {
               if (!(c instanceof UpdateIf) && !(c instanceof UpdateIfExists)) {
                 throw new IllegalArgumentException(
-                    CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(update));
+                    CoreError.OPERATION_CHECK_ERROR_UPDATE_CONDITION.buildMessage(update));
               }
             });
   }
