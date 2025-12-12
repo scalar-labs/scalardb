@@ -195,7 +195,7 @@ public enum DataLoaderError implements ScalarDbError {
   INVALID_DATE_TIME_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0048",
-      "Invalid date time value '%s' specified for column %s in table %s in namespace %s",
+      "Invalid date/time value '%s' specified for column %s in table %s in namespace %s",
       "",
       ""),
   NULL_OR_EMPTY_KEY_VALUE_INPUT(
