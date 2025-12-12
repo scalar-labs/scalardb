@@ -139,7 +139,7 @@ public enum DataLoaderError implements ScalarDbError {
       "",
       ""),
   FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0028", "The provided file format is not supported : %s", "", ""),
+      Category.USER_ERROR, "0028", "The provided file format is not supported: %s", "", ""),
   COULD_NOT_FIND_PARTITION_KEY(
       Category.USER_ERROR, "0029", "Could not find the partition key", "", ""),
   UPSERT_INSERT_MISSING_COLUMNS(
