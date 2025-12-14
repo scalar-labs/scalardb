@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gradle_check_reports
           path: /tmp/gradle_test_reports
@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload Spotbugs reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gradle_spotbugs_reports
           path: /tmp/gradle_spotbugs_reports
@@ -184,7 +184,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: cassandra_3.0_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
@@ -249,7 +249,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: cassandra_3.11_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
@@ -314,7 +314,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: cassandra_4.1_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
@@ -379,7 +379,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: cassandra_5.0_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCassandra
@@ -478,7 +478,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: cosmos_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestCosmos
@@ -540,7 +540,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dynamo_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestDynamo
@@ -600,7 +600,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: mysql_5.7_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -660,7 +660,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: mysql_8.0_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -720,7 +720,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: mysql_8.4_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -785,7 +785,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: postgresql_13_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -850,7 +850,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: postgresql_14_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -915,7 +915,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -980,7 +980,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: postgresql_16_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1045,7 +1045,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: postgresql_17_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1110,7 +1110,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: oracle_19_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1182,7 +1182,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: oracle_21_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1271,7 +1271,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: oracle_23_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1353,7 +1353,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: sqlserver_2017_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1424,7 +1424,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: sqlserver_2019_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1495,7 +1495,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: sqlserver_2022_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1554,7 +1554,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: sqlite_3_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1614,7 +1614,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: mariadb_10_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1674,7 +1674,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: mariadb_11.4_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1734,7 +1734,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: yugabytedb_2_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1812,7 +1812,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: db2_11.5_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1890,7 +1890,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: db2_12.1_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -1956,7 +1956,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: alloydb_15_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -2022,7 +2022,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: alloydb_16_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -2097,7 +2097,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: tidb_6_5_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -2172,7 +2172,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: tidb_7_5_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -2247,7 +2247,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: tidb_8_5_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestJdbc
@@ -2317,7 +2317,7 @@ jobs:
 
       - name: Upload Gradle test reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: blob_storage_integration_test_reports_${{ matrix.mode.label }}
           path: core/build/reports/tests/integrationTestObjectStorage
@@ -2389,7 +2389,7 @@ jobs:
         run: ./gradlew integrationTestMultiStorage ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
 
       - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: multi_storage_integration_test_reports_${{ matrix.mode.label }}
