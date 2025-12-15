@@ -61,14 +61,15 @@ public class OperationChecker {
       String name = get.getPartitionKey().getColumns().get(0).getName();
       if (!metadata.getSecondaryIndexNames().contains(name)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(get));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(
+                get, metadata));
       }
 
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(get.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED.buildMessage(
-                get));
+                get, metadata));
       }
 
       // The following check is not needed when we use GetWithIndex. But we need to keep it for
@@ -105,14 +106,15 @@ public class OperationChecker {
       String name = scan.getPartitionKey().getColumns().get(0).getName();
       if (!metadata.getSecondaryIndexNames().contains(name)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED.buildMessage(
+                scan, metadata));
       }
 
       if (!new ColumnChecker(metadata, true, false, false, false)
           .check(scan.getPartitionKey().getColumns().get(0))) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED.buildMessage(
-                scan));
+                scan, metadata));
       }
 
       // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
@@ -172,7 +174,8 @@ public class OperationChecker {
     for (String projection : selection.getProjections()) {
       if (!metadata.getColumnNames().contains(projection)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_PROJECTION.buildMessage(projection, selection));
+            CoreError.OPERATION_CHECK_ERROR_PROJECTION.buildMessage(
+                projection, selection, metadata));
       }
     }
   }
@@ -187,7 +190,8 @@ public class OperationChecker {
       Key startClusteringKey = scan.getStartClusteringKey().get();
       Key endClusteringKey = scan.getEndClusteringKey().get();
       Supplier<String> message =
-          () -> CoreError.OPERATION_CHECK_ERROR_CLUSTERING_KEY_BOUNDARY.buildMessage(scan);
+          () ->
+              CoreError.OPERATION_CHECK_ERROR_CLUSTERING_KEY_BOUNDARY.buildMessage(scan, metadata);
 
       if (startClusteringKey.size() != endClusteringKey.size()) {
         throw new IllegalArgumentException(message.get());
@@ -209,7 +213,8 @@ public class OperationChecker {
             ckey -> {
               if (!checkKey(ckey, metadata.getClusteringKeyNames(), true, metadata)) {
                 throw new IllegalArgumentException(
-                    CoreError.OPERATION_CHECK_ERROR_START_CLUSTERING_KEY.buildMessage(scan));
+                    CoreError.OPERATION_CHECK_ERROR_START_CLUSTERING_KEY.buildMessage(
+                        scan, metadata));
               }
             });
   }
@@ -220,7 +225,8 @@ public class OperationChecker {
             ckey -> {
               if (!checkKey(ckey, metadata.getClusteringKeyNames(), true, metadata)) {
                 throw new IllegalArgumentException(
-                    CoreError.OPERATION_CHECK_ERROR_END_CLUSTERING_KEY.buildMessage(scan));
+                    CoreError.OPERATION_CHECK_ERROR_END_CLUSTERING_KEY.buildMessage(
+                        scan, metadata));
               }
             });
   }
@@ -232,7 +238,9 @@ public class OperationChecker {
     }
 
     Supplier<String> message =
-        () -> CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan);
+        () ->
+            CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(
+                scan, metadata);
 
     if (orderings.size() > metadata.getClusteringKeyNames().size()) {
       throw new IllegalArgumentException(message.get());
@@ -263,7 +271,7 @@ public class OperationChecker {
       if (!metadata.getColumnNames().contains(ordering.getColumnName())) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_ORDERING_COLUMN_NOT_FOUND.buildMessage(
-                ordering, scanAll));
+                ordering, scanAll, metadata));
       }
     }
   }
@@ -284,7 +292,7 @@ public class OperationChecker {
         }
         if (!isValid) {
           throw new IllegalArgumentException(
-              CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(selection));
+              CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(selection, metadata));
         }
       }
     }
@@ -317,7 +325,7 @@ public class OperationChecker {
     for (Column<?> column : put.getColumns().values()) {
       if (!new ColumnChecker(metadata, false, false, false, true).check(column)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_INVALID_COLUMN.buildMessage(column, put));
+            CoreError.OPERATION_CHECK_ERROR_INVALID_COLUMN.buildMessage(column, put, metadata));
       }
     }
   }
@@ -330,7 +338,7 @@ public class OperationChecker {
             c -> {
               if (!new ConditionChecker(metadata).check(mutation.getCondition().get(), isPut)) {
                 throw new IllegalArgumentException(
-                    CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(mutation));
+                    CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(mutation, metadata));
               }
             });
   }
@@ -447,13 +455,13 @@ public class OperationChecker {
   private void checkPartitionKey(Operation operation, TableMetadata metadata) {
     if (!checkKey(operation.getPartitionKey(), metadata.getPartitionKeyNames(), false, metadata)) {
       throw new IllegalArgumentException(
-          CoreError.OPERATION_CHECK_ERROR_PARTITION_KEY.buildMessage(operation));
+          CoreError.OPERATION_CHECK_ERROR_PARTITION_KEY.buildMessage(operation, metadata));
     }
   }
 
   private void checkClusteringKey(Operation operation, TableMetadata metadata) {
     Supplier<String> message =
-        () -> CoreError.OPERATION_CHECK_ERROR_CLUSTERING_KEY.buildMessage(operation);
+        () -> CoreError.OPERATION_CHECK_ERROR_CLUSTERING_KEY.buildMessage(operation, metadata);
 
     if (!metadata.getClusteringKeyNames().isEmpty() && !operation.getClusteringKey().isPresent()) {
       throw new IllegalArgumentException(message.get());
