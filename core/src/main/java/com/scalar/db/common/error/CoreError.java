@@ -841,7 +841,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_MISSING_SOURCE_FIELD(
       Category.USER_ERROR,
       "0185",
-      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "The data mapping source field '%s' for table '%s' is missing in the JSON data record",
       "",
       ""),
   DATA_LOADER_CSV_DATA_MISMATCH(
