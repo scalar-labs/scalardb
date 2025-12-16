@@ -823,7 +823,7 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
+      Category.USER_ERROR, "0178", "The provided file format is not supported: %s", "", ""),
   DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY(
       Category.USER_ERROR, "0179", "Could not find the partition key", "", ""),
   DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS(
@@ -851,7 +851,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_IMPORT_TARGET_MISSING(
       Category.USER_ERROR,
       "0189",
-      "Missing option: either '--namespace' and'--table' or '--control-file' options must be specified.",
+      "Missing option: either '--namespace' and '--table' or '--control-file' options must be specified.",
       "",
       ""),
   DATA_LOADER_MISSING_IMPORT_FILE(
