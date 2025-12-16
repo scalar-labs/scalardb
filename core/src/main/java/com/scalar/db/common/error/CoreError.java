@@ -1166,7 +1166,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_CSV_FILE_READ_FAILED(
       Category.INTERNAL_ERROR, "0049", "Failed to read CSV file. Details: %s.", "", ""),
   DATA_LOADER_CSV_FILE_HEADER_READ_FAILED(
-      Category.INTERNAL_ERROR, "0050", "Failed to CSV read header line. Details: %s.", "", ""),
+      Category.INTERNAL_ERROR, "0050", "Failed to read CSV header line. Details: %s.", "", ""),
   DATA_LOADER_DATA_CHUNK_PROCESS_FAILED(
       Category.INTERNAL_ERROR,
       "0051",
