@@ -5,6 +5,32 @@ plugins {
     id 'maven-publish'
 }
 
+sourceSets {
+    integrationTestAll {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+configurations {
+    integrationTestAllImplementation.extendsFrom testImplementation
+    integrationTestAllImplementation.extendsFrom testRuntimeOnly
+    integrationTestAllCompileOnly.extendsFrom testCompileOnly
+}
+
+task integrationTestAll(type: Test) {
+    description = 'Runs integration tests for data-loader CLI'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestAll.output.classesDirs
+    classpath = sourceSets.integrationTestAll.runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter test
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+}
+
 base {
     archivesName = "scalardb-data-loader-cli"
 }
@@ -22,6 +48,11 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+    testImplementation "org.testcontainers:testcontainers:1.20.4"
+    testImplementation "org.testcontainers:postgresql:1.20.4"
+    testImplementation "org.testcontainers:mysql:1.20.4"
+    testImplementation "org.testcontainers:cassandra:1.20.4"
+    testImplementation "com.datastax.cassandra:cassandra-driver-core:3.11.2"
 }
 
 javadoc {

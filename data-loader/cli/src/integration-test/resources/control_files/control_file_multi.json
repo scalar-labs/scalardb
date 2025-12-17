@@ -1,0 +1,40 @@
+{
+  "tables": [{
+    "namespace": "test",
+    "table": "employee",
+    "mappings": [{
+      "source_field": "id",
+      "target_column": "id"
+    },
+
+      {
+        "source_field": "name",
+        "target_column": "name"
+      },
+      {
+        "source_field": "email",
+        "target_column": "email"
+      }
+    ]
+  },
+
+    {
+      "namespace": "test",
+      "table": "emp_department",
+      "mappings": [{
+        "source_field": "dept_id",
+        "target_column": "id"
+      },
+
+        {
+          "source_field": "id",
+          "target_column": "emp_id"
+        },
+        {
+          "source_field": "department_name",
+          "target_column": "department"
+        }
+      ]
+    }
+  ]
+}

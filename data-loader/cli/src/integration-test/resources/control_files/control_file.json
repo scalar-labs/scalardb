@@ -1,0 +1,21 @@
+{
+  "tables": [{
+    "namespace": "test",
+    "table": "employee",
+    "mappings": [{
+      "source_field": "eid",
+      "target_column": "id"
+    },
+
+      {
+        "source_field": "emp_name",
+        "target_column": "name"
+      },
+      {
+        "source_field": "email",
+        "target_column": "email"
+      }
+    ]
+  }
+  ]
+}

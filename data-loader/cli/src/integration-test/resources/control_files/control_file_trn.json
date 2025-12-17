@@ -1,0 +1,41 @@
+{
+	"tables": [{
+			"namespace": "test",
+			"table": "employee_trn",
+			"mappings": [{
+				"source_field": "emp_id",
+				"target_column": "id"
+			},
+
+			{
+				"source_field": "name",
+				"target_column": "name"
+			},
+			{
+				"source_field": "email",
+				"target_column": "email"
+			},
+			{
+				"source_field": "tx_id",
+				"target_column": "tx_id"
+			},
+			{
+				"source_field": "tx_state",
+				"target_column": "tx_state"
+			},
+			{
+				"source_field": "tx_version",
+				"target_column": "tx_version"
+			},
+			{
+				"source_field": "tx_prepared_at",
+				"target_column": "tx_prepared_at"
+			},
+			{
+				"source_field": "tx_committed_at",
+				"target_column": "tx_committed_at"
+			}
+			]
+		}
+	]
+}
