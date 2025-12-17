@@ -823,7 +823,7 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   DATA_LOADER_FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0178", "The provided file format is not supported : %s", "", ""),
+      Category.USER_ERROR, "0178", "The provided file format is not supported: %s", "", ""),
   DATA_LOADER_COULD_NOT_FIND_PARTITION_KEY(
       Category.USER_ERROR, "0179", "Could not find the partition key", "", ""),
   DATA_LOADER_UPSERT_INSERT_MISSING_COLUMNS(
@@ -841,7 +841,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_MISSING_SOURCE_FIELD(
       Category.USER_ERROR,
       "0185",
-      "The data mapping source field '%s' for table '%s' is missing in the json data record",
+      "The data mapping source field '%s' for table '%s' is missing in the JSON data record",
       "",
       ""),
   DATA_LOADER_CSV_DATA_MISMATCH(
@@ -851,7 +851,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_IMPORT_TARGET_MISSING(
       Category.USER_ERROR,
       "0189",
-      "Missing option: either '--namespace' and'--table' or '--control-file' options must be specified.",
+      "Missing option: either '--namespace' and '--table' or '--control-file' options must be specified.",
       "",
       ""),
   DATA_LOADER_MISSING_IMPORT_FILE(
@@ -882,7 +882,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_INVALID_DATE_TIME_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0199",
-      "Invalid date time value specified for column %s in table %s in namespace %s.",
+      "Invalid date/time value specified for column %s in table %s in namespace %s.",
       "",
       ""),
   DATA_LOADER_NULL_OR_EMPTY_KEY_VALUE_INPUT(
@@ -1166,7 +1166,7 @@ public enum CoreError implements ScalarDbError {
   DATA_LOADER_CSV_FILE_READ_FAILED(
       Category.INTERNAL_ERROR, "0049", "Failed to read CSV file. Details: %s.", "", ""),
   DATA_LOADER_CSV_FILE_HEADER_READ_FAILED(
-      Category.INTERNAL_ERROR, "0050", "Failed to CSV read header line. Details: %s.", "", ""),
+      Category.INTERNAL_ERROR, "0050", "Failed to read CSV header line. Details: %s.", "", ""),
   DATA_LOADER_DATA_CHUNK_PROCESS_FAILED(
       Category.INTERNAL_ERROR,
       "0051",
