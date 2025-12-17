@@ -139,7 +139,7 @@ public enum DataLoaderError implements ScalarDbError {
       "",
       ""),
   FILE_FORMAT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0028", "The provided file format is not supported : %s", "", ""),
+      Category.USER_ERROR, "0028", "The provided file format is not supported: %s", "", ""),
   COULD_NOT_FIND_PARTITION_KEY(
       Category.USER_ERROR, "0029", "Could not find the partition key", "", ""),
   UPSERT_INSERT_MISSING_COLUMNS(
@@ -195,7 +195,7 @@ public enum DataLoaderError implements ScalarDbError {
   INVALID_DATE_TIME_FOR_COLUMN_VALUE(
       Category.USER_ERROR,
       "0048",
-      "Invalid date time value '%s' specified for column %s in table %s in namespace %s",
+      "Invalid date/time value '%s' specified for column %s in table %s in namespace %s",
       "",
       ""),
   NULL_OR_EMPTY_KEY_VALUE_INPUT(
