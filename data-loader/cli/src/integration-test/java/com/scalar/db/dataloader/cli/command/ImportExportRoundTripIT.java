@@ -35,8 +35,9 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
 
   @Override
   protected boolean shouldCleanupTables() {
-    // Round-trip tests need initial data, then clean up after export
-    return true;
+    // Round-trip tests need initial data from init_mysql.sql to export
+    // They handle cleanup manually after export and before import
+    return false;
   }
 
   /**
@@ -58,15 +59,23 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
   @Test
   void testRoundTripCsvExportImport_ShouldMaintainDataIntegrity() throws Exception {
     // Step 1: Export data to CSV
+    // Use projection to exclude transaction metadata columns that don't exist in the employee table
     String exportDir = tempDir.resolve("export").toString();
     Files.createDirectories(tempDir.resolve("export"));
 
     String[] exportArgs = {
-      "--config", configFilePath.toString(),
-      "--namespace", NAMESPACE,
-      "--table", TABLE_EMPLOYEE,
-      "--format", "CSV",
-      "--output-dir", exportDir
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "CSV",
+      "--projection",
+      "id,name,email",
+      "--output-dir",
+      exportDir
     };
 
     ExportCommand exportCommand = new ExportCommand();
@@ -89,6 +98,7 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
     cleanupTablesInternal();
 
     // Step 3: Import the exported CSV back
+    // require-all-columns defaults to false, which allows importing CSV with only projected columns
     String[] importArgs = {
       "--config",
       configFilePath.toString(),
@@ -108,30 +118,37 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
     CommandLine importCommandLine = new CommandLine(importCommand);
     int importExitCode = importCommandLine.execute(importArgs);
 
-    // Note: May fail due to metadata issue, but structure is correct
-    assertThat(importExitCode).isNotNull();
+    // Verify import succeeded
+    assertThat(importExitCode).as("Import should succeed with exit code 0").isEqualTo(0);
 
-    // Step 4: Verify data integrity (if import succeeded)
-    if (importExitCode == 0) {
-      // Verify some records exist
-      int recordCount =
-          TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
-      assertThat(recordCount).isGreaterThan(0);
-    }
+    // Step 4: Verify data integrity - records should be imported
+    int recordCount =
+        TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
+    assertThat(recordCount)
+        .as("Records should be imported successfully. Found %d records", recordCount)
+        .isGreaterThan(0);
   }
 
   @Test
   void testRoundTripJsonExportImport_ShouldMaintainDataIntegrity() throws Exception {
     // Step 1: Export data to JSON
+    // Use projection to exclude transaction metadata columns that don't exist in the employee table
     String exportDir = tempDir.resolve("export").toString();
     Files.createDirectories(tempDir.resolve("export"));
 
     String[] exportArgs = {
-      "--config", configFilePath.toString(),
-      "--namespace", NAMESPACE,
-      "--table", TABLE_EMPLOYEE,
-      "--format", "JSON",
-      "--output-dir", exportDir
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "JSON",
+      "--projection",
+      "id,name,email",
+      "--output-dir",
+      exportDir
     };
 
     ExportCommand exportCommand = new ExportCommand();
@@ -154,6 +171,8 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
     cleanupTablesInternal();
 
     // Step 3: Import the exported JSON back
+    // require-all-columns defaults to false, which allows importing JSON with only projected
+    // columns
     String[] importArgs = {
       "--config",
       configFilePath.toString(),
@@ -173,29 +192,37 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
     CommandLine importCommandLine = new CommandLine(importCommand);
     int importExitCode = importCommandLine.execute(importArgs);
 
-    // Note: May fail due to metadata issue, but structure is correct
-    assertThat(importExitCode).isNotNull();
+    // Verify import succeeded
+    assertThat(importExitCode).as("Import should succeed with exit code 0").isEqualTo(0);
 
-    // Step 4: Verify data integrity (if import succeeded)
-    if (importExitCode == 0) {
-      int recordCount =
-          TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
-      assertThat(recordCount).isGreaterThan(0);
-    }
+    // Step 4: Verify data integrity - records should be imported
+    int recordCount =
+        TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
+    assertThat(recordCount)
+        .as("Records should be imported successfully. Found %d records", recordCount)
+        .isGreaterThan(0);
   }
 
   @Test
   void testRoundTripJsonLinesExportImport_ShouldMaintainDataIntegrity() throws Exception {
     // Step 1: Export data to JSONL
+    // Use projection to exclude transaction metadata columns that don't exist in the employee table
     String exportDir = tempDir.resolve("export").toString();
     Files.createDirectories(tempDir.resolve("export"));
 
     String[] exportArgs = {
-      "--config", configFilePath.toString(),
-      "--namespace", NAMESPACE,
-      "--table", TABLE_EMPLOYEE,
-      "--format", "JSONL",
-      "--output-dir", exportDir
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "JSONL",
+      "--projection",
+      "id,name,email",
+      "--output-dir",
+      exportDir
     };
 
     ExportCommand exportCommand = new ExportCommand();
@@ -218,6 +245,8 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
     cleanupTablesInternal();
 
     // Step 3: Import the exported JSONL back
+    // require-all-columns defaults to false, which allows importing JSONL with only projected
+    // columns
     String[] importArgs = {
       "--config",
       configFilePath.toString(),
@@ -237,29 +266,37 @@ public class ImportExportRoundTripIT extends BaseIntegrationTest {
     CommandLine importCommandLine = new CommandLine(importCommand);
     int importExitCode = importCommandLine.execute(importArgs);
 
-    // Note: May fail due to metadata issue, but structure is correct
-    assertThat(importExitCode).isNotNull();
+    // Verify import succeeded
+    assertThat(importExitCode).as("Import should succeed with exit code 0").isEqualTo(0);
 
-    // Step 4: Verify data integrity (if import succeeded)
-    if (importExitCode == 0) {
-      int recordCount =
-          TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
-      assertThat(recordCount).isGreaterThan(0);
-    }
+    // Step 4: Verify data integrity - records should be imported
+    int recordCount =
+        TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
+    assertThat(recordCount)
+        .as("Records should be imported successfully. Found %d records", recordCount)
+        .isGreaterThan(0);
   }
 
   @Test
   void testRoundTripWithDifferentImportModes_ShouldWorkCorrectly() throws Exception {
     // Export data
+    // Use projection to exclude transaction metadata columns that don't exist in the employee table
     String exportDir = tempDir.resolve("export").toString();
     Files.createDirectories(tempDir.resolve("export"));
 
     String[] exportArgs = {
-      "--config", configFilePath.toString(),
-      "--namespace", NAMESPACE,
-      "--table", TABLE_EMPLOYEE,
-      "--format", "CSV",
-      "--output-dir", exportDir
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "CSV",
+      "--projection",
+      "id,name,email",
+      "--output-dir",
+      exportDir
     };
 
     ExportCommand exportCommand = new ExportCommand();

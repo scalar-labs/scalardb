@@ -3,9 +3,11 @@ package com.scalar.db.dataloader.cli;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -104,6 +106,86 @@ public abstract class BaseIntegrationTest {
   static void stopContainers() {
     if (mysql != null && mysql.isRunning()) {
       mysql.stop();
+    }
+    // Clean up log files that may have been created in the project root
+    cleanupLogFiles();
+  }
+
+  /**
+   * Cleans up log files that may have been created in the CLI project root directory during test
+   * execution. This happens when tests don't specify a log directory, causing the import command to
+   * use the current working directory (project root) as the log directory.
+   */
+  private static void cleanupLogFiles() {
+    try {
+      // Get the current working directory (where tests run from)
+      // This is typically the project root (scalardb) when running from Gradle
+      Path currentDir = Paths.get(System.getProperty("user.dir"));
+
+      // The log files are created in data-loader/cli directory
+      // Try the most common path first
+      Path cliProjectRoot = currentDir.resolve("data-loader/cli");
+
+      // If that doesn't exist, try other possible locations
+      if (!Files.exists(cliProjectRoot)) {
+        Path[] alternativePaths = {
+          currentDir.resolve("cli"), currentDir, Paths.get("data-loader/cli").toAbsolutePath()
+        };
+
+        for (Path path : alternativePaths) {
+          if (Files.exists(path) && Files.isDirectory(path)) {
+            cliProjectRoot = path;
+            break;
+          }
+        }
+      }
+
+      // List of log file names to clean up (exact matches)
+      String[] logFileNames = {
+        "logssuccess.json",
+        "logsfailure.json",
+        "logssummary.log",
+        "logsssummary.log", // Handle both variations
+        "logsummary.json",
+        "success.json",
+        "failure.json",
+        "summary.log",
+        "summary.json"
+      };
+
+      // Clean up exact file names
+      for (String fileName : logFileNames) {
+        try {
+          Path logFile = cliProjectRoot.resolve(fileName);
+          if (Files.exists(logFile)) {
+            Files.deleteIfExists(logFile);
+          }
+        } catch (IOException e) {
+          // Ignore cleanup errors - log files are not critical
+        }
+      }
+
+      // Also clean up any files matching log*.json or log*.log patterns
+      try (java.util.stream.Stream<Path> stream = Files.list(cliProjectRoot)) {
+        stream
+            .filter(Files::isRegularFile)
+            .filter(
+                path -> {
+                  String fileName = path.getFileName().toString();
+                  return (fileName.startsWith("log") && fileName.endsWith(".json"))
+                      || (fileName.startsWith("log") && fileName.endsWith(".log"));
+                })
+            .forEach(
+                path -> {
+                  try {
+                    Files.deleteIfExists(path);
+                  } catch (IOException e) {
+                    // Ignore cleanup errors - log files are not critical
+                  }
+                });
+      }
+    } catch (Exception e) {
+      // Ignore cleanup errors - log files are not critical and shouldn't fail tests
     }
   }
 

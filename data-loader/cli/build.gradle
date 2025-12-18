@@ -48,10 +48,8 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
-    testImplementation "org.testcontainers:testcontainers:1.20.4"
-    testImplementation "org.testcontainers:postgresql:1.20.4"
-    testImplementation "org.testcontainers:mysql:1.20.4"
-    testImplementation "org.testcontainers:cassandra:1.20.4"
+    testImplementation "org.testcontainers:testcontainers:2.0.2"
+    testImplementation "org.testcontainers:testcontainers-mysql:2.0.2"
     testImplementation "com.datastax.cassandra:cassandra-driver-core:3.11.2"
 }
 

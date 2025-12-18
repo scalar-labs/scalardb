@@ -97,7 +97,6 @@ public class ImportCommandNegativeIT extends BaseIntegrationTest {
     ImportCommand importCommand = new ImportCommand();
     CommandLine commandLine = new CommandLine(importCommand);
     int exitCode = commandLine.execute(args);
-
     assertThat(exitCode).isNotEqualTo(0);
   }
 
