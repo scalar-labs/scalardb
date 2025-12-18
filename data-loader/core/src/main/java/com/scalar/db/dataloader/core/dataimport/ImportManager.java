@@ -48,9 +48,8 @@ public class ImportManager implements ImportEventListener {
   /**
    * Starts the import process using the configured parameters.
    *
-   * <p>If the data chunk size in {@link ImportOptions} is set to 0, the entire file will be
-   * processed as a single chunk. Otherwise, the file will be processed in chunks of the specified
-   * size.
+   * <p>The entire file is processed as a single data chunk, with records grouped into transaction
+   * batches according to the configured transaction batch size.
    */
   public void startImport() {
     ImportProcessorParams params =
@@ -64,12 +63,7 @@ public class ImportManager implements ImportEventListener {
             .build();
     ImportProcessor processor = importProcessorFactory.createImportProcessor(params);
     processor.addListener(this);
-    // If the data chunk size is 0, then process the entire file in a single data chunk
-    int dataChunkSize =
-        importOptions.getDataChunkSize() == 0
-            ? Integer.MAX_VALUE
-            : importOptions.getDataChunkSize();
-    processor.process(dataChunkSize, importOptions.getTransactionBatchSize(), importFileReader);
+    processor.process(importOptions.getTransactionBatchSize(), importFileReader);
   }
 
   /**

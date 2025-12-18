@@ -44,7 +44,7 @@ public class CsvImportProcessor extends ImportProcessor {
   }
 
   /**
-   * Reads and processes CSV data in chunks from the provided reader.
+   * Reads and processes CSV data from the provided reader.
    *
    * <p>This method:
    *
@@ -52,18 +52,16 @@ public class CsvImportProcessor extends ImportProcessor {
    *   <li>Reads the CSV header (custom or from file)
    *   <li>Validates each data row against the header
    *   <li>Converts rows to JSON format
-   *   <li>Batches rows into data chunks
-   *   <li>Enqueues chunks for processing
+   *   <li>Enqueues all rows as a single data chunk for processing
    * </ul>
    *
    * @param reader the BufferedReader containing CSV data
-   * @param dataChunkSize the number of rows to include in each chunk
    * @param dataChunkQueue the queue where data chunks are placed for processing
    * @throws RuntimeException if there are errors reading the file or if interrupted
    */
   @Override
   protected void readDataChunks(
-      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+      BufferedReader reader, BlockingQueue<ImportDataChunk> dataChunkQueue) {
     try {
       String delimiter =
           Optional.of(params.getImportOptions().getDelimiter())
@@ -76,7 +74,7 @@ public class CsvImportProcessor extends ImportProcessor {
               .orElseGet(() -> safeReadLine(reader));
 
       String[] headerArray = header.split(delimiter);
-      List<ImportRow> currentDataChunk = new ArrayList<>();
+      List<ImportRow> allRows = new ArrayList<>();
       String line;
       int rowNumber = 1;
       while ((line = reader.readLine()) != null) {
@@ -88,13 +86,9 @@ public class CsvImportProcessor extends ImportProcessor {
         JsonNode jsonNode = combineHeaderAndData(headerArray, dataArray);
         if (jsonNode.isEmpty()) continue;
 
-        currentDataChunk.add(new ImportRow(rowNumber++, jsonNode));
-        if (currentDataChunk.size() == dataChunkSize) {
-          enqueueDataChunk(currentDataChunk, dataChunkQueue);
-          currentDataChunk = new ArrayList<>();
-        }
+        allRows.add(new ImportRow(rowNumber++, jsonNode));
       }
-      if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
+      if (!allRows.isEmpty()) enqueueDataChunk(allRows, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
       throw new RuntimeException(
           DataLoaderError.CSV_FILE_READ_FAILED.buildMessage(e.getMessage()), e);

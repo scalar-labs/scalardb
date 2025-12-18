@@ -14,7 +14,6 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,11 +50,8 @@ class CsvImportProcessorTest {
             .controlFileValidationLevel(ControlFileValidationLevel.MAPPED)
             .namespace("namespace")
             .transactionBatchSize(1)
-            .dataChunkSize(5)
             .tableName("table")
-            .logMode(LogMode.SINGLE_FILE)
             .maxThreads(8)
-            .dataChunkQueueSize(256)
             .build();
     Mockito.when(
             dao.get(
@@ -89,7 +85,7 @@ class CsvImportProcessorTest {
     csvImportProcessor = new CsvImportProcessor(params);
     Assertions.assertDoesNotThrow(
         () -> {
-          csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
+          csvImportProcessor.process(1, UnitTestUtils.getCsvReader());
         });
   }
 
@@ -107,7 +103,7 @@ class CsvImportProcessorTest {
     csvImportProcessor = new CsvImportProcessor(params);
     Assertions.assertDoesNotThrow(
         () -> {
-          csvImportProcessor.process(5, 1, UnitTestUtils.getCsvReader());
+          csvImportProcessor.process(1, UnitTestUtils.getCsvReader());
         });
   }
 }

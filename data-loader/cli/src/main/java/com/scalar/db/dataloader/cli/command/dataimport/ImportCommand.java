@@ -16,9 +16,7 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
-import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.dataloader.core.dataimport.log.SingleFileImportLogger;
-import com.scalar.db.dataloader.core.dataimport.log.SplitByDataChunkImportLogger;
 import com.scalar.db.dataloader.core.dataimport.log.writer.DefaultLogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.processor.DefaultImportProcessorFactory;
@@ -58,8 +56,6 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     validateImportTarget(controlFilePath, namespace, tableName);
     validateLogDirectory(logDirectory);
     validatePositiveValue(
-        spec.commandLine(), dataChunkSize, DataLoaderError.INVALID_DATA_CHUNK_SIZE);
-    validatePositiveValue(
         spec.commandLine(), transactionSize, DataLoaderError.INVALID_TRANSACTION_SIZE);
     // Only validate the argument when provided by the user, if not set a default
     if (maxThreads != null) {
@@ -67,8 +63,6 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
     } else {
       maxThreads = Runtime.getRuntime().availableProcessors();
     }
-    validatePositiveValue(
-        spec.commandLine(), dataChunkQueueSize, DataLoaderError.INVALID_DATA_CHUNK_QUEUE_SIZE);
     ControlFile controlFile = parseControlFileFromPath(controlFilePath).orElse(null);
     ImportOptions importOptions = createImportOptions(controlFile);
     ImportLoggerConfig importLoggerConfig =
@@ -191,12 +185,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             importProcessorFactory,
             transactionMode,
             transactionFactory.getTransactionManager());
-    if (importOptions.getLogMode().equals(LogMode.SPLIT_BY_DATA_CHUNK)) {
-      importManager.addListener(
-          new SplitByDataChunkImportLogger(importLoggerConfig, logWriterFactory));
-    } else {
-      importManager.addListener(new SingleFileImportLogger(importLoggerConfig, logWriterFactory));
-    }
+    importManager.addListener(new SingleFileImportLogger(importLoggerConfig, logWriterFactory));
     return importManager;
   }
 
@@ -374,18 +363,13 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             .logSuccessRecords(enableLogSuccessRecords)
             .ignoreNullValues(ignoreNullValues)
             .namespace(namespace)
-            .dataChunkSize(dataChunkSize)
             .transactionBatchSize(transactionSize)
             .maxThreads(maxThreads)
-            .dataChunkQueueSize(dataChunkQueueSize)
             .tableName(tableName);
 
     // Import mode
     if (importMode != null) {
       builder.importMode(importMode);
-    }
-    if (!splitLogMode) {
-      builder.logMode(LogMode.SINGLE_FILE);
     }
 
     // CSV options

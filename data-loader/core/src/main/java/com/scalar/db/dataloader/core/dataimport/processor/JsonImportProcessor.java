@@ -48,41 +48,35 @@ public class JsonImportProcessor extends ImportProcessor {
   }
 
   /**
-   * Reads data chunks from the JSON file and adds them to the processing queue.
+   * Reads data from the JSON file and adds it to the processing queue.
    *
-   * <p>This method reads the JSON file as an array of objects, creating data chunks of the
-   * specified size. Each chunk is then added to the queue for processing. The method expects the
-   * JSON file to start with an array token '[' and end with ']'.
+   * <p>This method reads the JSON file as an array of objects and enqueues all records as a single
+   * data chunk. The method expects the JSON file to start with an array token '[' and end with ']'.
    *
    * <p>Empty or null JSON nodes are skipped during processing.
    *
    * @param reader the BufferedReader containing the JSON data
-   * @param dataChunkSize the maximum number of records to include in each chunk
    * @param dataChunkQueue the queue where data chunks are placed for processing
    * @throws RuntimeException if there is an error reading the JSON file or if the thread is
    *     interrupted
    */
   @Override
   protected void readDataChunks(
-      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+      BufferedReader reader, BlockingQueue<ImportDataChunk> dataChunkQueue) {
     try (JsonParser jsonParser = new JsonFactory().createParser(reader)) {
       if (jsonParser.nextToken() != JsonToken.START_ARRAY) {
         throw new IOException(DataLoaderError.JSON_CONTENT_START_ERROR.buildMessage());
       }
 
-      List<ImportRow> currentDataChunk = new ArrayList<>();
+      List<ImportRow> allRows = new ArrayList<>();
       int rowNumber = 1;
       while (jsonParser.nextToken() != JsonToken.END_ARRAY) {
         JsonNode jsonNode = OBJECT_MAPPER.readTree(jsonParser);
         if (jsonNode == null || jsonNode.isEmpty()) continue;
 
-        currentDataChunk.add(new ImportRow(rowNumber++, jsonNode));
-        if (currentDataChunk.size() == dataChunkSize) {
-          enqueueDataChunk(currentDataChunk, dataChunkQueue);
-          currentDataChunk = new ArrayList<>();
-        }
+        allRows.add(new ImportRow(rowNumber++, jsonNode));
       }
-      if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
+      if (!allRows.isEmpty()) enqueueDataChunk(allRows, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
       throw new RuntimeException(
           DataLoaderError.JSON_FILE_READ_FAILED.buildMessage(e.getMessage()), e);

@@ -14,9 +14,7 @@ public class ImportOptionsTest {
         ImportOptions.builder()
             .namespace("test_namespace")
             .tableName("test_table")
-            .dataChunkSize(100)
             .transactionBatchSize(10)
-            .dataChunkQueueSize(64)
             .build();
 
     // Verify the default was applied
@@ -30,10 +28,8 @@ public class ImportOptionsTest {
         ImportOptions.builder()
             .namespace("test_namespace")
             .tableName("test_table")
-            .dataChunkSize(100)
             .transactionBatchSize(10)
             .maxThreads(8)
-            .dataChunkQueueSize(64)
             .build();
 
     // Verify the explicit value was used

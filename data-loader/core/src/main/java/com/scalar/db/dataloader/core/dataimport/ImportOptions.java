@@ -3,7 +3,6 @@ package com.scalar.db.dataloader.core.dataimport;
 import com.scalar.db.dataloader.core.FileFormat;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
-import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import lombok.Builder;
 import lombok.Data;
 
@@ -18,7 +17,6 @@ public class ImportOptions {
   @Builder.Default private final FileFormat fileFormat = FileFormat.JSON;
   @Builder.Default private final boolean prettyPrint = false;
   @Builder.Default private final boolean ignoreNullValues = false;
-  @Builder.Default private final LogMode logMode = LogMode.SPLIT_BY_DATA_CHUNK;
 
   @Builder.Default
   private final ControlFileValidationLevel controlFileValidationLevel =
@@ -29,12 +27,10 @@ public class ImportOptions {
   @Builder.Default private final boolean logSuccessRecords = false;
   @Builder.Default private final boolean logRawRecord = false;
 
-  private final int dataChunkSize;
   private final int transactionBatchSize;
   private final ControlFile controlFile;
   private final String namespace;
   private final String tableName;
   @Builder.Default private final int maxThreads = Runtime.getRuntime().availableProcessors();
   private final String customHeaderRow;
-  private final int dataChunkQueueSize;
 }

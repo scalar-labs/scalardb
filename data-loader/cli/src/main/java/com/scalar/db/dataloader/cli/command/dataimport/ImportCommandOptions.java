@@ -159,13 +159,17 @@ public class ImportCommandOptions {
           "Header row for the CSV/TSV import file (default: use the first line as the header)")
   protected String customHeaderRow;
 
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Data chunking is no longer
+   *     used; the import process now works with transactions only.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--data-chunk-size", "-dcs"},
       paramLabel = "<DATA_CHUNK_SIZE>",
-      description =
-          "Maximum number of records to be included in a single data chunk (default: 500)",
-      defaultValue = "500")
-  protected int dataChunkSize;
+      description = "Deprecated: This option is no longer used and will be removed in 4.0.0",
+      hidden = true)
+  protected Integer dataChunkSizeDeprecated;
 
   @CommandLine.Option(
       names = {"--transaction-size", "-ts"},
@@ -175,20 +179,29 @@ public class ImportCommandOptions {
       defaultValue = "100")
   protected int transactionSize;
 
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Data chunking is no longer
+   *     used; the import process now works with transactions only.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--split-log-mode", "-slm"},
       paramLabel = "<SPLIT_LOG_MODE>",
-      description = "Split log file into multiple files based on data chunks (default: false)",
-      defaultValue = "false")
-  protected boolean splitLogMode;
+      description = "Deprecated: This option is no longer used and will be removed in 4.0.0",
+      hidden = true)
+  protected boolean splitLogModeDeprecated;
 
+  /**
+   * @deprecated As of release 3.17.0. Will be removed in release 4.0.0. Data chunking is no longer
+   *     used; the import process now works with transactions only.
+   */
+  @Deprecated
   @CommandLine.Option(
       names = {"--data-chunk-queue-size", "-qs"},
       paramLabel = "<DATA_CHUNK_QUEUE_SIZE>",
-      description =
-          "Maximum number of data chunks that can be kept at a time for processing (default: 256)",
-      defaultValue = "256")
-  protected int dataChunkQueueSize;
+      description = "Deprecated: This option is no longer used and will be removed in 4.0.0",
+      hidden = true)
+  protected Integer dataChunkQueueSizeDeprecated;
 
   /**
    * Applies deprecated option values if they are set.

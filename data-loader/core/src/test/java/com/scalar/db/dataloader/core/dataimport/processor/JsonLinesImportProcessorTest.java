@@ -14,7 +14,6 @@ import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileValidationLevel;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDaoException;
-import com.scalar.db.dataloader.core.dataimport.log.LogMode;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,11 +50,8 @@ class JsonLinesImportProcessorTest {
             .controlFileValidationLevel(ControlFileValidationLevel.MAPPED)
             .namespace("namespace")
             .transactionBatchSize(1)
-            .dataChunkSize(5)
             .tableName("table")
             .maxThreads(8)
-            .dataChunkQueueSize(256)
-            .logMode(LogMode.SINGLE_FILE)
             .build();
     Mockito.when(
             dao.get(
@@ -89,7 +85,7 @@ class JsonLinesImportProcessorTest {
     jsonLinesImportProcessor = new JsonLinesImportProcessor(params);
     Assertions.assertDoesNotThrow(
         () -> {
-          jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
+          jsonLinesImportProcessor.process(1, UnitTestUtils.getJsonLinesReader());
         });
   }
 
@@ -107,7 +103,7 @@ class JsonLinesImportProcessorTest {
     jsonLinesImportProcessor = new JsonLinesImportProcessor(params);
     Assertions.assertDoesNotThrow(
         () -> {
-          jsonLinesImportProcessor.process(5, 1, UnitTestUtils.getJsonLinesReader());
+          jsonLinesImportProcessor.process(1, UnitTestUtils.getJsonLinesReader());
         });
   }
 }

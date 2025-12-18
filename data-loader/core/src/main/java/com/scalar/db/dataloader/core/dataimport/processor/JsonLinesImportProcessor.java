@@ -42,35 +42,30 @@ public class JsonLinesImportProcessor extends ImportProcessor {
   }
 
   /**
-   * Reads data from the input file and creates data chunks for processing.
+   * Reads data from the input file and creates a data chunk for processing.
    *
-   * <p>This method reads the input file line by line, parsing each line as a JSON object. It
-   * accumulates rows until reaching the specified chunk size, then enqueues the chunk for
-   * processing. Empty lines or invalid JSON objects are skipped.
+   * <p>This method reads the input file line by line, parsing each line as a JSON object. All rows
+   * are enqueued as a single data chunk for processing. Empty lines or invalid JSON objects are
+   * skipped.
    *
    * @param reader the BufferedReader for reading the input file
-   * @param dataChunkSize the maximum number of rows to include in each data chunk
    * @param dataChunkQueue the queue where data chunks are placed for processing
    * @throws RuntimeException if there is an error reading the file or if the thread is interrupted
    */
   @Override
   protected void readDataChunks(
-      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+      BufferedReader reader, BlockingQueue<ImportDataChunk> dataChunkQueue) {
     try {
-      List<ImportRow> currentDataChunk = new ArrayList<>();
+      List<ImportRow> allRows = new ArrayList<>();
       int rowNumber = 1;
       String line;
       while ((line = reader.readLine()) != null) {
         JsonNode jsonNode = OBJECT_MAPPER.readTree(line);
         if (jsonNode == null || jsonNode.isEmpty()) continue;
 
-        currentDataChunk.add(new ImportRow(rowNumber++, jsonNode));
-        if (currentDataChunk.size() == dataChunkSize) {
-          enqueueDataChunk(currentDataChunk, dataChunkQueue);
-          currentDataChunk = new ArrayList<>();
-        }
+        allRows.add(new ImportRow(rowNumber++, jsonNode));
       }
-      if (!currentDataChunk.isEmpty()) enqueueDataChunk(currentDataChunk, dataChunkQueue);
+      if (!allRows.isEmpty()) enqueueDataChunk(allRows, dataChunkQueue);
     } catch (IOException | InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new RuntimeException(

@@ -77,7 +77,6 @@ class ImportProcessorTest {
     tableMetadataByTableName.put("namespace.table", UnitTestUtils.createTestTableMetadata());
 
     when(importOptions.getMaxThreads()).thenReturn(2);
-    when(importOptions.getDataChunkQueueSize()).thenReturn(10);
     when(params.getImportOptions()).thenReturn(importOptions);
   }
 
@@ -93,7 +92,7 @@ class ImportProcessorTest {
     processor.addListener(eventListener);
 
     // Act
-    processor.process(2, 1, reader);
+    processor.process(1, reader);
 
     // Assert
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -116,7 +115,7 @@ class ImportProcessorTest {
     processor.addListener(eventListener);
 
     // Act
-    processor.process(2, 1, reader);
+    processor.process(1, reader);
 
     // Assert
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -133,7 +132,7 @@ class ImportProcessorTest {
     BufferedReader reader = new BufferedReader(new StringReader(""));
 
     // Act
-    processor.process(2, 1, reader);
+    processor.process(1, reader);
 
     // Assert
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -144,7 +143,7 @@ class ImportProcessorTest {
   // Thread executor behavior tests
 
   @Test
-  void process_withMultipleDataChunks_shouldUseThreadPool() {
+  void process_withLargeData_shouldProcessAsSingleChunk() {
     // Arrange
     final int maxThreads = 4;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
@@ -152,29 +151,23 @@ class ImportProcessorTest {
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
-    // Create test data with multiple chunks
+    // Create test data with multiple lines (all processed as a single chunk)
     StringBuilder testData = new StringBuilder();
     for (int i = 0; i < 20; i++) {
       testData.append("test data line ").append(i).append("\n");
     }
     BufferedReader reader = new BufferedReader(new StringReader(testData.toString()));
 
-    // Create a latch to ensure tasks take some time to complete
-    CountDownLatch latch = new CountDownLatch(1);
-
     // Create a TestImportProcessor
     TestImportProcessor processor = new TestImportProcessor(params);
     processor.addListener(eventListener);
-    processor.setProcessingLatch(latch);
 
     // Act
-    processor.process(2, 1, reader);
+    processor.process(1, reader);
 
     // Assert
-    // Verify that multiple threads were used but not more than maxThreads
-    assertTrue(processor.getMaxConcurrentThreads().get() > 1, "Should use multiple threads");
-    assertTrue(
-        processor.getMaxConcurrentThreads().get() <= maxThreads, "Should not exceed max threads");
+    // Verify that all data was processed as a single chunk
+    assertEquals(1, processor.getProcessedChunksCount().get(), "Should process as single chunk");
 
     // Verify that all data chunks were processed
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -191,7 +184,7 @@ class ImportProcessorTest {
     processor.setSimulateInterruption(true);
 
     // Act & Assert
-    assertThrows(RuntimeException.class, () -> processor.process(2, 1, reader));
+    assertThrows(RuntimeException.class, () -> processor.process(1, reader));
 
     // Verify that onAllDataChunksCompleted was still called (in finally block)
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -219,7 +212,7 @@ class ImportProcessorTest {
     processor.setProcessingDelayMs(10); // 10ms delay per chunk
 
     // Act
-    processor.process(2, 1, reader);
+    processor.process(1, reader);
 
     // Assert
     // Verify that all tasks were completed
@@ -244,12 +237,13 @@ class ImportProcessorTest {
     processor.setProcessingDelayMs(50); // 50ms delay per chunk
 
     // Act
-    processor.process(1, 1, reader);
+    processor.process(1, reader);
 
     // Assert
-    // Verify that all data chunks were processed and executors were shut down gracefully
+    // Verify that all data was processed as a single chunk and executors were shut down gracefully
     verify(eventListener, times(1)).onAllDataChunksCompleted();
-    assertEquals(3, processor.getProcessedChunksCount().get(), "All chunks should be processed");
+    assertEquals(
+        1, processor.getProcessedChunksCount().get(), "Data should be processed as single chunk");
   }
 
   @Test
@@ -265,7 +259,7 @@ class ImportProcessorTest {
     processor.addListener(eventListener);
 
     // Act
-    processor.process(2, 1, reader);
+    processor.process(1, reader);
 
     // Assert
     verify(eventListener, times(1)).onAllDataChunksCompleted();
@@ -316,7 +310,7 @@ class ImportProcessorTest {
 
     @Override
     protected void readDataChunks(
-        BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+        BufferedReader reader, BlockingQueue<ImportDataChunk> dataChunkQueue) {
       try {
         List<ImportRow> rows = new ArrayList<>();
         String line;
@@ -328,31 +322,18 @@ class ImportProcessorTest {
             JsonNode jsonNode = OBJECT_MAPPER.readTree("{\"data\":\"" + line + "\"}");
             rows.add(new ImportRow(rowNumber++, jsonNode));
 
-            if (rows.size() >= dataChunkSize) {
-              ImportDataChunk dataChunk =
-                  ImportDataChunk.builder()
-                      .dataChunkId(rowNumber / dataChunkSize)
-                      .sourceData(rows)
-                      .build();
-              dataChunkQueue.put(dataChunk);
-              rows = new ArrayList<>();
-
-              // Simulate interruption if requested (in the reader thread)
-              if (simulateInterruption.get()) {
-                Thread.currentThread().interrupt();
-                throw new InterruptedException("Simulated interruption in reader");
-              }
+            // Simulate interruption if requested (in the reader thread)
+            if (simulateInterruption.get()) {
+              Thread.currentThread().interrupt();
+              throw new InterruptedException("Simulated interruption in reader");
             }
           }
         }
 
-        // Add any remaining rows
+        // Add all rows as a single data chunk
         if (!rows.isEmpty()) {
           ImportDataChunk dataChunk =
-              ImportDataChunk.builder()
-                  .dataChunkId(rowNumber / dataChunkSize + 1)
-                  .sourceData(rows)
-                  .build();
+              ImportDataChunk.builder().dataChunkId(1).sourceData(rows).build();
           dataChunkQueue.put(dataChunk);
         }
       } catch (IOException | InterruptedException e) {

@@ -53,22 +53,20 @@ public abstract class ImportProcessor {
   /**
    * Processes the source data from the given import file.
    *
-   * <p>This method reads data from the provided {@link BufferedReader}, processes it in chunks, and
-   * batches transactions according to the specified sizes. The processing can be done in either
-   * single CRUD or consensus commit mode, depending on the configured {@link TransactionMode}.
+   * <p>This method reads data from the provided {@link BufferedReader}, processes it as a single
+   * data chunk, and batches transactions according to the specified size. The processing can be
+   * done in either single CRUD or consensus commit mode, depending on the configured {@link
+   * TransactionMode}.
    *
-   * @param dataChunkSize the number of records to include in each data chunk for parallel
-   *     processing
    * @param transactionBatchSize the number of records to group together in a single transaction
    *     (only used in consensus commit mode)
    * @param reader the {@link BufferedReader} used to read the source file
    */
-  public void process(int dataChunkSize, int transactionBatchSize, BufferedReader reader) {
+  public void process(int transactionBatchSize, BufferedReader reader) {
     ExecutorService dataChunkReaderExecutor = Executors.newSingleThreadExecutor();
     ExecutorService dataChunkProcessorExecutor =
         Executors.newFixedThreadPool(params.getImportOptions().getMaxThreads());
-    BlockingQueue<ImportDataChunk> dataChunkQueue =
-        new LinkedBlockingQueue<>(params.getImportOptions().getDataChunkQueueSize());
+    BlockingQueue<ImportDataChunk> dataChunkQueue = new LinkedBlockingQueue<>();
 
     // Semaphore controls concurrent task submissions, small buffer to be two times of threads
     Semaphore taskSemaphore = new Semaphore(params.getImportOptions().getMaxThreads() * 2);
@@ -78,7 +76,7 @@ public abstract class ImportProcessor {
     try {
       CompletableFuture<Void> readerFuture =
           CompletableFuture.runAsync(
-              () -> readDataChunks(reader, dataChunkSize, dataChunkQueue), dataChunkReaderExecutor);
+              () -> readDataChunks(reader, dataChunkQueue), dataChunkReaderExecutor);
 
       while (!(dataChunkQueue.isEmpty() && readerFuture.isDone())) {
         ImportDataChunk dataChunk = dataChunkQueue.poll(100, TimeUnit.MILLISECONDS);
@@ -136,19 +134,18 @@ public abstract class ImportProcessor {
   }
 
   /**
-   * Reads and processes data in chunks from the provided reader.
+   * Reads and processes data from the provided reader.
    *
    * <p>This method should be implemented by each processor to handle the specific format of the
    * input data. It reads data from the reader, converts it to the appropriate format, and enqueues
-   * it for processing.
+   * it for processing as a single data chunk.
    *
    * @param reader the BufferedReader containing the data
-   * @param dataChunkSize the number of rows to include in each chunk
    * @param dataChunkQueue the queue where data chunks are placed for processing
    * @throws RuntimeException if there are errors reading the file or if interrupted
    */
   protected abstract void readDataChunks(
-      BufferedReader reader, int dataChunkSize, BlockingQueue<ImportDataChunk> dataChunkQueue);
+      BufferedReader reader, BlockingQueue<ImportDataChunk> dataChunkQueue);
 
   /**
    * Add import event listener to listener list
