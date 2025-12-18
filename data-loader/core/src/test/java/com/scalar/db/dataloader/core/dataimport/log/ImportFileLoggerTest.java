@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
+import com.scalar.db.dataloader.core.dataimport.ImportStatus;
 import com.scalar.db.dataloader.core.dataimport.log.writer.DefaultLogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
@@ -29,9 +29,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class SingleFileImportLoggerTest {
+class ImportFileLoggerTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(SingleFileImportLoggerTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(ImportFileLoggerTest.class);
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
 
   @TempDir Path tempDir;
@@ -88,17 +88,16 @@ class SingleFileImportLoggerTest {
             .isLogRawSourceRecordsEnabled(true)
             .isLogSuccessRecordsEnabled(logSuccessRecords)
             .build();
-    SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
+    ImportFileLogger importLogger = new ImportFileLogger(config, logWriterFactory);
 
     List<ImportTransactionBatchResult> batchResults = createBatchResults(1, success);
 
     // Act
     for (ImportTransactionBatchResult batchResult : batchResults) {
       importLogger.onTransactionBatchCompleted(batchResult);
-      importLogger.onDataChunkCompleted(
-          ImportDataChunkStatus.builder().dataChunkId(batchResult.getDataChunkId()).build());
+      importLogger.onImportCompleted(ImportStatus.builder().importId(0).build());
     }
-    importLogger.onAllDataChunksCompleted();
+    importLogger.onAllImportsCompleted();
 
     // Assert
     assertTransactionBatchResults(batchResults, success, logSuccessRecords);
@@ -117,7 +116,6 @@ class SingleFileImportLoggerTest {
                   .build());
       ImportTransactionBatchResult result =
           ImportTransactionBatchResult.builder()
-              .dataChunkId(i)
               .transactionBatchId(1)
               .records(records)
               .success(success)
@@ -133,12 +131,11 @@ class SingleFileImportLoggerTest {
       throws IOException {
     DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
 
-    // Single file log mode
     Path logFileName =
         tempDir.resolve(
             success
-                ? SingleFileImportLogger.SUCCESS_LOG_FILE_NAME
-                : SingleFileImportLogger.FAILURE_LOG_FILE_NAME);
+                ? ImportFileLogger.SUCCESS_LOG_FILE_NAME
+                : ImportFileLogger.FAILURE_LOG_FILE_NAME);
     if (logSuccessRecords || !success) {
       assertTrue(Files.exists(logFileName), "Log file should exist");
 
@@ -182,17 +179,16 @@ class SingleFileImportLoggerTest {
             .isLogRawSourceRecordsEnabled(logRawRecords)
             .isLogSuccessRecordsEnabled(false)
             .build();
-    SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
+    ImportFileLogger importLogger = new ImportFileLogger(config, logWriterFactory);
 
     List<ImportTransactionBatchResult> batchResults = createBatchResults(1, false);
 
     // Act
     for (ImportTransactionBatchResult batchResult : batchResults) {
       importLogger.onTransactionBatchCompleted(batchResult);
-      importLogger.onDataChunkCompleted(
-          ImportDataChunkStatus.builder().dataChunkId(batchResult.getDataChunkId()).build());
+      importLogger.onImportCompleted(ImportStatus.builder().importId(0).build());
     }
-    importLogger.onAllDataChunksCompleted();
+    importLogger.onAllImportsCompleted();
 
     // Assert
     assertTransactionBatchResultsForRawRecords(logRawRecords);
@@ -201,7 +197,7 @@ class SingleFileImportLoggerTest {
   private void assertTransactionBatchResultsForRawRecords(boolean logRawRecord) throws IOException {
     DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
 
-    Path logFileName = tempDir.resolve(SingleFileImportLogger.FAILURE_LOG_FILE_NAME);
+    Path logFileName = tempDir.resolve(ImportFileLogger.FAILURE_LOG_FILE_NAME);
     assertTrue(Files.exists(logFileName), "Log file should exist");
     String logContent = new String(Files.readAllBytes(logFileName), StandardCharsets.UTF_8);
     List<ImportTransactionBatchResult> logEntries =
@@ -217,7 +213,6 @@ class SingleFileImportLoggerTest {
 
   private void assertTransactionBatchResult(
       ImportTransactionBatchResult expected, ImportTransactionBatchResult actual) {
-    assertEquals(expected.getDataChunkId(), actual.getDataChunkId(), "Data chunk ID should match");
     assertEquals(
         expected.getTransactionBatchId(),
         actual.getTransactionBatchId(),
@@ -241,38 +236,36 @@ class SingleFileImportLoggerTest {
   }
 
   @Test
-  void onDataChunkCompleted_NoErrors_ShouldWriteToSummaryLogFile() throws IOException {
-    testDataChunkCompleted(false);
+  void onImportCompleted_NoErrors_ShouldWriteToSummaryLogFile() throws IOException {
+    testImportCompleted(false);
   }
 
   @Test
-  void onDataChunkCompleted_HasErrors_ShouldWriteToSummaryLogFile() throws IOException {
-    testDataChunkCompleted(true);
+  void onImportCompleted_HasErrors_ShouldWriteToSummaryLogFile() throws IOException {
+    testImportCompleted(true);
   }
 
-  private void testDataChunkCompleted(boolean hasErrors) throws IOException {
+  private void testImportCompleted(boolean hasErrors) throws IOException {
     ImportLoggerConfig config =
         ImportLoggerConfig.builder()
             .logDirectoryPath(tempDir.toString() + "/")
             .isLogRawSourceRecordsEnabled(true)
             .isLogSuccessRecordsEnabled(true)
             .build();
-    SingleFileImportLogger importLogger = new SingleFileImportLogger(config, logWriterFactory);
+    ImportFileLogger importLogger = new ImportFileLogger(config, logWriterFactory);
 
-    List<ImportDataChunkStatus> dataChunkStatuses =
-        Stream.of(1, 2)
-            .map(id -> createDataChunkStatus(id, hasErrors))
-            .collect(Collectors.toList());
+    List<ImportStatus> importStatuses =
+        Stream.of(1, 2).map(id -> createImportStatus(id, hasErrors)).collect(Collectors.toList());
 
-    dataChunkStatuses.forEach(importLogger::onDataChunkCompleted);
-    importLogger.onAllDataChunksCompleted();
+    importStatuses.forEach(importLogger::onImportCompleted);
+    importLogger.onAllImportsCompleted();
 
-    assertDataChunkStatusLog(SingleFileImportLogger.SUMMARY_LOG_FILE_NAME, dataChunkStatuses);
+    assertImportStatusLog(ImportFileLogger.SUMMARY_LOG_FILE_NAME, importStatuses);
   }
 
-  private ImportDataChunkStatus createDataChunkStatus(int dataChunkId, boolean hasErrors) {
-    return ImportDataChunkStatus.builder()
-        .dataChunkId(dataChunkId)
+  private ImportStatus createImportStatus(int importId, boolean hasErrors) {
+    return ImportStatus.builder()
+        .importId(importId)
         .startTime(Instant.now())
         .endTime(Instant.now())
         .totalRecords(100)
@@ -283,31 +276,29 @@ class SingleFileImportLoggerTest {
         .build();
   }
 
-  private void assertDataChunkStatusLog(
-      String logFilePattern, List<ImportDataChunkStatus> dataChunkStatuses) throws IOException {
-    assertSingleFileLog(tempDir, logFilePattern, dataChunkStatuses);
+  private void assertImportStatusLog(String logFilePattern, List<ImportStatus> importStatuses)
+      throws IOException {
+    assertSingleFileLog(tempDir, logFilePattern, importStatuses);
   }
 
   private void assertSingleFileLog(
-      Path tempDir, String logFileName, List<ImportDataChunkStatus> dataChunkStatuses)
-      throws IOException {
+      Path tempDir, String logFileName, List<ImportStatus> importStatuses) throws IOException {
     Path summaryLogFile = tempDir.resolve(logFileName);
     assertTrue(Files.exists(summaryLogFile));
 
     String logContent = new String(Files.readAllBytes(summaryLogFile), StandardCharsets.UTF_8);
     DataLoaderObjectMapper objectMapper = new DataLoaderObjectMapper();
-    List<ImportDataChunkStatus> logEntries =
-        objectMapper.readValue(logContent, new TypeReference<List<ImportDataChunkStatus>>() {});
+    List<ImportStatus> logEntries =
+        objectMapper.readValue(logContent, new TypeReference<List<ImportStatus>>() {});
 
-    assertEquals(dataChunkStatuses.size(), logEntries.size());
-    for (int i = 0; i < dataChunkStatuses.size(); i++) {
-      assertDataChunkStatusEquals(dataChunkStatuses.get(i), logEntries.get(i));
+    assertEquals(importStatuses.size(), logEntries.size());
+    for (int i = 0; i < importStatuses.size(); i++) {
+      assertImportStatusEquals(importStatuses.get(i), logEntries.get(i));
     }
   }
 
-  private void assertDataChunkStatusEquals(
-      ImportDataChunkStatus expected, ImportDataChunkStatus actual) {
-    assertEquals(expected.getDataChunkId(), actual.getDataChunkId());
+  private void assertImportStatusEquals(ImportStatus expected, ImportStatus actual) {
+    assertEquals(expected.getImportId(), actual.getImportId());
     assertEquals(expected.getStartTime(), actual.getStartTime());
     assertEquals(expected.getEndTime(), actual.getEndTime());
     assertEquals(expected.getTotalRecords(), actual.getTotalRecords());

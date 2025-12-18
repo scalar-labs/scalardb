@@ -48,20 +48,20 @@ public class ImportManagerTest {
   }
 
   @Test
-  void onAllDataChunksCompleted_shouldNotifyListenersAndCloseStorage() {
-    importManager.onAllDataChunksCompleted();
+  void onAllImportsCompleted_shouldNotifyListenersAndCloseStorage() {
+    importManager.onAllImportsCompleted();
 
-    verify(listener1).onAllDataChunksCompleted();
-    verify(listener2).onAllDataChunksCompleted();
+    verify(listener1).onAllImportsCompleted();
+    verify(listener2).onAllImportsCompleted();
     verify(distributedTransactionManager).close();
   }
 
   @Test
-  void onAllDataChunksCompleted_shouldAggregateListenerExceptionAndStillCloseResources() {
-    doThrow(new RuntimeException("Listener1 failed")).when(listener1).onAllDataChunksCompleted();
+  void onAllImportsCompleted_shouldAggregateListenerExceptionAndStillCloseResources() {
+    doThrow(new RuntimeException("Listener1 failed")).when(listener1).onAllImportsCompleted();
 
     RuntimeException thrown =
-        assertThrows(RuntimeException.class, () -> importManager.onAllDataChunksCompleted());
+        assertThrows(RuntimeException.class, () -> importManager.onAllImportsCompleted());
 
     assertTrue(thrown.getMessage().contains("Error during completion"));
     assertEquals("Listener1 failed", thrown.getCause().getMessage());

@@ -1,6 +1,5 @@
 package com.scalar.db.dataloader.core.dataimport;
 
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.task.result.ImportTaskResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchResult;
 import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransactionBatchStatus;
@@ -12,27 +11,28 @@ import com.scalar.db.dataloader.core.dataimport.transactionbatch.ImportTransacti
 public interface ImportEventListener {
 
   /**
-   * Called when processing of a data chunk begins.
+   * Called when the import process begins.
    *
-   * @param status the current status of the data chunk being processed
+   * @param status the current status of the import being processed
    */
-  void onDataChunkStarted(ImportDataChunkStatus status);
+  void onImportStarted(ImportStatus status);
 
   /**
-   * Called when processing of a data chunk is completed.
+   * Called when the import process is completed.
    *
-   * @param status the final status of the completed data chunk
+   * @param status the final status of the completed import
    */
-  void onDataChunkCompleted(ImportDataChunkStatus status);
+  void onImportCompleted(ImportStatus status);
 
   /**
-   * Called when all data chunks have been processed. This indicates that the entire chunked import
-   * process is complete.
+   * Called when all imports have been processed. This indicates that the entire import process is
+   * complete.
    */
-  void onAllDataChunksCompleted();
+  void onAllImportsCompleted();
 
   /**
-   * Called when processing of a transaction batch begins.
+   * Called when processing of a transaction batch begins. A transaction batch is a group of records
+   * processed within a single transaction.
    *
    * @param batchStatus the initial status of the transaction batch
    */
@@ -46,7 +46,7 @@ public interface ImportEventListener {
   void onTransactionBatchCompleted(ImportTransactionBatchResult batchResult);
 
   /**
-   * Called when an import task is completed.
+   * Called when an import task is completed. A task represents processing a single record.
    *
    * @param taskResult the result of the completed import task
    */

@@ -10,7 +10,6 @@ import lombok.Value;
 @Builder
 @Value
 public class ImportTransactionBatchStatus {
-  int dataChunkId;
   int transactionBatchId;
   String transactionId;
   List<ImportTaskResult> records;

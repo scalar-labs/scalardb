@@ -15,8 +15,8 @@ import com.scalar.db.dataloader.core.dataimport.ImportManager;
 import com.scalar.db.dataloader.core.dataimport.ImportOptions;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFile;
 import com.scalar.db.dataloader.core.dataimport.controlfile.ControlFileTable;
+import com.scalar.db.dataloader.core.dataimport.log.ImportFileLogger;
 import com.scalar.db.dataloader.core.dataimport.log.ImportLoggerConfig;
-import com.scalar.db.dataloader.core.dataimport.log.SingleFileImportLogger;
 import com.scalar.db.dataloader.core.dataimport.log.writer.DefaultLogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.log.writer.LogWriterFactory;
 import com.scalar.db.dataloader.core.dataimport.processor.DefaultImportProcessorFactory;
@@ -185,7 +185,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
             importProcessorFactory,
             transactionMode,
             transactionFactory.getTransactionManager());
-    importManager.addListener(new SingleFileImportLogger(importLoggerConfig, logWriterFactory));
+    importManager.addListener(new ImportFileLogger(importLoggerConfig, logWriterFactory));
     return importManager;
   }
 

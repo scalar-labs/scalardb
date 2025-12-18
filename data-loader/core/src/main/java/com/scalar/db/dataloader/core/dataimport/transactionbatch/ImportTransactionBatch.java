@@ -1,6 +1,6 @@
 package com.scalar.db.dataloader.core.dataimport.transactionbatch;
 
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
+import com.scalar.db.dataloader.core.dataimport.ImportRow;
 import java.util.List;
 import lombok.Builder;
 import lombok.Value;

@@ -1,4 +1,4 @@
-package com.scalar.db.dataloader.core.dataimport.datachunk;
+package com.scalar.db.dataloader.core.dataimport;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Value;

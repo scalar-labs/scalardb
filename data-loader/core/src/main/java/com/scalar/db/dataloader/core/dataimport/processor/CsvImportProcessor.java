@@ -4,16 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.DataLoaderObjectMapper;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunk;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportRow;
+import com.scalar.db.dataloader.core.dataimport.ImportRow;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A processor for importing CSV data into the database.
@@ -22,8 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <ul>
  *   <li>Reading and parsing CSV data with configurable delimiters
- *   <li>Processing data in configurable chunk sizes for efficient batch processing
- *   <li>Supporting parallel processing using multiple threads
+ *   <li>Processing data in batches according to transaction batch size
  *   <li>Converting CSV rows into JSON format for database import
  * </ul>
  *
@@ -32,7 +28,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class CsvImportProcessor extends ImportProcessor {
   private static final DataLoaderObjectMapper OBJECT_MAPPER = new DataLoaderObjectMapper();
-  private final AtomicInteger dataChunkIdCounter = new AtomicInteger(0);
+
+  private String[] headerArray;
+  private String delimiter;
+  private int currentRowNumber = 1;
+  private boolean initialized = false;
 
   /**
    * Creates a new CsvImportProcessor with the specified parameters.
@@ -44,68 +44,60 @@ public class CsvImportProcessor extends ImportProcessor {
   }
 
   /**
-   * Reads and processes CSV data from the provided reader.
+   * Reads the next batch of records from the CSV file.
    *
    * <p>This method:
    *
    * <ul>
-   *   <li>Reads the CSV header (custom or from file)
+   *   <li>Initializes the header on first call (custom or from file)
+   *   <li>Reads up to batchSize rows from the file
    *   <li>Validates each data row against the header
    *   <li>Converts rows to JSON format
-   *   <li>Enqueues all rows as a single data chunk for processing
    * </ul>
    *
    * @param reader the BufferedReader containing CSV data
-   * @param dataChunkQueue the queue where data chunks are placed for processing
-   * @throws RuntimeException if there are errors reading the file or if interrupted
+   * @param batchSize the maximum number of records to read
+   * @return a list of ImportRow objects, or an empty list if no more records
+   * @throws RuntimeException if there are errors reading the file
    */
   @Override
-  protected void readDataChunks(
-      BufferedReader reader, BlockingQueue<ImportDataChunk> dataChunkQueue) {
+  protected List<ImportRow> readNextBatch(BufferedReader reader, int batchSize) {
+    List<ImportRow> batch = new ArrayList<>();
     try {
-      String delimiter =
-          Optional.of(params.getImportOptions().getDelimiter())
-              .map(c -> Character.toString(c).trim())
-              .filter(s -> !s.isEmpty())
-              .orElse(",");
+      // Initialize header and delimiter on first call
+      if (!initialized) {
+        delimiter =
+            Optional.of(params.getImportOptions().getDelimiter())
+                .map(c -> Character.toString(c).trim())
+                .filter(s -> !s.isEmpty())
+                .orElse(",");
 
-      String header =
-          Optional.ofNullable(params.getImportOptions().getCustomHeaderRow())
-              .orElseGet(() -> safeReadLine(reader));
+        String header =
+            Optional.ofNullable(params.getImportOptions().getCustomHeaderRow())
+                .orElseGet(() -> safeReadLine(reader));
 
-      String[] headerArray = header.split(delimiter);
-      List<ImportRow> allRows = new ArrayList<>();
+        headerArray = header.split(delimiter);
+        initialized = true;
+      }
+
       String line;
-      int rowNumber = 1;
-      while ((line = reader.readLine()) != null) {
+      while (batch.size() < batchSize && (line = reader.readLine()) != null) {
         String[] dataArray = line.split(delimiter);
         if (headerArray.length != dataArray.length) {
           throw new IllegalArgumentException(
-              DataLoaderError.CSV_DATA_MISMATCH.buildMessage(line, header));
+              DataLoaderError.CSV_DATA_MISMATCH.buildMessage(
+                  line, String.join(delimiter, headerArray)));
         }
         JsonNode jsonNode = combineHeaderAndData(headerArray, dataArray);
         if (jsonNode.isEmpty()) continue;
 
-        allRows.add(new ImportRow(rowNumber++, jsonNode));
+        batch.add(new ImportRow(currentRowNumber++, jsonNode));
       }
-      if (!allRows.isEmpty()) enqueueDataChunk(allRows, dataChunkQueue);
-    } catch (IOException | InterruptedException e) {
+    } catch (IOException e) {
       throw new RuntimeException(
           DataLoaderError.CSV_FILE_READ_FAILED.buildMessage(e.getMessage()), e);
     }
-  }
-
-  /**
-   * Adds a completed data chunk to the processing queue.
-   *
-   * @param dataChunk the list of ImportRows to be processed
-   * @param queue the queue where the chunk should be placed
-   * @throws InterruptedException if the thread is interrupted while waiting to add to the queue
-   */
-  private void enqueueDataChunk(List<ImportRow> dataChunk, BlockingQueue<ImportDataChunk> queue)
-      throws InterruptedException {
-    int dataChunkId = dataChunkIdCounter.getAndIncrement();
-    queue.put(ImportDataChunk.builder().dataChunkId(dataChunkId).sourceData(dataChunk).build());
+    return batch;
   }
 
   /**

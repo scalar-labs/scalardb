@@ -22,9 +22,6 @@ public class ImportTaskParams {
   /** The source record to be imported, represented as a JSON node */
   @NonNull JsonNode sourceRecord;
 
-  /** Identifier for the current chunk of data being processed */
-  int dataChunkId;
-
   /** The row number of the current record in the source data */
   int rowNumber;
 

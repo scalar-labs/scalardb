@@ -1,4 +1,4 @@
-package com.scalar.db.dataloader.core.dataimport.datachunk;
+package com.scalar.db.dataloader.core.dataimport;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -6,15 +6,15 @@ import java.time.Instant;
 import lombok.Builder;
 import lombok.Data;
 
-/** A DTO to store import data chunk details. */
+/** A DTO to store import status details. */
 @SuppressWarnings({"SameNameButDifferent", "MissingSummary"})
 @Data
 @Builder
-@JsonDeserialize(builder = ImportDataChunkStatus.ImportDataChunkStatusBuilder.class)
-public class ImportDataChunkStatus {
+@JsonDeserialize(builder = ImportStatus.ImportStatusBuilder.class)
+public class ImportStatus {
 
-  @JsonProperty("dataChunkId")
-  private final int dataChunkId;
+  @JsonProperty("importId")
+  private final int importId;
 
   @JsonProperty("startTime")
   private final Instant startTime;
@@ -38,7 +38,7 @@ public class ImportDataChunkStatus {
   private final int totalDurationInMilliSeconds;
 
   @JsonProperty("status")
-  private final ImportDataChunkStatusState status;
+  private final ImportStatusState status;
 
   /**
    * Explicit builder class declaration required for Javadoc generation.
@@ -47,5 +47,5 @@ public class ImportDataChunkStatus {
    * However, when using a custom builder method name (e.g., {@code hiddenBuilder()}), Javadoc may
    * fail to resolve references to this builder unless it is explicitly declared.
    */
-  public static class ImportDataChunkStatusBuilder {}
+  public static class ImportStatusBuilder {}
 }

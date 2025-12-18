@@ -4,7 +4,6 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.dataloader.core.TransactionMode;
 import com.scalar.db.dataloader.core.dataimport.dao.ScalarDbDao;
-import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessor;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorFactory;
 import com.scalar.db.dataloader.core.dataimport.processor.ImportProcessorParams;
@@ -87,17 +86,17 @@ public class ImportManager implements ImportEventListener {
 
   /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
-  public void onDataChunkStarted(ImportDataChunkStatus status) {
+  public void onImportStarted(ImportStatus status) {
     for (ImportEventListener listener : listeners) {
-      listener.onDataChunkStarted(status);
+      listener.onImportStarted(status);
     }
   }
 
   /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
-  public void onDataChunkCompleted(ImportDataChunkStatus status) {
+  public void onImportCompleted(ImportStatus status) {
     for (ImportEventListener listener : listeners) {
-      listener.onDataChunkCompleted(status);
+      listener.onImportCompleted(status);
     }
   }
 
@@ -127,12 +126,12 @@ public class ImportManager implements ImportEventListener {
 
   /** {@inheritDoc} Forwards the event to all registered listeners. */
   @Override
-  public void onAllDataChunksCompleted() {
+  public void onAllImportsCompleted() {
     Throwable firstException = null;
 
     for (ImportEventListener listener : listeners) {
       try {
-        listener.onAllDataChunksCompleted();
+        listener.onAllImportsCompleted();
       } catch (Throwable e) {
         if (firstException == null) {
           firstException = e;

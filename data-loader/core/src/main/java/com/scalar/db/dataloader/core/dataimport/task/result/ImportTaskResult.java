@@ -22,9 +22,6 @@ public class ImportTaskResult {
   @JsonProperty("rawRecord")
   JsonNode rawRecord;
 
-  @JsonProperty("dataChunkId")
-  int dataChunkId;
-
   /**
    * Explicit builder class declaration required for Javadoc generation.
    *

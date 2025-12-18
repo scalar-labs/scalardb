@@ -13,9 +13,6 @@ import lombok.Value;
 @Value
 @JsonDeserialize(builder = ImportTransactionBatchResult.ImportTransactionBatchResultBuilder.class)
 public class ImportTransactionBatchResult {
-  @JsonProperty("dataChunkId")
-  int dataChunkId;
-
   @JsonProperty("transactionBatchId")
   int transactionBatchId;
 
