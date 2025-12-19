@@ -1,3 +1,19 @@
+-- ============================================================================
+-- MySQL Database Initialization Script for Import Tests
+-- ============================================================================
+-- This script is used by import test classes (ImportCommandCsvMySQLIT, etc.).
+-- It includes:
+--   - Full database schema (tables, metadata, namespaces)
+--   - NO test data in employee table (clean slate for import tests)
+--   - Coordinator tables for consensus-commit transaction manager
+--
+-- Usage: Used by import tests that need empty tables to import into
+-- Related: init_mysql.sql (similar structure but includes employee data)
+--
+-- NOTE: Keep this file in sync with init_mysql.sql structure.
+--       Only difference should be the presence/absence of employee table data.
+-- ============================================================================
+
 CREATE DATABASE IF NOT EXISTS scalardb;
 USE scalardb;
 
@@ -54,6 +70,10 @@ CREATE TABLE `employee` (
   `email` longtext,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- NOTE: This file does NOT include test data in employee table.
+--       init_mysql.sql has the same table structure WITH 25 test records.
+--       This allows import tests to start with a clean slate.
 
 USE test;
 CREATE TABLE `employee_trn` (

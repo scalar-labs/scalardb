@@ -24,9 +24,11 @@ Files containing a single record for basic import testing:
 Files containing multiple records for batch import testing:
 
 - **`import_data_all.csv`** - Multiple employee records in CSV format
-- **`import_multi_mapped.csv`** - Multiple records with column mapping in CSV
-- **`import_multi_mapped.json`** - Multiple records with column mapping in JSON
-- **`import_multi_mapped.jsonl`** - Multiple records with column mapping in JSON Lines
+- **`import_multi_mapped.csv`** - Multiple records with column mapping in CSV (multi-table import)
+- **`import_multi_mapped.json`** - Multiple records with column mapping in JSON (format-specific test, multi-table)
+- **`import_multi_mapped.jsonl`** - Multiple records with column mapping in JSON Lines (format-specific test, multi-table)
+
+**Note**: JSON/JSONL versions are necessary to test that multi-table imports work correctly with JSON/JSONL formats, not just CSV.
 
 ### Special Format Files
 Files with special formatting or delimiters:
@@ -35,11 +37,13 @@ Files with special formatting or delimiters:
 - **`import_single_without_header.csv`** - CSV without header row
 
 ### Transaction Files
-Files for testing transaction-related features:
+Files for testing transaction-related features (transaction metadata import):
 
 - **`import_single_trn_full.csv`** - Single record with transaction metadata in CSV
-- **`import_single_trn_full.json`** - Single record with transaction metadata in JSON
-- **`import_single_trn_full.jsonl`** - Single record with transaction metadata in JSON Lines
+- **`import_single_trn_full.json`** - Single record with transaction metadata in JSON (format-specific test)
+- **`import_single_trn_full.jsonl`** - Single record with transaction metadata in JSON Lines (format-specific test)
+
+**Note**: JSON/JSONL versions are necessary to test that transaction metadata parsing works correctly with JSON/JSONL formats, not just CSV.
 
 ### Special Data Files
 Files with special data scenarios:
@@ -47,11 +51,13 @@ Files with special data scenarios:
 - **`import_data_with_null.json`** - Records containing null values for null handling tests
 
 ### Mapped Files
-Files with column mapping configurations:
+Files with column mapping configurations (used with control files for column mapping tests):
 
 - **`import_single_mapped.csv`** - Single record with column mapping in CSV
-- **`import_single_mapped.json`** - Single record with column mapping in JSON
-- **`import_single_mapped.jsonl`** - Single record with column mapping in JSON Lines
+- **`import_single_mapped.json`** - Single record with column mapping in JSON (format-specific test)
+- **`import_single_mapped.jsonl`** - Single record with column mapping in JSON Lines (format-specific test)
+
+**Note**: JSON/JSONL versions are necessary to test that control file mapping works correctly with JSON/JSONL formats, not just CSV.
 
 ## Usage in Tests
 
