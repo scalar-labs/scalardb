@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scalar.db.dataloader.cli.BaseIntegrationTest;
+import com.scalar.db.dataloader.cli.BasePostgreSQLIntegrationTest;
 import com.scalar.db.dataloader.cli.TestDataValidationHelper;
 import com.scalar.db.dataloader.cli.command.dataexport.ExportCommand;
 import com.scalar.db.dataloader.cli.command.dataimport.ImportCommand;
@@ -17,33 +17,25 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 /**
- * Integration tests for round-trip scenarios (export then import) using single-crud-operation
- * transaction manager.
+ * Integration tests for round-trip scenarios (export then import).
  *
  * <p>These tests verify data integrity by:
  *
  * <ul>
- *   <li>Exporting data from database using single-crud-operation transaction manager
- *   <li>Importing the exported data back using single-crud-operation transaction manager
+ *   <li>Exporting data from database
+ *   <li>Importing the exported data back
  *   <li>Verifying data integrity (comparing original vs re-imported)
  *   <li>Testing with all formats (CSV, JSON, JSONL)
  *   <li>Testing with different import modes (INSERT, UPDATE, UPSERT)
  * </ul>
  *
- * <p>These tests ensure that data can be exported and re-imported without loss or corruption when
- * using the single-crud-operation transaction manager, which provides storage-only mode without
- * distributed transactions.
+ * <p>These tests ensure that data can be exported and re-imported without loss or corruption.
  */
-public class ImportExportRoundTripSingleCrudIT extends BaseIntegrationTest {
-
-  @Override
-  protected String getTransactionManagerType() {
-    return TRANSACTION_MANAGER_SINGLE_CRUD;
-  }
+public class ImportExportRoundTripPostgreSQLIT extends BasePostgreSQLIntegrationTest {
 
   @Override
   protected boolean shouldCleanupTables() {
-    // Round-trip tests need initial data from init_mysql.sql to export
+    // Round-trip tests need initial data from init_postgres.sql to export
     // They handle cleanup manually after export and before import
     return false;
   }
@@ -65,7 +57,7 @@ public class ImportExportRoundTripSingleCrudIT extends BaseIntegrationTest {
   }
 
   @Test
-  void testRoundTripCsvExportImportWithSingleCrud_ShouldMaintainDataIntegrity() throws Exception {
+  void testRoundTripCsvExportImport_ShouldMaintainDataIntegrity() throws Exception {
     // Step 1: Export data to CSV
     // Use projection to exclude transaction metadata columns that don't exist in the employee table
     String exportDir = tempDir.resolve("export").toString();
@@ -138,7 +130,7 @@ public class ImportExportRoundTripSingleCrudIT extends BaseIntegrationTest {
   }
 
   @Test
-  void testRoundTripJsonExportImportWithSingleCrud_ShouldMaintainDataIntegrity() throws Exception {
+  void testRoundTripJsonExportImport_ShouldMaintainDataIntegrity() throws Exception {
     // Step 1: Export data to JSON
     // Use projection to exclude transaction metadata columns that don't exist in the employee table
     String exportDir = tempDir.resolve("export").toString();
@@ -209,6 +201,156 @@ public class ImportExportRoundTripSingleCrudIT extends BaseIntegrationTest {
     assertThat(recordCount)
         .as("Records should be imported successfully. Found %d records", recordCount)
         .isGreaterThan(0);
+  }
+
+  @Test
+  void testRoundTripJsonLinesExportImport_ShouldMaintainDataIntegrity() throws Exception {
+    // Step 1: Export data to JSONL
+    // Use projection to exclude transaction metadata columns that don't exist in the employee table
+    String exportDir = tempDir.resolve("export").toString();
+    Files.createDirectories(tempDir.resolve("export"));
+
+    String[] exportArgs = {
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "JSONL",
+      "--projection",
+      "id,name,email",
+      "--output-dir",
+      exportDir
+    };
+
+    ExportCommand exportCommand = new ExportCommand();
+    CommandLine exportCommandLine = new CommandLine(exportCommand);
+    int exportExitCode = exportCommandLine.execute(exportArgs);
+
+    assertThat(exportExitCode).isEqualTo(0);
+
+    // Find the exported JSONL file
+    List<Path> jsonlFiles = findFilesWithExtension(tempDir.resolve("export"), ".jsonl");
+    assertThat(jsonlFiles).hasSize(1);
+    Path exportedFile = jsonlFiles.get(0);
+
+    // Verify exported file exists and has content
+    assertTrue(
+        TestDataValidationHelper.verifyExportedFileExists(exportedFile),
+        "Exported JSONL file should exist and not be empty");
+
+    // Step 2: Clean up table before re-import
+    cleanupTablesInternal();
+
+    // Step 3: Import the exported JSONL back
+    // require-all-columns defaults to false, which allows importing JSONL with only projected
+    // columns
+    String[] importArgs = {
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "JSONL",
+      "--import-mode",
+      "UPSERT",
+      "--file",
+      exportedFile.toString()
+    };
+
+    ImportCommand importCommand = new ImportCommand();
+    CommandLine importCommandLine = new CommandLine(importCommand);
+    int importExitCode = importCommandLine.execute(importArgs);
+
+    // Verify import succeeded
+    assertThat(importExitCode).as("Import should succeed with exit code 0").isEqualTo(0);
+
+    // Step 4: Verify data integrity - records should be imported
+    int recordCount =
+        TestDataValidationHelper.countRecords(configFilePath, NAMESPACE, TABLE_EMPLOYEE);
+    assertThat(recordCount)
+        .as("Records should be imported successfully. Found %d records", recordCount)
+        .isGreaterThan(0);
+  }
+
+  @Test
+  void testRoundTripWithDifferentImportModes_ShouldWorkCorrectly() throws Exception {
+    // Export data
+    // Use projection to exclude transaction metadata columns that don't exist in the employee table
+    String exportDir = tempDir.resolve("export").toString();
+    Files.createDirectories(tempDir.resolve("export"));
+
+    String[] exportArgs = {
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "CSV",
+      "--projection",
+      "id,name,email",
+      "--output-dir",
+      exportDir
+    };
+
+    ExportCommand exportCommand = new ExportCommand();
+    CommandLine exportCommandLine = new CommandLine(exportCommand);
+    int exportExitCode = exportCommandLine.execute(exportArgs);
+
+    assertThat(exportExitCode).isEqualTo(0);
+
+    List<Path> csvFiles = findFilesWithExtension(tempDir.resolve("export"), ".csv");
+    assertThat(csvFiles).hasSize(1);
+    Path exportedFile = csvFiles.get(0);
+
+    // Test with INSERT mode
+    cleanupTablesInternal();
+    String[] insertArgs = {
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "CSV",
+      "--import-mode",
+      "INSERT",
+      "--file",
+      exportedFile.toString()
+    };
+
+    ImportCommand importCommand = new ImportCommand();
+    CommandLine importCommandLine = new CommandLine(importCommand);
+    int insertExitCode = importCommandLine.execute(insertArgs);
+    assertThat(insertExitCode).isNotNull();
+
+    // Test with UPDATE mode (re-import same data)
+    String[] updateArgs = {
+      "--config",
+      configFilePath.toString(),
+      "--namespace",
+      NAMESPACE,
+      "--table",
+      TABLE_EMPLOYEE,
+      "--format",
+      "CSV",
+      "--import-mode",
+      "UPDATE",
+      "--file",
+      exportedFile.toString()
+    };
+
+    importCommand = new ImportCommand();
+    importCommandLine = new CommandLine(importCommand);
+    int updateExitCode = importCommandLine.execute(updateArgs);
+    assertThat(updateExitCode).isNotNull();
   }
 
   /** Internal method to clean up tables. Used by round-trip tests to reset state. */

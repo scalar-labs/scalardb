@@ -15,29 +15,31 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mysql.MySQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 /**
- * Base class for integration tests that provides shared MySQL container setup and configuration.
+ * Base class for integration tests that provides shared PostgreSQL container setup and
+ * configuration.
  *
  * <p>This class eliminates code duplication across test classes by providing:
  *
  * <ul>
- *   <li>Shared MySQL container instance
+ *   <li>Shared PostgreSQL container instance
  *   <li>Config file creation helper
  *   <li>Test constants (database names, credentials, etc.)
  *   <li>Test isolation support
  * </ul>
  */
 @Testcontainers
-public abstract class BaseIntegrationTest {
+public abstract class BasePostgreSQLIntegrationTest {
 
   // Database configuration constants
-  protected static final String MYSQL_IMAGE = "mysql:8.0";
+  protected static final String POSTGRES_IMAGE = "postgres:16-alpine";
   protected static final String DATABASE_NAME = "test";
-  protected static final String USERNAME = "root";
-  protected static final String PASSWORD = "12345678";
+  protected static final String USERNAME = "postgres";
+  protected static final String PASSWORD = "postgres";
   protected static final String NAMESPACE = "test";
 
   // Table name constants
@@ -46,16 +48,16 @@ public abstract class BaseIntegrationTest {
   protected static final String TABLE_ALL_COLUMNS = "all_columns";
   protected static final String TABLE_EMP_DEPARTMENT = "emp_department";
 
-  // Shared MySQL container - initialized once per test class
+  // Shared PostgreSQL container - initialized once per test class
   @Container
-  protected static final MySQLContainer mysql =
-      new MySQLContainer(MYSQL_IMAGE)
+  protected static final PostgreSQLContainer postgres =
+      new PostgreSQLContainer(DockerImageName.parse(POSTGRES_IMAGE))
           .withDatabaseName(DATABASE_NAME)
           .withUsername(USERNAME)
           .withPassword(PASSWORD)
           .withCopyFileToContainer(
-              MountableFile.forClasspathResource("init_mysql.sql"),
-              "/docker-entrypoint-initdb.d/init_mysql.sql");
+              MountableFile.forClasspathResource("init_postgres.sql"),
+              "/docker-entrypoint-initdb.d/init_postgres.sql");
 
   // Temporary directory for test files (created per test method)
   @TempDir protected Path tempDir;
@@ -68,13 +70,13 @@ public abstract class BaseIntegrationTest {
    * different init file. This method is kept for backward compatibility but is no longer used for
    * container initialization.
    *
-   * @return the name of the init SQL file (default: "init_mysql_import.sql")
+   * @return the name of the init SQL file (default: "init_postgres_import.sql")
    * @deprecated Container initialization is now handled automatically via {@code @Container}
    *     annotation. This method is kept for reference only.
    */
   @Deprecated
   protected static String getInitSqlFileName() {
-    return "init_mysql_import.sql";
+    return "init_postgres_import.sql";
   }
 
   /**
@@ -238,7 +240,7 @@ public abstract class BaseIntegrationTest {
   protected String getScalarDbConfig() {
     return "scalar.db.storage=jdbc\n"
         + "scalar.db.contact_points="
-        + mysql.getJdbcUrl()
+        + postgres.getJdbcUrl()
         + "\n"
         + "scalar.db.username="
         + USERNAME
@@ -326,6 +328,33 @@ public abstract class BaseIntegrationTest {
     } catch (ExecutionException e) {
       // Table might not exist, already empty, or other error - ignore during cleanup
       // This is expected and should not fail tests
+    }
+  }
+
+  /**
+   * Internal method to perform table cleanup for specific namespace and table. Used by round-trip
+   * tests that need targeted cleanup.
+   *
+   * @param namespace the namespace name
+   * @param table the table name
+   * @throws Exception if cleanup fails
+   */
+  protected void cleanupTablesInternal(String namespace, String table) throws Exception {
+    if (configFilePath == null || !Files.exists(configFilePath)) {
+      return; // Skip cleanup if config file doesn't exist
+    }
+
+    try {
+      Properties props = new Properties();
+      props.load(Files.newInputStream(configFilePath));
+      StorageFactory factory = StorageFactory.create(props);
+      DistributedStorageAdmin admin = factory.getStorageAdmin();
+
+      truncateTableSafely(admin, namespace, table);
+
+      admin.close();
+    } catch (Exception e) {
+      // Log but don't fail tests if cleanup fails
     }
   }
 }

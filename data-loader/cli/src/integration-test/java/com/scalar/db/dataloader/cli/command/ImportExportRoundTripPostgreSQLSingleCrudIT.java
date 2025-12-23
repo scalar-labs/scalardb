@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scalar.db.dataloader.cli.BaseIntegrationTest;
+import com.scalar.db.dataloader.cli.BasePostgreSQLIntegrationTest;
 import com.scalar.db.dataloader.cli.TestDataValidationHelper;
 import com.scalar.db.dataloader.cli.command.dataexport.ExportCommand;
 import com.scalar.db.dataloader.cli.command.dataimport.ImportCommand;
@@ -34,7 +34,7 @@ import picocli.CommandLine;
  * using the single-crud-operation transaction manager, which provides storage-only mode without
  * distributed transactions.
  */
-public class ImportExportRoundTripSingleCrudIT extends BaseIntegrationTest {
+public class ImportExportRoundTripPostgreSQLSingleCrudIT extends BasePostgreSQLIntegrationTest {
 
   @Override
   protected String getTransactionManagerType() {
@@ -43,7 +43,7 @@ public class ImportExportRoundTripSingleCrudIT extends BaseIntegrationTest {
 
   @Override
   protected boolean shouldCleanupTables() {
-    // Round-trip tests need initial data from init_mysql.sql to export
+    // Round-trip tests need initial data from init_postgres.sql to export
     // They handle cleanup manually after export and before import
     return false;
   }

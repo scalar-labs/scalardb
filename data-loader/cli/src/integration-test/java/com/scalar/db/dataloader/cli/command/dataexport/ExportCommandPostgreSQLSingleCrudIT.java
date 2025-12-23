@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scalar.db.dataloader.cli.BaseIntegrationTest;
+import com.scalar.db.dataloader.cli.BasePostgreSQLIntegrationTest;
 import com.scalar.db.dataloader.cli.TestDataValidationHelper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,12 +15,12 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 /**
- * Integration tests for data export functionality using MySQL with consensus-commit transaction
- * manager.
+ * Integration tests for data export functionality using PostgreSQL with single-crud-operation
+ * transaction manager.
  *
- * <p>These tests verify that data export operations work correctly when using the consensus-commit
- * transaction manager. This transaction manager provides full ACID guarantees and distributed
- * transaction support.
+ * <p>These tests verify that data export operations work correctly when using the
+ * single-crud-operation transaction manager. This transaction manager provides storage-only mode
+ * without distributed transactions, suitable for simple CRUD operations.
  *
  * <p>Tests various export scenarios including:
  *
@@ -32,16 +32,16 @@ import picocli.CommandLine;
  *   <li>Custom delimiters and headers
  * </ul>
  *
- * <p>These tests use a shared MySQL container initialized with test data. Unlike import tests,
+ * <p>These tests use a shared PostgreSQL container initialized with test data. Unlike import tests,
  * export tests preserve data between tests (cleanup is disabled) since they need data to export.
  *
- * @see BaseIntegrationTest for shared test infrastructure
+ * @see BasePostgreSQLIntegrationTest for shared test infrastructure
  */
-public class ExportCommandMySQLConsensusCommitIT extends BaseIntegrationTest {
+public class ExportCommandPostgreSQLSingleCrudIT extends BasePostgreSQLIntegrationTest {
 
   @Override
   protected String getTransactionManagerType() {
-    return TRANSACTION_MANAGER_CONSENSUS_COMMIT;
+    return TRANSACTION_MANAGER_SINGLE_CRUD;
   }
 
   @Override
@@ -55,7 +55,7 @@ public class ExportCommandMySQLConsensusCommitIT extends BaseIntegrationTest {
   private static final String JSONLINES_EXTENSION = ".jsonl";
 
   @Test
-  void testExportToFileWithConsensusCommitTransactionManager_ShouldSucceed() throws IOException {
+  void testExportToFileWithSingleCrudTransactionManager_ShouldSucceed() throws IOException {
     String outputDir = tempDir.toString();
     String[] args = {
       "--config", configFilePath.toString(),
@@ -81,7 +81,7 @@ public class ExportCommandMySQLConsensusCommitIT extends BaseIntegrationTest {
   }
 
   @Test
-  void testExportToFileWithConsensusCommitAndJSONFormat_ShouldSucceed() throws IOException {
+  void testExportToFileWithSingleCrudAndJSONFormat_ShouldSucceed() throws IOException {
     String outputDir = tempDir.toString();
 
     String[] args = {
@@ -109,7 +109,7 @@ public class ExportCommandMySQLConsensusCommitIT extends BaseIntegrationTest {
   }
 
   @Test
-  void testExportToFileWithConsensusCommitAndJSONLinesFormat_ShouldSucceed() throws IOException {
+  void testExportToFileWithSingleCrudAndJSONLinesFormat_ShouldSucceed() throws IOException {
     String outputDir = tempDir.toString();
     String[] args = {
       "--config",

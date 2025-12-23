@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataexport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scalar.db.dataloader.cli.BaseIntegrationTest;
+import com.scalar.db.dataloader.cli.BasePostgreSQLIntegrationTest;
 import com.scalar.db.dataloader.cli.TestDataValidationHelper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
 /**
- * Integration tests for data export functionality using MySQL with consensus-commit transaction
- * manager.
+ * Integration tests for data export functionality using PostgreSQL with consensus-commit
+ * transaction manager.
  *
  * <p>These tests verify that data export operations work correctly when using the consensus-commit
  * transaction manager. This transaction manager provides full ACID guarantees and distributed
@@ -32,12 +32,12 @@ import picocli.CommandLine;
  *   <li>Custom delimiters and headers
  * </ul>
  *
- * <p>These tests use a shared MySQL container initialized with test data. Unlike import tests,
+ * <p>These tests use a shared PostgreSQL container initialized with test data. Unlike import tests,
  * export tests preserve data between tests (cleanup is disabled) since they need data to export.
  *
- * @see BaseIntegrationTest for shared test infrastructure
+ * @see BasePostgreSQLIntegrationTest for shared test infrastructure
  */
-public class ExportCommandMySQLConsensusCommitIT extends BaseIntegrationTest {
+public class ExportCommandPostgreSQLConsensusCommitIT extends BasePostgreSQLIntegrationTest {
 
   @Override
   protected String getTransactionManagerType() {

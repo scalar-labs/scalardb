@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.scalar.db.dataloader.cli.BaseIntegrationTest;
 import com.scalar.db.dataloader.cli.TestDataValidationHelper;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
@@ -18,9 +17,9 @@ import picocli.CommandLine;
  * Integration tests for CSV import functionality using MySQL with consensus-commit transaction
  * manager.
  *
- * <p>These tests verify that CSV import operations work correctly when using the
- * consensus-commit transaction manager. This transaction manager provides full ACID guarantees
- * and distributed transaction support.
+ * <p>These tests verify that CSV import operations work correctly when using the consensus-commit
+ * transaction manager. This transaction manager provides full ACID guarantees and distributed
+ * transaction support.
  *
  * <p>Tests various CSV import scenarios including:
  *
@@ -95,8 +94,7 @@ public class ImportCommandCsvMySQLConsensusCommitIT extends BaseIntegrationTest 
 
     assertThat(exitCode).isEqualTo(0);
     // Verify data was imported
-    int recordCount =
-        TestDataValidationHelper.countRecords(configFilePath, "test", "employee_trn");
+    int recordCount = TestDataValidationHelper.countRecords(configFilePath, "test", "employee_trn");
     assertTrue(recordCount > 0, "Expected records to be imported, but found " + recordCount);
   }
 
@@ -241,4 +239,3 @@ public class ImportCommandCsvMySQLConsensusCommitIT extends BaseIntegrationTest 
     assertThat(exitCode).isEqualTo(0);
   }
 }
-

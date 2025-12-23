@@ -71,7 +71,7 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
     // Use employee_trn table which has transaction metadata columns
     String tableName = "employee_trn";
     String namespace = "test";
-    
+
     // Step 1: Export data to CSV
     // Use projection to export only data columns (excluding transaction metadata columns)
     String exportDir = tempDir.resolve("export").toString();
@@ -120,7 +120,7 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
                         .getClassLoader()
                         .getResource("control_files/control_file_trn_mapped.json"))
                 .toURI());
-    
+
     String[] importArgs = {
       "--config",
       configFilePath.toString(),
@@ -148,8 +148,7 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
     assertThat(importExitCode).as("Import should succeed with exit code 0").isEqualTo(0);
 
     // Step 4: Verify data integrity - records should be imported
-    int recordCount =
-        TestDataValidationHelper.countRecords(configFilePath, namespace, tableName);
+    int recordCount = TestDataValidationHelper.countRecords(configFilePath, namespace, tableName);
     assertThat(recordCount)
         .as("Records should be imported successfully. Found %d records", recordCount)
         .isGreaterThan(0);
@@ -162,7 +161,7 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
     // Use employee_trn table which has transaction metadata columns
     String tableName = "employee_trn";
     String namespace = "test";
-    
+
     // Step 1: Export data to JSON
     // Use projection to export only data columns (excluding transaction metadata columns)
     String exportDir = tempDir.resolve("export").toString();
@@ -211,7 +210,7 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
                         .getClassLoader()
                         .getResource("control_files/control_file_trn_mapped.json"))
                 .toURI());
-    
+
     String[] importArgs = {
       "--config",
       configFilePath.toString(),
@@ -239,8 +238,7 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
     assertThat(importExitCode).as("Import should succeed with exit code 0").isEqualTo(0);
 
     // Step 4: Verify data integrity - records should be imported
-    int recordCount =
-        TestDataValidationHelper.countRecords(configFilePath, namespace, tableName);
+    int recordCount = TestDataValidationHelper.countRecords(configFilePath, namespace, tableName);
     assertThat(recordCount)
         .as("Records should be imported successfully. Found %d records", recordCount)
         .isGreaterThan(0);
@@ -275,4 +273,3 @@ public class ImportExportRoundTripConsensusCommitIT extends BaseIntegrationTest 
     }
   }
 }
-

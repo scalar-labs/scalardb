@@ -3,7 +3,7 @@ package com.scalar.db.dataloader.cli.command.dataimport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scalar.db.dataloader.cli.BaseIntegrationTest;
+import com.scalar.db.dataloader.cli.BasePostgreSQLIntegrationTest;
 import com.scalar.db.dataloader.cli.TestDataValidationHelper;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,8 +14,8 @@ import org.testcontainers.utility.MountableFile;
 import picocli.CommandLine;
 
 /**
- * Integration tests for CSV import functionality using MySQL with single-crud-operation transaction
- * manager.
+ * Integration tests for CSV import functionality using PostgreSQL with single-crud-operation
+ * transaction manager.
  *
  * <p>These tests verify that CSV import operations work correctly when using the
  * single-crud-operation transaction manager. This transaction manager provides storage-only mode
@@ -31,12 +31,12 @@ import picocli.CommandLine;
  *   <li>Data validation after import
  * </ul>
  *
- * <p>These tests use a shared MySQL container initialized with test data. Each test starts with a
- * clean state (tables are truncated before each test) to ensure test isolation.
+ * <p>These tests use a shared PostgreSQL container initialized with test data. Each test starts
+ * with a clean state (tables are truncated before each test) to ensure test isolation.
  *
- * @see BaseIntegrationTest for shared test infrastructure
+ * @see BasePostgreSQLIntegrationTest for shared test infrastructure
  */
-public class ImportCommandCsvMySQLSingleCrudIT extends BaseIntegrationTest {
+public class ImportCommandCsvPostgreSQLSingleCrudIT extends BasePostgreSQLIntegrationTest {
 
   @Override
   protected String getTransactionManagerType() {
@@ -46,9 +46,9 @@ public class ImportCommandCsvMySQLSingleCrudIT extends BaseIntegrationTest {
   @BeforeAll
   static void setupContainer() {
     // Copy initialization SQL file to container
-    mysql.withCopyFileToContainer(
-        MountableFile.forClasspathResource("init_mysql_import.sql"),
-        "/docker-entrypoint-initdb.d/init_mysql.sql");
+    postgres.withCopyFileToContainer(
+        MountableFile.forClasspathResource("init_postgres_import.sql"),
+        "/docker-entrypoint-initdb.d/init_postgres.sql");
   }
 
   @Test
