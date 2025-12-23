@@ -424,7 +424,7 @@ public final class ScalarDbUtils {
    * @param escape an escape character.
    * @return the equivalent Java regular expression of the given pattern
    */
-  private static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
+  public static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
     assert likePattern != null : "LIKE pattern must not be null";
 
     StringBuilder out = new StringBuilder();
