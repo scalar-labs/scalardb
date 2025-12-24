@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
@@ -424,8 +425,8 @@ public final class ScalarDbUtils {
    * @param escape an escape character.
    * @return the equivalent Java regular expression of the given pattern
    */
-  private static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
-    assert likePattern != null : "LIKE pattern must not be null";
+  public static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
+    Objects.requireNonNull(likePattern, "LIKE pattern must not be null");
 
     StringBuilder out = new StringBuilder();
     char[] chars = likePattern.toCharArray();
