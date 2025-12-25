@@ -1,6 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.*;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;

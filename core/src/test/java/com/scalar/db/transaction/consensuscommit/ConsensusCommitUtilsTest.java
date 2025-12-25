@@ -1,7 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionBuilder.column;
-import static com.scalar.db.api.ConditionSetBuilder.*;
+import static com.scalar.db.api.ConditionSetBuilder.condition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
