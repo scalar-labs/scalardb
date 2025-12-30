@@ -25,7 +25,7 @@ import java.util.Optional;
  * partition key and a clustering key also comprise a list of values. Having clustering key is
  * optional, so in that case, primary key is composed of only partition key.
  *
- * <h3>Usage Examples</h3>
+ * Usage Examples
  *
  * Here is a simple example to demonstrate how to use them. (Exception handling is omitted for
  * readability.)

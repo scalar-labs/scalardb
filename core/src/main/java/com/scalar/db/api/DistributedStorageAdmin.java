@@ -6,7 +6,7 @@ import com.scalar.db.exception.storage.ExecutionException;
  * An administrative interface for distributed storage implementations. The user can execute
  * administrative operations with it like createNamespace/createTable/getTableMetadata.
  *
- * <h3>Usage Examples</h3>
+ * Usage Examples
  *
  * Here is a simple example to demonstrate how to use it. (Exception handling is omitted for
  * readability.)

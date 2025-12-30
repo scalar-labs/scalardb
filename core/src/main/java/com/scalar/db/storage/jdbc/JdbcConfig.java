@@ -101,6 +101,8 @@ public class JdbcConfig {
   // is 1970-01-01.
   public static final String DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
 
+  public static final String EXECUTE_BATCH_ENABLED = PREFIX + "execute_batch.enabled";
+
   private final DatabaseConfig databaseConfig;
 
   private final String jdbcUrl;
@@ -130,6 +132,8 @@ public class JdbcConfig {
 
   private final LocalDate oracleTimeColumnDefaultDateComponent;
   private final LocalDate db2TimeColumnDefaultDateComponent;
+
+  private boolean executeBatchEnabled;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     this.databaseConfig = databaseConfig;
@@ -259,6 +263,8 @@ public class JdbcConfig {
     assert db2TimeColumnDefaultDateComponentString != null;
     db2TimeColumnDefaultDateComponent =
         LocalDate.parse(db2TimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
+
+    executeBatchEnabled = getBoolean(databaseConfig.getProperties(), EXECUTE_BATCH_ENABLED, false);
   }
 
   public DatabaseConfig getDatabaseConfig() {
@@ -347,5 +353,9 @@ public class JdbcConfig {
 
   public LocalDate getDb2TimeColumnDefaultDateComponent() {
     return db2TimeColumnDefaultDateComponent;
+  }
+
+  public boolean isExecuteBatchEnabled() {
+    return executeBatchEnabled;
   }
 }

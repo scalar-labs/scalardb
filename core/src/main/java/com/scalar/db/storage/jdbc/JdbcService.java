@@ -6,7 +6,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutIfExists;
+import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
@@ -17,14 +21,17 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
+import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.UpdateQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -45,6 +52,7 @@ public class JdbcService {
   private final RdbEngineStrategy rdbEngine;
   private final QueryBuilder queryBuilder;
   private final int scanFetchSize;
+  private boolean isExecuteBatchEnabled = false;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcService(
@@ -58,6 +66,20 @@ public class JdbcService {
         rdbEngine,
         new QueryBuilder(rdbEngine),
         scanFetchSize);
+  }
+
+  public JdbcService(
+      TableMetadataManager tableMetadataManager,
+      OperationChecker operationChecker,
+      RdbEngineStrategy rdbEngine,
+      int scanFetchSize,
+      boolean isExecuteBatchEnabled) {
+    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
+    this.operationChecker = Objects.requireNonNull(operationChecker);
+    this.rdbEngine = Objects.requireNonNull(rdbEngine);
+    this.queryBuilder = new QueryBuilder(rdbEngine);
+    this.scanFetchSize = scanFetchSize;
+    this.isExecuteBatchEnabled = isExecuteBatchEnabled;
   }
 
   @VisibleForTesting
@@ -240,16 +262,81 @@ public class JdbcService {
     checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     operationChecker.check(mutations);
 
+    Statement statement = connection.createStatement();
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
-        if (!putInternal((Put) mutation, connection)) {
-          return false;
+        if (isExecuteBatchEnabled) {
+          //System.out.println("execute batch enabled");
+          if (!putInternalBatch((Put) mutation, connection, statement)) {
+            return false;
+          }
+        } else {
+          //System.out.println("execute batch disabled");
+          if (!putInternal((Put) mutation, connection)) {
+            return false;
+          }
         }
       } else {
         assert mutation instanceof Delete;
         if (!deleteInternal((Delete) mutation, connection)) {
           return false;
         }
+      }
+    }
+    statement.executeBatch();
+    return true;
+  }
+
+  private boolean putInternalBatch(Put put, Connection connection, Statement statement)
+      throws SQLException, ExecutionException {
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(put);
+
+    if (!put.getCondition().isPresent()) {
+      UpsertQuery upsertQuery =
+          queryBuilder
+              .upsertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
+              .values(put.getPartitionKey(), put.getClusteringKey(), put.getColumns())
+              .build();
+      statement.addBatch(upsertQuery.sql());
+    } else {
+      MutationCondition condition = put.getCondition().get();
+      if (condition instanceof PutIf) {
+        UpdateQuery updateQuery =
+            queryBuilder
+                .update(put.forNamespace().get(), put.forTable().get(), tableMetadata)
+                .set(put.getColumns())
+                .where(put.getPartitionKey(), put.getClusteringKey(), condition.getExpressions())
+                .build();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(updateQuery.sql())) {
+          updateQuery.bind(preparedStatement);
+          statement.addBatch(preparedStatement.toString());
+        }
+
+      } else if (condition instanceof PutIfExists) {
+        UpdateQuery updateQuery =
+            queryBuilder
+                .update(put.forNamespace().get(), put.forTable().get(), tableMetadata)
+                .set(put.getColumns())
+                .where(put.getPartitionKey(), put.getClusteringKey())
+                .build();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(updateQuery.sql())) {
+          updateQuery.bind(preparedStatement);
+          statement.addBatch(preparedStatement.toString());
+        }
+
+      } else if (condition instanceof PutIfNotExists) {
+        InsertQuery insertQuery =
+            queryBuilder
+                .insertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
+                .values(put.getPartitionKey(), put.getClusteringKey(), put.getColumns())
+                .build();
+        try (PreparedStatement preparedStatement = connection.prepareStatement(insertQuery.sql())) {
+          insertQuery.bind(preparedStatement);
+          statement.addBatch(preparedStatement.toString());
+        }
+
+      } else {
+        throw new RuntimeException("not supported condition: " + condition);
       }
     }
     return true;

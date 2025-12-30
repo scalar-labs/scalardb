@@ -173,7 +173,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           parallelExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
-          config.isOnePhaseCommitEnabled());
+          config.isOnePhaseCommitEnabled(),
+          config.isMutationGroupingEnabled());
     }
   }
 
@@ -199,7 +200,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return begin(txId, isolation, true, false);
   }
 
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  /**
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
+   */
   @Deprecated
   @Override
   public DistributedTransaction start(com.scalar.db.api.Isolation isolation) {
@@ -207,14 +210,18 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  /**
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
+   */
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, com.scalar.db.api.Isolation isolation) {
     return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  /**
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
+   */
   @Deprecated
   @Override
   public DistributedTransaction start(
@@ -223,7 +230,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return begin(txId, Isolation.valueOf(isolation.name()), false, false);
   }
 
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  /**
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
+   */
   @Deprecated
   @Override
   public DistributedTransaction start(com.scalar.db.api.SerializableStrategy strategy) {
@@ -231,7 +240,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return begin(txId, Isolation.SERIALIZABLE, false, false);
   }
 
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  /**
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
+   */
   @Deprecated
   @Override
   public DistributedTransaction start(
@@ -239,7 +250,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return begin(txId, Isolation.SERIALIZABLE, false, false);
   }
 
-  /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
+  /**
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
+   */
   @Deprecated
   @Override
   public DistributedTransaction start(
@@ -372,7 +385,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /**
+   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
@@ -384,7 +399,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /**
+   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -436,7 +453,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /**
+   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {

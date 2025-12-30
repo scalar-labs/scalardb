@@ -24,6 +24,7 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,6 +46,7 @@ public class CommitHandler {
   private final MutationsGrouper mutationsGrouper;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
+  private boolean mutationGroupingEnabled = true;
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
 
@@ -64,6 +66,25 @@ public class CommitHandler {
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
+  }
+
+  public CommitHandler(
+      DistributedStorage storage,
+      Coordinator coordinator,
+      TransactionTableMetadataManager tableMetadataManager,
+      ParallelExecutor parallelExecutor,
+      MutationsGrouper mutationsGrouper,
+      boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean onePhaseCommitEnabled,
+      boolean mutationGroupingEnabled) {
+    this.storage = checkNotNull(storage);
+    this.coordinator = checkNotNull(coordinator);
+    this.tableMetadataManager = checkNotNull(tableMetadataManager);
+    this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.mutationsGrouper = checkNotNull(mutationsGrouper);
+    this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
+    this.onePhaseCommitEnabled = onePhaseCommitEnabled;
+    this.mutationGroupingEnabled = mutationGroupingEnabled;
   }
 
   /**
@@ -310,10 +331,29 @@ public class CommitHandler {
           new PrepareMutationComposer(context.transactionId, tableMetadataManager);
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
+      /*
+      System.out.println("---- prepareRecords begin ----");
+      System.out.println("group size: " + groupedMutations.size());
+      for (List<Mutation> mutations : groupedMutations) {
+        System.out.println("mutation size: " + mutations.size());
+      }
+      System.out.println("---- prepareRecords end ----");
+       */
 
       List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
       for (List<Mutation> mutations : groupedMutations) {
-        tasks.add(() -> storage.mutate(mutations));
+        if (mutationGroupingEnabled) {
+          // logger.info("mutation grouping is enabled. mutations size: {}", mutations.size());
+          tasks.add(() -> storage.mutate(mutations));
+        } else {
+          // logger.info("mutation grouping is disabled.");
+          tasks.add(
+              () -> {
+                for (Mutation m : mutations) {
+                  storage.mutate(Collections.singletonList(m));
+                }
+              });
+        }
       }
       parallelExecutor.prepareRecords(tasks, context.transactionId);
     } catch (NoMutationException e) {

@@ -56,6 +56,8 @@ public class ConsensusCommitConfig {
   public static final String COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED =
       COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_monitor_log_enabled";
 
+  public static final String MUTATION_GROUPING_ENABLED = PREFIX + "mutation_grouping.enabled";
+
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
 
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY = 20;
@@ -87,6 +89,7 @@ public class ConsensusCommitConfig {
   private final int coordinatorGroupCommitOldGroupAbortTimeoutMillis;
   private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
   private final boolean coordinatorGroupCommitMetricsMonitorLogEnabled;
+  private boolean mutationGroupingEnabled = true;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -181,6 +184,8 @@ public class ConsensusCommitConfig {
             DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS);
     coordinatorGroupCommitMetricsMonitorLogEnabled =
         getBoolean(properties, COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED, false);
+
+    mutationGroupingEnabled = getBoolean(properties, MUTATION_GROUPING_ENABLED, true);
   }
 
   public Isolation getIsolation() {
@@ -261,6 +266,10 @@ public class ConsensusCommitConfig {
 
   public boolean isCoordinatorGroupCommitMetricsMonitorLogEnabled() {
     return coordinatorGroupCommitMetricsMonitorLogEnabled;
+  }
+
+  public boolean isMutationGroupingEnabled() {
+    return mutationGroupingEnabled;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {

@@ -64,7 +64,11 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     jdbcService =
         new JdbcService(
-            tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
+            tableMetadataManager,
+            operationChecker,
+            rdbEngine,
+            databaseConfig.getScanFetchSize(),
+            config.isExecuteBatchEnabled());
   }
 
   @VisibleForTesting
