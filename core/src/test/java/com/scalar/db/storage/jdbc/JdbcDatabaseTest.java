@@ -79,7 +79,8 @@ public class JdbcDatabaseTest {
             tableMetadataDataSource,
             tableMetadataManager,
             virtualTableInfoManager,
-            jdbcService);
+            jdbcService,
+            false);
   }
 
   @Test
@@ -1562,6 +1563,162 @@ public class JdbcDatabaseTest {
     verify(connection).close();
   }
 
+  @Test
+  public void get_WhenRequiresExplicitCommitIsTrue_ShouldSetAutoCommitFalseAndCommitAfterExecution()
+      throws Exception {
+    // Arrange
+    JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
+
+    // Act
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+    database.get(get);
+
+    // Assert
+    verify(connection).setAutoCommit(false);
+    verify(connection).setReadOnly(true);
+    verify(jdbcService).get(any(), any());
+    verify(connection).commit();
+    verify(connection, never()).rollback();
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      get_WhenRequiresExplicitCommitIsTrueAndJdbcServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
+          throws Exception {
+    // Arrange
+    JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
+    when(jdbcService.get(any(), any())).thenThrow(sqlException);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Get get =
+                  Get.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val"))
+                      .build();
+              database.get(get);
+            })
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).setAutoCommit(false);
+    verify(connection).rollback();
+    verify(connection, never()).commit();
+    verify(connection).close();
+  }
+
+  @Test
+  public void put_WhenRequiresExplicitCommitIsTrue_ShouldSetAutoCommitFalseAndCommitAfterExecution()
+      throws Exception {
+    // Arrange
+    JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
+    when(jdbcService.put(any(), any())).thenReturn(true);
+
+    // Act
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .textValue("v1", "val2")
+            .build();
+    database.put(put);
+
+    // Assert
+    verify(connection).setAutoCommit(false);
+    verify(jdbcService).put(any(), any());
+    verify(connection).commit();
+    verify(connection, never()).rollback();
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      put_WhenRequiresExplicitCommitIsTrueAndJdbcServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
+          throws Exception {
+    // Arrange
+    JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
+    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Put put =
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
+              database.put(put);
+            })
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).setAutoCommit(false);
+    verify(connection).rollback();
+    verify(connection, never()).commit();
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      delete_WhenRequiresExplicitCommitIsTrue_ShouldSetAutoCommitFalseAndCommitAfterExecution()
+          throws Exception {
+    // Arrange
+    JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
+    when(jdbcService.delete(any(), any())).thenReturn(true);
+
+    // Act
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .build();
+    database.delete(delete);
+
+    // Assert
+    verify(connection).setAutoCommit(false);
+    verify(jdbcService).delete(any(), any());
+    verify(connection).commit();
+    verify(connection, never()).rollback();
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      delete_WhenRequiresExplicitCommitIsTrueAndJdbcServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
+          throws Exception {
+    // Arrange
+    JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
+    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Delete delete =
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .build();
+              database.delete(delete);
+            })
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).setAutoCommit(false);
+    verify(connection).rollback();
+    verify(connection, never()).commit();
+    verify(connection).close();
+  }
+
   private VirtualTableInfo createVirtualTableInfo(VirtualTableJoinType joinType) {
     return new VirtualTableInfo() {
       @Override
@@ -1627,5 +1784,17 @@ public class JdbcDatabaseTest {
         .addClusteringKey("ck1")
         .addClusteringKey("ck2")
         .build();
+  }
+
+  private JdbcDatabase createJdbcDatabaseWithExplicitCommit() {
+    return new JdbcDatabase(
+        databaseConfig,
+        RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
+        dataSource,
+        tableMetadataDataSource,
+        tableMetadataManager,
+        virtualTableInfoManager,
+        jdbcService,
+        true);
   }
 }

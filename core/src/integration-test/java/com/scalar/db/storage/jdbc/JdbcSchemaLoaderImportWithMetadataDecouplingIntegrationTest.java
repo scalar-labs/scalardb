@@ -15,7 +15,7 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("isSqliteOrOracle")
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSqlite")
 public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     extends SchemaLoaderImportWithMetadataDecouplingIntegrationTestBase {
 
@@ -203,11 +203,6 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     } catch (Exception e) {
       logger.warn("Failed to close test utils", e);
     }
-  }
-
-  @SuppressWarnings("unused")
-  private static boolean isSqliteOrOracle() {
-    return JdbcEnv.isSqlite() || JdbcEnv.isOracle();
   }
 
   @Override

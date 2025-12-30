@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
 
 /**
  * This implements a RdbEngine for TiDB that extends MySQL one. TiDB is MySQL compatible and uses
@@ -21,5 +22,11 @@ public class RdbEngineTidb extends RdbEngineMysql {
           CoreError.JDBC_TIDB_UNSUPPORTED_COLUMN_TYPE_CONVERSION.buildMessage(
               from.toString(), to.toString()));
     }
+  }
+
+  @Override
+  public int getMaximumIsolationLevel() {
+    // TiDB doesn't support SERIALIZABLE isolation level
+    return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }
