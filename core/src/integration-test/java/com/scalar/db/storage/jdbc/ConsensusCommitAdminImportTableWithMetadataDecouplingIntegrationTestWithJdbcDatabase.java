@@ -13,7 +13,6 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
 public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestBase {
   private static final Logger logger =

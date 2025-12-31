@@ -35,7 +35,7 @@ public class VirtualTableMetadataServiceTest {
   public void setUp() {
     MockitoAnnotations.openMocks(this);
     rdbEngine = new RdbEngineMysql();
-    service = new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine);
+    service = new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine, false);
   }
 
   @Test
@@ -168,7 +168,7 @@ public class VirtualTableMetadataServiceTest {
     verify(preparedStatement).setString(3, "ns.right_table");
     verify(preparedStatement).setString(4, "INNER");
     verify(preparedStatement).setString(5, "");
-    verify(preparedStatement).execute();
+    verify(preparedStatement).executeUpdate();
   }
 
   @Test
@@ -189,7 +189,7 @@ public class VirtualTableMetadataServiceTest {
     assertThat(captor.getValue())
         .isEqualTo("DELETE FROM `scalardb`.`virtual_tables` WHERE `full_table_name` = ?");
     verify(preparedStatement).setString(1, "ns.vtable");
-    verify(preparedStatement).execute();
+    verify(preparedStatement).executeUpdate();
   }
 
   @Test

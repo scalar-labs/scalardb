@@ -1,15 +1,16 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.executeQuery;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.withConnection;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
+import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Properties;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -18,6 +19,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
+  private final boolean requiresExplicitCommit;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
@@ -25,6 +27,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     metadataSchema = config.getMetadataSchema();
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
   }
 
   @Override
@@ -72,28 +75,27 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
             + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " WHERE "
             + rdbEngine.enclose(TableMetadataService.COL_FULL_TABLE_NAME)
-            + " = ?";
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(deleteMetadataStatement)) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
-      preparedStatement.executeUpdate();
-    }
+            + " = '"
+            + getFullTableName(namespace, table)
+            + "'";
+    execute(deleteMetadataStatement);
   }
 
   private void execute(String sql) throws SQLException {
-    try (Connection connection = dataSource.getConnection()) {
-      JdbcAdmin.execute(connection, sql);
-    }
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          JdbcAdmin.execute(connection, sql, requiresExplicitCommit);
+        });
   }
 
   @Override
   public boolean tableExists(String namespace, String table) throws Exception {
     String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
     String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute(sql);
+    try {
+      execute(sql);
       return true;
     } catch (SQLException e) {
       // An exception will be thrown if the table does not exist when executing the select
@@ -139,13 +141,17 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
     }
 
-    try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-      preparedStatement.setString(1, namespace);
-      ResultSet resultSet = preparedStatement.executeQuery();
-
-      return resultSet.next();
-    }
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, Boolean, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    sql,
+                    requiresExplicitCommit,
+                    ps -> ps.setString(1, namespace),
+                    ResultSet::next));
   }
 
   @Override

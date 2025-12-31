@@ -19,6 +19,8 @@ import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.util.ThrowableConsumer;
+import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -37,6 +39,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import javax.sql.DataSource;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +63,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private final TableMetadataService tableMetadataService;
   private final NamespaceMetadataService namespaceMetadataService;
   private final VirtualTableMetadataService virtualTableMetadataService;
+  private final boolean requiresExplicitCommit;
 
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
@@ -67,9 +71,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     metadataSchema = config.getMetadataSchema();
-    tableMetadataService = new TableMetadataService(metadataSchema, rdbEngine);
-    namespaceMetadataService = new NamespaceMetadataService(metadataSchema, rdbEngine);
-    virtualTableMetadataService = new VirtualTableMetadataService(metadataSchema, rdbEngine);
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
+    tableMetadataService =
+        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    namespaceMetadataService =
+        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    virtualTableMetadataService =
+        new VirtualTableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -77,21 +85,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
-    tableMetadataService = new TableMetadataService(metadataSchema, rdbEngine);
-    namespaceMetadataService = new NamespaceMetadataService(metadataSchema, rdbEngine);
-    virtualTableMetadataService = new VirtualTableMetadataService(metadataSchema, rdbEngine);
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
+    tableMetadataService =
+        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    namespaceMetadataService =
+        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    virtualTableMetadataService =
+        new VirtualTableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config, boolean requiresExplicitCommit) {
+    rdbEngine = RdbEngineFactory.create(config);
+    this.dataSource = dataSource;
+    metadataSchema = config.getMetadataSchema();
+    this.requiresExplicitCommit = requiresExplicitCommit;
+    tableMetadataService =
+        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    namespaceMetadataService =
+        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    virtualTableMetadataService =
+        new VirtualTableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
   }
 
   @VisibleForTesting
   JdbcAdmin(
       BasicDataSource dataSource,
       JdbcConfig config,
-      VirtualTableMetadataService virtualTableMetadataService) {
+      VirtualTableMetadataService virtualTableMetadataService,
+      boolean requiresExplicitCommit) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
-    tableMetadataService = new TableMetadataService(metadataSchema, rdbEngine);
-    namespaceMetadataService = new NamespaceMetadataService(metadataSchema, rdbEngine);
+    this.requiresExplicitCommit = requiresExplicitCommit;
+    tableMetadataService =
+        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    namespaceMetadataService =
+        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
     this.virtualTableMetadataService = virtualTableMetadataService;
   }
 
@@ -101,13 +131,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       JdbcConfig config,
       TableMetadataService tableMetadataService,
       NamespaceMetadataService namespaceMetadataService,
-      VirtualTableMetadataService virtualTableMetadataService) {
+      VirtualTableMetadataService virtualTableMetadataService,
+      boolean requiresExplicitCommit) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
     this.tableMetadataService = tableMetadataService;
     this.namespaceMetadataService = namespaceMetadataService;
     this.virtualTableMetadataService = virtualTableMetadataService;
+    this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
   private static boolean hasDescClusteringOrder(TableMetadata metadata) {
@@ -134,11 +166,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     rdbEngine.throwIfInvalidNamespaceName(namespace);
 
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, rdbEngine.createSchemaSqls(namespace));
-      createMetadataSchemaIfNotExists(connection);
-      createNamespacesTableIfNotExists(connection);
-      namespaceMetadataService.insertIntoNamespacesTable(connection, namespace);
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            execute(connection, rdbEngine.createSchemaSqls(namespace), requiresExplicitCommit);
+            createMetadataSchemaIfNotExists(connection);
+            createNamespacesTableIfNotExists(connection);
+            namespaceMetadataService.insertIntoNamespacesTable(connection, namespace);
+          });
     } catch (SQLException e) {
       throw new ExecutionException("Creating the " + namespace + " schema failed", e);
     }
@@ -148,10 +185,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      createMetadataSchemaIfNotExists(connection);
-      createTableInternal(connection, namespace, table, metadata, false);
-      addTableMetadata(connection, namespace, table, metadata, true, false);
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            createMetadataSchemaIfNotExists(connection);
+            createTableInternal(connection, namespace, table, metadata, false);
+            addTableMetadata(connection, namespace, table, metadata, true, false);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Creating the " + getFullTableName(namespace, table) + " table failed ", e);
@@ -205,7 +247,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         rdbEngine.createTableInternalSqlsAfterCreateTable(
             hasDifferentClusteringOrders(metadata), schema, table, metadata, ifNotExists);
     try {
-      execute(connection, stmts, ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
+      execute(
+          connection,
+          stmts,
+          requiresExplicitCommit,
+          ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
     } catch (SQLException e) {
       if (!(ifNotExists && rdbEngine.isDuplicateIndexError(e))) {
         throw e;
@@ -227,37 +273,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      VirtualTableInfo virtualTableInfo =
-          virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
-      if (virtualTableInfo != null) {
-        // For a virtual table
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            VirtualTableInfo virtualTableInfo =
+                virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
+            if (virtualTableInfo != null) {
+              // For a virtual table
 
-        // Drop the virtual table view
-        dropVirtualTableView(connection, namespace, table);
+              // Drop the virtual table view
+              dropVirtualTableView(connection, namespace, table);
 
-        // Delete its metadata
-        virtualTableMetadataService.deleteFromVirtualTablesTable(connection, namespace, table);
-        virtualTableMetadataService.deleteVirtualTablesTableIfEmpty(connection);
-        return;
-      }
+              // Delete its metadata
+              virtualTableMetadataService.deleteFromVirtualTablesTable(
+                  connection, namespace, table);
+              virtualTableMetadataService.deleteVirtualTablesTableIfEmpty(connection);
+              return;
+            }
 
-      List<VirtualTableInfo> virtualTableInfos =
-          virtualTableMetadataService.getVirtualTableInfosBySourceTable(
-              connection, namespace, table);
-      if (!virtualTableInfos.isEmpty()) {
-        // For a source table of virtual tables
-        throw new IllegalArgumentException(
-            CoreError.SOURCE_TABLES_CANNOT_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST.buildMessage(
-                getFullTableName(namespace, table),
-                virtualTableInfos.stream()
-                    .map(v -> getFullTableName(v.getNamespaceName(), v.getTableName()))
-                    .collect(Collectors.joining(","))));
-      }
+            List<VirtualTableInfo> virtualTableInfos =
+                virtualTableMetadataService.getVirtualTableInfosBySourceTable(
+                    connection, namespace, table);
+            if (!virtualTableInfos.isEmpty()) {
+              // For a source table of virtual tables
+              throw new IllegalArgumentException(
+                  CoreError.SOURCE_TABLES_CANNOT_BE_DROPPED_WHILE_VIRTUAL_TABLES_EXIST.buildMessage(
+                      getFullTableName(namespace, table),
+                      virtualTableInfos.stream()
+                          .map(v -> getFullTableName(v.getNamespaceName(), v.getTableName()))
+                          .collect(Collectors.joining(","))));
+            }
 
-      // For a regular table
-      dropTableInternal(connection, namespace, table);
-      tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
+            // For a regular table
+            dropTableInternal(connection, namespace, table);
+            tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Dropping the " + getFullTableName(namespace, table) + " table failed", e);
@@ -267,22 +319,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void dropTableInternal(Connection connection, String schema, String table)
       throws SQLException {
     String dropTableStatement = "DROP TABLE " + encloseFullTableName(schema, table);
-    execute(connection, dropTableStatement);
+    execute(connection, dropTableStatement, requiresExplicitCommit);
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      Set<String> remainingTables = getInternalTableNames(connection, namespace);
-      if (!remainingTables.isEmpty()) {
-        throw new IllegalArgumentException(
-            CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
-                namespace, remainingTables));
-      }
-      execute(connection, rdbEngine.dropNamespaceSql(namespace));
-      namespaceMetadataService.deleteFromNamespacesTable(connection, namespace);
-      namespaceMetadataService.deleteNamespacesTableIfEmpty(connection);
-      deleteMetadataSchemaIfEmpty(connection);
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            Set<String> remainingTables = getInternalTableNames(connection, namespace);
+            if (!remainingTables.isEmpty()) {
+              throw new IllegalArgumentException(
+                  CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
+                      namespace, remainingTables));
+            }
+            execute(connection, rdbEngine.dropNamespaceSql(namespace), requiresExplicitCommit);
+            namespaceMetadataService.deleteFromNamespacesTable(connection, namespace);
+            namespaceMetadataService.deleteNamespacesTableIfEmpty(connection);
+            deleteMetadataSchemaIfEmpty(connection);
+          });
     } catch (SQLException e) {
       rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
     }
@@ -294,43 +351,52 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (Strings.isNullOrEmpty(sql)) {
       return Collections.emptySet();
     }
-    Set<String> tableNames = new HashSet<>();
-    try (PreparedStatement statement = connection.prepareStatement(sql)) {
-      statement.setString(1, namespace);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        while (resultSet.next()) {
-          tableNames.add(resultSet.getString(1));
-        }
-      }
-    }
-    return tableNames;
+    return executeQuery(
+        connection,
+        sql,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, namespace),
+        rs -> {
+          Set<String> tableNames = new HashSet<>();
+          while (rs.next()) {
+            tableNames.add(rs.getString(1));
+          }
+          return tableNames;
+        });
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      VirtualTableInfo virtualTableInfo =
-          virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
-      if (virtualTableInfo != null) {
-        // For a virtual table
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            VirtualTableInfo virtualTableInfo =
+                virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
+            if (virtualTableInfo != null) {
+              // For a virtual table
 
-        // truncate the source tables
-        execute(
-            connection,
-            rdbEngine.truncateTableSql(
-                virtualTableInfo.getLeftSourceNamespaceName(),
-                virtualTableInfo.getLeftSourceTableName()));
-        execute(
-            connection,
-            rdbEngine.truncateTableSql(
-                virtualTableInfo.getRightSourceNamespaceName(),
-                virtualTableInfo.getRightSourceTableName()));
-        return;
-      }
+              // truncate the source tables
+              execute(
+                  connection,
+                  rdbEngine.truncateTableSql(
+                      virtualTableInfo.getLeftSourceNamespaceName(),
+                      virtualTableInfo.getLeftSourceTableName()),
+                  requiresExplicitCommit);
+              execute(
+                  connection,
+                  rdbEngine.truncateTableSql(
+                      virtualTableInfo.getRightSourceNamespaceName(),
+                      virtualTableInfo.getRightSourceTableName()),
+                  requiresExplicitCommit);
+              return;
+            }
 
-      // For a regular table
-      String truncateTableStatement = rdbEngine.truncateTableSql(namespace, table);
-      execute(connection, truncateTableStatement);
+            // For a regular table
+            String truncateTableStatement = rdbEngine.truncateTableSql(namespace, table);
+            execute(connection, truncateTableStatement, requiresExplicitCommit);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Truncating the " + getFullTableName(namespace, table) + " table failed", e);
@@ -340,35 +406,40 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Nullable
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
+    try {
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            rdbEngine.setConnectionToReadOnly(connection, true);
 
-      // If it's a regular table, return its metadata
-      TableMetadata tableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      if (tableMetadata != null) {
-        return tableMetadata;
-      }
+            // If it's a regular table, return its metadata
+            TableMetadata tableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            if (tableMetadata != null) {
+              return tableMetadata;
+            }
 
-      // If it's a virtual table, merge the source table metadata and return it
-      VirtualTableInfo virtualTableInfo =
-          virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
-      if (virtualTableInfo != null) {
-        TableMetadata leftSourceTableMetadata =
-            tableMetadataService.getTableMetadata(
-                connection,
-                virtualTableInfo.getLeftSourceNamespaceName(),
-                virtualTableInfo.getLeftSourceTableName());
-        TableMetadata rightSourceTableMetadata =
-            tableMetadataService.getTableMetadata(
-                connection,
-                virtualTableInfo.getRightSourceNamespaceName(),
-                virtualTableInfo.getRightSourceTableName());
-        assert leftSourceTableMetadata != null && rightSourceTableMetadata != null;
-        return mergeSourceTableMetadata(leftSourceTableMetadata, rightSourceTableMetadata);
-      }
+            // If it's a virtual table, merge the source table metadata and return it
+            VirtualTableInfo virtualTableInfo =
+                virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
+            if (virtualTableInfo != null) {
+              TableMetadata leftSourceTableMetadata =
+                  tableMetadataService.getTableMetadata(
+                      connection,
+                      virtualTableInfo.getLeftSourceNamespaceName(),
+                      virtualTableInfo.getLeftSourceTableName());
+              TableMetadata rightSourceTableMetadata =
+                  tableMetadataService.getTableMetadata(
+                      connection,
+                      virtualTableInfo.getRightSourceNamespaceName(),
+                      virtualTableInfo.getRightSourceTableName());
+              assert leftSourceTableMetadata != null && rightSourceTableMetadata != null;
+              return mergeSourceTableMetadata(leftSourceTableMetadata, rightSourceTableMetadata);
+            }
 
-      return null;
+            return null;
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Getting a table metadata for the "
@@ -429,48 +500,55 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   TableMetadata getImportTableMetadata(
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
-    TableMetadata.Builder builder = TableMetadata.newBuilder();
-    boolean primaryKeyExists = false;
+    try {
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            rdbEngine.setConnectionToReadOnly(connection, true);
 
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
+            String catalogName = rdbEngine.getCatalogName(namespace);
+            String schemaName = rdbEngine.getSchemaName(namespace);
 
-      String catalogName = rdbEngine.getCatalogName(namespace);
-      String schemaName = rdbEngine.getSchemaName(namespace);
+            if (!internalTableExists(connection, namespace, table)) {
+              throw new IllegalArgumentException(
+                  CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
+            }
 
-      if (!internalTableExists(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
-      }
+            TableMetadata.Builder builder = TableMetadata.newBuilder();
+            boolean primaryKeyExists = false;
 
-      DatabaseMetaData metadata = connection.getMetaData();
-      ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
-      while (resultSet.next()) {
-        primaryKeyExists = true;
-        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        builder.addPartitionKey(columnName);
-      }
+            DatabaseMetaData metadata = connection.getMetaData();
+            ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
+            while (resultSet.next()) {
+              primaryKeyExists = true;
+              String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+              builder.addPartitionKey(columnName);
+            }
 
-      if (!primaryKeyExists) {
-        throw new IllegalStateException(
-            CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
-                getFullTableName(namespace, table)));
-      }
+            if (!primaryKeyExists) {
+              throw new IllegalStateException(
+                  CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
+                      getFullTableName(namespace, table)));
+            }
 
-      resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
-      while (resultSet.next()) {
-        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        DataType overrideDataType = overrideColumnsType.get(columnName);
-        DataType dataType =
-            rdbEngine.getDataTypeForScalarDb(
-                getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE)),
-                resultSet.getString(JDBC_COL_TYPE_NAME),
-                resultSet.getInt(JDBC_COL_COLUMN_SIZE),
-                resultSet.getInt(JDBC_COL_DECIMAL_DIGITS),
-                getFullTableName(namespace, table) + " " + columnName,
-                overrideDataType);
-        builder.addColumn(columnName, dataType);
-      }
+            resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
+            while (resultSet.next()) {
+              String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
+              DataType overrideDataType = overrideColumnsType.get(columnName);
+              DataType dataType =
+                  rdbEngine.getDataTypeForScalarDb(
+                      getJdbcType(resultSet.getInt(JDBC_COL_DATA_TYPE)),
+                      resultSet.getString(JDBC_COL_TYPE_NAME),
+                      resultSet.getInt(JDBC_COL_COLUMN_SIZE),
+                      resultSet.getInt(JDBC_COL_DECIMAL_DIGITS),
+                      getFullTableName(namespace, table) + " " + columnName,
+                      overrideDataType);
+              builder.addColumn(columnName, dataType);
+            }
+
+            return builder.build();
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Getting a table metadata for the "
@@ -478,8 +556,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + " table failed",
           e);
     }
-
-    return builder.build();
   }
 
   @Override
@@ -491,12 +567,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     rdbEngine.throwIfImportNotSupported();
 
-    try (Connection connection = dataSource.getConnection()) {
+    try {
       TableMetadata tableMetadata = getImportTableMetadata(namespace, table, overrideColumnsType);
-      createMetadataSchemaIfNotExists(connection);
-      createNamespacesTableIfNotExists(connection);
-      upsertIntoNamespacesTable(connection, namespace);
-      addTableMetadata(connection, namespace, table, tableMetadata, true, false);
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            createMetadataSchemaIfNotExists(connection);
+            createNamespacesTableIfNotExists(connection);
+            upsertIntoNamespacesTable(connection, namespace);
+            addTableMetadata(connection, namespace, table, tableMetadata, true, false);
+          });
     } catch (SQLException | ExecutionException e) {
       throw new ExecutionException(
           String.format("Importing the %s table failed", getFullTableName(namespace, table)), e);
@@ -505,14 +586,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
+    try {
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            rdbEngine.setConnectionToReadOnly(connection, true);
 
-      // Get both regular and virtual table names
-      Set<String> tableNames = new HashSet<>();
-      tableNames.addAll(tableMetadataService.getNamespaceTableNames(connection, namespace));
-      tableNames.addAll(virtualTableMetadataService.getNamespaceTableNames(connection, namespace));
-      return tableNames;
+            // Get both regular and virtual table names
+            Set<String> tableNames = new HashSet<>();
+            tableNames.addAll(tableMetadataService.getNamespaceTableNames(connection, namespace));
+            tableNames.addAll(
+                virtualTableMetadataService.getNamespaceTableNames(connection, namespace));
+            return tableNames;
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Getting the list of tables of the " + namespace + " schema failed", e);
@@ -521,9 +608,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
-      return namespaceMetadataService.namespaceExists(connection, namespace);
+    try {
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            rdbEngine.setConnectionToReadOnly(connection, true);
+            return namespaceMetadataService.namespaceExists(connection, namespace);
+          });
     } catch (SQLException e) {
       throw new ExecutionException("Checking if the " + namespace + " schema exists failed", e);
     }
@@ -565,50 +657,59 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      VirtualTableInfo virtualTableInfo =
-          virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
-      if (virtualTableInfo != null) {
-        // For a virtual table
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            VirtualTableInfo virtualTableInfo =
+                virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
+            if (virtualTableInfo != null) {
+              // For a virtual table
 
-        TableMetadata leftSourceTableMetadata =
-            tableMetadataService.getTableMetadata(
+              TableMetadata leftSourceTableMetadata =
+                  tableMetadataService.getTableMetadata(
+                      connection,
+                      virtualTableInfo.getLeftSourceNamespaceName(),
+                      virtualTableInfo.getLeftSourceTableName());
+              if (leftSourceTableMetadata.getColumnNames().contains(columnName)) {
+                // If the column exists in the left source table, create the index there
+                createIndexInternal(
+                    connection,
+                    virtualTableInfo.getLeftSourceNamespaceName(),
+                    virtualTableInfo.getLeftSourceTableName(),
+                    columnName,
+                    leftSourceTableMetadata.getColumnDataType(columnName));
+              }
+
+              TableMetadata rightSourceTableMetadata =
+                  tableMetadataService.getTableMetadata(
+                      connection,
+                      virtualTableInfo.getRightSourceNamespaceName(),
+                      virtualTableInfo.getRightSourceTableName());
+              if (rightSourceTableMetadata.getColumnNames().contains(columnName)) {
+                // If the column exists in the right source table, create the index there
+                createIndexInternal(
+                    connection,
+                    virtualTableInfo.getRightSourceNamespaceName(),
+                    virtualTableInfo.getRightSourceTableName(),
+                    columnName,
+                    rightSourceTableMetadata.getColumnDataType(columnName));
+              }
+
+              return;
+            }
+
+            // For a regular table
+            TableMetadata tableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            createIndexInternal(
                 connection,
-                virtualTableInfo.getLeftSourceNamespaceName(),
-                virtualTableInfo.getLeftSourceTableName());
-        if (leftSourceTableMetadata.getColumnNames().contains(columnName)) {
-          // If the column exists in the left source table, create the index there
-          createIndexInternal(
-              connection,
-              virtualTableInfo.getLeftSourceNamespaceName(),
-              virtualTableInfo.getLeftSourceTableName(),
-              columnName,
-              leftSourceTableMetadata.getColumnDataType(columnName));
-        }
-
-        TableMetadata rightSourceTableMetadata =
-            tableMetadataService.getTableMetadata(
-                connection,
-                virtualTableInfo.getRightSourceNamespaceName(),
-                virtualTableInfo.getRightSourceTableName());
-        if (rightSourceTableMetadata.getColumnNames().contains(columnName)) {
-          // If the column exists in the right source table, create the index there
-          createIndexInternal(
-              connection,
-              virtualTableInfo.getRightSourceNamespaceName(),
-              virtualTableInfo.getRightSourceTableName(),
-              columnName,
-              rightSourceTableMetadata.getColumnDataType(columnName));
-        }
-
-        return;
-      }
-
-      // For a regular table
-      TableMetadata tableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      createIndexInternal(
-          connection, namespace, table, columnName, tableMetadata.getColumnDataType(columnName));
+                namespace,
+                table,
+                columnName,
+                tableMetadata.getColumnDataType(columnName));
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -636,9 +737,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
-    for (String sql : sqls) {
-      execute(connection, sql);
-    }
+    execute(connection, sqls, requiresExplicitCommit);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -653,58 +752,65 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String columnType = rdbEngine.getDataTypeForEngine(dataType);
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
-    for (String sql : sqls) {
-      execute(connection, sql);
-    }
+    execute(connection, sqls, requiresExplicitCommit);
   }
 
   @Override
   public void dropIndex(String namespace, String table, String columnName)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      VirtualTableInfo virtualTableInfo =
-          virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
-      if (virtualTableInfo != null) {
-        // For a virtual table
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            VirtualTableInfo virtualTableInfo =
+                virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table);
+            if (virtualTableInfo != null) {
+              // For a virtual table
 
-        TableMetadata leftSourceTableMetadata =
-            tableMetadataService.getTableMetadata(
+              TableMetadata leftSourceTableMetadata =
+                  tableMetadataService.getTableMetadata(
+                      connection,
+                      virtualTableInfo.getLeftSourceNamespaceName(),
+                      virtualTableInfo.getLeftSourceTableName());
+              if (leftSourceTableMetadata.getColumnNames().contains(columnName)) {
+                // If the column exists in the left source table, drop the index there
+                dropIndexInternal(
+                    connection,
+                    virtualTableInfo.getLeftSourceNamespaceName(),
+                    virtualTableInfo.getLeftSourceTableName(),
+                    columnName,
+                    leftSourceTableMetadata.getColumnDataType(columnName));
+              }
+
+              TableMetadata rightSourceTableMetadata =
+                  tableMetadataService.getTableMetadata(
+                      connection,
+                      virtualTableInfo.getRightSourceNamespaceName(),
+                      virtualTableInfo.getRightSourceTableName());
+              if (rightSourceTableMetadata.getColumnNames().contains(columnName)) {
+                // If the column exists in the right source table, drop the index there
+                dropIndexInternal(
+                    connection,
+                    virtualTableInfo.getRightSourceNamespaceName(),
+                    virtualTableInfo.getRightSourceTableName(),
+                    columnName,
+                    rightSourceTableMetadata.getColumnDataType(columnName));
+              }
+
+              return;
+            }
+
+            // For a regular table
+            TableMetadata tableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            dropIndexInternal(
                 connection,
-                virtualTableInfo.getLeftSourceNamespaceName(),
-                virtualTableInfo.getLeftSourceTableName());
-        if (leftSourceTableMetadata.getColumnNames().contains(columnName)) {
-          // If the column exists in the left source table, drop the index there
-          dropIndexInternal(
-              connection,
-              virtualTableInfo.getLeftSourceNamespaceName(),
-              virtualTableInfo.getLeftSourceTableName(),
-              columnName,
-              leftSourceTableMetadata.getColumnDataType(columnName));
-        }
-
-        TableMetadata rightSourceTableMetadata =
-            tableMetadataService.getTableMetadata(
-                connection,
-                virtualTableInfo.getRightSourceNamespaceName(),
-                virtualTableInfo.getRightSourceTableName());
-        if (rightSourceTableMetadata.getColumnNames().contains(columnName)) {
-          // If the column exists in the right source table, drop the index there
-          dropIndexInternal(
-              connection,
-              virtualTableInfo.getRightSourceNamespaceName(),
-              virtualTableInfo.getRightSourceTableName(),
-              columnName,
-              rightSourceTableMetadata.getColumnDataType(columnName));
-        }
-
-        return;
-      }
-
-      // For a regular table
-      TableMetadata tableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      dropIndexInternal(
-          connection, namespace, table, columnName, tableMetadata.getColumnDataType(columnName));
+                namespace,
+                table,
+                columnName,
+                tableMetadata.getColumnDataType(columnName));
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -727,11 +833,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     rdbEngine.throwIfInvalidNamespaceName(namespace);
 
-    try (Connection connection = dataSource.getConnection()) {
-      createSchemaIfNotExists(connection, namespace);
-      createMetadataSchemaIfNotExists(connection);
-      createNamespacesTableIfNotExists(connection);
-      upsertIntoNamespacesTable(connection, namespace);
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            createSchemaIfNotExists(connection, namespace);
+            createMetadataSchemaIfNotExists(connection);
+            createNamespacesTableIfNotExists(connection);
+            upsertIntoNamespacesTable(connection, namespace);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(String.format("Repairing the %s schema failed", namespace), e);
     }
@@ -741,12 +852,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      throwIfVirtualTableOrSourceTable(connection, namespace, table, "repairTable()");
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, table, "repairTable()");
 
-      createMetadataSchemaIfNotExists(connection);
-      createTableInternal(connection, namespace, table, metadata, true);
-      addTableMetadata(connection, namespace, table, metadata, true, true);
+            createMetadataSchemaIfNotExists(connection);
+            createTableInternal(connection, namespace, table, metadata, true);
+            addTableMetadata(connection, namespace, table, metadata, true, true);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Repairing the " + getFullTableName(namespace, table) + " table failed ", e);
@@ -757,22 +873,29 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      throwIfVirtualTableOrSourceTable(connection, namespace, table, "addNewColumnToTable()");
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, table, "addNewColumnToTable()");
 
-      TableMetadata currentTableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      TableMetadata updatedTableMetadata =
-          TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
-      String addNewColumnStatement =
-          "ALTER TABLE "
-              + encloseFullTableName(namespace, table)
-              + " ADD "
-              + enclose(columnName)
-              + " "
-              + getVendorDbColumnType(updatedTableMetadata, columnName);
-      execute(connection, addNewColumnStatement);
-      addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+            TableMetadata currentTableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            TableMetadata updatedTableMetadata =
+                TableMetadata.newBuilder(currentTableMetadata)
+                    .addColumn(columnName, columnType)
+                    .build();
+            String addNewColumnStatement =
+                "ALTER TABLE "
+                    + encloseFullTableName(namespace, table)
+                    + " ADD "
+                    + enclose(columnName)
+                    + " "
+                    + getVendorDbColumnType(updatedTableMetadata, columnName);
+            execute(connection, addNewColumnStatement, requiresExplicitCommit);
+            addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -785,19 +908,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @Override
   public void dropColumnFromTable(String namespace, String table, String columnName)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      throwIfVirtualTableOrSourceTable(connection, namespace, table, "dropColumnFromTable()");
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, table, "dropColumnFromTable()");
 
-      TableMetadata currentTableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      TableMetadata updatedTableMetadata =
-          TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
-      String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
+            TableMetadata currentTableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            TableMetadata updatedTableMetadata =
+                TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+            String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
 
-      for (String dropColumnStatement : dropColumnStatements) {
-        execute(connection, dropColumnStatement);
-      }
-      addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+            execute(connection, dropColumnStatements, requiresExplicitCommit);
+            addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -811,41 +937,47 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void renameColumn(
       String namespace, String table, String oldColumnName, String newColumnName)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      throwIfVirtualTableOrSourceTable(connection, namespace, table, "renameColumn()");
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, table, "renameColumn()");
 
-      TableMetadata currentTableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      assert currentTableMetadata != null;
-      rdbEngine.throwIfRenameColumnNotSupported(oldColumnName, currentTableMetadata);
-      TableMetadata.Builder tableMetadataBuilder =
-          TableMetadata.newBuilder(currentTableMetadata).renameColumn(oldColumnName, newColumnName);
-      if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
-        tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
-      }
-      if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
-        tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
-      }
-      if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-        tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
-      }
-      TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
-      String renameColumnStatement =
-          rdbEngine.renameColumnSql(
-              namespace,
-              table,
-              oldColumnName,
-              newColumnName,
-              getVendorDbColumnType(updatedTableMetadata, newColumnName));
+            TableMetadata currentTableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            assert currentTableMetadata != null;
+            rdbEngine.throwIfRenameColumnNotSupported(oldColumnName, currentTableMetadata);
+            TableMetadata.Builder tableMetadataBuilder =
+                TableMetadata.newBuilder(currentTableMetadata)
+                    .renameColumn(oldColumnName, newColumnName);
+            if (currentTableMetadata.getPartitionKeyNames().contains(oldColumnName)) {
+              tableMetadataBuilder.renamePartitionKey(oldColumnName, newColumnName);
+            }
+            if (currentTableMetadata.getClusteringKeyNames().contains(oldColumnName)) {
+              tableMetadataBuilder.renameClusteringKey(oldColumnName, newColumnName);
+            }
+            if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+              tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
+            }
+            TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
+            String renameColumnStatement =
+                rdbEngine.renameColumnSql(
+                    namespace,
+                    table,
+                    oldColumnName,
+                    newColumnName,
+                    getVendorDbColumnType(updatedTableMetadata, newColumnName));
 
-      execute(connection, renameColumnStatement);
-      if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-        String oldIndexName = getIndexName(namespace, table, oldColumnName);
-        String newIndexName = getIndexName(namespace, table, newColumnName);
-        renameIndexInternal(
-            connection, namespace, table, newColumnName, oldIndexName, newIndexName);
-      }
-      addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+            execute(connection, renameColumnStatement, requiresExplicitCommit);
+            if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
+              String oldIndexName = getIndexName(namespace, table, oldColumnName);
+              String newIndexName = getIndexName(namespace, table, newColumnName);
+              renameIndexInternal(
+                  connection, namespace, table, newColumnName, oldIndexName, newIndexName);
+            }
+            addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -859,28 +991,31 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void alterColumnType(
       String namespace, String table, String columnName, DataType newColumnType)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      throwIfVirtualTableOrSourceTable(connection, namespace, table, "alterColumnType()");
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, table, "alterColumnType()");
 
-      TableMetadata currentTableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, table);
-      assert currentTableMetadata != null;
-      DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
-      rdbEngine.throwIfAlterColumnTypeNotSupported(currentColumnType, newColumnType);
+            TableMetadata currentTableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, table);
+            assert currentTableMetadata != null;
+            DataType currentColumnType = currentTableMetadata.getColumnDataType(columnName);
+            rdbEngine.throwIfAlterColumnTypeNotSupported(currentColumnType, newColumnType);
 
-      TableMetadata updatedTableMetadata =
-          TableMetadata.newBuilder(currentTableMetadata)
-              .removeColumn(columnName)
-              .addColumn(columnName, newColumnType)
-              .build();
-      String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
-      String[] alterColumnTypeStatements =
-          rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
+            TableMetadata updatedTableMetadata =
+                TableMetadata.newBuilder(currentTableMetadata)
+                    .removeColumn(columnName)
+                    .addColumn(columnName, newColumnType)
+                    .build();
+            String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
+            String[] alterColumnTypeStatements =
+                rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
 
-      for (String alterColumnTypeStatement : alterColumnTypeStatements) {
-        execute(connection, alterColumnTypeStatement);
-      }
-      addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+            execute(connection, alterColumnTypeStatements, requiresExplicitCommit);
+            addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -895,23 +1030,34 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     rdbEngine.throwIfInvalidTableName(newTableName);
 
-    try (Connection connection = dataSource.getConnection()) {
-      throwIfVirtualTableOrSourceTable(connection, namespace, oldTableName, "renameTable()");
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, oldTableName, "renameTable()");
 
-      TableMetadata tableMetadata =
-          tableMetadataService.getTableMetadata(connection, namespace, oldTableName);
-      assert tableMetadata != null;
-      String renameTableStatement = rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
+            TableMetadata tableMetadata =
+                tableMetadataService.getTableMetadata(connection, namespace, oldTableName);
+            assert tableMetadata != null;
+            String renameTableStatement =
+                rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
 
-      execute(connection, renameTableStatement);
-      tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
-      for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
-        String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
-        String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
-        renameIndexInternal(
-            connection, namespace, newTableName, indexedColumnName, oldIndexName, newIndexName);
-      }
-      addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+            execute(connection, renameTableStatement, requiresExplicitCommit);
+            tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
+            for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
+              String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
+              String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
+              renameIndexInternal(
+                  connection,
+                  namespace,
+                  newTableName,
+                  indexedColumnName,
+                  oldIndexName,
+                  newIndexName);
+            }
+            addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           String.format(
@@ -930,9 +1076,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String newIndexName)
       throws SQLException {
     String[] sqls = rdbEngine.renameIndexSqls(schema, table, column, oldIndexName, newIndexName);
-    for (String sql : sqls) {
-      execute(connection, sql);
-    }
+    execute(connection, sqls, requiresExplicitCommit);
   }
 
   @VisibleForTesting
@@ -948,6 +1092,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       execute(
           connection,
           createIndexStatement,
+          requiresExplicitCommit,
           ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
     } catch (SQLException e) {
       // Suppress the exception thrown when the index already exists
@@ -961,7 +1106,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
-    execute(connection, sql);
+    execute(connection, sql, requiresExplicitCommit);
   }
 
   private String getIndexName(String schema, String table, String indexedColumn) {
@@ -970,9 +1115,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceNames() throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
-      return namespaceMetadataService.getNamespaceNames(connection);
+    try {
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            rdbEngine.setConnectionToReadOnly(connection, true);
+            return namespaceMetadataService.getNamespaceNames(connection);
+          });
     } catch (SQLException e) {
       throw new ExecutionException("Getting the existing schema names failed", e);
     }
@@ -980,25 +1130,30 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      Set<String> namespaceNamesOfExistingTables = new HashSet<>();
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            Set<String> namespaceNamesOfExistingTables = new HashSet<>();
 
-      // Get namespaces of existing tables (both regular and virtual tables)
-      namespaceNamesOfExistingTables.addAll(
-          tableMetadataService.getNamespaceNamesOfExistingTables(connection));
-      namespaceNamesOfExistingTables.addAll(
-          virtualTableMetadataService.getNamespaceNamesOfExistingTables(connection));
+            // Get namespaces of existing tables (both regular and virtual tables)
+            namespaceNamesOfExistingTables.addAll(
+                tableMetadataService.getNamespaceNamesOfExistingTables(connection));
+            namespaceNamesOfExistingTables.addAll(
+                virtualTableMetadataService.getNamespaceNamesOfExistingTables(connection));
 
-      if (namespaceNamesOfExistingTables.isEmpty()) {
-        // No existing tables, so no need to upgrade
-        return;
-      }
+            if (namespaceNamesOfExistingTables.isEmpty()) {
+              // No existing tables, so no need to upgrade
+              return;
+            }
 
-      createMetadataSchemaIfNotExists(connection);
-      createNamespacesTableIfNotExists(connection);
-      for (String namespace : namespaceNamesOfExistingTables) {
-        upsertIntoNamespacesTable(connection, namespace);
-      }
+            createMetadataSchemaIfNotExists(connection);
+            createNamespacesTableIfNotExists(connection);
+            for (String namespace : namespaceNamesOfExistingTables) {
+              upsertIntoNamespacesTable(connection, namespace);
+            }
+          });
     } catch (SQLException e) {
       throw new ExecutionException("Upgrading the ScalarDB environment failed", e);
     }
@@ -1006,21 +1161,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public StorageInfo getStorageInfo(String namespace) throws ExecutionException {
-    boolean consistentVirtualTableReadGuaranteed;
-    try (Connection connection = dataSource.getConnection()) {
-      int isolationLevel = connection.getTransactionIsolation();
-      consistentVirtualTableReadGuaranteed =
-          isolationLevel >= rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead();
+    try {
+      boolean consistentVirtualTableReadGuaranteed =
+          withConnection(
+              dataSource,
+              requiresExplicitCommit,
+              connection -> {
+                int isolationLevel = connection.getTransactionIsolation();
+                return isolationLevel
+                    >= rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead();
+              });
+
+      return new StorageInfoImpl(
+          "jdbc",
+          StorageInfo.MutationAtomicityUnit.STORAGE,
+          // No limit on the number of mutations
+          Integer.MAX_VALUE,
+          consistentVirtualTableReadGuaranteed);
     } catch (SQLException e) {
       throw new ExecutionException("Getting the transaction isolation level failed", e);
     }
-
-    return new StorageInfoImpl(
-        "jdbc",
-        StorageInfo.MutationAtomicityUnit.STORAGE,
-        // No limit on the number of mutations
-        Integer.MAX_VALUE,
-        consistentVirtualTableReadGuaranteed);
   }
 
   @Override
@@ -1036,31 +1196,36 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     rdbEngine.throwIfInvalidTableName(table);
 
-    try (Connection connection = dataSource.getConnection()) {
-      // Create View
-      createVirtualTableView(
-          connection,
-          namespace,
-          table,
-          leftSourceNamespace,
-          leftSourceTable,
-          rightSourceNamespace,
-          rightSourceTable,
-          joinType);
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            // Create View
+            createVirtualTableView(
+                connection,
+                namespace,
+                table,
+                leftSourceNamespace,
+                leftSourceTable,
+                rightSourceNamespace,
+                rightSourceTable,
+                joinType);
 
-      // Add metadata
-      createMetadataSchemaIfNotExists(connection);
-      virtualTableMetadataService.createVirtualTablesTableIfNotExists(connection);
-      virtualTableMetadataService.insertIntoVirtualTablesTable(
-          connection,
-          namespace,
-          table,
-          leftSourceNamespace,
-          leftSourceTable,
-          rightSourceNamespace,
-          rightSourceTable,
-          joinType,
-          "");
+            // Add metadata
+            createMetadataSchemaIfNotExists(connection);
+            virtualTableMetadataService.createVirtualTablesTableIfNotExists(connection);
+            virtualTableMetadataService.insertIntoVirtualTablesTable(
+                connection,
+                namespace,
+                table,
+                leftSourceNamespace,
+                leftSourceTable,
+                rightSourceNamespace,
+                rightSourceTable,
+                joinType,
+                "");
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Creating the virtual table "
@@ -1174,22 +1339,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       firstCondition = false;
     }
 
-    execute(connection, createViewSql.toString());
+    execute(connection, createViewSql.toString(), requiresExplicitCommit);
   }
 
   private void dropVirtualTableView(Connection connection, String namespace, String table)
       throws SQLException {
     String dropViewStatement = "DROP VIEW " + encloseFullTableName(namespace, table);
-    execute(connection, dropViewStatement);
+    execute(connection, dropViewStatement, requiresExplicitCommit);
   }
 
   @Override
   public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
       throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      rdbEngine.setConnectionToReadOnly(connection, true);
-      return Optional.ofNullable(
-          virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table));
+    try {
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            rdbEngine.setConnectionToReadOnly(connection, true);
+            return Optional.ofNullable(
+                virtualTableMetadataService.getVirtualTableInfo(connection, namespace, table));
+          });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Getting virtual table info for the "
@@ -1256,7 +1426,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
-    execute(connection, sql);
+    execute(connection, sql, requiresExplicitCommit);
   }
 
   private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
@@ -1266,7 +1436,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt);
+      execute(connection, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -1276,29 +1446,25 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private boolean internalTableExists(Connection connection, String namespace, String table)
-      throws ExecutionException {
+      throws SQLException {
     String fullTableName = encloseFullTableName(namespace, table);
     String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try {
-      execute(connection, sql);
+      execute(connection, sql, requiresExplicitCommit);
       return true;
     } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select
-      // query
+      // An exception will be thrown if the table does not exist when executing the select query
       if (rdbEngine.isUndefinedTableError(e)) {
         return false;
       }
-      throw new ExecutionException(
-          String.format(
-              "Checking if the %s table exists failed", getFullTableName(namespace, table)),
-          e);
+      throw e;
     }
   }
 
   private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
     String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
     try {
-      execute(connection, sqls);
+      execute(connection, sqls, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
       if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
@@ -1315,17 +1481,65 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return rdbEngine.encloseFullTableName(schema, table);
   }
 
-  static void execute(Connection connection, String sql) throws SQLException {
-    execute(connection, sql, null);
+  static void withConnection(
+      DataSource dataSource,
+      boolean requiresExplicitCommit,
+      ThrowableConsumer<Connection, SQLException> consumer)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          consumer.accept(connection);
+          return null;
+        });
   }
 
-  static void execute(Connection connection, String sql, @Nullable SqlWarningHandler handler)
+  static <T> T withConnection(
+      DataSource dataSource,
+      boolean requiresExplicitCommit,
+      ThrowableFunction<Connection, T, SQLException> function)
+      throws SQLException {
+    try (Connection connection = dataSource.getConnection()) {
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
+      try {
+        return function.apply(connection);
+      } catch (SQLException e) {
+        if (requiresExplicitCommit) {
+          try {
+            connection.rollback();
+          } catch (SQLException rollbackEx) {
+            e.addSuppressed(rollbackEx);
+          }
+        }
+        throw e;
+      }
+    }
+  }
+
+  static void execute(Connection connection, String sql, boolean requiresExplicitCommit)
+      throws SQLException {
+    execute(connection, sql, requiresExplicitCommit, null);
+  }
+
+  static void execute(
+      Connection connection,
+      String sql,
+      boolean requiresExplicitCommit,
+      @Nullable SqlWarningHandler handler)
       throws SQLException {
     if (Strings.isNullOrEmpty(sql)) {
       return;
     }
+
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
+
       throwSqlWarningIfNeeded(handler, stmt);
     }
   }
@@ -1335,6 +1549,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (handler == null) {
       return;
     }
+
     SQLWarning warning = stmt.getWarnings();
     while (warning != null) {
       handler.throwSqlWarningIfNeeded(warning);
@@ -1342,15 +1557,69 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  static void execute(Connection connection, String[] sqls) throws SQLException {
-    execute(connection, sqls, null);
+  static void execute(Connection connection, String[] sqls, boolean requiresExplicitCommit)
+      throws SQLException {
+    execute(connection, sqls, requiresExplicitCommit, null);
   }
 
   static void execute(
-      Connection connection, String[] sqls, @Nullable SqlWarningHandler warningHandler)
+      Connection connection,
+      String[] sqls,
+      boolean requiresExplicitCommit,
+      @Nullable SqlWarningHandler warningHandler)
       throws SQLException {
     for (String sql : sqls) {
-      execute(connection, sql, warningHandler);
+      execute(connection, sql, requiresExplicitCommit, warningHandler);
+    }
+  }
+
+  static void executeUpdate(
+      Connection connection,
+      String sql,
+      boolean requiresExplicitCommit,
+      ThrowableConsumer<PreparedStatement, SQLException> paramSetter)
+      throws SQLException {
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      paramSetter.accept(ps);
+      ps.executeUpdate();
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
+    }
+  }
+
+  static <T> T executeQuery(
+      Connection connection,
+      String sql,
+      boolean requiresExplicitCommit,
+      ThrowableFunction<ResultSet, T, SQLException> resultMapper)
+      throws SQLException {
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      T result = resultMapper.apply(rs);
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
+      return result;
+    }
+  }
+
+  static <T> T executeQuery(
+      Connection connection,
+      String sql,
+      boolean requiresExplicitCommit,
+      ThrowableConsumer<PreparedStatement, SQLException> paramSetter,
+      ThrowableFunction<ResultSet, T, SQLException> resultMapper)
+      throws SQLException {
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      paramSetter.accept(ps);
+      try (ResultSet rs = ps.executeQuery()) {
+        T result = resultMapper.apply(rs);
+        if (requiresExplicitCommit) {
+          connection.commit();
+        }
+        return result;
+      }
     }
   }
 

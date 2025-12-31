@@ -121,7 +121,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(rdbEngine);
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
       mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
-      return new JdbcAdmin(dataSource, config, virtualTableMetadataService);
+      return new JdbcAdmin(dataSource, config, virtualTableMetadataService, false);
     }
   }
 
@@ -131,7 +131,7 @@ public class JdbcAdminTest {
       mocked
           .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
           .thenReturn(rdbEngineStrategy);
-      return new JdbcAdmin(dataSource, config, virtualTableMetadataService);
+      return new JdbcAdmin(dataSource, config, virtualTableMetadataService, false);
     }
   }
 
@@ -145,7 +145,8 @@ public class JdbcAdminTest {
           config,
           tableMetadataService,
           namespaceMetadataService,
-          virtualTableMetadataService);
+          virtualTableMetadataService,
+          false);
     }
   }
 
@@ -621,8 +622,8 @@ public class JdbcAdminTest {
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement2).setString(1, namespace);
-    verify(mockedInsertNamespaceStatement1).execute();
-    verify(mockedInsertNamespaceStatement2).execute();
+    verify(mockedInsertNamespaceStatement1).executeUpdate();
+    verify(mockedInsertNamespaceStatement2).executeUpdate();
   }
 
   @Test
@@ -2321,7 +2322,7 @@ public class JdbcAdminTest {
     verify(dropNamespaceStmt).execute(dropNamespaceQuery);
     verify(deleteFromNamespaceTablePrepStmt).setString(1, namespace);
     verify(connection).prepareStatement(deleteFromNamespaceTableQuery);
-    verify(deleteFromNamespaceTablePrepStmt).execute();
+    verify(deleteFromNamespaceTablePrepStmt).executeUpdate();
     verify(selectAllFromNamespaceTablePrepStmt).executeQuery(selectAllFromNamespaceTableQuery);
     verify(dropNamespaceTableStmt).execute(dropNamespaceTableQuery);
     verify(dropMetadataSchemaStmt).execute(dropMetadataSchemaQuery);
@@ -2441,7 +2442,7 @@ public class JdbcAdminTest {
     }
     verify(connection).prepareStatement(deleteFromNamespaceTable);
     verify(deleteFromNamespaceTableMock).setString(1, namespace);
-    verify(deleteFromNamespaceTableMock).execute();
+    verify(deleteFromNamespaceTableMock).executeUpdate();
     verify(selectNamespaceStatementMock).executeQuery(selectNamespaceStatement);
   }
 
@@ -4604,10 +4605,10 @@ public class JdbcAdminTest {
         mockResultSet(
             new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace1),
             new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace2));
-    PreparedStatement mockPreparedStatement = mock(PreparedStatement.class);
+    Statement mockStatement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
-    when(mockPreparedStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.createStatement()).thenReturn(mockStatement);
+    when(mockStatement.executeQuery(anyString())).thenReturn(resultSet);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
@@ -4620,8 +4621,7 @@ public class JdbcAdminTest {
     } else {
       verify(connection).setReadOnly(true);
     }
-    verify(connection).prepareStatement(expectedSelectStatement);
-    verify(mockPreparedStatement).executeQuery();
+    verify(mockStatement).executeQuery(expectedSelectStatement);
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
   }
 
@@ -5084,8 +5084,8 @@ public class JdbcAdminTest {
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement2).setString(1, namespace);
-    verify(mockedInsertNamespaceStatement1).execute();
-    verify(mockedInsertNamespaceStatement2).execute();
+    verify(mockedInsertNamespaceStatement1).executeUpdate();
+    verify(mockedInsertNamespaceStatement2).executeUpdate();
   }
 
   @Test
@@ -5262,9 +5262,9 @@ public class JdbcAdminTest {
     verify(insertNamespacePrepStmt1).setString(1, METADATA_SCHEMA);
     verify(insertNamespacePrepStmt2).setString(1, "ns2");
     verify(insertNamespacePrepStmt3).setString(1, "ns1");
-    verify(insertNamespacePrepStmt1).execute();
-    verify(insertNamespacePrepStmt2).execute();
-    verify(insertNamespacePrepStmt3).execute();
+    verify(insertNamespacePrepStmt1).executeUpdate();
+    verify(insertNamespacePrepStmt2).executeUpdate();
+    verify(insertNamespacePrepStmt3).executeUpdate();
   }
 
   private List<Statement> prepareMockStatements(int count) {
@@ -5411,7 +5411,7 @@ public class JdbcAdminTest {
                     METADATA_SCHEMA, NamespaceMetadataService.TABLE_NAME)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
-    verify(insertStatement).execute();
+    verify(insertStatement).executeUpdate();
   }
 
   @ParameterizedTest
@@ -5421,7 +5421,7 @@ public class JdbcAdminTest {
     // Arrange
     PreparedStatement insertStatement = mock(PreparedStatement.class);
     when(connection.prepareStatement(anyString())).thenReturn(insertStatement);
-    doThrow(prepareDuplicatedKeyException(rdbEngine)).when(insertStatement).execute();
+    doThrow(prepareDuplicatedKeyException(rdbEngine)).when(insertStatement).executeUpdate();
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
@@ -5436,7 +5436,7 @@ public class JdbcAdminTest {
                     METADATA_SCHEMA, NamespaceMetadataService.TABLE_NAME)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
-    verify(insertStatement).execute();
+    verify(insertStatement).executeUpdate();
   }
 
   @Test
@@ -5549,7 +5549,7 @@ public class JdbcAdminTest {
     verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement).setString(1, METADATA_SCHEMA);
-    verify(mockedInsertNamespaceStatement).execute();
+    verify(mockedInsertNamespaceStatement).executeUpdate();
   }
 
   private SQLException prepareDuplicatedKeyException(RdbEngine rdbEngine) {
@@ -5599,7 +5599,7 @@ public class JdbcAdminTest {
       anySqlException = mock(SQLException.class);
       when(anySqlException.getSQLState()).thenReturn("foo");
     }
-    doThrow(anySqlException).when(insertStatement).execute();
+    doThrow(anySqlException).when(insertStatement).executeUpdate();
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     // Act
@@ -5615,7 +5615,7 @@ public class JdbcAdminTest {
                     METADATA_SCHEMA, NamespaceMetadataService.TABLE_NAME)
                 + " VALUES (?)");
     verify(insertStatement).setString(1, NAMESPACE);
-    verify(insertStatement).execute();
+    verify(insertStatement).executeUpdate();
   }
 
   @Test

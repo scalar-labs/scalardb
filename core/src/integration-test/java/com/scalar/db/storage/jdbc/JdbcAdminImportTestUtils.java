@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.withConnection;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
@@ -120,12 +122,14 @@ public class JdbcAdminImportTestUtils {
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
   private final BasicDataSource dataSource;
+  private final boolean requiresExplicitCommit;
 
   public JdbcAdminImportTestUtils(Properties properties) {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     majorVersion = getMajorVersion();
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
   }
 
   public List<TestData> createExistingDatabaseWithAllDataTypes(String namespace)
@@ -184,15 +188,21 @@ public class JdbcAdminImportTestUtils {
   }
 
   public void execute(String sql) throws SQLException {
-    try (Connection connection = dataSource.getConnection()) {
-      JdbcAdmin.execute(connection, sql);
-    }
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          JdbcAdmin.execute(connection, sql, requiresExplicitCommit);
+        });
   }
 
-  public void execute(String[] sql) throws SQLException {
-    try (Connection connection = dataSource.getConnection()) {
-      JdbcAdmin.execute(connection, sql);
-    }
+  public void execute(String[] sqls) throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          JdbcAdmin.execute(connection, sqls, requiresExplicitCommit);
+        });
   }
 
   private LinkedHashMap<String, String> prepareColumnsForMysql() {
@@ -913,7 +923,7 @@ public class JdbcAdminImportTestUtils {
     try (Connection connection = dataSource.getConnection()) {
       return connection.getMetaData().getDatabaseMajorVersion();
     } catch (SQLException e) {
-      throw new RuntimeException("Get database major version failed");
+      throw new RuntimeException("Get database major version failed", e);
     }
   }
 
