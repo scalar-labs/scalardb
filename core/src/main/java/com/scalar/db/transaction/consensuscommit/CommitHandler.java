@@ -156,7 +156,7 @@ public class CommitHandler {
       }
     }
 
-    if (context.snapshot.hasReads()) {
+    if (context.isValidationActuallyRequired()) {
       try {
         validateRecords(context);
       } catch (ValidationException e) {
@@ -197,9 +197,8 @@ public class CommitHandler {
       return false;
     }
 
-    // If validation is required (in SERIALIZABLE isolation), we cannot one-phase commit the
-    // transaction
-    if (context.isValidationRequired()) {
+    // If validation is required, we cannot one-phase commit the transaction
+    if (context.isValidationActuallyRequired()) {
       return false;
     }
 

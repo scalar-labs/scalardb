@@ -1,8 +1,11 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.scalar.db.api.Get;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public class TransactionContext {
 
@@ -48,6 +51,34 @@ public class TransactionContext {
 
   public boolean isValidationRequired() {
     return isolation == Isolation.SERIALIZABLE;
+  }
+
+  public boolean isValidationActuallyRequired() {
+    // Only SERIALIZABLE isolation level requires validation
+    if (isolation != Isolation.SERIALIZABLE) {
+      return false;
+    }
+
+    // If the scan set is not empty, we need to perform validation
+    if (!snapshot.isScanSetEmpty()) {
+      return true;
+    }
+
+    // If the scanner set is not empty, we need to perform validation
+    if (!snapshot.isScannerSetEmpty()) {
+      return true;
+    }
+
+    // If all the records in the get set are included in the write set or delete set, no validation
+    // is required
+    for (Map.Entry<Get, Optional<TransactionResult>> getSetEntry : snapshot.getGetSet()) {
+      Snapshot.Key key = new Snapshot.Key(getSetEntry.getKey());
+      if (!snapshot.containsKeyInWriteSet(key) && !snapshot.containsKeyInDeleteSet(key)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public boolean areAllScannersClosed() {
