@@ -111,9 +111,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
-  protected RecoveryExecutor recoveryExecutor;
+  private RecoveryExecutor recoveryExecutor;
   private CommitHandler commit;
-  @Nullable protected CoordinatorGroupCommitter groupCommitter;
+  @Nullable private CoordinatorGroupCommitter groupCommitter;
 
   @BeforeAll
   void beforeAll() throws Exception {
@@ -188,7 +188,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
   }
 
-  protected void truncateTables() throws ExecutionException {
+  private void truncateTables() throws ExecutionException {
     consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
     consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
     consensusCommitAdmin.truncateCoordinatorTables();
@@ -7069,7 +7069,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       case TABLE:
       case NAMESPACE:
       case STORAGE:
-        if (onePhaseCommitEnabled && isolation != Isolation.SERIALIZABLE) {
+        if (onePhaseCommitEnabled) {
           // one-phase commit, so only one mutation call
           verify(storage).mutate(anyList());
 
@@ -7174,7 +7174,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       case TABLE:
       case NAMESPACE:
       case STORAGE:
-        if (onePhaseCommitEnabled && isolation != Isolation.SERIALIZABLE) {
+        if (onePhaseCommitEnabled) {
           // one-phase commit, so only one mutation call
           verify(storage).mutate(anyList());
 
@@ -7295,7 +7295,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           }
           break;
         case STORAGE:
-          if (onePhaseCommitEnabled && isolation != Isolation.SERIALIZABLE) {
+          if (onePhaseCommitEnabled) {
             // one-phase commit, so only one mutation call
             verify(storage).mutate(anyList());
 
@@ -7345,6 +7345,521 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
     assertThat(result2.get().getInt(BALANCE)).isEqualTo(200);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndOnePhaseCommitEnabled")
+  public void
+      updateAndCommit_SinglePartitionMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageAtomicityUnit(
+          Isolation isolation, boolean onePhaseCommitEnabled)
+          throws TransactionException, ExecutionException, CoordinatorException {
+    if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
+      // Enabling both one-phase commit and group commit is not supported
+      return;
+    }
+
+    // Arrange
+
+    // Prepare initial records
+    createConsensusCommitManager(isolation)
+        .mutate(
+            Arrays.asList(
+                Insert.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                    .intValue(BALANCE, INITIAL_BALANCE)
+                    .build(),
+                Insert.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                    .intValue(BALANCE, INITIAL_BALANCE)
+                    .build()));
+
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation, onePhaseCommitEnabled);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build());
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, 200)
+            .build());
+    transaction.commit();
+
+    // Assert
+    verify(storage, times(2)).get(any(Get.class));
+
+    StorageInfo storageInfo = admin.getStorageInfo(namespace1);
+    switch (storageInfo.getMutationAtomicityUnit()) {
+      case RECORD:
+        // twice for prepare, twice for commit
+        verify(storage, times(4)).mutate(anyList());
+
+        // commit-state should occur
+        if (isGroupCommitEnabled()) {
+          verify(coordinator)
+              .putStateForGroupCommit(
+                  anyString(), anyList(), any(TransactionState.class), anyLong());
+          return;
+        }
+        verify(coordinator).putState(any(Coordinator.State.class));
+        break;
+      case PARTITION:
+      case TABLE:
+      case NAMESPACE:
+      case STORAGE:
+        if (onePhaseCommitEnabled) {
+          // one-phase commit, so only one mutation call
+          verify(storage).mutate(anyList());
+
+          // no commit-state should occur
+          verify(coordinator, never()).putState(any(Coordinator.State.class));
+        } else {
+          // one for prepare, one for commit
+          verify(storage, times(2)).mutate(anyList());
+
+          // commit-state should occur
+          if (isGroupCommitEnabled()) {
+            verify(coordinator)
+                .putStateForGroupCommit(
+                    anyString(), anyList(), any(TransactionState.class), anyLong());
+          } else {
+            verify(coordinator).putState(any(Coordinator.State.class));
+          }
+        }
+        break;
+      default:
+        throw new AssertionError();
+    }
+
+    Optional<Result> result1 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(100);
+
+    Optional<Result> result2 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .build());
+    assertThat(result2.isPresent()).isTrue();
+    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result2.get().getInt(BALANCE)).isEqualTo(200);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndOnePhaseCommitEnabled")
+  public void
+      updateAndCommit_TwoPartitionsMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageAtomicityUnit(
+          Isolation isolation, boolean onePhaseCommitEnabled)
+          throws TransactionException, ExecutionException, CoordinatorException {
+    if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
+      // Enabling both one-phase commit and group commit is not supported
+      return;
+    }
+
+    // Arrange
+
+    // Prepare initial records
+    createConsensusCommitManager(isolation)
+        .mutate(
+            Arrays.asList(
+                Insert.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                    .intValue(BALANCE, INITIAL_BALANCE)
+                    .build(),
+                Insert.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                    .intValue(BALANCE, INITIAL_BALANCE)
+                    .build()));
+
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation, onePhaseCommitEnabled);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build());
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 200)
+            .build());
+    transaction.commit();
+
+    // Assert
+    verify(storage, times(2)).get(any(Get.class));
+
+    StorageInfo storageInfo = admin.getStorageInfo(namespace1);
+    switch (storageInfo.getMutationAtomicityUnit()) {
+      case RECORD:
+      case PARTITION:
+        // twice for prepare, twice for commit
+        verify(storage, times(4)).mutate(anyList());
+
+        // commit-state should occur
+        if (isGroupCommitEnabled()) {
+          verify(coordinator)
+              .putStateForGroupCommit(
+                  anyString(), anyList(), any(TransactionState.class), anyLong());
+        } else {
+          verify(coordinator).putState(any(Coordinator.State.class));
+        }
+        break;
+      case TABLE:
+      case NAMESPACE:
+      case STORAGE:
+        if (onePhaseCommitEnabled) {
+          // one-phase commit, so only one mutation call
+          verify(storage).mutate(anyList());
+
+          // no commit-state should occur
+          verify(coordinator, never()).putState(any(Coordinator.State.class));
+        } else {
+          // one for prepare, one for commit
+          verify(storage, times(2)).mutate(anyList());
+
+          // commit-state should occur
+          if (isGroupCommitEnabled()) {
+            verify(coordinator)
+                .putStateForGroupCommit(
+                    anyString(), anyList(), any(TransactionState.class), anyLong());
+          } else {
+            verify(coordinator).putState(any(Coordinator.State.class));
+          }
+        }
+        break;
+      default:
+        throw new AssertionError();
+    }
+
+    Optional<Result> result1 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(100);
+
+    Optional<Result> result2 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result2.isPresent()).isTrue();
+    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(1);
+    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result2.get().getInt(BALANCE)).isEqualTo(200);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndOnePhaseCommitEnabled")
+  public void
+      updateAndCommit_TwoNamespacesMutationsGiven_ShouldBehaveCorrectlyBasedOnStorageAtomicityUnit(
+          Isolation isolation, boolean onePhaseCommitEnabled)
+          throws TransactionException, ExecutionException, CoordinatorException {
+    if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
+      // Enabling both one-phase commit and group commit is not supported
+      return;
+    }
+
+    // Arrange
+
+    // Prepare initial records
+    createConsensusCommitManager(isolation)
+        .mutate(
+            Arrays.asList(
+                Insert.newBuilder()
+                    .namespace(namespace1)
+                    .table(TABLE_1)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                    .intValue(BALANCE, INITIAL_BALANCE)
+                    .build(),
+                Insert.newBuilder()
+                    .namespace(namespace2)
+                    .table(TABLE_2)
+                    .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                    .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                    .intValue(BALANCE, INITIAL_BALANCE)
+                    .build()));
+
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation, onePhaseCommitEnabled);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 100)
+            .build());
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace2)
+            .table(TABLE_2)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 200)
+            .build());
+    transaction.commit();
+
+    // Assert
+    verify(storage, times(2)).get(any(Get.class));
+
+    StorageInfo storageInfo1 = admin.getStorageInfo(namespace1);
+    StorageInfo storageInfo2 = admin.getStorageInfo(namespace2);
+    if (!storageInfo1.getStorageName().equals(storageInfo2.getStorageName())) {
+      // different storages
+
+      // twice for prepare, twice for commit
+      verify(storage, times(4)).mutate(anyList());
+
+      // commit-state should occur
+      if (isGroupCommitEnabled()) {
+        verify(coordinator)
+            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      } else {
+        verify(coordinator).putState(any(Coordinator.State.class));
+      }
+    } else {
+      // same storage
+      switch (storageInfo1.getMutationAtomicityUnit()) {
+        case RECORD:
+        case PARTITION:
+        case TABLE:
+        case NAMESPACE:
+          // twice for prepare, twice for commit
+          verify(storage, times(4)).mutate(anyList());
+
+          // commit-state should occur
+          if (isGroupCommitEnabled()) {
+            verify(coordinator)
+                .putStateForGroupCommit(
+                    anyString(), anyList(), any(TransactionState.class), anyLong());
+          } else {
+            verify(coordinator).putState(any(Coordinator.State.class));
+          }
+          break;
+        case STORAGE:
+          if (onePhaseCommitEnabled) {
+            // one-phase commit, so only one mutation call
+            verify(storage).mutate(anyList());
+
+            // no commit-state should occur
+            verify(coordinator, never()).putState(any(Coordinator.State.class));
+          } else {
+            // one for prepare, one for commit
+            verify(storage, times(2)).mutate(anyList());
+
+            // commit-state should occur
+            if (isGroupCommitEnabled()) {
+              verify(coordinator)
+                  .putStateForGroupCommit(
+                      anyString(), anyList(), any(TransactionState.class), anyLong());
+            } else {
+              verify(coordinator).putState(any(Coordinator.State.class));
+            }
+          }
+          break;
+        default:
+          throw new AssertionError();
+      }
+    }
+
+    Optional<Result> result1 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(100);
+
+    Optional<Result> result2 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace2)
+                .table(TABLE_2)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result2.isPresent()).isTrue();
+    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result2.get().getInt(BALANCE)).isEqualTo(200);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndOnePhaseCommitEnabled")
+  public void getAndInsertAndCommit_ShouldBehaveCorrectly(
+      Isolation isolation, boolean onePhaseCommitEnabled)
+      throws TransactionException, ExecutionException, CoordinatorException {
+    if (isGroupCommitEnabled() && onePhaseCommitEnabled) {
+      // Enabling both one-phase commit and group commit is not supported
+      return;
+    }
+
+    // Arrange
+
+    // Prepare initial record
+    createConsensusCommitManager(isolation)
+        .insert(
+            Insert.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .intValue(BALANCE, INITIAL_BALANCE)
+                .build());
+
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation, onePhaseCommitEnabled);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Optional<Result> result =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, 100)
+            .build());
+    transaction.commit();
+
+    // Assert
+    if (isolation == Isolation.SERIALIZABLE) {
+      // one for transaction read, one for validation read
+      verify(storage, times(2)).get(any(Get.class));
+
+      // one for prepare, one for commit
+      verify(storage, times(2)).mutate(anyList());
+
+      // commit-state should occur
+      if (isGroupCommitEnabled()) {
+        verify(coordinator)
+            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+        return;
+      }
+      verify(coordinator).putState(any(Coordinator.State.class));
+    } else if (onePhaseCommitEnabled) {
+      // only one transaction read, no validation read
+      verify(storage).get(any(Get.class));
+
+      // one-phase commit, so only one mutation call
+      verify(storage).mutate(anyList());
+
+      // no commit-state should occur
+      verify(coordinator, never()).putState(any(Coordinator.State.class));
+    } else {
+      // only one transaction read, no validation read
+      verify(storage).get(any(Get.class));
+
+      // one for prepare, one for commit
+      verify(storage, times(2)).mutate(anyList());
+
+      // commit-state should occur
+      if (isGroupCommitEnabled()) {
+        verify(coordinator)
+            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+      } else {
+        verify(coordinator).putState(any(Coordinator.State.class));
+      }
+    }
+
+    Optional<Result> result1 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+                .build());
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result1.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result1.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    Optional<Result> result2 =
+        manager.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+                .build());
+    assertThat(result2.isPresent()).isTrue();
+    assertThat(result2.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result2.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(result2.get().getInt(BALANCE)).isEqualTo(100);
   }
 
   @Test

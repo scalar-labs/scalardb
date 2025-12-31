@@ -50,6 +50,32 @@ public class TransactionContext {
     return isolation == Isolation.SERIALIZABLE;
   }
 
+  public boolean isValidationActuallyRequired() {
+    // Only SERIALIZABLE isolation level requires validation
+    if (isolation != Isolation.SERIALIZABLE) {
+      return false;
+    }
+
+    // If the scan set is not empty, we need to perform validation
+    if (!snapshot.isScanSetEmpty()) {
+      return true;
+    }
+
+    // If the scanner set is not empty, we need to perform validation
+    if (!snapshot.isScannerSetEmpty()) {
+      return true;
+    }
+
+    // If all the records in the get set are included in the write set or delete set, no validation
+    // is required
+    return snapshot.getGetSet().stream()
+        .anyMatch(
+            getSetEntry -> {
+              Snapshot.Key key = new Snapshot.Key(getSetEntry.getKey());
+              return !snapshot.containsKeyInWriteSet(key) && !snapshot.containsKeyInDeleteSet(key);
+            });
+  }
+
   public boolean areAllScannersClosed() {
     return scanners.stream().allMatch(ConsensusCommitScanner::isClosed);
   }
