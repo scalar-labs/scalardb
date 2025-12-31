@@ -75,8 +75,9 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
             + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " WHERE "
             + rdbEngine.enclose(TableMetadataService.COL_FULL_TABLE_NAME)
-            + " = "
-            + getFullTableName(namespace, table);
+            + " = '"
+            + getFullTableName(namespace, table)
+            + "'";
     execute(deleteMetadataStatement);
   }
 
