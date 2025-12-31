@@ -1,11 +1,8 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.scalar.db.api.Get;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 public class TransactionContext {
 
@@ -71,14 +68,12 @@ public class TransactionContext {
 
     // If all the records in the get set are included in the write set or delete set, no validation
     // is required
-    for (Map.Entry<Get, Optional<TransactionResult>> getSetEntry : snapshot.getGetSet()) {
-      Snapshot.Key key = new Snapshot.Key(getSetEntry.getKey());
-      if (!snapshot.containsKeyInWriteSet(key) && !snapshot.containsKeyInDeleteSet(key)) {
-        return true;
-      }
-    }
-
-    return false;
+    return snapshot.getGetSet().stream()
+        .anyMatch(
+            getSetEntry -> {
+              Snapshot.Key key = new Snapshot.Key(getSetEntry.getKey());
+              return !snapshot.containsKeyInWriteSet(key) && !snapshot.containsKeyInDeleteSet(key);
+            });
   }
 
   public boolean areAllScannersClosed() {

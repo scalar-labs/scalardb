@@ -176,7 +176,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @BeforeEach
-  void setUp() throws Exception {
+  protected void setUp() throws Exception {
     truncateTables();
   }
 
