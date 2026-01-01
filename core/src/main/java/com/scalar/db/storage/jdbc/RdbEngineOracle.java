@@ -19,7 +19,6 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -437,8 +436,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public Driver getDriver() {
-    return new oracle.jdbc.driver.OracleDriver();
+  public String getDriverClassName() {
+    return oracle.jdbc.driver.OracleDriver.class.getName();
   }
 
   @Override

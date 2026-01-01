@@ -7,18 +7,18 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.ThrowableFunction;
+import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Properties;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
+  private final HikariDataSource dataSource;
   private final boolean requiresExplicitCommit;
 
   public JdbcAdminTestUtils(Properties properties) {

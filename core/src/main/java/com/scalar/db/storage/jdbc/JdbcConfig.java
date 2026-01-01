@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getString;
 
@@ -23,12 +22,7 @@ public class JdbcConfig {
   public static final String TRANSACTION_MANAGER_NAME = STORAGE_NAME;
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
-  public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
   public static final String CONNECTION_POOL_MAX_TOTAL = PREFIX + "connection_pool.max_total";
-  public static final String PREPARED_STATEMENTS_POOL_ENABLED =
-      PREFIX + "prepared_statements_pool.enabled";
-  public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
-      PREFIX + "prepared_statements_pool.max_open";
 
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
 
@@ -37,15 +31,11 @@ public class JdbcConfig {
 
   public static final String TABLE_METADATA_CONNECTION_POOL_MIN_IDLE =
       PREFIX + "table_metadata.connection_pool.min_idle";
-  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_IDLE =
-      PREFIX + "table_metadata.connection_pool.max_idle";
   public static final String TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "table_metadata.connection_pool.max_total";
 
   public static final String ADMIN_CONNECTION_POOL_MIN_IDLE =
       PREFIX + "admin.connection_pool.min_idle";
-  public static final String ADMIN_CONNECTION_POOL_MAX_IDLE =
-      PREFIX + "admin.connection_pool.max_idle";
   public static final String ADMIN_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "admin.connection_pool.max_total";
 
@@ -59,17 +49,12 @@ public class JdbcConfig {
   public static final String DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "db2.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
-  public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
-  public static final boolean DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED = false;
-  public static final int DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN = -1;
 
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE = 5;
-  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL = 25;
 
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE = 5;
-  public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
 
   // MySQL, Oracle and Db2 have limitations regarding the total size of key columns. Thus, we should
@@ -114,20 +99,16 @@ public class JdbcConfig {
   @Nullable private final String password;
 
   private final int connectionPoolMinIdle;
-  private final int connectionPoolMaxIdle;
   private final int connectionPoolMaxTotal;
-  private final boolean preparedStatementsPoolEnabled;
-  private final int preparedStatementsPoolMaxOpen;
 
   @Nullable private final Isolation isolation;
 
   private final String metadataSchema;
+
   private final int tableMetadataConnectionPoolMinIdle;
-  private final int tableMetadataConnectionPoolMaxIdle;
   private final int tableMetadataConnectionPoolMaxTotal;
 
   private final int adminConnectionPoolMinIdle;
-  private final int adminConnectionPoolMaxIdle;
   private final int adminConnectionPoolMaxTotal;
 
   private final int mysqlVariableKeyColumnSize;
@@ -151,6 +132,20 @@ public class JdbcConfig {
               + "'");
     }
 
+    String[] removedProperties =
+        new String[] {
+          PREFIX + "connection_pool.max_idle",
+          PREFIX + "prepared_statements_pool.enabled",
+          PREFIX + "prepared_statements_pool.max_open",
+          PREFIX + "table_metadata.connection_pool.max_idle",
+          PREFIX + "admin.connection_pool.max_idle"
+        };
+    for (String property : removedProperties) {
+      if (databaseConfig.getProperties().containsKey(property)) {
+        logger.warn("The configuration property {} is removed and will be ignored", property);
+      }
+    }
+
     if (databaseConfig.getContactPoints().isEmpty()) {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
@@ -163,26 +158,11 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             CONNECTION_POOL_MIN_IDLE,
             DEFAULT_CONNECTION_POOL_MIN_IDLE);
-    connectionPoolMaxIdle =
-        getInt(
-            databaseConfig.getProperties(),
-            CONNECTION_POOL_MAX_IDLE,
-            DEFAULT_CONNECTION_POOL_MAX_IDLE);
     connectionPoolMaxTotal =
         getInt(
             databaseConfig.getProperties(),
             CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_CONNECTION_POOL_MAX_TOTAL);
-    preparedStatementsPoolEnabled =
-        getBoolean(
-            databaseConfig.getProperties(),
-            PREPARED_STATEMENTS_POOL_ENABLED,
-            DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
-    preparedStatementsPoolMaxOpen =
-        getInt(
-            databaseConfig.getProperties(),
-            PREPARED_STATEMENTS_POOL_MAX_OPEN,
-            DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
 
     String isolationLevel = getString(databaseConfig.getProperties(), ISOLATION_LEVEL, null);
     if (isolationLevel != null) {
@@ -196,11 +176,6 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             TABLE_METADATA_CONNECTION_POOL_MIN_IDLE,
             DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
-    tableMetadataConnectionPoolMaxIdle =
-        getInt(
-            databaseConfig.getProperties(),
-            TABLE_METADATA_CONNECTION_POOL_MAX_IDLE,
-            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
     tableMetadataConnectionPoolMaxTotal =
         getInt(
             databaseConfig.getProperties(),
@@ -212,11 +187,6 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             ADMIN_CONNECTION_POOL_MIN_IDLE,
             DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE);
-    adminConnectionPoolMaxIdle =
-        getInt(
-            databaseConfig.getProperties(),
-            ADMIN_CONNECTION_POOL_MAX_IDLE,
-            DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE);
     adminConnectionPoolMaxTotal =
         getInt(
             databaseConfig.getProperties(),
@@ -301,20 +271,8 @@ public class JdbcConfig {
     return connectionPoolMinIdle;
   }
 
-  public int getConnectionPoolMaxIdle() {
-    return connectionPoolMaxIdle;
-  }
-
   public int getConnectionPoolMaxTotal() {
     return connectionPoolMaxTotal;
-  }
-
-  public boolean isPreparedStatementsPoolEnabled() {
-    return preparedStatementsPoolEnabled;
-  }
-
-  public int getPreparedStatementsPoolMaxOpen() {
-    return preparedStatementsPoolMaxOpen;
   }
 
   public Optional<Isolation> getIsolation() {
@@ -329,20 +287,12 @@ public class JdbcConfig {
     return tableMetadataConnectionPoolMinIdle;
   }
 
-  public int getTableMetadataConnectionPoolMaxIdle() {
-    return tableMetadataConnectionPoolMaxIdle;
-  }
-
   public int getTableMetadataConnectionPoolMaxTotal() {
     return tableMetadataConnectionPoolMaxTotal;
   }
 
   public int getAdminConnectionPoolMinIdle() {
     return adminConnectionPoolMinIdle;
-  }
-
-  public int getAdminConnectionPoolMaxIdle() {
-    return adminConnectionPoolMaxIdle;
   }
 
   public int getAdminConnectionPoolMaxTotal() {
