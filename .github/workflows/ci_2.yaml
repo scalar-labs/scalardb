@@ -3,9 +3,6 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Ru
 
 on:
   pull_request:
-  push:
-    branches:
-      - ci_refac
   workflow_dispatch:
     inputs:
       INT_TEST_JAVA_RUNTIME_VERSION:
