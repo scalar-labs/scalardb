@@ -701,7 +701,7 @@ public class CrudHandlerTest {
     Get anotherGet = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    snapshot = new Snapshot(ANY_ID_1, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -730,8 +730,7 @@ public class CrudHandlerTest {
     Get anotherGet = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    snapshot =
-        new Snapshot(ANY_ID_1, Isolation.READ_COMMITTED, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.READ_COMMITTED, false, false);
@@ -1153,7 +1152,7 @@ public class CrudHandlerTest {
     Scan anotherScan = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
     TransactionResult expected = new TransactionResult(result);
-    snapshot = new Snapshot(ANY_ID_1, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1224,7 +1223,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    snapshot = new Snapshot(ANY_ID_1, Isolation.SNAPSHOT, tableMetadataManager, parallelExecutor);
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1284,7 +1283,6 @@ public class CrudHandlerTest {
     snapshot =
         new Snapshot(
             ANY_ID_1,
-            Isolation.SNAPSHOT,
             tableMetadataManager,
             parallelExecutor,
             readSet,
