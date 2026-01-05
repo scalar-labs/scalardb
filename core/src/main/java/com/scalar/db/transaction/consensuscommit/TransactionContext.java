@@ -46,11 +46,11 @@ public class TransactionContext {
     return isolation != Isolation.READ_COMMITTED;
   }
 
-  public boolean isValidationRequired() {
+  public boolean isValidationPossiblyRequired() {
     return isolation == Isolation.SERIALIZABLE;
   }
 
-  public boolean isValidationActuallyRequired() {
+  public boolean isValidationRequired() {
     // Only SERIALIZABLE isolation level requires validation
     if (isolation != Isolation.SERIALIZABLE) {
       return false;

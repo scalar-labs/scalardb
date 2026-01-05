@@ -156,7 +156,7 @@ public class CommitHandler {
       }
     }
 
-    if (context.isValidationActuallyRequired()) {
+    if (context.isValidationRequired()) {
       try {
         validateRecords(context);
       } catch (ValidationException e) {
@@ -198,7 +198,7 @@ public class CommitHandler {
     }
 
     // If validation is required, we cannot one-phase commit the transaction
-    if (context.isValidationActuallyRequired()) {
+    if (context.isValidationRequired()) {
       return false;
     }
 

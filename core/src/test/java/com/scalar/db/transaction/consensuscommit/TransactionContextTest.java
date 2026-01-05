@@ -31,41 +31,40 @@ public class TransactionContextTest {
   }
 
   @Test
-  public void isValidationActuallyRequired_WhenSnapshotIsolation_ShouldReturnFalse() {
+  public void isValidationRequired_WhenSnapshotIsolation_ShouldReturnFalse() {
     // Arrange
     TransactionContext context =
         new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isFalse();
   }
 
   @Test
-  public void isValidationActuallyRequired_WhenReadCommittedIsolation_ShouldReturnFalse() {
+  public void isValidationRequired_WhenReadCommittedIsolation_ShouldReturnFalse() {
     // Arrange
     TransactionContext context =
         new TransactionContext(ANY_ID, snapshot, Isolation.READ_COMMITTED, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isFalse();
   }
 
   @Test
-  public void
-      isValidationActuallyRequired_WhenSerializableIsolationWithNonEmptyScanSet_ShouldReturnTrue() {
+  public void isValidationRequired_WhenSerializableIsolationWithNonEmptyScanSet_ShouldReturnTrue() {
     // Arrange
     when(snapshot.isScanSetEmpty()).thenReturn(false);
     TransactionContext context =
         new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isTrue();
@@ -73,7 +72,7 @@ public class TransactionContextTest {
 
   @Test
   public void
-      isValidationActuallyRequired_WhenSerializableIsolationWithNonEmptyScannerSet_ShouldReturnTrue() {
+      isValidationRequired_WhenSerializableIsolationWithNonEmptyScannerSet_ShouldReturnTrue() {
     // Arrange
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(false);
@@ -81,7 +80,7 @@ public class TransactionContextTest {
         new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isTrue();
@@ -89,7 +88,7 @@ public class TransactionContextTest {
 
   @Test
   public void
-      isValidationActuallyRequired_WhenSerializableIsolationWithGetNotInWriteOrDeleteSet_ShouldReturnTrue() {
+      isValidationRequired_WhenSerializableIsolationWithGetNotInWriteOrDeleteSet_ShouldReturnTrue() {
     // Arrange
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -107,7 +106,7 @@ public class TransactionContextTest {
         new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isTrue();
@@ -115,7 +114,7 @@ public class TransactionContextTest {
 
   @Test
   public void
-      isValidationActuallyRequired_WhenSerializableIsolationWithAllGetsInWriteSet_ShouldReturnFalse() {
+      isValidationRequired_WhenSerializableIsolationWithAllGetsInWriteSet_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -132,7 +131,7 @@ public class TransactionContextTest {
         new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isFalse();
@@ -140,7 +139,7 @@ public class TransactionContextTest {
 
   @Test
   public void
-      isValidationActuallyRequired_WhenSerializableIsolationWithAllGetsInDeleteSet_ShouldReturnFalse() {
+      isValidationRequired_WhenSerializableIsolationWithAllGetsInDeleteSet_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -158,15 +157,14 @@ public class TransactionContextTest {
         new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isFalse();
   }
 
   @Test
-  public void
-      isValidationActuallyRequired_WhenSerializableIsolationWithEmptySets_ShouldReturnFalse() {
+  public void isValidationRequired_WhenSerializableIsolationWithEmptySets_ShouldReturnFalse() {
     // Arrange
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
@@ -176,7 +174,7 @@ public class TransactionContextTest {
         new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
-    boolean actual = context.isValidationActuallyRequired();
+    boolean actual = context.isValidationRequired();
 
     // Assert
     assertThat(actual).isFalse();
