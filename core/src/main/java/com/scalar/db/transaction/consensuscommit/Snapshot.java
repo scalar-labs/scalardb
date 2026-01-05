@@ -55,7 +55,6 @@ import org.slf4j.LoggerFactory;
 public class Snapshot {
   private static final Logger logger = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
-  private final Isolation isolation;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
@@ -83,11 +82,9 @@ public class Snapshot {
 
   public Snapshot(
       String id,
-      Isolation isolation,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.id = id;
-    this.isolation = isolation;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     readSet = new ConcurrentHashMap<>();
@@ -101,7 +98,6 @@ public class Snapshot {
   @VisibleForTesting
   Snapshot(
       String id,
-      Isolation isolation,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
@@ -111,7 +107,6 @@ public class Snapshot {
       Map<Key, Delete> deleteSet,
       List<ScannerInfo> scannerSet) {
     this.id = id;
-    this.isolation = isolation;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
@@ -231,6 +226,18 @@ public class Snapshot {
 
   public boolean hasWritesOrDeletes() {
     return !writeSet.isEmpty() || !deleteSet.isEmpty();
+  }
+
+  public boolean isScanSetEmpty() {
+    return scanSet.isEmpty();
+  }
+
+  public boolean isScannerSetEmpty() {
+    return scannerSet.isEmpty();
+  }
+
+  public boolean isGetSetEmpty() {
+    return getSet.isEmpty();
   }
 
   public boolean hasReads() {
@@ -523,10 +530,6 @@ public class Snapshot {
   @VisibleForTesting
   void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (isolation != Isolation.SERIALIZABLE) {
-      return;
-    }
-
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Scan set is re-validated to check if there is no anti-dependency
