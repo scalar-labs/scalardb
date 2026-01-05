@@ -854,7 +854,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     transaction.prepare();
     transaction.validate();
-    when(context.isValidationRequired()).thenReturn(true);
+    when(context.isValidationPossiblyRequired()).thenReturn(true);
 
     // Act
     transaction.commit();
@@ -869,7 +869,7 @@ public class TwoPhaseConsensusCommitTest {
       throws PreparationException {
     // Arrange
     transaction.prepare();
-    when(context.isValidationRequired()).thenReturn(true);
+    when(context.isValidationPossiblyRequired()).thenReturn(true);
 
     // Act Assert
     assertThatThrownBy(transaction::commit).isInstanceOf(IllegalStateException.class);

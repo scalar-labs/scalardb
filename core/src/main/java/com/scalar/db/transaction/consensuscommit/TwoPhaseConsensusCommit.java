@@ -227,7 +227,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void commit() throws CommitConflictException, UnknownTransactionStatusException {
-    if (context.isValidationRequired() && !validated) {
+    if (context.isValidationPossiblyRequired() && !validated) {
       throw new IllegalStateException(
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE.buildMessage());
     }
