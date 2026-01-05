@@ -1,6 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.api.ConditionBuilder.*;
+import static com.scalar.db.api.ConditionBuilder.column;
+import static com.scalar.db.api.ConditionBuilder.deleteIf;
+import static com.scalar.db.api.ConditionBuilder.putIf;
+import static com.scalar.db.api.ConditionBuilder.putIfNotExists;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
