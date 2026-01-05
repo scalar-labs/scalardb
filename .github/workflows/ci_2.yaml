@@ -72,7 +72,7 @@ jobs:
       - name: Run integration test
         uses: ./.github/actions/run-integration-test
         with:
-          INTEGRATION_TEST_CMD: "./gradlew integrationTestJdbc"
+          INT_TEST_CMD: "./gradlew integrationTestJdbc"
           GROUP_COMMIT_ENABLED: "${{ matrix.mode.group_commit_enabled && 'true' || 'false' }}"
 
 
