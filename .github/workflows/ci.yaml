@@ -2,7 +2,6 @@ name: CI
 run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run integration test with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       INT_TEST_JAVA_RUNTIME_VERSION:
