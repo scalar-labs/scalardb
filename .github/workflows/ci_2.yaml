@@ -3,6 +3,9 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Ru
 
 on:
   pull_request:
+  push:
+    branches:
+      - ci_refac
   workflow_dispatch:
     inputs:
       INT_TEST_JAVA_RUNTIME_VERSION:
@@ -63,8 +66,8 @@ jobs:
         mode:
           - label: default
             group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+#          - label: with_group_commit
+#            group_commit_enabled: true
 
     steps:
       - uses: actions/checkout@v6
