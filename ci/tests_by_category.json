@@ -1,0 +1,83 @@
+{
+  "cassandra": [
+    {
+      "label": "cassandra",
+      "label_pretty": "Cassandra ${{ matrix.version }}",
+      "setup_env": "docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m-p 9042:9042 cassandra:${{ matrix.version }}>",
+      "versions": [
+        "3.0",
+        "3.11",
+        "4.1",
+        "5.0"
+      ],
+      "test": "./gradlew integrationTestCassandra"
+    }
+  ],
+  "dynamo": [
+    {
+      "label": "dynamo",
+      "label_pretty": "DynamoDB Local",
+      "setup_env": "docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local",
+      "test": "./gradlew integrationTestDynamo"
+    }
+  ],
+  "jdbc": [
+    {
+      "label": "mysql",
+      "label_pretty": "MySQL ${{ matrix.version }}",
+      "setup_env": "docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:${{ matrix.version }} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin",
+      "versions": [
+        "5.7",
+        "8.0",
+        "8.4"
+      ],
+      "test": "./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql"
+    },
+    {
+      "label": "postgresql",
+      "label_pretty": "PostgreSQL ",
+      "setup_env": "docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:${{ matrix.version }}-alpine",
+      "versions": [
+        "13",
+        "14",
+        "15",
+        "16",
+        "17"
+      ],
+      "test": "./gradlew integrationTestJdbc"
+    },
+    {
+      "label": "oracle_19",
+      "label_pretty": "Oracle 19",
+      "pre_setup_env": "docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}",
+      "setup_env": "docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:19",
+      "test": "./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle"
+    },
+    {
+      "label": "oracle_21",
+      "label_pretty": "Oracle 21",
+      "pre_setup_env": "docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}",
+      "setup_env": "docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:21",
+      "test": "./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle"
+    },
+    {
+      "label": "oracle_23",
+      "label_pretty": "Oracle 23",
+      "pre_setup_env": "docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}",
+      "setup_env": "docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:23",
+      "test": "./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle"
+    },
+    {
+      "label": "sqlserver",
+      "label_pretty": "SQL Server ${{ matrix.version }}",
+      "setup_env": "docker run -d --name sqlserver -e 'MSSQL_PID=Express' -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=SqlServer1' -p 1433:1433 mcr.microsoft.com/mssql/server:${{ matrix.version }}",
+      "post_setup_env": "docker exec sqlserver22 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer22 -Q \"CREATE DATABASE test_db COLLATE Japanese_BIN2;\"",
+      "versions": [
+        "2017-latest",
+        "2019-latest",
+        "2022-latest"
+      ],
+      "test": "./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer1"
+    }
+  ]
+}
