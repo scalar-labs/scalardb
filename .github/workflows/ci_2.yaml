@@ -45,7 +45,7 @@ env:
 
 jobs:
   integration-test-for-cassandra:
-    name: Cassandra ${{ matrix.version }} integration test (${{ matrix.group-commit-enabled && 'with group commit' || '' }})
+    name: Cassandra ${{ matrix.version }} integration test (${{ matrix.group-commit-enabled && 'with group commit' || 'default' }})
     runs-on: ubuntu-latest
     env:
       LABEL: cassandra_${{ matrix.version }}
@@ -62,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [ 4.1, 5.0 ]
+        version: [ 3.0, 3.11, 4.1, 5.0 ]
         group-commit-enabled: [ false, true ]
 
     steps:
@@ -81,36 +81,104 @@ jobs:
           LABEL: ${{ env.LABEL }}
 
 
-#  integration-test-for-jdbc-postgresql-13:
-#    name: PostgreSQL 13 integration test (${{ matrix.mode.label }})
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      postgres:
-#        image: postgres:13-alpine
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#        ports:
-#          - 5432:5432
-#
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        mode:
-#          - label: default
-#            group_commit_enabled: false
-##          - label: with_group_commit
-##            group_commit_enabled: true
-#
-#    steps:
-#      - uses: actions/checkout@v6
-#
-#      - name: Run integration test
-#        uses: ./.github/actions/run-integration-test
-#        with:
-#          INT_TEST_CMD: "./gradlew integrationTestJdbc"
-#          GROUP_COMMIT_ENABLED: "${{ matrix.mode.group_commit_enabled && 'true' || 'false' }}"
+  integration-test-for-cosmos:
+    name: Cosmos ${{ matrix.version }} integration test (${{ matrix.group-commit-enabled && 'with group commit' || 'default' }})
+    runs-on: windows-latest
+    env:
+      # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
+      # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
+      SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
+      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - label: default
+            group_commit_enabled: false
+          - label: with_group_commit
+            group_commit_enabled: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        uses: actions/setup-java@v5
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+        run: |
+          $container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
+          docker cp "${container_id}:oracle-jdk.exe" .
+          docker rm "$container_id"
+          Write-Host "Install Oracle JDK"
+          Start-Process "oracle-jdk.exe" -NoNewWindow -Wait -ArgumentList "/s"
+          Write-Host "Oracle JDK installation successful"
+          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+            $jdk_root_dir = "jdk-1.8"
+          } else {
+            $jdk_root_dir = "jdk-11"
+          }
+          echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
+
+      - name: Start Azure Cosmos DB emulator
+        run: |
+          Write-Host "Launching Cosmos DB Emulator"
+          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+          # Set startup timeout to 10min (600s), the default is 4min
+          Start-CosmosDbEmulator -Consistency Strong -Timeout 600
+
+      - name: Install TLS/SSL certificate
+        run: |
+          $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
+          $params = @{
+            Cert = $cert
+            Type = "CERT"
+            FilePath = "$home/tmp-cert.cer"
+            NoClobber = $true
+          }
+          Export-Certificate @params
+          certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
+          Remove-Item $home/tmp-cert.cer
+          # Setting the keystore option differs between Java 8 and Java 11+
+          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+            $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
+          } else {
+            $keystore = "-cacerts"
+          }
+          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
+          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestCosmos' task
+        run: ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cosmos_integration_test_reports_${{ matrix.mode.label }}
+          path: core/build/reports/tests/integrationTestCosmos
 
 
 

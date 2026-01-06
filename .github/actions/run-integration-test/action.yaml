@@ -31,6 +31,14 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Assert Linux or Windows runner is used
+      shell: bash
+      run: |
+        if [[ "${{ runner.os }}" != "Linux" &&  "${{ runner.os }}" != "Windows" ]]; then
+          echo "This action only supports Ubuntu and Windows runners."
+          exit 1
+        fi
+
     - name: Set up JDK 8
       uses: actions/setup-java@v5
       with:
@@ -38,30 +46,24 @@ runs:
         distribution: temurin
 
     - name: Set up JDK ${{ inputs.JAVA_RUNTIME_VERSION }} (${{ inputs.JAVA_RUNTIME_VENDOR }}) to run integration test
+      id: setup-int-test-jdk
       uses: actions/setup-java@v5
-      if: ${{ inputs.JAVA_RUNTIME_VENDOR != 'oracle' }}
+      if: ${{ (os.runner == 'Linux' && inputs.JAVA_RUNTIME_VENDOR != 'oracle') || (os.runner == 'Windows' && !(inputs.JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.JAVA_RUNTIME_VERSION == '8' || inputs.JAVA_RUNTIME_VERSION == '11')))  }}
       with:
         java-version: ${{ inputs.JAVA_RUNTIME_VERSION }}
         distribution: ${{ inputs.JAVA_RUNTIME_VENDOR }}
 
-    - name: Login to Oracle container registry
-      uses: docker/login-action@v3
-      if: ${{ inputs.JAVA_RUNTIME_VENDOR == 'oracle' }}
-      with:
-        registry: container-registry.oracle.com
-        username: ${{ inputs.OCR_USERNAME }}
-        password: ${{ inputs.OCR_TOKEN }}
-
     - name: Set up JDK ${{ inputs.JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-      if: ${{ inputs.JAVA_RUNTIME_VENDOR == 'oracle' }}
+      if: ${{ steps.setup-int-test-jdk.outcome == 'skipped' }}
       shell: bash
       run: |
-        if ([ "${{ runner.os }}" != "Windows"  ]); then
-          # Ubuntu runner
+        if ([ "${{ runner.os }}" != "Linux"  ]); then
+          # Linux runner, install Oracle JDK for any versions from Oracle Container Registry
+          docker login container-registry.oracle.com -u ${{ inputs.OCR_USERNAME }} --p ${{ inputs.OCR_TOKEN }}
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ inputs.JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
         else
-          # Windows runner
+          # Windows runner, install Oracle JDK 8 or 11 from Scalar Container Registry
           docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ inputs.CR_PAT }}
           container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.JAVA_RUNTIME_VERSION }}-windows")
           docker cp "${container_id}:oracle-jdk.exe" .
@@ -76,19 +78,19 @@ runs:
           fi
           echo "JAVA_HOME=C:\\Program Files\\Java\\${jdk_root_dir}" >> "$GITHUB_ENV"
         fi
-        
-      
+
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
 
     - name: Execute integration test
+      id: execute-integration-test
       env:
         ORG_GRADLE_PROJECT_javaVersion: '8'
         ORG_GRADLE_PROJECT_javaVendor: 'temurin'
         ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ inputs.JAVA_RUNTIME_VERSION }}"
         ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ inputs.JAVA_RUNTIME_VENDOR }}"
         GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
-      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+      shell: ${{ runner.os == 'Linux' && 'bash' || 'powershell' }}
       run: ${{ inputs.CMD }} ${{ inputs.GROUP_COMMIT_ENABLED == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
 
     - name: Detect test report folder
@@ -110,6 +112,5 @@ runs:
       if: ${{ always() && steps.detect-report-folder.outputs.report_path != '' }}
       uses: actions/upload-artifact@v6
       with:
-        name: ${{ job.status == 'success' && 'success' || 'failure' }}_${{ inputs.LABEL }}_integration_test_reports_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}
+        name: ${{ steps.execute-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ inputs.LABEL }}_integration_test_reports_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}
         path: ${{ steps.detect-report-folder.outputs.report_path }}
-
