@@ -1,8 +1,20 @@
-# Additional integration tests
+# Define all integration tests to be run in the CI
+
+# Each test follows the following format:
+#
+# test_category:
+#   - label: a unique label for the test
+#     display_name: a human-readable name
+#     runner: (optional) a Github action runner. The default is "ubuntu-latest".
+#     versions: (optional) an array of database versions to test. If present, the test will be run for each version.
+#     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, all tests will be run with group commit enabled and disabled.
+#     setup_db: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+#     test: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+
 blob-storage:
   - label: blob-storage
-    label_pretty: Blob Storage
-    setup_env: docker run -d -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
+    display_name: Blob Storage
+    setup_db: docker run -d -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
     test: |
       az storage container create \
             --name test-container \
@@ -11,10 +23,9 @@ blob-storage:
 
 cosmos:
   - label: cosmos
-    label_pretty: Cosmos DB
-    # Setup_env and test scripts will be run on powershell
+    display_name: Cosmos DB
     runner: windows-latest
-    setup_env: |
+    setup_db: |
       Write-Host "Launching Cosmos DB Emulator"
       Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
       # Set startup timeout to 10min (600s), the default is 4min
@@ -23,8 +34,8 @@ cosmos:
 
 cassandra:
   - label: cassandra_${{ matrix.version }}
-    label_pretty: Cassandra ${{ matrix.version }}
-    setup_env: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:${{ matrix.version }}
+    display_name: Cassandra ${{ matrix.version }}
+    setup_db: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:${{ matrix.version }}
     versions:
       - 3.0
       - 3.11
@@ -34,22 +45,22 @@ cassandra:
 
 dynamo:
   - label: dynamo
-    label_pretty: DynamoDB Local
-    setup_env: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
+    display_name: DynamoDB Local
+    setup_db: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
     test: ./gradlew integrationTestDynamo
 
 jdbc:
   - label: alloydb_${{ matrix.version }}
-    label_pretty: AlloyDB ${{ matrix.version }}
-    setup_env: docker run -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 google/alloydbomni:${{ matrix.version }}
+    display_name: AlloyDB ${{ matrix.version }}
+    setup_db: docker run -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 google/alloydbomni:${{ matrix.version }}
     versions:
       - 15
       - 16
     test: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
   - label: db2_${{ matrix.version }}
-    label_pretty: DB2 ${{ matrix.version }}
-    setup_env: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -p 50000:50000 icr.io/db2_community/db2:${{ matrix.version }}
+    display_name: DB2 ${{ matrix.version }}
+    setup_db: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -p 50000:50000 icr.io/db2_community/db2:${{ matrix.version }}
     versions:
       - 11.5.9.0
       - 12.1.1.0
@@ -64,16 +75,16 @@ jdbc:
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
 
   - label: mariadb_${{ matrix.version }}
-    label_pretty: MariaDB_${{ matrix.version }}
-    setup_env: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:${{ matrix.version }} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    display_name: MariaDB_${{ matrix.version }}
+    setup_db: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:${{ matrix.version }} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
       - 10.11
       - 11.4
     test: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
   - label: mysql_${{ matrix.version }}
-    label_pretty: MySQL ${{ matrix.version }}
-    setup_env: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:${{ matrix.version }} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    display_name: MySQL ${{ matrix.version }}
+    setup_db: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:${{ matrix.version }} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
       - 5.7
       - 8.0
@@ -81,19 +92,21 @@ jdbc:
     test: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
   - label: oracle_${{ matrix.version }}
-    label_pretty: Oracle_${{ matrix.version }}
+    display_name: Oracle_${{ matrix.version }}
     versions:
       - 19
       - 21
       - 23
-    setup_env:
+    setup_db:
       docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}
       docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:${{ matrix.version }}
-    test: declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1"); ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[${{ matrix.version }}]} -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+    test: |
+      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[${{ matrix.version }}]} -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
 
   - label: postgresql_${{ matrix.version }}
-    label_pretty: PostgreSQL ${{ matrix.version }}
-    setup_env: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:${{ matrix.version }}-alpine
+    display_name: PostgreSQL ${{ matrix.version }}
+    setup_db: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:${{ matrix.version }}-alpine
     versions:
       - 13
       - 14
@@ -103,8 +116,8 @@ jdbc:
     test: ./gradlew integrationTestJdbc
 
   - label: sqlserver_${{ matrix.version }}
-    label_pretty: SQL Server ${{ matrix.version }}
-    setup_env: docker run -d --name sqlserver -e MSSQL_PID=Express -e ACCEPT_EULA=Y -e SA_PASSWORD=SqlServer1 -p 1433:1433 mcr.microsoft.com/mssql/server:${{ matrix.version }}-latest
+    display_name: SQL Server ${{ matrix.version }}
+    setup_db: docker run -d --name sqlserver -e MSSQL_PID=Express -e ACCEPT_EULA=Y -e SA_PASSWORD=SqlServer1 -p 1433:1433 mcr.microsoft.com/mssql/server:${{ matrix.version }}-latest
     versions:
       - 2017
       - 2019
@@ -115,12 +128,12 @@ jdbc:
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer1
 
   - label: tidb_${{ matrix.version }}
-    label_pretty: TiDB ${{ matrix.version }}
+    display_name: TiDB ${{ matrix.version }}
     versions:
       - v6.5
       - v7.5
       - v8.5
-    setup_env: |
+    setup_db: |
       echo "Install TiUP\n"
       curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
       echo "$HOME/.tiup/bin" >> $GITHUB_PATH
@@ -140,17 +153,17 @@ jdbc:
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root
 
   - label: yugabytedb
-    label_pretty: YugabyteDB 2
-    setup_env: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
+    display_name: YugabyteDB 2
+    setup_db: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
     test: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
 multi-storage:
-    - label: multi-storage
-      label_pretty: Multi-Storage
-      setup_env: |
-        docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
-        docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:3.11
-      test: ./gradlew integrationTestMultiStorage
-      disable_group_commit: true
+  - label: multi-storage
+    display_name: Multi-Storage
+    setup_db: |
+      docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:3.11
+    test: ./gradlew integrationTestMultiStorage
+    disable_group_commit: true
 
 

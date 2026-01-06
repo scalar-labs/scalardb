@@ -66,13 +66,13 @@ if (!allTest) {
 }
 
 // Collect all remaining tests from enabled categories
-// If a test has a "versions" array, expand it into multiple test variants
+// If a test has a "versions" array, create a test entry for each version
 def testsToRun = []
 testsByCategory.each { category, tests ->
     tests.each { test ->
         test["test_category"] = category
         if (test.versions) {
-            // Expand test into multiple variants, one per version
+            // For each test variant that has several versions, create a separate entry for each version
             test.versions.each { version ->
                 def testVariant = new LinkedHashMap(test)
                 testVariant.remove("versions")
@@ -85,6 +85,27 @@ testsByCategory.each { category, tests ->
     }
 }
 
+// For each test "without disable_group_commit:true", create two entries, one where "group_commit_enabled: true", one where "group_commit_enabled: false"
+def expandedTests = []
+testsToRun.each { test ->
+    if (test.disable_group_commit) {
+        // Keep as is, remove the disable_group_commit attribute
+        def testVariant = new LinkedHashMap(test)
+        testVariant.remove("disable_group_commit")
+        testVariant["group_commit_enabled"] = false
+        expandedTests.add(testVariant)
+    } else {
+        // Create two variants: one with group_commit_enabled true, one with false
+        def testWithGroupCommit = new LinkedHashMap(test)
+        testWithGroupCommit["group_commit_enabled"] = true
+        expandedTests.add(testWithGroupCommit)
+
+        def testWithoutGroupCommit = new LinkedHashMap(test)
+        testWithoutGroupCommit["group_commit_enabled"] = false
+        expandedTests.add(testWithoutGroupCommit)
+    }
+}
+
 // Output the tests to run as JSON for the matrix strategy
-def jsonBuilder = new JsonBuilder([include: testsToRun])
+def jsonBuilder = new JsonBuilder([include: expandedTests])
 println(jsonBuilder.toString())
