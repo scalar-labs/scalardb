@@ -2,9 +2,7 @@
 
 // This script generates a test matrix for the integration tests based on the environment variables
 
-@Grab('org.json:json:20250517')
-
-import groovy.json.JsonSlurper
+import groovy.yaml.YamlSlurper
 import groovy.json.JsonBuilder
 import groovy.transform.SourceURI
 
@@ -40,10 +38,10 @@ def dynamoTest = Boolean.parseBoolean(System.getenv('DYNAMO'))
 def jdbcTest = Boolean.parseBoolean(System.getenv('JDBC'))
 def multistorageTest = Boolean.parseBoolean(System.getenv('MULTISTORAGE'))
 
-// Load the tests organized by category from JSON file
+// Load the tests organized by category from YAML file
 @SourceURI
 URI scriptBasePath
-def testsByCategory = new JsonSlurper().parse(new File(scriptBasePath.resolve("node_tests_by_category.json")))
+def testsByCategory = new YamlSlurper().parse(new File(scriptBasePath.resolve("tests.yaml")))
 
 // Filter the tests based on inputs - remove the disabled categories
 if (!allTest) {
