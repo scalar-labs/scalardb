@@ -1,17 +1,17 @@
 name: 'Run integration test'
 description: 'Setup the Java version, run the integration test and upload the test reports as artifact.'
 inputs:
-  INT_TEST_CMD:
+  CMD:
     description: 'The command to run the integration test. For example: ./gradlew integrationTestCassandra'
     required: true
   GROUP_COMMIT_ENABLED:
     description: 'Whether to run group commit related tests'
     required: true
-  INT_TEST_JAVA_RUNTIME_VERSION:
+  JAVA_RUNTIME_VERSION:
     description: JDK version used to run the integration test
     required: false
     default: '8'
-  INT_TEST_JAVA_RUNTIME_VENDOR:
+  JAVA_RUNTIME_VENDOR:
     description: Vendor of the JDK used to run the integration test
     required: false
     default: 'temurin'
@@ -23,6 +23,9 @@ inputs:
     description: 'Oracle Container Registry token'
     required: false
     default: ''
+  LABEL:
+    description: 'Label to identify the test run and artifacts'
+    required: true
 
 runs:
   using: "composite"
@@ -33,43 +36,79 @@ runs:
         java-version: 8
         distribution: temurin
 
-    - name: Set up JDK ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+    - name: Set up JDK ${{ inputs.JAVA_RUNTIME_VERSION }} (${{ inputs.JAVA_RUNTIME_VENDOR }}) to run integration test
       uses: actions/setup-java@v5
-      if: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle' }}
+      if: ${{ inputs.JAVA_RUNTIME_VENDOR != 'oracle' }}
       with:
-        java-version: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}
-        distribution: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}
+        java-version: ${{ inputs.JAVA_RUNTIME_VERSION }}
+        distribution: ${{ inputs.JAVA_RUNTIME_VENDOR }}
 
     - name: Login to Oracle container registry
       uses: docker/login-action@v3
-      if: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+      if: ${{ inputs.JAVA_RUNTIME_VENDOR == 'oracle' }}
       with:
         registry: container-registry.oracle.com
         username: ${{ inputs.OCR_USERNAME }}
         password: ${{ inputs.OCR_TOKEN }}
 
-    - name: Set up JDK ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-      if: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+    - name: Set up JDK ${{ inputs.JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+      if: ${{ inputs.JAVA_RUNTIME_VENDOR == 'oracle' }}
       shell: bash
       run: |
-        container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}")
-        docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+        if ([ "${{ runner.os }}" != "windows" ] ]); then
+          # Ubuntu runner
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ inputs.JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+        else
+          # Windows runner
+          docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
+          docker cp "${container_id}:oracle-jdk.exe" .
+          docker rm "$container_id"
+          echo "Install Oracle JDK"
+          ./oracle-jdk.exe /s
+          echo "Oracle JDK installation successful"
+          if [[ "$JAVA_RUNTIME_VERSION" == "8" ]]; then
+            jdk_root_dir="jdk-1.8"
+          else
+            jdk_root_dir="jdk-11"
+          fi
+          echo "JAVA_HOME=C:\\Program Files\\Java\\${jdk_root_dir}" >> "$GITHUB_ENV"
+        fi
+        
       
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
 
     - name: Execute integration test
       env:
-        INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
+        ORG_GRADLE_PROJECT_javaVersion: '8'
+        ORG_GRADLE_PROJECT_javaVendor: 'temurin'
+        ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ inputs.JAVA_RUNTIME_VERSION }}"
+        ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ inputs.JAVA_RUNTIME_VENDOR }}"
+        GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
+      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+      run: ${{ inputs.CMD }} ${{ inputs.GROUP_COMMIT_ENABLED == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
+
+    - name: Detect test report folder
+      id: detect-report-folder
+      if: always()
       shell: bash
-      run: ${{ inputs.INT_TEST_CMD }} ${{ inputs.GROUP_COMMIT_ENABLED == 'true' && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+      run: |
+        report_dir="core/build/reports/tests"
+        folder_name=$(ls -1 "$report_dir" | head -n 1)
+        report_path=$report_dir/$folder_name
+        if [ -d "$report_path" ]; then
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          echo "Detected test report folder: $report_path"
+        else
+          echo "Test report folder could not be found"
+        fi
 
     - name: Upload Gradle test reports
-      if: always()
+      if: ${{ always() && steps.detect-report-folder.outputs.report_path != '' }}
       uses: actions/upload-artifact@v6
       with:
-        # TODO : Make the path configurable
-        # TODO: prefix with fail/success based on the test result
-        name: postgresql_13_integration_test_reports_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-        path: core/build/reports/tests/integrationTestJdbc
+        name: ${{ job.status == 'success' && 'success' || 'failure' }}_${{ inputs.LABEL }}_integration_test_reports_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}
+        path: ${{ steps.detect-report-folder.outputs.report_path }}
 
