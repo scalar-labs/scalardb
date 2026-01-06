@@ -9,12 +9,12 @@ import groovy.transform.SourceURI
 // Check for required environment variables
 def requiredEnvVars = [
         'ALL',
-        'BLOBSTORAGE',
+        'BLOB_STORAGE',
         'CASSANDRA',
         'COSMOS',
         'DYNAMO',
         'JDBC',
-        'MULTISTORAGE',
+        'MULTI_STORAGE',
 ]
 
 def missingVars = []
@@ -31,12 +31,12 @@ if (!missingVars.isEmpty()) {
 
 // Read input parameters from environment variables
 def allTest = Boolean.parseBoolean(System.getenv('ALL'))
-def blobstorageTest = Boolean.parseBoolean(System.getenv('BLOBSTORAGE'))
+def blobStorageTest = Boolean.parseBoolean(System.getenv('BLOB_STORAGE'))
 def cassandraTest = Boolean.parseBoolean(System.getenv('CASSANDRA'))
 def cosmosTest = Boolean.parseBoolean(System.getenv('COSMOS'))
 def dynamoTest = Boolean.parseBoolean(System.getenv('DYNAMO'))
 def jdbcTest = Boolean.parseBoolean(System.getenv('JDBC'))
-def multistorageTest = Boolean.parseBoolean(System.getenv('MULTISTORAGE'))
+def multiStorageTest = Boolean.parseBoolean(System.getenv('MULTI_STORAGE'))
 
 // Load the tests organized by category from YAML file
 @SourceURI
@@ -45,8 +45,8 @@ def testsByCategory = new YamlSlurper().parse(new File(scriptBasePath.resolve("t
 
 // Filter the tests based on inputs - remove the disabled categories
 if (!allTest) {
-    if (!blobstorageTest) {
-        testsByCategory.remove("blobstorage")
+    if (!blobStorageTest) {
+        testsByCategory.remove("blob-storage")
     }
     if (!cassandraTest) {
         testsByCategory.remove("cassandra")
@@ -60,18 +60,26 @@ if (!allTest) {
     if (!jdbcTest) {
         testsByCategory.remove("jdbc")
     }
-    if (!multistorageTest) {
-        testsByCategory.remove("multistorage")
+    if (!multiStorageTest) {
+        testsByCategory.remove("multi-storage")
     }
 }
 
 // Collect all remaining tests from enabled categories
+// If a test has a "versions" array, expand it into multiple test variants
 def testsToRun = []
 testsByCategory.each { category, tests ->
     tests.each { test ->
-        // Check for duplicates before adding
-        if (!testsToRun.any { it.label == test.label }) {
-            test["test_category"] = category
+        test["test_category"] = category
+        if (test.versions) {
+            // Expand test into multiple variants, one per version
+            test.versions.each { version ->
+                def testVariant = new LinkedHashMap(test)
+                testVariant.remove("versions")
+                testVariant["version"] = version
+                testsToRun.add(testVariant)
+            }
+        } else {
             testsToRun.add(test)
         }
     }

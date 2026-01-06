@@ -112,5 +112,6 @@ runs:
       if: ${{ always() && steps.detect-report-folder.outputs.report_path != '' }}
       uses: actions/upload-artifact@v6
       with:
+        # TODO Append with artifact suffix
         name: ${{ steps.execute-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ inputs.LABEL }}_integration_test_reports_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}
         path: ${{ steps.detect-report-folder.outputs.report_path }}
