@@ -25,7 +25,7 @@ cosmos:
 cassandra:
   - label: cassandra
     label_pretty: Cassandra
-    setup_env: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:${{ matrix.version }}>
+    setup_env: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:${{ matrix.version }}
     versions:
       - "3.0"
       - "3.11"
@@ -66,7 +66,7 @@ jdbc:
 
   - label: mariadb
     label_pretty: MariaDB
-    setup_env: docker run --name mariadb-e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:${{ matrix.version}} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    setup_env: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:${{ matrix.version }} --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
       - "10.11"
       - "11.4"
@@ -106,7 +106,8 @@ jdbc:
       - "2019"
       - "2022"
     test: |
-      docker exec sqlserver22 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer22 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+      #TODO sqlcmd path may be different in 2017
+      docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer1
 
   - label: tidb
@@ -133,6 +134,7 @@ jdbc:
         sleep 5
       done
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root
+
   - label: yugabytedb
     label_pretty: YugabyteDB 2
     setup_env: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
