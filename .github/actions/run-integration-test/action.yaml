@@ -55,20 +55,20 @@ runs:
       if: ${{ inputs.JAVA_RUNTIME_VENDOR == 'oracle' }}
       shell: bash
       run: |
-        if ([ "${{ runner.os }}" != "windows" ] ]); then
+        if ([ "${{ runner.os }}" != "Windows"  ]); then
           # Ubuntu runner
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ inputs.JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
         else
           # Windows runner
           docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}
-          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
+          container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.JAVA_RUNTIME_VERSION }}-windows")
           docker cp "${container_id}:oracle-jdk.exe" .
           docker rm "$container_id"
           echo "Install Oracle JDK"
           ./oracle-jdk.exe /s
           echo "Oracle JDK installation successful"
-          if [[ "$JAVA_RUNTIME_VERSION" == "8" ]]; then
+          if [[ "${{ env.JAVA_RUNTIME_VERSION }} == "8" ]]; then
             jdk_root_dir="jdk-1.8"
           else
             jdk_root_dir="jdk-11"
