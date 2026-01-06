@@ -25,7 +25,7 @@ public class RdbEngineTidb extends RdbEngineMysql {
   }
 
   @Override
-  public int getMaximumIsolationLevel() {
+  public int getHighestIsolationLevel() {
     // TiDB doesn't support SERIALIZABLE isolation level
     return Connection.TRANSACTION_REPEATABLE_READ;
   }

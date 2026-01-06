@@ -353,11 +353,11 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns the maximum isolation level supported by the underlying database.
+   * Returns the highest isolation level supported by the underlying database.
    *
-   * @return the maximum isolation level
+   * @return the highest isolation level
    */
-  default int getMaximumIsolationLevel() {
+  default int getHighestIsolationLevel() {
     return Connection.TRANSACTION_SERIALIZABLE;
   }
 }
