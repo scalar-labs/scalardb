@@ -15,14 +15,15 @@ inputs:
     description: Vendor of the JDK used to run the integration test
     required: false
     default: 'temurin'
+  CR_PAT:
+    description: 'Scalar Container registry personal access token '
+    required: true
   OCR_USERNAME:
     description: 'Oracle Container Registry username'
-    required: false
-    default: ''
+    required: true
   OCR_TOKEN:
     description: 'Oracle Container Registry token'
-    required: false
-    default: ''
+    required: true
   LABEL:
     description: 'Label to identify the test run and artifacts'
     required: true
@@ -61,7 +62,7 @@ runs:
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
         else
           # Windows runner
-          docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}
+          docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ inputs.CR_PAT }}
           container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.JAVA_RUNTIME_VERSION }}-windows")
           docker cp "${container_id}:oracle-jdk.exe" .
           docker rm "$container_id"

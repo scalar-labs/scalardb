@@ -74,6 +74,7 @@ jobs:
           CMD: "./gradlew integrationTestCassandra"
           JAVA_RUNTIME_VERSION: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           JAVA_RUNTIME_VENDOR: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+          CR_PAT: ${{ secrets.CR_PAT }}
           OCR_USERNAME: ${{ secrets.OCR_USERNAME }}
           OCR_TOKEN: ${{ secrets.OCR_TOKEN }}
           GROUP_COMMIT_ENABLED: ${{ matrix.group-commit-enabled }}
