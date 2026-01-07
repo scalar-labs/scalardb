@@ -16,29 +16,30 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.jdbc.query.DeleteQuery;
+import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
-import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A service class to perform get/scan/put/delete/mutate operations.
+ * A service class to perform CRUD operations.
  *
  * @author Toshihiro Suzuki
  */
 @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
-public class JdbcService {
+public class JdbcCrudService {
 
   private final TableMetadataManager tableMetadataManager;
   private final OperationChecker operationChecker;
@@ -47,7 +48,7 @@ public class JdbcService {
   private final int scanFetchSize;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public JdbcService(
+  public JdbcCrudService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
       RdbEngineStrategy rdbEngine,
@@ -61,7 +62,7 @@ public class JdbcService {
   }
 
   @VisibleForTesting
-  JdbcService(
+  JdbcCrudService(
       TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
       RdbEngineStrategy rdbEngine,
@@ -184,55 +185,20 @@ public class JdbcService {
 
   public boolean put(Put put, Connection connection) throws SQLException, ExecutionException {
     operationChecker.check(put);
-    return putInternal(put, connection);
-  }
-
-  private boolean putInternal(Put put, Connection connection)
-      throws SQLException, ExecutionException {
-    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(put);
-
-    if (!put.getCondition().isPresent()) {
-      UpsertQuery upsertQuery =
-          queryBuilder
-              .upsertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
-              .values(put.getPartitionKey(), put.getClusteringKey(), put.getColumns())
-              .build();
-      try (PreparedStatement preparedStatement = connection.prepareStatement(upsertQuery.sql())) {
-        upsertQuery.bind(preparedStatement);
-        preparedStatement.executeUpdate();
-        return true;
-      }
-    } else {
-      return new ConditionalMutator(put, tableMetadata, connection, rdbEngine, queryBuilder)
-          .mutate();
-    }
+    return executeSingleMutation(put, connection);
   }
 
   public boolean delete(Delete delete, Connection connection)
       throws SQLException, ExecutionException {
     operationChecker.check(delete);
-    return deleteInternal(delete, connection);
+    return executeSingleMutation(delete, connection);
   }
 
-  private boolean deleteInternal(Delete delete, Connection connection)
+  private boolean executeSingleMutation(Mutation mutation, Connection connection)
       throws SQLException, ExecutionException {
-    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(delete);
-
-    if (!delete.getCondition().isPresent()) {
-      DeleteQuery deleteQuery =
-          queryBuilder
-              .deleteFrom(delete.forNamespace().get(), delete.forTable().get(), tableMetadata)
-              .where(delete.getPartitionKey(), delete.getClusteringKey())
-              .build();
-      try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery.sql())) {
-        deleteQuery.bind(preparedStatement);
-        preparedStatement.executeUpdate();
-        return true;
-      }
-    } else {
-      return new ConditionalMutator(delete, tableMetadata, connection, rdbEngine, queryBuilder)
-          .mutate();
-    }
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(mutation);
+    Query mutationQuery = buildMutationQuery(mutation, tableMetadata);
+    return executeSingleMutationQuery(mutationQuery, connection);
   }
 
   public boolean mutate(List<? extends Mutation> mutations, Connection connection)
@@ -240,18 +206,121 @@ public class JdbcService {
     checkArgument(!mutations.isEmpty(), CoreError.EMPTY_MUTATIONS_SPECIFIED.buildMessage());
     operationChecker.check(mutations);
 
+    if (mutations.size() == 1) {
+      return executeSingleMutation(mutations.get(0), connection);
+    }
+
+    // Build all queries
+    List<Query> queries = new ArrayList<>(mutations.size());
     for (Mutation mutation : mutations) {
-      if (mutation instanceof Put) {
-        if (!putInternal((Put) mutation, connection)) {
-          return false;
-        }
+      TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(mutation);
+      queries.add(buildMutationQuery(mutation, tableMetadata));
+    }
+
+    // Group queries by SQL for batching
+    Map<String, List<Query>> batchableGroups = new LinkedHashMap<>();
+    List<Query> nonBatchable = new ArrayList<>();
+
+    for (Query query : queries) {
+      if (isBatchable(query)) {
+        batchableGroups.computeIfAbsent(query.sql(), k -> new ArrayList<>()).add(query);
       } else {
-        assert mutation instanceof Delete;
-        if (!deleteInternal((Delete) mutation, connection)) {
+        nonBatchable.add(query);
+      }
+    }
+
+    // Execute batchable groups
+    for (Map.Entry<String, List<Query>> entry : batchableGroups.entrySet()) {
+      if (!executeBatch(entry.getKey(), entry.getValue(), connection)) {
+        return false;
+      }
+    }
+
+    // Execute non-batchable queries individually
+    for (Query query : nonBatchable) {
+      if (!executeSingleMutationQuery(query, connection)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private boolean isBatchable(Query query) {
+    if (query instanceof ConditionalMutationQuery) {
+      return ((ConditionalMutationQuery) query).isBatchable();
+    }
+
+    return true;
+  }
+
+  private boolean executeBatch(String sql, List<Query> queries, Connection connection)
+      throws SQLException {
+    if (queries.size() == 1) {
+      return executeSingleMutationQuery(queries.get(0), connection);
+    }
+
+    try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      for (Query query : queries) {
+        query.bind(preparedStatement);
+        preparedStatement.addBatch();
+      }
+
+      int[] results = preparedStatement.executeBatch();
+
+      for (int i = 0; i < results.length; i++) {
+        Query query = queries.get(i);
+        boolean isConditional = query instanceof ConditionalMutationQuery;
+        if (isConditional && results[i] == 0) {
           return false;
         }
       }
     }
+
     return true;
+  }
+
+  private boolean executeSingleMutationQuery(Query mutationQuery, Connection connection)
+      throws SQLException {
+    try (PreparedStatement preparedStatement = connection.prepareStatement(mutationQuery.sql())) {
+      mutationQuery.bind(preparedStatement);
+      int updateCount = preparedStatement.executeUpdate();
+
+      // For conditional mutations, we need to check whether the mutation was applied
+      if (mutationQuery instanceof ConditionalMutationQuery) {
+        return updateCount > 0;
+      }
+
+      return true;
+    } catch (SQLException e) {
+      // For conditional mutations, we need to handle the exception
+      if (mutationQuery instanceof ConditionalMutationQuery) {
+        return ((ConditionalMutationQuery) mutationQuery).handleSQLException(e);
+      }
+
+      throw e;
+    }
+  }
+
+  private Query buildMutationQuery(Mutation mutation, TableMetadata tableMetadata) {
+    assert mutation instanceof Put || mutation instanceof Delete;
+
+    if (mutation.getCondition().isPresent()) {
+      return new ConditionalMutationQuery(mutation, tableMetadata, rdbEngine, queryBuilder);
+    }
+
+    if (mutation instanceof Put) {
+      Put put = (Put) mutation;
+      return queryBuilder
+          .upsertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
+          .values(put.getPartitionKey(), put.getClusteringKey(), put.getColumns())
+          .build();
+    } else {
+      Delete delete = (Delete) mutation;
+      return queryBuilder
+          .deleteFrom(delete.forNamespace().get(), delete.forTable().get(), tableMetadata)
+          .where(delete.getPartitionKey(), delete.getClusteringKey())
+          .build();
+    }
   }
 }

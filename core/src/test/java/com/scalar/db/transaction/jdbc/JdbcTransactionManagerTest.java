@@ -40,7 +40,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcCrudService;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -64,7 +64,7 @@ public class JdbcTransactionManagerTest {
   @Mock private DatabaseConfig databaseConfig;
   @Mock private BasicDataSource dataSource;
   @Mock private BasicDataSource tableMetadataDataSource;
-  @Mock private JdbcService jdbcService;
+  @Mock private JdbcCrudService jdbcCrudService;
   @Mock private Connection connection;
   @Mock private SQLException sqlException;
 
@@ -82,15 +82,15 @@ public class JdbcTransactionManagerTest {
             dataSource,
             tableMetadataDataSource,
             RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
-            jdbcService);
+            jdbcCrudService);
   }
 
   @Test
-  public void whenSomeOperationsExecutedAndCommit_shouldCallJdbcService() throws Exception {
+  public void whenSomeOperationsExecutedAndCommit_shouldCallJdbcCrudService() throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any())).thenReturn(Collections.emptyList());
-    when(jdbcService.put(any(), any())).thenReturn(true);
-    when(jdbcService.delete(any(), any())).thenReturn(true);
+    when(jdbcCrudService.scan(any(), any())).thenReturn(Collections.emptyList());
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(true);
 
     // Act
     DistributedTransaction transaction = manager.begin();
@@ -127,19 +127,20 @@ public class JdbcTransactionManagerTest {
     transaction.commit();
 
     // Assert
-    verify(jdbcService).get(any(), any());
-    verify(jdbcService).scan(any(), any());
-    verify(jdbcService, times(2)).put(any(), any());
-    verify(jdbcService, times(2)).delete(any(), any());
+    verify(jdbcCrudService).get(any(), any());
+    verify(jdbcCrudService).scan(any(), any());
+    verify(jdbcCrudService, times(2)).put(any(), any());
+    verify(jdbcCrudService, times(2)).delete(any(), any());
     verify(connection).commit();
     verify(connection).close();
   }
 
   @Test
-  public void whenGetOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
-      throws Exception {
+  public void
+      whenGetOperationsExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowCrudException()
+          throws Exception {
     // Arrange
-    when(jdbcService.get(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.get(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -231,7 +232,7 @@ public class JdbcTransactionManagerTest {
   public void get_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.get(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.get(any(), any())).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
@@ -250,10 +251,11 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void whenScanOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
-      throws Exception {
+  public void
+      whenScanOperationsExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowCrudException()
+          throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.scan(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -274,7 +276,7 @@ public class JdbcTransactionManagerTest {
   public void scan_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.scan(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.scan(any(), any())).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
@@ -656,10 +658,11 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
-  public void whenPutOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
-      throws Exception {
+  public void
+      whenPutOperationsExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowCrudException()
+          throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -681,7 +684,7 @@ public class JdbcTransactionManagerTest {
   public void put_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
@@ -702,10 +705,10 @@ public class JdbcTransactionManagerTest {
 
   @Test
   public void
-      whenDeleteOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
+      whenDeleteOperationsExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.delete(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -726,7 +729,7 @@ public class JdbcTransactionManagerTest {
   public void delete_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.delete(any(), any())).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
@@ -746,10 +749,10 @@ public class JdbcTransactionManagerTest {
 
   @Test
   public void
-      whenMutateOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
+      whenMutateOperationsExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -777,7 +780,7 @@ public class JdbcTransactionManagerTest {
   public void mutate_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
@@ -805,7 +808,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenCommitFails_shouldThrowCommitExceptionAndRollback() throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
 
     // Act Assert
@@ -837,7 +840,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowAbortException() throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -868,7 +871,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenRollbackFails_shouldThrowRollbackException() throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).rollback();
 
     // Act Assert
@@ -900,7 +903,7 @@ public class JdbcTransactionManagerTest {
   public void whenCommitAndRollbackFails_shouldThrowUnknownTransactionStatusException()
       throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
     doThrow(sqlException).when(connection).commit();
     doThrow(sqlException).when(connection).rollback();
 

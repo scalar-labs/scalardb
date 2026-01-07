@@ -67,7 +67,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   private final BasicDataSource tableMetadataDataSource;
   private final TableMetadataManager tableMetadataManager;
   private final VirtualTableInfoManager virtualTableInfoManager;
-  private final JdbcService jdbcService;
+  private final JdbcCrudService jdbcCrudService;
   private final boolean requiresExplicitCommit;
 
   @Inject
@@ -87,8 +87,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         new JdbcOperationChecker(
             databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin), rdbEngine);
 
-    jdbcService =
-        new JdbcService(
+    jdbcCrudService =
+        new JdbcCrudService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
 
     virtualTableInfoManager =
@@ -103,12 +103,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       BasicDataSource tableMetadataDataSource,
       TableMetadataManager tableMetadataManager,
       VirtualTableInfoManager virtualTableInfoManager,
-      JdbcService jdbcService,
+      JdbcCrudService jdbcCrudService,
       boolean requiresExplicitCommit) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.jdbcService = jdbcService;
+    this.jdbcCrudService = jdbcCrudService;
     this.rdbEngine = rdbEngine;
     this.tableMetadataManager = tableMetadataManager;
     this.virtualTableInfoManager = virtualTableInfoManager;
@@ -125,7 +125,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         connection.setAutoCommit(false);
       }
       rdbEngine.setConnectionToReadOnly(connection, true);
-      Optional<Result> result = jdbcService.get(get, connection);
+      Optional<Result> result = jdbcCrudService.get(get, connection);
       if (requiresExplicitCommit) {
         connection.commit();
       }
@@ -153,7 +153,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection = dataSource.getConnection();
       connection.setAutoCommit(false);
       rdbEngine.setConnectionToReadOnly(connection, true);
-      return jdbcService.getScanner(scan, connection);
+      return jdbcCrudService.getScanner(scan, connection);
     } catch (SQLException e) {
       try {
         if (connection != null) {
@@ -199,7 +199,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       if (requiresExplicitCommit) {
         connection.setAutoCommit(false);
       }
-      if (!jdbcService.put(put, connection)) {
+      if (!jdbcCrudService.put(put, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
@@ -244,7 +244,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       if (requiresExplicitCommit) {
         connection.setAutoCommit(false);
       }
-      if (!jdbcService.delete(delete, connection)) {
+      if (!jdbcCrudService.delete(delete, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
@@ -325,7 +325,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     }
 
     try {
-      if (!jdbcService.mutate(mutations, connection)) {
+      if (!jdbcCrudService.mutate(mutations, connection)) {
         try {
           connection.rollback();
         } catch (SQLException e) {
