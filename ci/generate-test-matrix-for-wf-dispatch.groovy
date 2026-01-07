@@ -6,6 +6,7 @@ import groovy.yaml.YamlSlurper
 import groovy.json.JsonBuilder
 import groovy.transform.SourceURI
 
+// TODO Add BASIC test category
 // Check for required environment variables
 def requiredEnvVars = [
         'ALL',

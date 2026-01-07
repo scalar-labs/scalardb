@@ -20,7 +20,7 @@ jobs:
     with:
       INT_TEST_JAVA_RUNTIME_VERSION: ${{ matrix.java_version }}
       INT_TEST_JAVA_RUNTIME_VENDOR: 'temurin'
-      INTEGRATION_TEST_ONLY: ${{ java_version != '8' }}
+      INTEGRATION_TEST_ONLY: ${{ matrix.java_version != '8' }}
     secrets: inherit
 
   report:
