@@ -213,25 +213,8 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  private Snapshot prepareSnapshotWithoutReads() {
-    Snapshot snapshot = prepareSnapshot();
-
-    // same partition
-    Put put1 = preparePut1();
-    Put put3 = preparePut3();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put3), put3);
-
-    return snapshot;
-  }
-
-  private Snapshot prepareSnapshotWithIsolation(Isolation isolation) {
-    return new Snapshot(anyId(), isolation, tableMetadataManager, new ParallelExecutor(config));
-  }
-
   private Snapshot prepareSnapshot() {
-    return new Snapshot(
-        anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(anyId(), tableMetadataManager, new ParallelExecutor(config));
   }
 
   private void setBeforePreparationHookIfNeeded(boolean withBeforePreparationHook) {
@@ -260,7 +243,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(4)).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -285,7 +268,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -308,7 +291,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, never()).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verify(coordinator, never()).putState(any());
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -332,7 +315,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, never()).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verify(coordinator, never()).putState(any());
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -357,7 +340,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, never()).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -374,7 +357,7 @@ public class CommitHandlerTest {
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -399,7 +382,7 @@ public class CommitHandlerTest {
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -414,11 +397,12 @@ public class CommitHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
+  public void commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
     // Arrange
-    Snapshot snapshot = spy(prepareSnapshotWithoutReads());
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
@@ -429,8 +413,36 @@ public class CommitHandlerTest {
     handler.commit(context);
 
     // Assert
-    verify(storage, times(2)).mutate(anyList());
+    verify(storage, times(4)).mutate(anyList());
+    // With SNAPSHOT isolation, validation should not be performed even if there are reads
     verify(snapshot, never()).toSerializable(storage);
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
+    verify(handler, never()).onFailureBeforeCommit(any());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void commit_SerializableIsolationWithReads_ShouldValidateRecords(
+      boolean withBeforePreparationHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doNothing().when(snapshot).toSerializable(storage);
+    doNothingWhenCoordinatorPutState();
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+
+    // Act
+    handler.commit(context);
+
+    // Assert
+    verify(storage, times(4)).mutate(anyList());
+    // With SERIALIZABLE isolation, validation should be performed when there are reads
+    verify(snapshot).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -641,7 +653,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -667,7 +679,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -699,7 +711,7 @@ public class CommitHandlerTest {
         .getState(anyId());
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -729,7 +741,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -760,7 +772,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -790,7 +802,7 @@ public class CommitHandlerTest {
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -1036,10 +1048,21 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
+  public void canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse()
+      throws Exception {
     // Arrange
     CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
-    Snapshot snapshot = prepareSnapshotWithIsolation(Isolation.SERIALIZABLE);
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    // Add a read that is not in the write set or delete set to trigger validation
+    Get get = prepareGet();
+    snapshot.putIntoGetSet(get, Optional.empty());
+
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
@@ -1047,8 +1070,39 @@ public class CommitHandlerTest {
     boolean actual = handler.canOnePhaseCommit(context);
 
     // Assert
+    // With SERIALIZABLE isolation and reads that require validation, one-phase commit is not
+    // allowed
     assertThat(actual).isFalse();
     verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue() throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    // Add a read that is not in the write set or delete set
+    Get get = prepareGet();
+    snapshot.putIntoGetSet(get, Optional.empty());
+
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(context);
+
+    // Assert
+    // With SNAPSHOT isolation, validation is not required, so one-phase commit is allowed
+    assertThat(actual).isTrue();
+    verify(mutationsGrouper).canBeGroupedAltogether(anyList());
   }
 
   @Test
