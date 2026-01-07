@@ -87,6 +87,8 @@ on:
 env:
   TERM: dumb
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
+  # Well-known Cosmos DB emulator key for local development (public, not a secret)
+  COSMOS_EMULATOR_KEY: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
 
 jobs:
   check:
