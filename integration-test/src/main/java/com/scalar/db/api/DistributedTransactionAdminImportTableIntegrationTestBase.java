@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -183,15 +184,24 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
             .collect(Collectors.toList());
 
     // Act
-    DistributedTransaction tx;
-    for (Insert insert : inserts) {
-      tx = manager.start();
-      tx.insert(insert);
-      tx.commit();
+
+    // When using Oracle with the SERIALIZABLE isolation level, a CommitConflictException may occur
+    // even without any conflicts. So, we retry the transaction in such a case.
+    while (true) {
+      DistributedTransaction tx = manager.start();
+      try {
+        for (Insert insert : inserts) {
+          tx.insert(insert);
+        }
+        tx.commit();
+        break;
+      } catch (CommitConflictException e) {
+        tx.abort();
+      }
     }
 
     List<Optional<Result>> results = new ArrayList<>();
-    tx = manager.start();
+    DistributedTransaction tx = manager.start();
     for (Get get : gets) {
       results.add(tx.get(get));
     }

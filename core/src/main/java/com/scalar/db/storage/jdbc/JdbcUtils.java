@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.annotations.VisibleForTesting;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.SQLException;
 import java.util.Map.Entry;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -165,5 +166,22 @@ public final class JdbcUtils {
         }
     }
     return type;
+  }
+
+  /**
+   * Determines whether explicit commit is required for single operations based on the connection's
+   * transaction isolation level.
+   *
+   * @param dataSource the data source to get a connection from
+   * @param rdbEngine the RDB engine strategy
+   * @return true if explicit commit is required, false otherwise
+   */
+  public static boolean requiresExplicitCommit(
+      BasicDataSource dataSource, RdbEngineStrategy rdbEngine) {
+    try (Connection connection = dataSource.getConnection()) {
+      return rdbEngine.requiresExplicitCommit(connection.getTransactionIsolation());
+    } catch (SQLException e) {
+      throw new RuntimeException("Failed to get transaction isolation level", e);
+    }
   }
 }
