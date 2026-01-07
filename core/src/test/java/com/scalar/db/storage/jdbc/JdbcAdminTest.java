@@ -119,7 +119,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(rdbEngine);
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
       mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
-      return new JdbcAdmin(dataSource, config, virtualTableMetadataService);
+      return new JdbcAdmin(dataSource, config, virtualTableMetadataService, false);
     }
   }
 
@@ -129,7 +129,7 @@ public class JdbcAdminTest {
       mocked
           .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
           .thenReturn(rdbEngineStrategy);
-      return new JdbcAdmin(dataSource, config, virtualTableMetadataService);
+      return new JdbcAdmin(dataSource, config, virtualTableMetadataService, false);
     }
   }
 
@@ -138,7 +138,8 @@ public class JdbcAdminTest {
     RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL);
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
       mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
-      return new JdbcAdmin(dataSource, config, tableMetadataService, virtualTableMetadataService);
+      return new JdbcAdmin(
+          dataSource, config, tableMetadataService, virtualTableMetadataService, false);
     }
   }
 

@@ -551,4 +551,12 @@ class RdbEngineOracle extends AbstractRdbEngine {
     // In Oracle, only the SERIALIZABLE isolation level guarantees consistent reads
     return Connection.TRANSACTION_SERIALIZABLE;
   }
+
+  @Override
+  public boolean requiresExplicitCommit(int isolationLevel) {
+    // In Oracle with SERIALIZABLE isolation level, the snapshot is not updated until an explicit
+    // commit is performed. Without explicit commit, subsequent reads will continue to see the same
+    // snapshot from the beginning of the first transaction, even with autocommit enabled.
+    return isolationLevel == Connection.TRANSACTION_SERIALIZABLE;
+  }
 }
