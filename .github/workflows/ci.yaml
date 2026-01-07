@@ -240,7 +240,7 @@ jobs:
 #          MATRIX_JSON=$(groovy ci/integration-test/generate-test-matrix-for-file-changes.groovy)
 #          echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
-      - name: Check which test categories will run
+      - name: Print integration test matrix
         id: check-test-categories
         run: |
           # Get the matrix JSON from either workflow dispatch or file changes
@@ -250,7 +250,7 @@ jobs:
           echo "$MATRIX_JSON" | jq .
 
   integration-test:
-    name: ${{ matrix.display_name }} integration test (${{ matrix.group_commit_enabled == true && 'with group commit' || 'default' }})
+    name: ${{ matrix.display_name }} integration test (${{ matrix.group_commit_enabled == 'true' && 'with group commit' || 'default' }})
     needs:
       - integration-test-jobs-planner
     runs-on: ${{ matrix.runner == '' && 'ubuntu-latest' || matrix.runner }}
@@ -361,4 +361,3 @@ jobs:
           pattern: "*${{ env.ARTIFACT_SUFFIX }}"
           separate-directories: true
           delete-merged: true
-
