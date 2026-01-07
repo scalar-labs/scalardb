@@ -617,11 +617,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private boolean namespaceExistsInternal(Connection connection, String namespace)
       throws SQLException {
     String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
-    try (PreparedStatement preparedStatement =
-        connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace));
-      return preparedStatement.executeQuery().next();
-    }
+    return executeQuery(
+        connection,
+        namespaceExistsStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace)),
+        ResultSet::next);
   }
 
   @Override
