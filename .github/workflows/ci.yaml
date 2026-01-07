@@ -4,6 +4,7 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Ru
 on:
 #  # When triggered by a pull request, basic integration tests will run in addition to the tests related
 #  # to the file changes. JDK 8 (Temurin) will be used at runtime.
+  # TODO enable again
 #  pull_request:
 
   # When triggered by a dispatch, selected tests will run with the given integration tests JDK runtime.
