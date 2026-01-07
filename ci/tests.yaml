@@ -50,7 +50,7 @@ cosmos:
       }
       & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
       & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
-    # TODO enable agin
+    # TODO enable again
     test: ./gradlew.bat integrationTestCosmos "--tests" "CosmosColumnValueIntegrationTest" "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=${{ env.COSMOS_EMULATOR_KEY }}" "-Dfile.encoding=UTF-8"
 #    test: ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=${{ env.COSMOS_EMULATOR_KEY }}" "-Dfile.encoding=UTF-8"
     # TODO enable group commit again
@@ -59,18 +59,12 @@ cassandra:
   - label: cassandra_%VERSION%
     display_name: Cassandra %VERSION%
     setup_db: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
-    # TODO enable group commit again
-    disable_group_commit: true
     versions:
       - 3.0
-    # TODO enabled again
-    # - 3.11
-    # - 4.1
-    # - 5.0
-    test:
-      echo foo;
-      ./gradlew integrationTestCassandra --tests CassandraColumnValueIntegrationTest
-    # test: ./gradlew integrationTestCassandra
+#      - 3.11
+#      - 4.1
+#      - 5.0
+    test: ./gradlew integrationTestCassandra -Dscalardb.cassandra.password=cassandra
 
 dynamo:
   - label: dynamo
