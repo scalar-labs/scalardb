@@ -106,6 +106,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'check' task
+        # TODO Enable again
+        # run: ./gradlew check -x test buildSrc:check
         run: ./gradlew check buildSrc:check
 
       - name: Save Gradle test reports
