@@ -1,6 +1,9 @@
 #!/usr/bin/env groovy
 
 // This script generates a test matrix for the integration tests based on the environment variables
+// It outputs:
+// 1. A JSON file with the full expanded test configuration (written to a file)
+// 2. A minimal JSON matrix with just labels for GitHub Actions (printed to stdout)
 
 import groovy.yaml.YamlSlurper
 import groovy.json.JsonBuilder
@@ -112,6 +115,21 @@ testsToRun.each { test ->
     }
 }
 
-// Output the tests to run as JSON for the matrix strategy
-def jsonBuilder = new JsonBuilder([include: expandedTests])
+// Output the full expanded test configuration as JSON to a file
+def outputFile = System.getenv('OUTPUT_FILE') ?: 'expanded-tests.json'
+def fullConfigJson = new JsonBuilder(expandedTests)
+new File(outputFile).text = fullConfigJson.toPrettyString()
+System.err.println("Wrote expanded test configuration to: ${outputFile}")
+
+// Output a minimal JSON matrix with just labels, display_name and group_commit_enabled for GitHub Actions
+// This avoids secret detection issues since sensitive data is only in the artifact
+def minimalMatrix = expandedTests.collect { test ->
+    [
+        label: test.label,
+        display_name: test.display_name,
+        group_commit_enabled: test.group_commit_enabled,
+        runner: test.runner ?: 'ubuntu-latest'
+    ]
+}
+def jsonBuilder = new JsonBuilder([include: minimalMatrix])
 println(jsonBuilder.toString())

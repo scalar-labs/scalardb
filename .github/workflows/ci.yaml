@@ -225,36 +225,46 @@ jobs:
             fi
           fi
 
-      - name: Generate the node integration tests matrix when invoked by workflow_dispatch
+      - name: Generate the integration tests matrix when invoked by workflow_dispatch
         id: generate-matrix-for-wf-dispatch
         if: env.TRIGGERED_BY_WF_DISPATCH
+        env:
+          OUTPUT_FILE: expanded-tests.json
         run: |
+          # Generate minimal JSON matrix (stdout) and full JSON config (file)
           MATRIX_JSON=$(groovy ci/generate-test-matrix-for-wf-dispatch.groovy)
           echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
-#      - name: Generate the Cluster node integration tests matrix based on file changes
+#      - name: Generate the integration tests matrix based on file changes
 #        id: generate-matrix-by-changes
 #        if: ${{ !env.TRIGGERED_BY_WF_DISPATCH }}
 #        env:
 #          PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+#          OUTPUT_FILE: expanded-tests.json
 #        run: |
-#          MATRIX_JSON=$(groovy ci/integration-test/generate-test-matrix-for-file-changes.groovy)
+#          MATRIX_JSON=$(groovy ci/generate-test-matrix-for-file-changes.groovy)
 #          echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
+      - name: Upload expanded test configuration
+        uses: actions/upload-artifact@v4
+        with:
+          name: expanded-tests-config
+          path: expanded-tests.json
+          retention-days: 1
+
       - name: Print integration test matrix
-        id: check-test-categories
         run: |
           # Get the matrix JSON from either workflow dispatch or file changes
           MATRIX_JSON='${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix || steps.generate-matrix-by-changes.outputs.matrix }}'
-          
+
           echo Integration test matrix:
           echo "$MATRIX_JSON" | jq .
 
   integration-test:
-    name: ${{ matrix.display_name }} integration test (${{ matrix.group_commit_enabled == 'true' && 'with group commit' || 'default' }})
+    name: ${{ matrix.display_name }} (${{ matrix.group_commit_enabled == 'true' && 'group commit' || 'default' }})
     needs:
       - integration-test-jobs-planner
-    runs-on: ${{ matrix.runner == '' && 'ubuntu-latest' || matrix.runner }}
+    runs-on: ${{ matrix.runner }}
     env:
       INT_TEST_JAVA_RUNTIME_VERSION: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}
       INT_TEST_JAVA_RUNTIME_VENDOR: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
@@ -266,8 +276,34 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up the database
-        run: ${{ matrix.setup_db }}
+      - name: Download test configuration
+        uses: actions/download-artifact@v4
+        with:
+          name: expanded-tests-config
+
+      - name: Load test configuration
+        shell: bash
+        run: |
+          # Find the test entry matching label and group_commit_enabled
+          LABEL="${{ matrix.label }}"
+          GROUP_COMMIT="${{ matrix.group_commit_enabled }}"
+
+          # Extract the test configuration using jq
+          CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests.json)
+
+          # Set environment variables
+          echo "SETUP_DB<<EOF" >> $GITHUB_ENV
+          echo "$CONFIG" | jq -r '.setup_db // ""' >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          # Build the test command, appending group commit options if enabled
+          TEST_CMD=$(echo "$CONFIG" | jq -r '.test // ""')
+          echo "TEST_CMD<<EOF" >> $GITHUB_ENV
+          echo "$TEST_CMD" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Set up the database (Linux)
+        run: ${{ env.SETUP_DB }}
 
       - name: Set up JDK 8
         uses: actions/setup-java@v5
@@ -322,7 +358,6 @@ jobs:
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
           GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
-          COSMOS_EMULATOR_KEY: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
         run: ${{ matrix.test }} ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
 
       - name: Detect test report folder
