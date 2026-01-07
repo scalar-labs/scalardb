@@ -280,9 +280,6 @@ jobs:
         with:
           name: expanded-tests-config_${{ env.ARTIFACT_SUFFIX }}
 
-      - name: Print downloaded test configuration
-        run: cat expanded-tests.json
-
       - name: Load test configuration
         shell: bash
         run: |
@@ -293,19 +290,18 @@ jobs:
           # Extract the test configuration using jq
           CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests.json)
 
-          # Set environment variables
-          echo "SETUP_DB<<EOF" >> $GITHUB_ENV
-          echo "$CONFIG" | jq -r '.setup_db // ""' >> $GITHUB_ENV
+          # Set environment variables for the setup and run commands
+          echo "SETUP_CMD<<EOF" >> $GITHUB_ENV
+          echo "$CONFIG" | jq -r '.setup // ""' >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          # Build the test command, appending group commit options if enabled
-          TEST_CMD=$(echo "$CONFIG" | jq -r '.test // ""')
-          echo "TEST_CMD<<EOF" >> $GITHUB_ENV
-          echo "$TEST_CMD" >> $GITHUB_ENV
+          RUN_CMD=$(echo "$CONFIG" | jq -r '.run // ""')
+          echo "RUN_CMD<<EOF" >> $GITHUB_ENV
+          echo "$RUN_CMD" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Set up the database
-        run: ${{ env.SETUP_DB }}
+        run: ${{ env.SETUP_CMD }}
 
       - name: Set up JDK 8
         uses: actions/setup-java@v5
@@ -328,12 +324,12 @@ jobs:
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "Linux" ]; then
-            # Linux runner, install Oracle JDK for any versions from Oracle Container Registry
+            # For Linux runner, install Oracle JDK for any versions from Oracle Container Registry
             docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} -p ${{ secrets.OCR_TOKEN }}
             container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}")
             docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
           else
-            # Windows runner, install Oracle JDK 8 or 11 from Scalar Container Registry
+            # For Windows runner, install Oracle JDK 8 or 11 from Scalar Container Registry
             docker login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.CR_PAT }}
             container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
             docker cp "${container_id}:oracle-jdk.exe" .
@@ -360,7 +356,7 @@ jobs:
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
           GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
-        run: ${{ env.TEST_CMD }} ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
+        run: ${{ env.RUN_CMD }} ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
 
       - name: Detect test report folder
         id: detect-report-folder
