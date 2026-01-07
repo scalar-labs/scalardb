@@ -312,11 +312,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
-      - name: Test multine
-        run:
-          echo abc
-          echo def;
-          echo ghi;
 
       - name: Run integration test
         id: execute-integration-test
