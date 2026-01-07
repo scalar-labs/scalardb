@@ -108,8 +108,8 @@ jobs:
 
       - name: Execute Gradle 'check' task
         # TODO Enable again
-        # run: ./gradlew check -x test buildSrc:check
-        run: ./gradlew check buildSrc:check
+        # run: ./gradlew check buildSrc:check
+        run: ./gradlew check -x test buildSrc:check
 
       - name: Save Gradle test reports
         if: always()

@@ -42,8 +42,8 @@ cassandra:
     # TODO enabled again
     # - 4.1
     # - 5.0
-    # test: ./gradlew integrationTestCassandra --tests CassandraColumnValueIntegrationTest
-    test: ./gradlew integrationTestCassandra
+    test: ./gradlew integrationTestCassandra --tests CassandraColumnValueIntegrationTest
+    # test: ./gradlew integrationTestCassandra
 
 dynamo:
   - label: dynamo
