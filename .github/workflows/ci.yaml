@@ -228,7 +228,7 @@ jobs:
         id: generate-matrix-for-wf-dispatch
         if: env.TRIGGERED_BY_WF_DISPATCH
         run: |
-          MATRIX_JSON=$(groovy ci/integration-test/generate-test-matrix-for-wf-dispatch.groovy)
+          MATRIX_JSON=$(groovy ci/generate-test-matrix-for-wf-dispatch.groovy)
           echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
 #      - name: Generate the Cluster node integration tests matrix based on file changes
