@@ -13,6 +13,7 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -205,5 +206,58 @@ class RdbEngineOracleTest {
             () -> rdbEngineOracle.throwIfConjunctionsColumnNotSupported(conjunctions, metadata))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("blob_column");
+  }
+
+  @Test
+  public void isConflict_WithSerializeAccessError_ShouldReturnTrue() {
+    // Arrange
+    // ORA-08177: can't serialize access for this transaction
+    SQLException e = new SQLException("can't serialize access for this transaction", null, 8177);
+
+    // Act
+    boolean result = rdbEngineOracle.isConflict(e);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void isConflict_WithDeadlockError_ShouldReturnTrue() {
+    // Arrange
+    // ORA-00060: deadlock detected while waiting for resource
+    SQLException e = new SQLException("deadlock detected while waiting for resource", null, 60);
+
+    // Act
+    boolean result = rdbEngineOracle.isConflict(e);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void isConflict_WithConsistentReadFailureError_ShouldReturnTrue() {
+    // Arrange
+    // ORA-08176: consistent read failure; rollback data not available
+    SQLException e =
+        new SQLException("consistent read failure; rollback data not available", null, 8176);
+
+    // Act
+    boolean result = rdbEngineOracle.isConflict(e);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void isConflict_WithOtherError_ShouldReturnFalse() {
+    // Arrange
+    // ORA-00942: Table or view does not exist
+    SQLException e = new SQLException("Table or view does not exist", null, 942);
+
+    // Act
+    boolean result = rdbEngineOracle.isConflict(e);
+
+    // Assert
+    assertThat(result).isFalse();
   }
 }
