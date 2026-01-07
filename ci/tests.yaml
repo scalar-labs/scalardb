@@ -30,8 +30,31 @@ cosmos:
       Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
       # Set startup timeout to 10min (600s), the default is 4min
       Start-CosmosDbEmulator -Consistency Strong -Timeout 600
+      
+      Write-Host "Install TLS/SSL certificate to Java keystore"
+      $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
+      $params = @{
+        Cert = $cert
+        Type = "CERT"
+        FilePath = "$home/tmp-cert.cer"
+        NoClobber = $true
+      }
+      Export-Certificate @params
+      certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
+      Remove-Item $home/tmp-cert.cer
+      # Setting the keystore option differs between Java 8 and Java 11+
+      if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+        $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
+      } else {
+        $keystore = "-cacerts"
+      }
+      & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
+      & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
+    # TODO enable agin
+    test: ./gradlew.bat integrationTestCosmos "--tests" "CosmosColumnValueIntegrationTest" "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=${{ env.COSMOS_EMULATOR_KEY }}" "-Dfile.encoding=UTF-8"
 #    test: ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=${{ env.COSMOS_EMULATOR_KEY }}" "-Dfile.encoding=UTF-8"
-    test: echo foo
+    # TODO enable group commit again
+    disable_group_commit: true
 cassandra:
   - label: cassandra_%VERSION%
     display_name: Cassandra %VERSION%
