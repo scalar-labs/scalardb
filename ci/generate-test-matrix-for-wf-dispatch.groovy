@@ -98,16 +98,16 @@ testsToRun.each { test ->
         // Keep as is, remove the disable_group_commit attribute
         def testVariant = new LinkedHashMap(test)
         testVariant.remove("disable_group_commit")
-        testVariant["group_commit_enabled"] = false
+        testVariant["group_commit_enabled"] = 'false'
         expandedTests.add(testVariant)
     } else {
         // Create two variants: one with group_commit_enabled true, one with false
         def testWithGroupCommit = new LinkedHashMap(test)
-        testWithGroupCommit["group_commit_enabled"] = true
+        testWithGroupCommit["group_commit_enabled"] = 'true'
         expandedTests.add(testWithGroupCommit)
 
         def testWithoutGroupCommit = new LinkedHashMap(test)
-        testWithoutGroupCommit["group_commit_enabled"] = false
+        testWithoutGroupCommit["group_commit_enabled"] = 'false'
         expandedTests.add(testWithoutGroupCommit)
     }
 }

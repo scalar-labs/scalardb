@@ -342,7 +342,7 @@ jobs:
         if: ${{ always() && steps.detect-report-folder.outputs.report_path != '' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ steps.execute-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.label }}_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}_test_${{ env.ARTIFACT_SUFFIX }}
+          name: ${{ steps.execute-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_test_${{ env.ARTIFACT_SUFFIX }}
           path: ${{ steps.detect-report-folder.outputs.report_path }}
 
   merge-artifacts:
@@ -357,7 +357,7 @@ jobs:
       - name: Merge all artifacts
         uses: actions/upload-artifact/merge@v5
         with:
-          name: ci_report_${{ env.ARTIFACT_SUFFIX }}_run_#${{ github.run_attempt }}
+          name: scalardb_core_ci_report_${{ env.ARTIFACT_SUFFIX }}_run_#${{ github.run_attempt }}
           pattern: "*${{ env.ARTIFACT_SUFFIX }}"
           separate-directories: true
           delete-merged: true
