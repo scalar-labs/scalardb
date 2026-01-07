@@ -18,7 +18,7 @@ on:
         type: boolean
         default: false
       BLOB_STORAGE:
-        description: Run Blob strorage integration tests
+        description: Run Blob storage integration tests
         type: boolean
         default: false
       CASSANDRA:
@@ -37,7 +37,7 @@ on:
         description: Run JDBC integration tests
         type: boolean
         default: false
-      MULTI-STORAGE:
+      MULTI_STORAGE:
         description: Run multi-storage integration tests
         type: boolean
         default: false
@@ -145,8 +145,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: gradle_spotbugs_reports
-          path: /tmp/gradle_spotbugs_reports_${{ env.ARTIFACT_SUFFIX }}
+          name: gradle_spotbugs_reports_${{ env.ARTIFACT_SUFFIX }}
+          path: /tmp/gradle_spotbugs_reports
 
   dockerfile-lint:
     name: Lint dockerfiles
@@ -183,7 +183,7 @@ jobs:
       COSMOS: ${{ inputs.COSMOS }}
       DYNAMO: ${{ inputs.DYNAMO }}
       JDBC: ${{ inputs.JDBC }}
-      MULTI-STORAGE: ${{ inputs.MULTI-STORAGE }}
+      MULTI_STORAGE: ${{ inputs.MULTI_STORAGE }}
       TRIGGERED_BY_WF_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
     outputs:
       test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix || steps.generate-matrix-by-changes.outputs.matrix }}
@@ -214,9 +214,9 @@ jobs:
                [ "$COSMOS" != "true" ] && \
                [ "$DYNAMO" != "true" ] && \
                [ "$JDBC" != "true" ] && \
-               [ "$MULTI-STORAGE" != "true" ]; then
+               [ "$MULTI_STORAGE" != "true" ]; then
               echo "Error: When the ALL workflow input is false, at least one specific test category must be enabled."
-              echo "Please enable at least one of: BASIC, BLOB_STORAGE, CASSANDRA, COSMOS, DYNAMO, JDBC, MULTI-STORAGE."
+              echo "Please enable at least one of: BASIC, BLOB_STORAGE, CASSANDRA, COSMOS, DYNAMO, JDBC, MULTI_STORAGE."
               exit 1
             fi
           fi
@@ -247,7 +247,7 @@ jobs:
           echo "$MATRIX_JSON" | jq .
 
   integration-test:
-    name: ${{ matrix.display_name }} integration test (${{ matrix.mode.group_commit_enabled == true && 'with group commit' || 'default' }})
+    name: ${{ matrix.display_name }} integration test (${{ matrix.group_commit_enabled == true && 'with group commit' || 'default' }})
     needs:
       - integration-test-jobs-planner
     runs-on: ${{ matrix.runner == '' && 'ubuntu-latest' || matrix.runner }}
@@ -257,7 +257,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.jobs-planner.outputs.test_matrix) }}
+      matrix: ${{ fromJSON(needs.integration-test-jobs-planner.outputs.test_matrix) }}
 
     steps:
       - uses: actions/checkout@v6
@@ -276,7 +276,7 @@ jobs:
         uses: actions/setup-java@v5
         # On Linux runner, skip if Oracle JDK is specified
         # On Windows runner, skip if Oracle JDK 8 or 11 is specified
-        if: ${{ (os.runner == 'Linux' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle') || (os.runner == 'Windows' && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')))  }}
+        if: ${{ (runner.os == 'Linux' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle') || (runner.os == 'Windows' && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11')))  }}
         with:
           java-version: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}
@@ -285,21 +285,21 @@ jobs:
         if: ${{ steps.setup-int-test-jdk.outcome == 'skipped' }}
         shell: bash
         run: |
-          if ([ "${{ runner.os }}" != "Linux"  ]); then
+          if [ "${{ runner.os }}" == "Linux" ]; then
             # Linux runner, install Oracle JDK for any versions from Oracle Container Registry
-            docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} --p ${{ secrets.OCR_TOKEN }}
+            docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} -p ${{ secrets.OCR_TOKEN }}
             container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION }}")
             docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
           else
             # Windows runner, install Oracle JDK 8 or 11 from Scalar Container Registry
-            docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}
+            docker login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.CR_PAT }}
             container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
             docker cp "${container_id}:oracle-jdk.exe" .
             docker rm "$container_id"
             echo "Install Oracle JDK"
             ./oracle-jdk.exe /s
             echo "Oracle JDK installation successful"
-            if [[ "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} == "8" ]]; then
+            if [[ "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}" == "8" ]]; then
               jdk_root_dir="jdk-1.8"
             else
               jdk_root_dir="jdk-11"
@@ -339,8 +339,7 @@ jobs:
         if: ${{ always() && steps.detect-report-folder.outputs.report_path != '' }}
         uses: actions/upload-artifact@v6
         with:
-#          name: ${{ steps.execute-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.label }}_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}_test_${{ env.ARTIFACT_SUFFIX }}
-          name: ${{ join([steps.execute-integration-test.outcome == 'success' && 'success' || 'failure', matrix.label, matrix.mode.group_commit_enabled == true && 'group_commit' || 'default', 'test', env.ARTIFACT_SUFFIX], '_') }}
+          name: ${{ steps.execute-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.label }}_${{ inputs.GROUP_COMMIT_ENABLED == 'true' && 'group_commit' || 'default' }}_test_${{ env.ARTIFACT_SUFFIX }}
           path: ${{ steps.detect-report-folder.outputs.report_path }}
 
   merge-artifacts:

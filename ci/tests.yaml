@@ -1,4 +1,4 @@
-# Define all integration tests to be run in the CI
+# Define all integration tests to be run in the CI. This file will be converty into a Github action matrix strategy.
 
 # Each test follows the following format:
 #
@@ -6,8 +6,8 @@
 #   - label: a unique label for the test
 #     display_name: a human-readable name
 #     runner: (optional) a Github action runner. The default is "ubuntu-latest".
-#     versions: (optional) an array of database versions to test. If present, the test will be run for each version.
-#     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, all tests will be run with group commit enabled and disabled.
+#     versions: (optional) an array of database versions to test. If present, a matrix entry for each version will be added.
+#     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, a matrix entry with group commit enabled and another one with group commit disabled will be added.
 #     setup_db: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 #     test: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
@@ -97,8 +97,8 @@ jdbc:
       - 19
       - 21
       - 23
-    setup_db:
-      docker login ghcr.io -u ${{ github.repository_owner }} --p ${{ secrets.CR_PAT }}
+    setup_db: |
+      docker login ghcr.io -u ${{ github.repository_owner }} -p ${{ secrets.CR_PAT }}
       docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:${{ matrix.version }}
     test: |
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
