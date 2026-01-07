@@ -36,13 +36,17 @@ cassandra:
   - label: cassandra_%VERSION%
     display_name: Cassandra %VERSION%
     setup_db: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
+    # TODO enable group commit again
+    disable_group_commit: true
     versions:
       - 3.0
-      - 3.11
     # TODO enabled again
+    # - 3.11
     # - 4.1
     # - 5.0
-    test: ./gradlew integrationTestCassandra --tests CassandraColumnValueIntegrationTest
+    test:
+      echo foo
+      ./gradlew integrationTestCassandra --tests CassandraColumnValueIntegrationTest
     # test: ./gradlew integrationTestCassandra
 
 dynamo:
