@@ -77,7 +77,12 @@ testsByCategory.each { category, tests ->
             test.versions.each { version ->
                 def testVariant = new LinkedHashMap(test)
                 testVariant.remove("versions")
-                testVariant["version"] = version
+                // Replace %VERSION% placeholder with the actual version in string properties
+                testVariant.each { key, value ->
+                    if (value instanceof String) {
+                        testVariant[key] = value.replace('%VERSION%', version.toString())
+                    }
+                }
                 testsToRun.add(testVariant)
             }
         } else {
