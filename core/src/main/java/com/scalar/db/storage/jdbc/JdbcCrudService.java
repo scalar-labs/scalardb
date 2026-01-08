@@ -271,7 +271,7 @@ public class JdbcCrudService {
       for (int i = 0; i < results.length; i++) {
         Query query = queries.get(i);
         boolean isConditional = query instanceof ConditionalMutationQuery;
-        if (isConditional && results[i] == 0) {
+        if (isConditional && results[i] <= 0) {
           return false;
         }
       }
