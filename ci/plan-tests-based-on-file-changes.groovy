@@ -49,7 +49,6 @@ def static initializeEnvVar(changedDirectories) {
     // Write environment variables to GITHUB_ENV file
     new File(githubEnvFile).withWriterAppend { writer ->
         writer.writeLine("BASIC=true")
-        writer.writeLine("MULTI_STORAGE=true")
         writer.writeLine("BLOB_STORAGE=${changedDirectories.contains('objectstorage')}")
         writer.writeLine("CASSANDRA=${changedDirectories.contains('cassandra')}")
         writer.writeLine("COSMOS=${changedDirectories.contains('cosmos')}")

@@ -135,8 +135,8 @@ def static filterTestsByEnvVar(expandedTests) {
     }
 
     // Build lists of test categories and labels to keep based on env vars
-    def testCategoriesToKeep = []
-    def testLabelsToKeep = []
+    def testCategoriesToKeep = [] as Set
+    def testLabelsToKeep = [] as Set
     if (basicTest) {
         testLabelsToKeep.add("postgresql_17")
         testCategoriesToKeep.add("dynamo")

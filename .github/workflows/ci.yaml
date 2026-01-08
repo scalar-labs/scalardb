@@ -207,6 +207,13 @@ jobs:
           sdk install groovy
           echo "$HOME/.sdkman/candidates/groovy/current/bin" >> $GITHUB_PATH
 
+      - name: Check file changes and init environment variables indicating which tests to run
+        id: generate-matrix-by-changes
+        if: ${{ !env.TRIGGERED_BY_WF_DISPATCH }}
+        env:
+          PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: groovy ci/plan-tests-based-on-file-changes.groovy
+
       - name: Validate workflow dispatch inputs
         if: env.TRIGGERED_BY_WF_DISPATCH
         run: |
@@ -224,13 +231,6 @@ jobs:
               exit 1
             fi
           fi
-      - name: Check file changes and init environment variables indicating which tests to run
-        id: generate-matrix-by-changes
-        if: ${{ !env.TRIGGERED_BY_WF_DISPATCH }}
-        env:
-          PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
-        run: groovy ci/plan-tests-based-on-file-changes.groovy
-
       - name: Generate the integration tests matrix
         id: generate-matrix-for-wf-dispatch
         env:
