@@ -224,32 +224,27 @@ jobs:
               exit 1
             fi
           fi
-
-      - name: Generate the integration tests matrix when invoked by workflow_dispatch
-        id: generate-matrix-for-wf-dispatch
-        if: env.TRIGGERED_BY_WF_DISPATCH
+      - name: Check file changes and init environment variables indicating which tests to run
+        id: generate-matrix-by-changes
+        if: ${{ !env.TRIGGERED_BY_WF_DISPATCH }}
         env:
-          OUTPUT_FILE: expanded-tests.json
+          PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: groovy ci/plan-tests-based-on-file-changes.groovy
+
+      - name: Generate the integration tests matrix
+        id: generate-matrix-for-wf-dispatch
+        env:
+          OUTPUT_FILE: expanded-tests-config.json
         run: |
           # Generate minimal JSON matrix (stdout) and full JSON config (file)
-          MATRIX_JSON=$(groovy ci/generate-test-matrix-for-wf-dispatch.groovy)
+          MATRIX_JSON=$(groovy ci/generate-test-matrix.groovy)
           echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
-
-#      - name: Generate the integration tests matrix based on file changes
-#        id: generate-matrix-by-changes
-#        if: ${{ !env.TRIGGERED_BY_WF_DISPATCH }}
-#        env:
-#          PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
-#          OUTPUT_FILE: expanded-tests.json
-#        run: |
-#          MATRIX_JSON=$(groovy ci/generate-test-matrix-for-file-changes.groovy)
-#          echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
       - name: Upload expanded test configuration
         uses: actions/upload-artifact@v4
         with:
           name: expanded-tests-config_${{ env.ARTIFACT_SUFFIX }}
-          path: expanded-tests.json
+          path: expanded-tests-config.json
 
       - name: Print integration test matrix
         run: |
@@ -288,7 +283,7 @@ jobs:
           GROUP_COMMIT="${{ matrix.group_commit_enabled }}"
 
           # Extract the test configuration using jq
-          CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests.json)
+          CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests-config.json)
 
           # Set environment variables for the setup and run commands
           echo "SETUP_CMD<<EOF" >> $GITHUB_ENV
