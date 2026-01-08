@@ -104,13 +104,13 @@ def static expandTests(testsByCategory) {
                     testVariant["group_commit_enabled"] = 'false'
                     expandedTests.add(testVariant)
                 } else {
-                    def testWithGroupCommit = new LinkedHashMap(variant)
-                    testWithGroupCommit["group_commit_enabled"] = 'true'
-                    expandedTests.add(testWithGroupCommit)
-
                     def testWithoutGroupCommit = new LinkedHashMap(variant)
                     testWithoutGroupCommit["group_commit_enabled"] = 'false'
                     expandedTests.add(testWithoutGroupCommit)
+
+                    def testWithGroupCommit = new LinkedHashMap(variant)
+                    testWithGroupCommit["group_commit_enabled"] = 'true'
+                    expandedTests.add(testWithGroupCommit)
                 }
             }
         }
