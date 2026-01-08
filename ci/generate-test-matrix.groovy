@@ -9,31 +9,7 @@ import groovy.yaml.YamlSlurper
 import groovy.json.JsonBuilder
 import groovy.transform.SourceURI
 
-// TODO Add BASIC test category
-// Check for required environment variables
-def requiredEnvVars = [
-        'ALL',
-        'BASIC',
-        'BLOB_STORAGE',
-        'CASSANDRA',
-        'COSMOS',
-        'DYNAMO',
-        'JDBC',
-        'MULTI_STORAGE',
-]
-
-def missingVars = []
-requiredEnvVars.each { varName ->
-    if (System.getenv(varName) == null) {
-        missingVars.add(varName)
-    }
-}
-
-if (!missingVars.isEmpty()) {
-    System.err.println("Error: Required environment variables not set: ${missingVars.join(', ')}")
-    System.exit(1)
-}
-
+validateEnvironmentVariables()
 
 // Load the tests organized by category from YAML file
 @SourceURI
@@ -67,6 +43,32 @@ def jsonBuilder = new JsonBuilder([include: minimalMatrix])
 println(jsonBuilder.toString())
 
 // Utility methods declaration
+
+// Validate that all required environment variables are set
+static def validateEnvironmentVariables() {
+    def requiredEnvVars = [
+            'ALL',
+            'BASIC',
+            'BLOB_STORAGE',
+            'CASSANDRA',
+            'COSMOS',
+            'DYNAMO',
+            'JDBC',
+            'MULTI_STORAGE',
+    ]
+
+    def missingVars = []
+    requiredEnvVars.each { varName ->
+        if (System.getenv(varName) == null) {
+            missingVars.add(varName)
+        }
+    }
+
+    if (!missingVars.isEmpty()) {
+        System.err.println("Error: Required environment variables not set: ${missingVars.join(', ')}")
+        System.exit(1)
+    }
+}
 
 // Expand tests by versions and group commit settings
 def static expandTests(testsByCategory) {
