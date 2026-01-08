@@ -26,9 +26,9 @@ expandedTestsConfig = filterTestsByEnvVar(expandedTestsConfig)
 // This file will be shared with downstream jobs as a build artifact. This is necessary because
 // Github does not allow outputting passwords (contained in setup and run attribute) in the matrix
 // directly because they are flagged as sensitive data
-def outputFile = System.getenv('OUTPUT_FILE') ?: 'expanded-tests-config.json'
+def expandedTestsConfigFilePath = System.getenv('EXPANDED_TESTS_CONFIG_FILE');
 def fullConfigJson = new JsonBuilder(expandedTestsConfig)
-new File(outputFile).text = fullConfigJson.toPrettyString()
+new File(expandedTestsConfigFilePath).text = fullConfigJson.toPrettyString()
 
 // Output a minimal JSON matrix with just labels, display_name and group_commit_enabled for GitHub Actions
 def minimalMatrix = expandedTestsConfig.collect { test ->
@@ -55,6 +55,7 @@ static def validateEnvironmentVariables() {
             'DYNAMO',
             'JDBC',
             'MULTI_STORAGE',
+            'EXPANDED_TESTS_CONFIG_FILE'
     ]
 
     def missingVars = []

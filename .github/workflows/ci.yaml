@@ -189,8 +189,9 @@ jobs:
       JDBC: ${{ inputs.JDBC }}
       MULTI_STORAGE: ${{ inputs.MULTI_STORAGE }}
       TRIGGERED_BY_WF_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
+      EXPANDED_TESTS_CONFIG_FILE: expanded-tests-config.json
     outputs:
-      test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix || steps.generate-matrix-by-changes.outputs.matrix }}
+      test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
 
@@ -231,20 +232,19 @@ jobs:
               exit 1
             fi
           fi
+
       - name: Generate the integration tests matrix
         id: generate-matrix-for-wf-dispatch
-        env:
-          OUTPUT_FILE: expanded-tests-config.json
         run: |
-          # Generate minimal JSON matrix (stdout) and full JSON config (file)
+          # Generate minimal JSON matrix (stdout) and full JSON config ($EXPANDED_TESTS_CONFIG_FILE)
           MATRIX_JSON=$(groovy ci/generate-test-matrix.groovy)
           echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
-      - name: Upload expanded test configuration
+      - name: Upload expanded tests configuration
         uses: actions/upload-artifact@v4
         with:
           name: expanded-tests-config_${{ env.ARTIFACT_SUFFIX }}
-          path: expanded-tests-config.json
+          path: ${{ env.EXPANDED_TESTS_CONFIG_FILE }}
 
       - name: Print integration test matrix
         run: |
