@@ -1,8 +1,9 @@
 #!/usr/bin/env groovy
 
-// This script sets environment variables indicating which tests to run based on which storage ]
+// This script sets environment variables indicating which tests to run based on which storage
 // adapter package have changed files.
 
+import groovy.transform.Field
 
 // Check for required environment variable
 if (System.getenv("PR_BASE_BRANCH") == null) {
@@ -10,7 +11,7 @@ if (System.getenv("PR_BASE_BRANCH") == null) {
     System.exit(1)
 }
 
-final String ADAPTER_PACKAGE_DIR = 'core/src/integration-test/java/com/scalar/db/storage/'
+@Field final String ADAPTER_PACKAGE_DIR = 'core/src/integration-test/java/com/scalar/db/storage/'
 
 def changedDirectories = getChangedAdapterPackageDirectories()
 initializeEnvVar(changedDirectories)
@@ -18,7 +19,7 @@ initializeEnvVar(changedDirectories)
 // Utility methods declaration
 
 // Get the folders containing file changes
-def static getChangedAdapterPackageDirectories() {
+def getChangedAdapterPackageDirectories() {
     def baseBranch = System.getenv("PR_BASE_BRANCH")
     executeCommand("git fetch origin ${baseBranch}")
 
@@ -38,7 +39,7 @@ def static getChangedAdapterPackageDirectories() {
 }
 
 // Initialize environment variables based on changed directories (writes to GITHUB_ENV)
-def static initializeEnvVar(changedDirectories) {
+def initializeEnvVar(changedDirectories) {
     def githubEnvFile = System.getenv("GITHUB_ENV")
 
     if (!githubEnvFile) {
@@ -58,7 +59,7 @@ def static initializeEnvVar(changedDirectories) {
 }
 
 // Execute a command and check for errors
-def static executeCommand(String command) {
+def executeCommand(String command) {
     def proc = command.execute()
     proc.waitFor()
 
