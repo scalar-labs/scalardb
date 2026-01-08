@@ -16,19 +16,48 @@ public final class JdbcUtils {
     return initDataSource(config, rdbEngine, false);
   }
 
-  @VisibleForTesting
-  static HikariDataSource createDataSource(HikariConfig hikariConfig) {
-    return new HikariDataSource(hikariConfig);
-  }
-
   public static HikariDataSource initDataSource(
       JdbcConfig config, RdbEngineStrategy rdbEngine, boolean transactional) {
+    return createDataSource(
+        config,
+        rdbEngine,
+        transactional,
+        config.getConnectionPoolMinIdle(),
+        config.getConnectionPoolMaxTotal());
+  }
+
+  public static HikariDataSource initDataSourceForTableMetadata(
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    return createDataSource(
+        config,
+        rdbEngine,
+        false,
+        config.getTableMetadataConnectionPoolMinIdle(),
+        config.getTableMetadataConnectionPoolMaxTotal());
+  }
+
+  public static HikariDataSource initDataSourceForAdmin(
+      JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    return createDataSource(
+        config,
+        rdbEngine,
+        false,
+        config.getAdminConnectionPoolMinIdle(),
+        config.getAdminConnectionPoolMaxTotal());
+  }
+
+  private static HikariDataSource createDataSource(
+      JdbcConfig config,
+      RdbEngineStrategy rdbEngine,
+      boolean transactional,
+      int minIdle,
+      int maxTotal) {
     HikariConfig hikariConfig = new HikariConfig();
 
     /*
      * We need to set the driver class of an underlying database to the dataSource in order
-     * to avoid the "No suitable driver" error in case when ServiceLoader in java.sql.DriverManager
-     * doesn't work (e.g., when we dynamically load a driver class from a fatJar).
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (e.g., when we dynamically load a driver class from a fatJar).
      */
     hikariConfig.setDriverClassName(rdbEngine.getDriverClassName());
 
@@ -47,42 +76,8 @@ public final class JdbcUtils {
                 hikariConfig.setTransactionIsolation(toHikariTransactionIsolation(isolation)));
 
     hikariConfig.setReadOnly(false);
-
-    hikariConfig.setMinimumIdle(config.getConnectionPoolMinIdle());
-    hikariConfig.setMaximumPoolSize(config.getConnectionPoolMaxTotal());
-
-    for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
-      hikariConfig.addDataSourceProperty(entry.getKey(), entry.getValue());
-    }
-
-    return createDataSource(hikariConfig);
-  }
-
-  public static HikariDataSource initDataSourceForTableMetadata(
-      JdbcConfig config, RdbEngineStrategy rdbEngine) {
-    HikariConfig hikariConfig = new HikariConfig();
-
-    /*
-     * We need to set the driver class of an underlying database to the dataSource in order
-     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
-     * work (e.g., when we dynamically load a driver class from a fatJar).
-     */
-    hikariConfig.setDriverClassName(rdbEngine.getDriverClassName());
-
-    hikariConfig.setJdbcUrl(config.getJdbcUrl());
-    config.getUsername().ifPresent(hikariConfig::setUsername);
-    config.getPassword().ifPresent(hikariConfig::setPassword);
-
-    config
-        .getIsolation()
-        .ifPresent(
-            isolation ->
-                hikariConfig.setTransactionIsolation(toHikariTransactionIsolation(isolation)));
-
-    hikariConfig.setReadOnly(false);
-
-    hikariConfig.setMinimumIdle(config.getTableMetadataConnectionPoolMinIdle());
-    hikariConfig.setMaximumPoolSize(config.getTableMetadataConnectionPoolMaxTotal());
+    hikariConfig.setMinimumIdle(minIdle);
+    hikariConfig.setMaximumPoolSize(maxTotal);
 
     for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
       hikariConfig.addDataSourceProperty(entry.getKey(), entry.getValue());
@@ -91,37 +86,9 @@ public final class JdbcUtils {
     return createDataSource(hikariConfig);
   }
 
-  public static HikariDataSource initDataSourceForAdmin(
-      JdbcConfig config, RdbEngineStrategy rdbEngine) {
-    HikariConfig hikariConfig = new HikariConfig();
-
-    /*
-     * We need to set the driver class of an underlying database to the dataSource in order
-     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
-     * work (e.g., when we dynamically load a driver class from a fatJar).
-     */
-    hikariConfig.setDriverClassName(rdbEngine.getDriverClassName());
-
-    hikariConfig.setJdbcUrl(config.getJdbcUrl());
-    config.getUsername().ifPresent(hikariConfig::setUsername);
-    config.getPassword().ifPresent(hikariConfig::setPassword);
-
-    config
-        .getIsolation()
-        .ifPresent(
-            isolation ->
-                hikariConfig.setTransactionIsolation(toHikariTransactionIsolation(isolation)));
-
-    hikariConfig.setReadOnly(false);
-
-    hikariConfig.setMinimumIdle(config.getAdminConnectionPoolMinIdle());
-    hikariConfig.setMaximumPoolSize(config.getAdminConnectionPoolMaxTotal());
-
-    for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
-      hikariConfig.addDataSourceProperty(entry.getKey(), entry.getValue());
-    }
-
-    return createDataSource(hikariConfig);
+  @VisibleForTesting
+  static HikariDataSource createDataSource(HikariConfig hikariConfig) {
+    return new HikariDataSource(hikariConfig);
   }
 
   private static String toHikariTransactionIsolation(Isolation isolation) {

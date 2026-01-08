@@ -40,6 +40,11 @@ public final class JdbcEnv {
     // Metadata cache expiration time
     properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
 
+    // Connection pool settings for tests
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "0");
+    properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "0");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "0");
+
     return properties;
   }
 

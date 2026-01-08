@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
@@ -132,19 +133,16 @@ public class JdbcConfig {
               + "'");
     }
 
-    String[] removedProperties =
-        new String[] {
-          PREFIX + "connection_pool.max_idle",
-          PREFIX + "prepared_statements_pool.enabled",
-          PREFIX + "prepared_statements_pool.max_open",
-          PREFIX + "table_metadata.connection_pool.max_idle",
-          PREFIX + "admin.connection_pool.max_idle"
-        };
-    for (String property : removedProperties) {
-      if (databaseConfig.getProperties().containsKey(property)) {
-        logger.warn("The configuration property {} is removed and will be ignored", property);
-      }
-    }
+    Stream.of(
+            "connection_pool.max_idle",
+            "prepared_statements_pool.enabled",
+            "prepared_statements_pool.max_open",
+            "table_metadata.connection_pool.max_idle",
+            "admin.connection_pool.max_idle")
+        .map(p -> PREFIX + p)
+        .filter(databaseConfig.getProperties()::containsKey)
+        .forEach(
+            p -> logger.warn("The configuration property {} is removed and will be ignored", p));
 
     if (databaseConfig.getContactPoints().isEmpty()) {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
