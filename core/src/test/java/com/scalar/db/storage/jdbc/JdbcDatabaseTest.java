@@ -54,7 +54,7 @@ public class JdbcDatabaseTest {
   @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private TableMetadataManager tableMetadataManager;
   @Mock private VirtualTableInfoManager virtualTableInfoManager;
-  @Mock private JdbcService jdbcService;
+  @Mock private JdbcCrudService jdbcCrudService;
 
   @Mock private ResultInterpreter resultInterpreter;
   @Mock private Connection connection;
@@ -79,12 +79,12 @@ public class JdbcDatabaseTest {
             tableMetadataDataSource,
             tableMetadataManager,
             virtualTableInfoManager,
-            jdbcService,
+            jdbcCrudService,
             false);
   }
 
   @Test
-  public void whenGetOperationExecuted_shouldCallJdbcService() throws Exception {
+  public void whenGetOperationExecuted_shouldCallJdbcCrudService() throws Exception {
     // Arrange
 
     // Act
@@ -98,16 +98,16 @@ public class JdbcDatabaseTest {
 
     // Assert
     verify(connection).setReadOnly(true);
-    verify(jdbcService).get(any(), any());
+    verify(jdbcCrudService).get(any(), any());
     verify(connection).close();
   }
 
   @Test
   public void
-      whenGetOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
+      whenGetOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.get(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.get(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -127,9 +127,10 @@ public class JdbcDatabaseTest {
   }
 
   @Test
-  public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcService() throws Exception {
+  public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcCrudService()
+      throws Exception {
     // Arrange
-    when(jdbcService.getScanner(any(), any()))
+    when(jdbcCrudService.getScanner(any(), any()))
         .thenReturn(
             new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet, true));
 
@@ -146,17 +147,17 @@ public class JdbcDatabaseTest {
     // Assert
     verify(connection).setAutoCommit(false);
     verify(connection).setReadOnly(true);
-    verify(jdbcService).getScanner(any(), any());
+    verify(jdbcCrudService).getScanner(any(), any());
     verify(connection).commit();
     verify(connection).close();
   }
 
   @Test
   public void
-      whenScanOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
+      whenScanOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.getScanner(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.getScanner(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -179,12 +180,12 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      whenScanOperationExecutedAndJdbcServiceThrowsIllegalArgumentException_shouldCloseConnectionAndThrowIllegalArgumentException()
+      whenScanOperationExecutedAndJdbcCrudServiceThrowsIllegalArgumentException_shouldCloseConnectionAndThrowIllegalArgumentException()
           throws Exception {
     // Arrange
     Exception cause = new IllegalArgumentException("Table not found");
     // Simulate the table not found scenario.
-    when(jdbcService.getScanner(any(), any())).thenThrow(cause);
+    when(jdbcCrudService.getScanner(any(), any())).thenThrow(cause);
 
     // Act Assert
     assertThatThrownBy(
@@ -206,7 +207,7 @@ public class JdbcDatabaseTest {
       whenScanOperationExecutedAndScannerClosed_SQLExceptionThrownByConnectionCommit_shouldThrowIOException()
           throws Exception {
     // Arrange
-    when(jdbcService.getScanner(any(), any()))
+    when(jdbcCrudService.getScanner(any(), any()))
         .thenReturn(
             new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet, true));
     doThrow(sqlException).when(connection).commit();
@@ -224,16 +225,16 @@ public class JdbcDatabaseTest {
     // Assert
     verify(connection).setAutoCommit(false);
     verify(connection).setReadOnly(true);
-    verify(jdbcService).getScanner(any(), any());
+    verify(jdbcCrudService).getScanner(any(), any());
     verify(connection).commit();
     verify(connection).rollback();
     verify(connection).close();
   }
 
   @Test
-  public void whenPutOperationExecuted_shouldCallJdbcService() throws Exception {
+  public void whenPutOperationExecuted_shouldCallJdbcCrudService() throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
 
     // Act
     Put put =
@@ -246,16 +247,16 @@ public class JdbcDatabaseTest {
     jdbcDatabase.put(put);
 
     // Assert
-    verify(jdbcService).put(any(), any());
+    verify(jdbcCrudService).put(any(), any());
     verify(connection).close();
   }
 
   @Test
   public void
-      whenPutOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
+      whenPutOperationWithConditionExecutedAndJdbcCrudServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(false);
+    when(jdbcCrudService.put(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
@@ -276,10 +277,10 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      whenPutOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
+      whenPutOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -299,9 +300,9 @@ public class JdbcDatabaseTest {
   }
 
   @Test
-  public void whenDeleteOperationExecuted_shouldCallJdbcService() throws Exception {
+  public void whenDeleteOperationExecuted_shouldCallJdbcCrudService() throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenReturn(true);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(true);
 
     // Act
     Delete delete =
@@ -313,16 +314,16 @@ public class JdbcDatabaseTest {
     jdbcDatabase.delete(delete);
 
     // Assert
-    verify(jdbcService).delete(any(), any());
+    verify(jdbcCrudService).delete(any(), any());
     verify(connection).close();
   }
 
   @Test
   public void
-      whenDeleteOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
+      whenDeleteOperationWithConditionExecutedAndJdbcCrudServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenReturn(false);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
@@ -342,10 +343,10 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      whenDeleteOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
+      whenDeleteOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.delete(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -364,9 +365,9 @@ public class JdbcDatabaseTest {
   }
 
   @Test
-  public void whenMutateOperationExecuted_shouldCallJdbcService() throws Exception {
+  public void whenMutateOperationExecuted_shouldCallJdbcCrudService() throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     // Act
     Put put =
@@ -386,17 +387,17 @@ public class JdbcDatabaseTest {
 
     // Assert
     verify(connection).setAutoCommit(false);
-    verify(jdbcService).mutate(any(), any());
+    verify(jdbcCrudService).mutate(any(), any());
     verify(connection).commit();
     verify(connection).close();
   }
 
   @Test
   public void
-      whenMutateOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
+      whenMutateOperationWithConditionExecutedAndJdbcCrudServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any())).thenReturn(false);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
@@ -420,17 +421,17 @@ public class JdbcDatabaseTest {
             })
         .isInstanceOf(NoMutationException.class);
     verify(connection).setAutoCommit(false);
-    verify(jdbcService).mutate(any(), any());
+    verify(jdbcCrudService).mutate(any(), any());
     verify(connection).rollback();
     verify(connection).close();
   }
 
   @Test
   public void
-      whenMutateOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
+      whenMutateOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.mutate(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -453,7 +454,7 @@ public class JdbcDatabaseTest {
         .isInstanceOf(ExecutionException.class)
         .hasCause(sqlException);
     verify(connection).setAutoCommit(false);
-    verify(jdbcService).mutate(any(), any());
+    verify(jdbcCrudService).mutate(any(), any());
     verify(connection).rollback();
     verify(connection).close();
   }
@@ -462,7 +463,7 @@ public class JdbcDatabaseTest {
   public void mutate_withConflictError_shouldThrowRetriableExecutionException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.mutate(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.mutate(any(), any())).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("40001");
 
     // Act Assert
@@ -486,7 +487,7 @@ public class JdbcDatabaseTest {
         .isInstanceOf(RetriableExecutionException.class)
         .hasCause(sqlException);
     verify(connection).setAutoCommit(false);
-    verify(jdbcService).mutate(any(), any());
+    verify(jdbcCrudService).mutate(any(), any());
     verify(connection).rollback();
     verify(connection).close();
   }
@@ -518,14 +519,14 @@ public class JdbcDatabaseTest {
             })
         .isEqualTo(exception);
     verify(connection).setAutoCommit(false);
-    verify(jdbcService, never()).mutate(any(), any());
+    verify(jdbcCrudService, never()).mutate(any(), any());
     verify(connection, never()).rollback();
     verify(connection).close();
   }
 
   @Test
   public void
-      put_ForVirtualTableWithInnerJoin_ShouldDivideIntoSourceTablesAndCallJdbcServiceWithBothPuts()
+      put_ForVirtualTableWithInnerJoin_ShouldDivideIntoSourceTablesAndCallJdbcCrudServiceWithBothPuts()
           throws Exception {
     // Arrange
     VirtualTableInfo virtualTableInfo = createVirtualTableInfo(VirtualTableJoinType.INNER);
@@ -535,7 +536,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -578,7 +579,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -600,7 +601,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -642,7 +643,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -664,7 +665,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -705,7 +706,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -725,7 +726,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -777,7 +778,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -799,7 +800,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -849,7 +850,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -871,7 +872,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -924,7 +925,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -946,7 +947,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Map<String, String> attributes = new HashMap<>();
     JdbcOperationAttributes.setLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
@@ -1006,7 +1007,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -1028,7 +1029,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Delete delete =
         Delete.newBuilder()
@@ -1066,7 +1067,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -1088,7 +1089,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Delete delete =
         Delete.newBuilder()
@@ -1125,7 +1126,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -1146,7 +1147,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Delete delete =
         Delete.newBuilder()
@@ -1194,7 +1195,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -1249,7 +1250,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Delete delete =
         Delete.newBuilder()
@@ -1298,7 +1299,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     assertThat(mutations).hasSize(2);
@@ -1320,7 +1321,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Map<String, String> attributes = new HashMap<>();
     JdbcOperationAttributes.setLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(
@@ -1376,7 +1377,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     // For LEFT_OUTER join with IS_NULL conditions allowed, both deletes should be created
@@ -1398,7 +1399,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     Put put =
         Put.newBuilder()
@@ -1464,7 +1465,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     // 2 Puts (from Put divided) + 2 Deletes (from Delete divided) = 4 mutations
@@ -1490,7 +1491,7 @@ public class JdbcDatabaseTest {
         .thenReturn(createLeftSourceTableMetadata());
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(createRightSourceTableMetadata());
-    when(jdbcService.mutate(any(), any())).thenReturn(true);
+    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
 
     // Regular table put
     Put regularPut =
@@ -1551,7 +1552,7 @@ public class JdbcDatabaseTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
 
     List<Mutation> mutations = mutationsCaptor.getValue();
     // 1 regular Put + 2 virtual Puts (from virtual Put divided) = 3 mutations
@@ -1581,7 +1582,7 @@ public class JdbcDatabaseTest {
     // Assert
     verify(connection).setAutoCommit(false);
     verify(connection).setReadOnly(true);
-    verify(jdbcService).get(any(), any());
+    verify(jdbcCrudService).get(any(), any());
     verify(connection).commit();
     verify(connection, never()).rollback();
     verify(connection).close();
@@ -1589,11 +1590,11 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      get_WhenRequiresExplicitCommitIsTrueAndJdbcServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
+      get_WhenRequiresExplicitCommitIsTrueAndJdbcCrudServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
           throws Exception {
     // Arrange
     JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
-    when(jdbcService.get(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.get(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -1619,7 +1620,7 @@ public class JdbcDatabaseTest {
       throws Exception {
     // Arrange
     JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
 
     // Act
     Put put =
@@ -1633,7 +1634,7 @@ public class JdbcDatabaseTest {
 
     // Assert
     verify(connection).setAutoCommit(false);
-    verify(jdbcService).put(any(), any());
+    verify(jdbcCrudService).put(any(), any());
     verify(connection).commit();
     verify(connection, never()).rollback();
     verify(connection).close();
@@ -1641,11 +1642,11 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      put_WhenRequiresExplicitCommitIsTrueAndJdbcServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
+      put_WhenRequiresExplicitCommitIsTrueAndJdbcCrudServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
           throws Exception {
     // Arrange
     JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
-    when(jdbcService.put(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -1673,7 +1674,7 @@ public class JdbcDatabaseTest {
           throws Exception {
     // Arrange
     JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
-    when(jdbcService.delete(any(), any())).thenReturn(true);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(true);
 
     // Act
     Delete delete =
@@ -1686,7 +1687,7 @@ public class JdbcDatabaseTest {
 
     // Assert
     verify(connection).setAutoCommit(false);
-    verify(jdbcService).delete(any(), any());
+    verify(jdbcCrudService).delete(any(), any());
     verify(connection).commit();
     verify(connection, never()).rollback();
     verify(connection).close();
@@ -1694,11 +1695,11 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      delete_WhenRequiresExplicitCommitIsTrueAndJdbcServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
+      delete_WhenRequiresExplicitCommitIsTrueAndJdbcCrudServiceThrowsSQLException_ShouldRollbackAndThrowExecutionException()
           throws Exception {
     // Arrange
     JdbcDatabase database = createJdbcDatabaseWithExplicitCommit();
-    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
+    when(jdbcCrudService.delete(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
@@ -1794,7 +1795,7 @@ public class JdbcDatabaseTest {
         tableMetadataDataSource,
         tableMetadataManager,
         virtualTableInfoManager,
-        jdbcService,
+        jdbcCrudService,
         true);
   }
 }

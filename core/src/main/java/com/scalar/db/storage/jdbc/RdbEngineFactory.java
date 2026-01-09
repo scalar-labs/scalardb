@@ -56,7 +56,7 @@ public final class RdbEngineFactory {
       }
     } catch (SQLException e) {
       // We can't throw a checked exception here because it would break backward compatibility since
-      // the calling method is executed in constructor of JdbcAdmin or JdbcService
+      // the calling method is executed in constructor of JdbcAdmin or JdbcCrudService
       throw new RuntimeException(
           CoreError.JDBC_MYSQL_GETTING_CONNECTION_METADATA_FAILED.buildMessage(e.getMessage()), e);
     }
