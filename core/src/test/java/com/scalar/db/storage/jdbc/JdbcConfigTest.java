@@ -28,11 +28,23 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_METADATA_SCHEMA);
     props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "1");
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "500");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "10000");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "300000");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_LIFETIME_MILLIS, "900000");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "60000");
     props.setProperty(JdbcConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.name());
     props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
     props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "20000");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "400000");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_LIFETIME_MILLIS, "1000000");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "70000");
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "50");
     props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "200");
+    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "30000");
+    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "500000");
+    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_LIFETIME_MILLIS, "1100000");
+    props.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "80000");
     props.setProperty(JdbcConfig.MYSQL_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.ORACLE_VARIABLE_KEY_COLUMN_SIZE, "64");
     props.setProperty(JdbcConfig.DB2_VARIABLE_KEY_COLUMN_SIZE, "64");
@@ -50,13 +62,25 @@ public class JdbcConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getConnectionPoolMinIdle()).isEqualTo(1);
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(500);
+    assertThat(config.getConnectionPoolConnectionTimeoutMillis()).hasValue(10000L);
+    assertThat(config.getConnectionPoolIdleTimeoutMillis()).hasValue(300000L);
+    assertThat(config.getConnectionPoolMaxLifetimeMillis()).hasValue(900000L);
+    assertThat(config.getConnectionPoolKeepaliveTimeMillis()).hasValue(60000L);
     assertThat(config.getIsolation()).isPresent();
     assertThat(config.getIsolation().get()).isEqualTo(Isolation.SERIALIZABLE);
     assertThat(config.getMetadataSchema()).isEqualTo(ANY_METADATA_SCHEMA);
     assertThat(config.getTableMetadataConnectionPoolMinIdle()).isEqualTo(100);
     assertThat(config.getTableMetadataConnectionPoolMaxTotal()).isEqualTo(300);
+    assertThat(config.getTableMetadataConnectionPoolConnectionTimeoutMillis()).hasValue(20000L);
+    assertThat(config.getTableMetadataConnectionPoolIdleTimeoutMillis()).hasValue(400000L);
+    assertThat(config.getTableMetadataConnectionPoolMaxLifetimeMillis()).hasValue(1000000L);
+    assertThat(config.getTableMetadataConnectionPoolKeepaliveTimeMillis()).hasValue(70000L);
     assertThat(config.getAdminConnectionPoolMinIdle()).isEqualTo(50);
     assertThat(config.getAdminConnectionPoolMaxTotal()).isEqualTo(200);
+    assertThat(config.getAdminConnectionPoolConnectionTimeoutMillis()).hasValue(30000L);
+    assertThat(config.getAdminConnectionPoolIdleTimeoutMillis()).hasValue(500000L);
+    assertThat(config.getAdminConnectionPoolMaxLifetimeMillis()).hasValue(1100000L);
+    assertThat(config.getAdminConnectionPoolKeepaliveTimeMillis()).hasValue(80000L);
     assertThat(config.getMysqlVariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getOracleVariableKeyColumnSize()).isEqualTo(64);
     assertThat(config.getDb2VariableKeyColumnSize()).isEqualTo(64);
@@ -89,12 +113,28 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxTotal())
         .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
+    assertThat(config.getConnectionPoolConnectionTimeoutMillis()).isEmpty();
+    assertThat(config.getConnectionPoolIdleTimeoutMillis()).isEmpty();
+    assertThat(config.getConnectionPoolMaxLifetimeMillis()).isEmpty();
+    assertThat(config.getConnectionPoolKeepaliveTimeMillis()).isEmpty();
     assertThat(config.getIsolation()).isNotPresent();
     assertThat(config.getMetadataSchema()).isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     assertThat(config.getTableMetadataConnectionPoolMinIdle())
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getTableMetadataConnectionPoolMaxTotal())
         .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
+    assertThat(config.getTableMetadataConnectionPoolConnectionTimeoutMillis()).isEmpty();
+    assertThat(config.getTableMetadataConnectionPoolIdleTimeoutMillis()).isEmpty();
+    assertThat(config.getTableMetadataConnectionPoolMaxLifetimeMillis()).isEmpty();
+    assertThat(config.getTableMetadataConnectionPoolKeepaliveTimeMillis()).isEmpty();
+    assertThat(config.getAdminConnectionPoolMinIdle())
+        .isEqualTo(JdbcConfig.DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE);
+    assertThat(config.getAdminConnectionPoolMaxTotal())
+        .isEqualTo(JdbcConfig.DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
+    assertThat(config.getAdminConnectionPoolConnectionTimeoutMillis()).isEmpty();
+    assertThat(config.getAdminConnectionPoolIdleTimeoutMillis()).isEmpty();
+    assertThat(config.getAdminConnectionPoolMaxLifetimeMillis()).isEmpty();
+    assertThat(config.getAdminConnectionPoolKeepaliveTimeMillis()).isEmpty();
     assertThat(config.getMysqlVariableKeyColumnSize())
         .isEqualTo(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     assertThat(config.getOracleVariableKeyColumnSize())

@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.util.Map.Entry;
+import javax.annotation.Nullable;
 import javax.sql.DataSource;
 
 public final class JdbcUtils {
@@ -23,7 +24,11 @@ public final class JdbcUtils {
         rdbEngine,
         transactional,
         config.getConnectionPoolMinIdle(),
-        config.getConnectionPoolMaxTotal());
+        config.getConnectionPoolMaxTotal(),
+        config.getConnectionPoolConnectionTimeoutMillis().orElse(null),
+        config.getConnectionPoolIdleTimeoutMillis().orElse(null),
+        config.getConnectionPoolMaxLifetimeMillis().orElse(null),
+        config.getConnectionPoolKeepaliveTimeMillis().orElse(null));
   }
 
   public static HikariDataSource initDataSourceForTableMetadata(
@@ -33,7 +38,11 @@ public final class JdbcUtils {
         rdbEngine,
         false,
         config.getTableMetadataConnectionPoolMinIdle(),
-        config.getTableMetadataConnectionPoolMaxTotal());
+        config.getTableMetadataConnectionPoolMaxTotal(),
+        config.getTableMetadataConnectionPoolConnectionTimeoutMillis().orElse(null),
+        config.getTableMetadataConnectionPoolIdleTimeoutMillis().orElse(null),
+        config.getTableMetadataConnectionPoolMaxLifetimeMillis().orElse(null),
+        config.getTableMetadataConnectionPoolKeepaliveTimeMillis().orElse(null));
   }
 
   public static HikariDataSource initDataSourceForAdmin(
@@ -43,7 +52,11 @@ public final class JdbcUtils {
         rdbEngine,
         false,
         config.getAdminConnectionPoolMinIdle(),
-        config.getAdminConnectionPoolMaxTotal());
+        config.getAdminConnectionPoolMaxTotal(),
+        config.getAdminConnectionPoolConnectionTimeoutMillis().orElse(null),
+        config.getAdminConnectionPoolIdleTimeoutMillis().orElse(null),
+        config.getAdminConnectionPoolMaxLifetimeMillis().orElse(null),
+        config.getAdminConnectionPoolKeepaliveTimeMillis().orElse(null));
   }
 
   private static HikariDataSource createDataSource(
@@ -51,7 +64,11 @@ public final class JdbcUtils {
       RdbEngineStrategy rdbEngine,
       boolean transactional,
       int minIdle,
-      int maxTotal) {
+      int maxTotal,
+      @Nullable Long connectionTimeout,
+      @Nullable Long idleTimeout,
+      @Nullable Long maxLifetime,
+      @Nullable Long keepaliveTime) {
     HikariConfig hikariConfig = new HikariConfig();
 
     /*
@@ -78,6 +95,19 @@ public final class JdbcUtils {
     hikariConfig.setReadOnly(false);
     hikariConfig.setMinimumIdle(minIdle);
     hikariConfig.setMaximumPoolSize(maxTotal);
+
+    if (connectionTimeout != null) {
+      hikariConfig.setConnectionTimeout(connectionTimeout);
+    }
+    if (idleTimeout != null) {
+      hikariConfig.setIdleTimeout(idleTimeout);
+    }
+    if (maxLifetime != null) {
+      hikariConfig.setMaxLifetime(maxLifetime);
+    }
+    if (keepaliveTime != null) {
+      hikariConfig.setKeepaliveTime(keepaliveTime);
+    }
 
     for (Entry<String, String> entry : rdbEngine.getConnectionProperties(config).entrySet()) {
       hikariConfig.addDataSourceProperty(entry.getKey(), entry.getValue());

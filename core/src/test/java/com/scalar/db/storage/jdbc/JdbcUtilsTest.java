@@ -39,6 +39,10 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "10");
     properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "30");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "15000");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "300000");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_LIFETIME_MILLIS, "900000");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "60000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("com.mysql.cj.jdbc.Driver");
@@ -76,6 +80,10 @@ public class JdbcUtilsTest {
 
     assertThat(hikariConfig.getMinimumIdle()).isEqualTo(10);
     assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(30);
+    assertThat(hikariConfig.getConnectionTimeout()).isEqualTo(15000);
+    assertThat(hikariConfig.getIdleTimeout()).isEqualTo(300000);
+    assertThat(hikariConfig.getMaxLifetime()).isEqualTo(900000);
+    assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(60000);
   }
 
   @Test
@@ -180,6 +188,13 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "REPEATABLE_READ");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
+    properties.setProperty(
+        JdbcConfig.TABLE_METADATA_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "20000");
+    properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "400000");
+    properties.setProperty(
+        JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_LIFETIME_MILLIS, "1000000");
+    properties.setProperty(
+        JdbcConfig.TABLE_METADATA_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "70000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("oracle.jdbc.driver.OracleDriver");
@@ -215,6 +230,10 @@ public class JdbcUtilsTest {
 
     assertThat(hikariConfig.getMinimumIdle()).isEqualTo(100);
     assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(300);
+    assertThat(hikariConfig.getConnectionTimeout()).isEqualTo(20000);
+    assertThat(hikariConfig.getIdleTimeout()).isEqualTo(400000);
+    assertThat(hikariConfig.getMaxLifetime()).isEqualTo(1000000);
+    assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(70000);
   }
 
   @Test
@@ -228,6 +247,10 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "READ_UNCOMMITTED");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "100");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "300");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "25000");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "500000");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_LIFETIME_MILLIS, "1100000");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "80000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -264,5 +287,9 @@ public class JdbcUtilsTest {
 
     assertThat(hikariConfig.getMinimumIdle()).isEqualTo(100);
     assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(300);
+    assertThat(hikariConfig.getConnectionTimeout()).isEqualTo(25000);
+    assertThat(hikariConfig.getIdleTimeout()).isEqualTo(500000);
+    assertThat(hikariConfig.getMaxLifetime()).isEqualTo(1100000);
+    assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(80000);
   }
 }
