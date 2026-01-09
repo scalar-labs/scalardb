@@ -210,18 +210,12 @@ public class JdbcCrudService {
       return executeSingleMutation(mutations.get(0), connection);
     }
 
-    // Build all queries
-    List<Query> queries = new ArrayList<>(mutations.size());
-    for (Mutation mutation : mutations) {
-      TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(mutation);
-      queries.add(buildMutationQuery(mutation, tableMetadata));
-    }
-
     // Group queries by SQL for batching
     Map<String, List<Query>> batchableGroups = new LinkedHashMap<>();
     List<Query> nonBatchable = new ArrayList<>();
-
-    for (Query query : queries) {
+    for (Mutation mutation : mutations) {
+      TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(mutation);
+      Query query = buildMutationQuery(mutation, tableMetadata);
       if (isBatchable(query)) {
         batchableGroups.computeIfAbsent(query.sql(), k -> new ArrayList<>()).add(query);
       } else {
