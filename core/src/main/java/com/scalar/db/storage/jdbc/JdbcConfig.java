@@ -133,6 +133,7 @@ public class JdbcConfig {
               + "'");
     }
 
+    // Show a warning when removed properties are set. We will keep checking them until 5.0.0.
     Stream.of(
             "connection_pool.max_idle",
             "prepared_statements_pool.enabled",
