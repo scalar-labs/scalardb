@@ -21,6 +21,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ThrowableConsumer;
 import com.scalar.db.util.ThrowableFunction;
+import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -40,15 +41,10 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.sql.DataSource;
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-  private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
-
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
   @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
@@ -58,7 +54,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final String INDEX_NAME_PREFIX = "index";
 
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
+  private final HikariDataSource dataSource;
   private final String metadataSchema;
   private final TableMetadataService tableMetadataService;
   private final NamespaceMetadataService namespaceMetadataService;
@@ -81,7 +77,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
+  public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -95,7 +91,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config, boolean requiresExplicitCommit) {
+  public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config, boolean requiresExplicitCommit) {
     rdbEngine = RdbEngineFactory.create(config);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -110,7 +106,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   JdbcAdmin(
-      BasicDataSource dataSource,
+      HikariDataSource dataSource,
       JdbcConfig config,
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
@@ -127,7 +123,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   JdbcAdmin(
-      BasicDataSource dataSource,
+      HikariDataSource dataSource,
       JdbcConfig config,
       TableMetadataService tableMetadataService,
       NamespaceMetadataService namespaceMetadataService,
@@ -623,11 +619,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void close() {
-    try {
-      dataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the dataSource", e);
-    }
+    dataSource.close();
   }
 
   /**

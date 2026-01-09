@@ -2,16 +2,16 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.PermissionTestUtils;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcPermissionTestUtils implements PermissionTestUtils {
   public static final int DDL_WAIT_SECONDS = 1;
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
+  private final HikariDataSource dataSource;
 
   public JdbcPermissionTestUtils(Properties properties) {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));

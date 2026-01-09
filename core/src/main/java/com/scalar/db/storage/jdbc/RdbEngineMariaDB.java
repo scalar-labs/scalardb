@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -11,8 +10,8 @@ import javax.annotation.Nullable;
 
 class RdbEngineMariaDB extends RdbEngineMysql {
   @Override
-  public Driver getDriver() {
-    return new org.mariadb.jdbc.Driver();
+  public String getDriverClassName() {
+    return org.mariadb.jdbc.Driver.class.getName();
   }
 
   @Override

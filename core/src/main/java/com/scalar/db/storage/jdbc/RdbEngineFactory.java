@@ -1,9 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.common.CoreError;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 /** Factory class of subclasses of {@link RdbEngineStrategy} */
 public final class RdbEngineFactory {
@@ -46,7 +46,7 @@ public final class RdbEngineFactory {
    */
   private static RdbEngineStrategy createMysqlOrTidbEngine(JdbcConfig config) {
     RdbEngineMysql mysqlEngine = new RdbEngineMysql(config);
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, mysqlEngine);
+    try (HikariDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, mysqlEngine);
         Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       if (version.contains("TiDB")) {

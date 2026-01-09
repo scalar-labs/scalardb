@@ -36,6 +36,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -46,7 +47,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,8 +63,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   private static final Logger logger = LoggerFactory.getLogger(JdbcDatabase.class);
 
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
-  private final BasicDataSource tableMetadataDataSource;
+  private final HikariDataSource dataSource;
+  private final HikariDataSource tableMetadataDataSource;
   private final TableMetadataManager tableMetadataManager;
   private final VirtualTableInfoManager virtualTableInfoManager;
   private final JdbcService jdbcService;
@@ -99,8 +99,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   JdbcDatabase(
       DatabaseConfig databaseConfig,
       RdbEngineStrategy rdbEngine,
-      BasicDataSource dataSource,
-      BasicDataSource tableMetadataDataSource,
+      HikariDataSource dataSource,
+      HikariDataSource tableMetadataDataSource,
       TableMetadataManager tableMetadataManager,
       VirtualTableInfoManager virtualTableInfoManager,
       JdbcService jdbcService,
@@ -568,15 +568,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Override
   public void close() {
-    try {
-      dataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the dataSource", e);
-    }
-    try {
-      tableMetadataDataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the table metadata dataSource", e);
-    }
+    dataSource.close();
+    tableMetadataDataSource.close();
   }
 }
