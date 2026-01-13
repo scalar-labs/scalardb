@@ -45,7 +45,7 @@ subprojects {
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
-        junitVersion = '5.14.1'
+        junitVersion = '5.14.2'
         commonsLangVersion = '3.20.0'
         assertjVersion = '3.27.6'
         mockitoVersion = '4.11.0'
