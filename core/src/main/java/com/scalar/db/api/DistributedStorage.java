@@ -181,6 +181,9 @@ public interface DistributedStorage extends AutoCloseable {
   /**
    * Mutates entries of the underlying storage with the specified list of {@link Mutation} commands.
    *
+   * <p>The execution order of mutations is not guaranteed. Users must not specify multiple
+   * mutations for the same record(s) if the outcome depends on the execution order.
+   *
    * <p>Note that this method only supports mutations within the atomicity unit specified by {@link
    * StorageInfo#getMutationAtomicityUnit()}. For example, if the atomicity unit of the storage is
    * {@link StorageInfo.MutationAtomicityUnit#PARTITION}, the mutations must occur within the same

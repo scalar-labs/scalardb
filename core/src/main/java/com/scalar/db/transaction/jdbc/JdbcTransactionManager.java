@@ -35,7 +35,7 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcCrudService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
@@ -58,7 +58,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
   private final RdbEngineStrategy rdbEngine;
-  private final JdbcService jdbcService;
+  private final JdbcCrudService jdbcCrudService;
 
   @Inject
   public JdbcTransactionManager(DatabaseConfig databaseConfig) {
@@ -76,8 +76,8 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         new OperationChecker(
             databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin));
 
-    jdbcService =
-        new JdbcService(
+    jdbcCrudService =
+        new JdbcCrudService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
   }
 
@@ -87,12 +87,12 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
       BasicDataSource dataSource,
       BasicDataSource tableMetadataDataSource,
       RdbEngineStrategy rdbEngine,
-      JdbcService jdbcService) {
+      JdbcCrudService jdbcCrudService) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.rdbEngine = rdbEngine;
-    this.jdbcService = jdbcService;
+    this.jdbcCrudService = jdbcCrudService;
   }
 
   @Override
@@ -126,9 +126,9 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         rdbEngine.setConnectionToReadOnly(connection, true);
         transaction =
             new ReadOnlyDistributedTransaction(
-                new JdbcTransaction(txId, jdbcService, connection, rdbEngine));
+                new JdbcTransaction(txId, jdbcCrudService, connection, rdbEngine));
       } else {
-        transaction = new JdbcTransaction(txId, jdbcService, connection, rdbEngine);
+        transaction = new JdbcTransaction(txId, jdbcCrudService, connection, rdbEngine);
       }
 
       getNamespace().ifPresent(transaction::withNamespace);
