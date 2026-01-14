@@ -15,7 +15,6 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -327,8 +326,8 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public Driver getDriver() {
-    return new org.sqlite.JDBC();
+  public String getDriverClassName() {
+    return org.sqlite.JDBC.class.getName();
   }
 
   @Override

@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
@@ -10,38 +10,58 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class JdbcConfig {
+  private static final Logger logger = LoggerFactory.getLogger(JdbcConfig.class);
+
   public static final String STORAGE_NAME = "jdbc";
   public static final String TRANSACTION_MANAGER_NAME = STORAGE_NAME;
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME + ".";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
-  public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
   public static final String CONNECTION_POOL_MAX_TOTAL = PREFIX + "connection_pool.max_total";
-  public static final String PREPARED_STATEMENTS_POOL_ENABLED =
-      PREFIX + "prepared_statements_pool.enabled";
-  public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
-      PREFIX + "prepared_statements_pool.max_open";
+  public static final String CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS =
+      PREFIX + "connection_pool.connection_timeout_millis";
+  public static final String CONNECTION_POOL_IDLE_TIMEOUT_MILLIS =
+      PREFIX + "connection_pool.idle_timeout_millis";
+  public static final String CONNECTION_POOL_MAX_LIFETIME_MILLIS =
+      PREFIX + "connection_pool.max_lifetime_millis";
+  public static final String CONNECTION_POOL_KEEPALIVE_TIME_MILLIS =
+      PREFIX + "connection_pool.keepalive_time_millis";
 
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
 
   public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
   public static final String TABLE_METADATA_CONNECTION_POOL_MIN_IDLE =
       PREFIX + "table_metadata.connection_pool.min_idle";
-  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_IDLE =
-      PREFIX + "table_metadata.connection_pool.max_idle";
   public static final String TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "table_metadata.connection_pool.max_total";
+  public static final String TABLE_METADATA_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS =
+      PREFIX + "table_metadata.connection_pool.connection_timeout_millis";
+  public static final String TABLE_METADATA_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS =
+      PREFIX + "table_metadata.connection_pool.idle_timeout_millis";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_LIFETIME_MILLIS =
+      PREFIX + "table_metadata.connection_pool.max_lifetime_millis";
+  public static final String TABLE_METADATA_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS =
+      PREFIX + "table_metadata.connection_pool.keepalive_time_millis";
 
   public static final String ADMIN_CONNECTION_POOL_MIN_IDLE =
       PREFIX + "admin.connection_pool.min_idle";
-  public static final String ADMIN_CONNECTION_POOL_MAX_IDLE =
-      PREFIX + "admin.connection_pool.max_idle";
   public static final String ADMIN_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "admin.connection_pool.max_total";
+  public static final String ADMIN_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS =
+      PREFIX + "admin.connection_pool.connection_timeout_millis";
+  public static final String ADMIN_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS =
+      PREFIX + "admin.connection_pool.idle_timeout_millis";
+  public static final String ADMIN_CONNECTION_POOL_MAX_LIFETIME_MILLIS =
+      PREFIX + "admin.connection_pool.max_lifetime_millis";
+  public static final String ADMIN_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS =
+      PREFIX + "admin.connection_pool.keepalive_time_millis";
 
   public static final String MYSQL_VARIABLE_KEY_COLUMN_SIZE =
       PREFIX + "mysql.variable_key_column_size";
@@ -53,17 +73,12 @@ public class JdbcConfig {
   public static final String DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "db2.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
-  public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
-  public static final boolean DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED = false;
-  public static final int DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN = -1;
 
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE = 5;
-  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL = 25;
 
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE = 5;
-  public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
 
   // MySQL, Oracle and Db2 have limitations regarding the total size of key columns. Thus, we should
@@ -108,21 +123,29 @@ public class JdbcConfig {
   @Nullable private final String password;
 
   private final int connectionPoolMinIdle;
-  private final int connectionPoolMaxIdle;
   private final int connectionPoolMaxTotal;
-  private final boolean preparedStatementsPoolEnabled;
-  private final int preparedStatementsPoolMaxOpen;
+  @Nullable private final Long connectionPoolConnectionTimeoutMillis;
+  @Nullable private final Long connectionPoolIdleTimeoutMillis;
+  @Nullable private final Long connectionPoolMaxLifetimeMillis;
+  @Nullable private final Long connectionPoolKeepaliveTimeMillis;
 
   @Nullable private final Isolation isolation;
 
   @Nullable private final String tableMetadataSchema;
+
   private final int tableMetadataConnectionPoolMinIdle;
-  private final int tableMetadataConnectionPoolMaxIdle;
   private final int tableMetadataConnectionPoolMaxTotal;
+  @Nullable private final Long tableMetadataConnectionPoolConnectionTimeoutMillis;
+  @Nullable private final Long tableMetadataConnectionPoolIdleTimeoutMillis;
+  @Nullable private final Long tableMetadataConnectionPoolMaxLifetimeMillis;
+  @Nullable private final Long tableMetadataConnectionPoolKeepaliveTimeMillis;
 
   private final int adminConnectionPoolMinIdle;
-  private final int adminConnectionPoolMaxIdle;
   private final int adminConnectionPoolMaxTotal;
+  @Nullable private final Long adminConnectionPoolConnectionTimeoutMillis;
+  @Nullable private final Long adminConnectionPoolIdleTimeoutMillis;
+  @Nullable private final Long adminConnectionPoolMaxLifetimeMillis;
+  @Nullable private final Long adminConnectionPoolKeepaliveTimeMillis;
 
   private final int mysqlVariableKeyColumnSize;
   private final int oracleVariableKeyColumnSize;
@@ -145,6 +168,18 @@ public class JdbcConfig {
               + "'");
     }
 
+    // Show a warning when removed properties are set. We will keep checking them until 5.0.0.
+    Stream.of(
+            "connection_pool.max_idle",
+            "prepared_statements_pool.enabled",
+            "prepared_statements_pool.max_open",
+            "table_metadata.connection_pool.max_idle",
+            "admin.connection_pool.max_idle")
+        .map(p -> PREFIX + p)
+        .filter(databaseConfig.getProperties()::containsKey)
+        .forEach(
+            p -> logger.warn("The configuration property {} is removed and will be ignored", p));
+
     if (databaseConfig.getContactPoints().isEmpty()) {
       throw new IllegalArgumentException(CoreError.INVALID_CONTACT_POINTS.buildMessage());
     }
@@ -157,26 +192,19 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             CONNECTION_POOL_MIN_IDLE,
             DEFAULT_CONNECTION_POOL_MIN_IDLE);
-    connectionPoolMaxIdle =
-        getInt(
-            databaseConfig.getProperties(),
-            CONNECTION_POOL_MAX_IDLE,
-            DEFAULT_CONNECTION_POOL_MAX_IDLE);
     connectionPoolMaxTotal =
         getInt(
             databaseConfig.getProperties(),
             CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_CONNECTION_POOL_MAX_TOTAL);
-    preparedStatementsPoolEnabled =
-        getBoolean(
-            databaseConfig.getProperties(),
-            PREPARED_STATEMENTS_POOL_ENABLED,
-            DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
-    preparedStatementsPoolMaxOpen =
-        getInt(
-            databaseConfig.getProperties(),
-            PREPARED_STATEMENTS_POOL_MAX_OPEN,
-            DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+    connectionPoolConnectionTimeoutMillis =
+        getLong(databaseConfig.getProperties(), CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, null);
+    connectionPoolIdleTimeoutMillis =
+        getLong(databaseConfig.getProperties(), CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, null);
+    connectionPoolMaxLifetimeMillis =
+        getLong(databaseConfig.getProperties(), CONNECTION_POOL_MAX_LIFETIME_MILLIS, null);
+    connectionPoolKeepaliveTimeMillis =
+        getLong(databaseConfig.getProperties(), CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, null);
 
     String isolationLevel = getString(databaseConfig.getProperties(), ISOLATION_LEVEL, null);
     if (isolationLevel != null) {
@@ -191,32 +219,51 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             TABLE_METADATA_CONNECTION_POOL_MIN_IDLE,
             DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
-    tableMetadataConnectionPoolMaxIdle =
-        getInt(
-            databaseConfig.getProperties(),
-            TABLE_METADATA_CONNECTION_POOL_MAX_IDLE,
-            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
     tableMetadataConnectionPoolMaxTotal =
         getInt(
             databaseConfig.getProperties(),
             TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
+    tableMetadataConnectionPoolConnectionTimeoutMillis =
+        getLong(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS,
+            null);
+    tableMetadataConnectionPoolIdleTimeoutMillis =
+        getLong(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS,
+            null);
+    tableMetadataConnectionPoolMaxLifetimeMillis =
+        getLong(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MAX_LIFETIME_MILLIS,
+            null);
+    tableMetadataConnectionPoolKeepaliveTimeMillis =
+        getLong(
+            databaseConfig.getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS,
+            null);
 
     adminConnectionPoolMinIdle =
         getInt(
             databaseConfig.getProperties(),
             ADMIN_CONNECTION_POOL_MIN_IDLE,
             DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE);
-    adminConnectionPoolMaxIdle =
-        getInt(
-            databaseConfig.getProperties(),
-            ADMIN_CONNECTION_POOL_MAX_IDLE,
-            DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE);
     adminConnectionPoolMaxTotal =
         getInt(
             databaseConfig.getProperties(),
             ADMIN_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
+    adminConnectionPoolConnectionTimeoutMillis =
+        getLong(
+            databaseConfig.getProperties(), ADMIN_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, null);
+    adminConnectionPoolIdleTimeoutMillis =
+        getLong(databaseConfig.getProperties(), ADMIN_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, null);
+    adminConnectionPoolMaxLifetimeMillis =
+        getLong(databaseConfig.getProperties(), ADMIN_CONNECTION_POOL_MAX_LIFETIME_MILLIS, null);
+    adminConnectionPoolKeepaliveTimeMillis =
+        getLong(databaseConfig.getProperties(), ADMIN_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, null);
 
     mysqlVariableKeyColumnSize =
         getInt(
@@ -281,20 +328,24 @@ public class JdbcConfig {
     return connectionPoolMinIdle;
   }
 
-  public int getConnectionPoolMaxIdle() {
-    return connectionPoolMaxIdle;
-  }
-
   public int getConnectionPoolMaxTotal() {
     return connectionPoolMaxTotal;
   }
 
-  public boolean isPreparedStatementsPoolEnabled() {
-    return preparedStatementsPoolEnabled;
+  public Optional<Long> getConnectionPoolConnectionTimeoutMillis() {
+    return Optional.ofNullable(connectionPoolConnectionTimeoutMillis);
   }
 
-  public int getPreparedStatementsPoolMaxOpen() {
-    return preparedStatementsPoolMaxOpen;
+  public Optional<Long> getConnectionPoolIdleTimeoutMillis() {
+    return Optional.ofNullable(connectionPoolIdleTimeoutMillis);
+  }
+
+  public Optional<Long> getConnectionPoolMaxLifetimeMillis() {
+    return Optional.ofNullable(connectionPoolMaxLifetimeMillis);
+  }
+
+  public Optional<Long> getConnectionPoolKeepaliveTimeMillis() {
+    return Optional.ofNullable(connectionPoolKeepaliveTimeMillis);
   }
 
   public Optional<Isolation> getIsolation() {
@@ -309,24 +360,48 @@ public class JdbcConfig {
     return tableMetadataConnectionPoolMinIdle;
   }
 
-  public int getTableMetadataConnectionPoolMaxIdle() {
-    return tableMetadataConnectionPoolMaxIdle;
-  }
-
   public int getTableMetadataConnectionPoolMaxTotal() {
     return tableMetadataConnectionPoolMaxTotal;
+  }
+
+  public Optional<Long> getTableMetadataConnectionPoolConnectionTimeoutMillis() {
+    return Optional.ofNullable(tableMetadataConnectionPoolConnectionTimeoutMillis);
+  }
+
+  public Optional<Long> getTableMetadataConnectionPoolIdleTimeoutMillis() {
+    return Optional.ofNullable(tableMetadataConnectionPoolIdleTimeoutMillis);
+  }
+
+  public Optional<Long> getTableMetadataConnectionPoolMaxLifetimeMillis() {
+    return Optional.ofNullable(tableMetadataConnectionPoolMaxLifetimeMillis);
+  }
+
+  public Optional<Long> getTableMetadataConnectionPoolKeepaliveTimeMillis() {
+    return Optional.ofNullable(tableMetadataConnectionPoolKeepaliveTimeMillis);
   }
 
   public int getAdminConnectionPoolMinIdle() {
     return adminConnectionPoolMinIdle;
   }
 
-  public int getAdminConnectionPoolMaxIdle() {
-    return adminConnectionPoolMaxIdle;
-  }
-
   public int getAdminConnectionPoolMaxTotal() {
     return adminConnectionPoolMaxTotal;
+  }
+
+  public Optional<Long> getAdminConnectionPoolConnectionTimeoutMillis() {
+    return Optional.ofNullable(adminConnectionPoolConnectionTimeoutMillis);
+  }
+
+  public Optional<Long> getAdminConnectionPoolIdleTimeoutMillis() {
+    return Optional.ofNullable(adminConnectionPoolIdleTimeoutMillis);
+  }
+
+  public Optional<Long> getAdminConnectionPoolMaxLifetimeMillis() {
+    return Optional.ofNullable(adminConnectionPoolMaxLifetimeMillis);
+  }
+
+  public Optional<Long> getAdminConnectionPoolKeepaliveTimeMillis() {
+    return Optional.ofNullable(adminConnectionPoolKeepaliveTimeMillis);
   }
 
   public int getMysqlVariableKeyColumnSize() {

@@ -26,6 +26,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -44,7 +45,6 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminImportTestUtils {
   static final String SUPPORTED_TABLE_NAME = "supported_table";
@@ -122,7 +122,7 @@ public class JdbcAdminImportTestUtils {
   private final JdbcConfig config;
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
-  private final BasicDataSource dataSource;
+  private final HikariDataSource dataSource;
   private final boolean requiresExplicitCommit;
 
   public JdbcAdminImportTestUtils(Properties properties) {
@@ -906,7 +906,7 @@ public class JdbcAdminImportTestUtils {
   }
 
   private boolean isMariaDB() {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    try (HikariDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
         Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("MariaDB");
@@ -916,7 +916,7 @@ public class JdbcAdminImportTestUtils {
   }
 
   boolean isTidb() {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    try (HikariDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
         Connection connection = dataSource.getConnection()) {
       String version = connection.getMetaData().getDatabaseProductVersion();
       return version.contains("TiDB");
@@ -926,7 +926,7 @@ public class JdbcAdminImportTestUtils {
   }
 
   private int getMajorVersion() {
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    try (HikariDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
         Connection connection = dataSource.getConnection()) {
       return connection.getMetaData().getDatabaseMajorVersion();
     } catch (SQLException e) {
