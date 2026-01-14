@@ -11,7 +11,6 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -391,8 +390,8 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public Driver getDriver() {
-    return new com.microsoft.sqlserver.jdbc.SQLServerDriver();
+  public String getDriverClassName() {
+    return com.microsoft.sqlserver.jdbc.SQLServerDriver.class.getName();
   }
 
   @Override
