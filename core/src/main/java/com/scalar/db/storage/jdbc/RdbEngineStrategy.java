@@ -13,7 +13,6 @@ import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -163,7 +162,7 @@ public interface RdbEngineStrategy {
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
-  Driver getDriver();
+  String getDriverClassName();
 
   default void throwIfImportNotSupported() {}
 

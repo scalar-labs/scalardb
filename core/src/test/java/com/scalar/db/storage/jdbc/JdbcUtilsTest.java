@@ -1,21 +1,16 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.SQLException;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.util.Collections;
 import java.util.Properties;
-import org.apache.commons.dbcp2.BasicDataSource;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
@@ -34,7 +29,7 @@ public class JdbcUtilsTest {
   }
 
   @Test
-  public void initDataSource_NonTransactional_ShouldReturnProperDataSource() throws SQLException {
+  public void initDataSource_NonTransactional_ShouldConfigureHikariConfigProperly() {
     // Arrange
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:mysql://localhost:3306/");
@@ -43,42 +38,56 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "10");
-    properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "20");
     properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "30");
-    properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
-    properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "100");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "15000");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "300000");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_LIFETIME_MILLIS, "900000");
+    properties.setProperty(JdbcConfig.CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "60000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    Driver driver = new com.mysql.cj.jdbc.Driver();
-    when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getDriverClassName()).thenReturn("com.mysql.cj.jdbc.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
 
-    // Act
-    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
 
     // Assert
-    assertThat(dataSource.getDriver()).isEqualTo(driver);
-    assertThat(dataSource.getUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
-    assertThat(dataSource.getUsername()).isEqualTo("root");
-    assertThat(dataSource.getPassword()).isEqualTo("mysql");
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("com.mysql.cj.jdbc.Driver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
+    assertThat(hikariConfig.getUsername()).isEqualTo("root");
+    assertThat(hikariConfig.getPassword()).isEqualTo("mysql");
 
-    assertThat(dataSource.getDefaultAutoCommit()).isEqualTo(null);
-    assertThat(dataSource.getAutoCommitOnReturn()).isEqualTo(true);
-    assertThat(dataSource.getDefaultTransactionIsolation())
-        .isEqualTo(Connection.TRANSACTION_SERIALIZABLE);
-    assertThat(dataSource.getDefaultReadOnly()).isFalse();
+    // Non-transactional mode does not set autoCommit to false, so it defaults to true
+    assertThat(hikariConfig.isAutoCommit()).isTrue();
+    assertThat(hikariConfig.getTransactionIsolation()).isEqualTo("TRANSACTION_SERIALIZABLE");
+    assertThat(hikariConfig.isReadOnly()).isFalse();
 
-    assertThat(dataSource.getMinIdle()).isEqualTo(10);
-    assertThat(dataSource.getMaxIdle()).isEqualTo(20);
-    assertThat(dataSource.getMaxTotal()).isEqualTo(30);
-    assertThat(dataSource.isPoolPreparedStatements()).isEqualTo(true);
-    assertThat(dataSource.getMaxOpenPreparedStatements()).isEqualTo(100);
-
-    dataSource.close();
+    assertThat(hikariConfig.getMinimumIdle()).isEqualTo(10);
+    assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(30);
+    assertThat(hikariConfig.getConnectionTimeout()).isEqualTo(15000);
+    assertThat(hikariConfig.getIdleTimeout()).isEqualTo(300000);
+    assertThat(hikariConfig.getMaxLifetime()).isEqualTo(900000);
+    assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(60000);
   }
 
   @Test
-  public void initDataSource_Transactional_ShouldReturnProperDataSource() throws SQLException {
+  public void initDataSource_Transactional_ShouldConfigureHikariConfigProperly() {
     // Arrange
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:postgresql://localhost:5432/");
@@ -87,42 +96,48 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "READ_COMMITTED");
     properties.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "30");
-    properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "40");
     properties.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "50");
-    properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
-    properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "200");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    Driver driver = new org.postgresql.Driver();
-    when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
 
-    // Act
-    BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine, true);
+    }
 
     // Assert
-    assertThat(dataSource.getDriver()).isEqualTo(driver);
-    assertThat(dataSource.getUrl()).isEqualTo("jdbc:postgresql://localhost:5432/");
-    assertThat(dataSource.getUsername()).isEqualTo("user");
-    assertThat(dataSource.getPassword()).isEqualTo("postgres");
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo("jdbc:postgresql://localhost:5432/");
+    assertThat(hikariConfig.getUsername()).isEqualTo("user");
+    assertThat(hikariConfig.getPassword()).isEqualTo("postgres");
 
-    assertThat(dataSource.getDefaultAutoCommit()).isEqualTo(false);
-    assertThat(dataSource.getAutoCommitOnReturn()).isEqualTo(false);
-    assertThat(dataSource.getDefaultTransactionIsolation())
-        .isEqualTo(Connection.TRANSACTION_READ_COMMITTED);
-    assertThat(dataSource.getDefaultReadOnly()).isFalse();
+    // Transactional mode sets autoCommit to false
+    assertThat(hikariConfig.isAutoCommit()).isFalse();
+    assertThat(hikariConfig.getTransactionIsolation()).isEqualTo("TRANSACTION_READ_COMMITTED");
+    assertThat(hikariConfig.isReadOnly()).isFalse();
 
-    assertThat(dataSource.getMinIdle()).isEqualTo(30);
-    assertThat(dataSource.getMaxIdle()).isEqualTo(40);
-    assertThat(dataSource.getMaxTotal()).isEqualTo(50);
-    assertThat(dataSource.isPoolPreparedStatements()).isEqualTo(true);
-    assertThat(dataSource.getMaxOpenPreparedStatements()).isEqualTo(200);
-
-    dataSource.close();
+    assertThat(hikariConfig.getMinimumIdle()).isEqualTo(30);
+    assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(50);
   }
 
   @Test
-  public void initDataSource_WithRdbEngineConnectionProperties_ShouldAddProperties() {
+  public void initDataSource_WithRdbEngineConnectionProperties_ShouldAddDataSourceProperties() {
     // Arrange
     Properties properties = new Properties();
     properties.setProperty(
@@ -133,29 +148,36 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
-    when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     when(rdbEngine.getConnectionProperties(config))
         .thenReturn(ImmutableMap.of("prop1", "prop1Value", "prop2", "prop2Value"));
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
     try (MockedStatic<JdbcUtils> jdbcUtils =
         Mockito.mockStatic(
             JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
-      BasicDataSource dataSource = spy(BasicDataSource.class);
-      jdbcUtils.when(JdbcUtils::createDataSource).thenReturn(dataSource);
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
 
       // Act
-      jdbcUtils.when(() -> JdbcUtils.initDataSource(config, rdbEngine)).thenCallRealMethod();
-
-      // Assert
-      verify(dataSource).addConnectionProperty("prop1", "prop1Value");
-      verify(dataSource).addConnectionProperty("prop2", "prop2Value");
-      verify(dataSource, never()).setConnectionProperties(anyString());
+      JdbcUtils.initDataSource(config, rdbEngine);
     }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDataSourceProperties().getProperty("prop1")).isEqualTo("prop1Value");
+    assertThat(hikariConfig.getDataSourceProperties().getProperty("prop2")).isEqualTo("prop2Value");
   }
 
   @Test
-  public void initDataSourceForTableMetadata_ShouldReturnProperDataSource() throws SQLException {
+  public void initDataSourceForTableMetadata_ShouldConfigureHikariConfigProperly() {
     // Arrange
     Properties properties = new Properties();
     properties.setProperty(
@@ -165,37 +187,57 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "REPEATABLE_READ");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
-    properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "200");
     properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
+    properties.setProperty(
+        JdbcConfig.TABLE_METADATA_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "20000");
+    properties.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "400000");
+    properties.setProperty(
+        JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_LIFETIME_MILLIS, "1000000");
+    properties.setProperty(
+        JdbcConfig.TABLE_METADATA_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "70000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    Driver driver = new oracle.jdbc.driver.OracleDriver();
-    when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getDriverClassName()).thenReturn("oracle.jdbc.driver.OracleDriver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
 
-    // Act
-    BasicDataSource tableMetadataDataSource =
-        JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
+    }
 
     // Assert
-    assertThat(tableMetadataDataSource.getDriver()).isEqualTo(driver);
-    assertThat(tableMetadataDataSource.getUrl())
-        .isEqualTo("jdbc:oracle:thin:@localhost:1521/XEPDB1");
-    assertThat(tableMetadataDataSource.getUsername()).isEqualTo("user");
-    assertThat(tableMetadataDataSource.getPassword()).isEqualTo("oracle");
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("oracle.jdbc.driver.OracleDriver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo("jdbc:oracle:thin:@localhost:1521/XEPDB1");
+    assertThat(hikariConfig.getUsername()).isEqualTo("user");
+    assertThat(hikariConfig.getPassword()).isEqualTo("oracle");
 
-    assertThat(tableMetadataDataSource.getDefaultTransactionIsolation())
-        .isEqualTo(Connection.TRANSACTION_REPEATABLE_READ);
-    assertThat(tableMetadataDataSource.getDefaultReadOnly()).isFalse();
+    assertThat(hikariConfig.getTransactionIsolation()).isEqualTo("TRANSACTION_REPEATABLE_READ");
+    assertThat(hikariConfig.isReadOnly()).isFalse();
 
-    assertThat(tableMetadataDataSource.getMinIdle()).isEqualTo(100);
-    assertThat(tableMetadataDataSource.getMaxIdle()).isEqualTo(200);
-    assertThat(tableMetadataDataSource.getMaxTotal()).isEqualTo(300);
-
-    tableMetadataDataSource.close();
+    assertThat(hikariConfig.getMinimumIdle()).isEqualTo(100);
+    assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(300);
+    assertThat(hikariConfig.getConnectionTimeout()).isEqualTo(20000);
+    assertThat(hikariConfig.getIdleTimeout()).isEqualTo(400000);
+    assertThat(hikariConfig.getMaxLifetime()).isEqualTo(1000000);
+    assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(70000);
   }
 
   @Test
-  public void initDataSourceForAdmin_ShouldReturnProperDataSource() throws SQLException {
+  public void initDataSourceForAdmin_ShouldConfigureHikariConfigProperly() {
     // Arrange
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:sqlserver://localhost:1433");
@@ -204,30 +246,50 @@ public class JdbcUtilsTest {
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
     properties.setProperty(JdbcConfig.ISOLATION_LEVEL, "READ_UNCOMMITTED");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "100");
-    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "200");
     properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "300");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_CONNECTION_TIMEOUT_MILLIS, "25000");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_IDLE_TIMEOUT_MILLIS, "500000");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_LIFETIME_MILLIS, "1100000");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "80000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
-    when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
 
-    // Act
-    BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+    }
 
     // Assert
-    assertThat(adminDataSource.getDriver()).isEqualTo(driver);
-    assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
-    assertThat(adminDataSource.getUsername()).isEqualTo("user");
-    assertThat(adminDataSource.getPassword()).isEqualTo("sqlserver");
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName())
+        .isEqualTo("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
+    assertThat(hikariConfig.getUsername()).isEqualTo("user");
+    assertThat(hikariConfig.getPassword()).isEqualTo("sqlserver");
 
-    assertThat(adminDataSource.getDefaultTransactionIsolation())
-        .isEqualTo(Connection.TRANSACTION_READ_UNCOMMITTED);
-    assertThat(adminDataSource.getDefaultReadOnly()).isFalse();
+    assertThat(hikariConfig.getTransactionIsolation()).isEqualTo("TRANSACTION_READ_UNCOMMITTED");
+    assertThat(hikariConfig.isReadOnly()).isFalse();
 
-    assertThat(adminDataSource.getMinIdle()).isEqualTo(100);
-    assertThat(adminDataSource.getMaxIdle()).isEqualTo(200);
-    assertThat(adminDataSource.getMaxTotal()).isEqualTo(300);
-
-    adminDataSource.close();
+    assertThat(hikariConfig.getMinimumIdle()).isEqualTo(100);
+    assertThat(hikariConfig.getMaximumPoolSize()).isEqualTo(300);
+    assertThat(hikariConfig.getConnectionTimeout()).isEqualTo(25000);
+    assertThat(hikariConfig.getIdleTimeout()).isEqualTo(500000);
+    assertThat(hikariConfig.getMaxLifetime()).isEqualTo(1100000);
+    assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(80000);
   }
 }
