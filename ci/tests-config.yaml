@@ -158,7 +158,7 @@ jdbc:
       - 2019
       - 2022
     run: |
-      if [ "%VERSION%" == "2017" ]; then
+      if [ "%VERSION%" = "2017" ]; then
         SQLCMD="/opt/mssql-tools/bin/sqlcmd"
       else
         SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
