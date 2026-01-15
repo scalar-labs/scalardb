@@ -31,6 +31,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.time.Duration;
 import java.time.Instant;
@@ -446,6 +447,39 @@ public class CommitHandlerTest {
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void validateRecords_ValidationNotRequired_ShouldNotCallToSerializable()
+      throws ValidationException, ExecutionException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    // With SNAPSHOT isolation, validation is not required
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    handler.validateRecords(context);
+
+    // Assert
+    verify(snapshot, never()).toSerializable(storage);
+  }
+
+  @Test
+  public void validateRecords_ValidationRequired_ShouldCallToSerializable()
+      throws ValidationException, ExecutionException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(snapshot).toSerializable(storage);
+    // With SERIALIZABLE isolation, validation is required when there are reads
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+
+    // Act
+    handler.validateRecords(context);
+
+    // Assert
+    verify(snapshot).toSerializable(storage);
   }
 
   @Test
