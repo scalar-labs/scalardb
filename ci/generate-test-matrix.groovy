@@ -99,17 +99,15 @@ def static expandTests(testsByCategory) {
 
             // Expand each variant by group commit setting
             testVariants.each { variant ->
-                if (variant.disable_group_commit) {
-                    def testVariant = new LinkedHashMap(variant)
-                    testVariant.remove("disable_group_commit")
-                    testVariant["group_commit_enabled"] = 'false'
-                    expandedTests.add(testVariant)
-                } else {
-                    def testWithoutGroupCommit = new LinkedHashMap(variant)
-                    testWithoutGroupCommit["group_commit_enabled"] = 'false'
-                    expandedTests.add(testWithoutGroupCommit)
+                def baseVariant = new LinkedHashMap(variant)
+                baseVariant.remove("disable_group_commit")
 
-                    def testWithGroupCommit = new LinkedHashMap(variant)
+                def testWithoutGroupCommit = new LinkedHashMap(baseVariant)
+                testWithoutGroupCommit["group_commit_enabled"] = 'false'
+                expandedTests.add(testWithoutGroupCommit)
+
+                if (!variant.disable_group_commit) {
+                    def testWithGroupCommit = new LinkedHashMap(baseVariant)
                     testWithGroupCommit["group_commit_enabled"] = 'true'
                     expandedTests.add(testWithGroupCommit)
                 }

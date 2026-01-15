@@ -71,7 +71,6 @@ dynamo:
     display_name: DynamoDB Local
     setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
     run: ./gradlew integrationTestDynamo
-    disable_group_commit: true
 
 jdbc:
   - label: alloydb_%VERSION%
@@ -165,6 +164,19 @@ jdbc:
       else
         SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
       fi
+
+      # Waiting for SQL Server to be ready (2 minutes timeout)
+      SECONDS=0
+      while ! docker exec sqlserver ${SQLCMD} -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1" > /dev/null 2>&1; do
+        if (( SECONDS > 120 )); then
+          echo "Timeout: SQL Server failed to start within 2 minutes"
+          exit 1
+        fi
+        echo "Waiting for SQL Server to be ready..."
+        sleep 5
+      done
+      echo "SQL Server is ready"
+
       docker exec sqlserver ${SQLCMD} -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
       ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer1
 
