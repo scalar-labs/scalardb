@@ -172,7 +172,7 @@ jobs:
       - name: Dockerfile Lint for ScalarDB Data Loader CLI
         run: ./gradlew data-loader:cli:dockerfileLint
 
-  # Set up which integration test categories to run
+  # Identify which integration tests to run, then extract the `ci/tests-config.yaml` into a matrix of jobs to be ingested by the `integration-test` job
   integration-test-jobs-planner:
     name: Plan integration test jobs
     runs-on: ubuntu-latest
@@ -281,7 +281,8 @@ jobs:
 
           # Extract the test configuration using jq
           CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests-config.json)
-          # Set environment variables for the setup and run commands
+          
+          # Set the SETUP_CMD and RUN_CMD environment variables for the setup and run commands
           SETUP_CMD=$(echo "$CONFIG" | jq -r '.setup // ""')
           echo "SETUP_CMD<<EOF" >> $GITHUB_ENV
           echo "$SETUP_CMD" >> $GITHUB_ENV
