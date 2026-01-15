@@ -14,11 +14,11 @@ on:
         type: boolean
         default: true
       BASIC:
-        description: Run integration tests for DynamoDB, PostgreSQL 17, and multi-storage
+        description: Run basic integration tests covering DynamoDB, PostgreSQL 17, and multi-storage
         type: boolean
         default: false
       BLOB_STORAGE:
-        description: Run Blob storage integration tests
+        description: Run Blob Storage integration tests
         type: boolean
         default: false
       CASSANDRA:
@@ -34,11 +34,15 @@ on:
         type: boolean
         default: false
       JDBC:
-        description: Run JDBC integration tests
+        description: Run JDBC storages integration tests
         type: boolean
         default: false
       MULTI_STORAGE:
         description: Run multi-storage integration tests
+        type: boolean
+        default: false
+      INTEGRATION_TEST_ONLY:
+        description: Run only integration tests. Unit tests and static analysis will be skipped.
         type: boolean
         default: false
       INT_TEST_JAVA_RUNTIME_VERSION:
@@ -59,10 +63,6 @@ on:
           - 'microsoft'
           - 'oracle'
           - 'temurin'
-      INTEGRATION_TEST_ONLY:
-        description: Run only integration tests
-        type: boolean
-        default: false
 
   # When triggered by another action, all tests will run with the given integration test JDK runtime.
   workflow_call:
