@@ -1,7 +1,6 @@
 # Define all integration tests to be run in the CI.
 
 # Each test follows the following format:
-#
 # test_category:
 #   - label: a unique label for the test
 #     display_name: a human-readable name
@@ -225,7 +224,7 @@ multi-storage:
     disable_group_commit: true
     setup: |
       docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
-      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:3.11
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:5.0
     run: ./gradlew integrationTestMultiStorage
 
 

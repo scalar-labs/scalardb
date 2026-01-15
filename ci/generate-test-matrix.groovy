@@ -120,46 +120,34 @@ def static expandTests(testsByCategory) {
 
 // Filter tests based on environment variables
 def static filterTestsByEnvVar(expandedTests) {
-    // Read input parameters from environment variables
-    def allTest = Boolean.parseBoolean(System.getenv('ALL'))
-    def basicTest = Boolean.parseBoolean(System.getenv('BASIC'))
-    def blobStorageTest = Boolean.parseBoolean(System.getenv('BLOB_STORAGE'))
-    def cassandraTest = Boolean.parseBoolean(System.getenv('CASSANDRA'))
-    def cosmosTest = Boolean.parseBoolean(System.getenv('COSMOS'))
-    def dynamoTest = Boolean.parseBoolean(System.getenv('DYNAMO'))
-    def jdbcTest = Boolean.parseBoolean(System.getenv('JDBC'))
-    def multiStorageTest = Boolean.parseBoolean(System.getenv('MULTI_STORAGE'))
-
     // If ALL is true, return all tests without filtering
-    if (allTest) {
+    if (Boolean.parseBoolean(System.getenv('ALL'))) {
         return expandedTests
     }
 
     // Build lists of test categories and labels to keep based on env vars
     def testCategoriesToKeep = [] as Set
     def testLabelsToKeep = [] as Set
-    if (basicTest) {
+
+    if (Boolean.parseBoolean(System.getenv('BASIC'))) {
         testLabelsToKeep.add("postgresql_17")
         testCategoriesToKeep.add("dynamo")
         testCategoriesToKeep.add("multi-storage")
     }
-    if (blobStorageTest) {
-        testCategoriesToKeep.add("blob-storage")
-    }
-    if (cassandraTest) {
-        testCategoriesToKeep.add("cassandra")
-    }
-    if (cosmosTest) {
-        testCategoriesToKeep.add("cosmos")
-    }
-    if (dynamoTest) {
-        testCategoriesToKeep.add("dynamo")
-    }
-    if (jdbcTest) {
-        testCategoriesToKeep.add("jdbc")
-    }
-    if (multiStorageTest) {
-        testCategoriesToKeep.add("multi-storage")
+
+    def envVarToCategory = [
+            'BLOB_STORAGE' : 'blob-storage',
+            'CASSANDRA'    : 'cassandra',
+            'COSMOS'       : 'cosmos',
+            'DYNAMO'       : 'dynamo',
+            'JDBC'         : 'jdbc',
+            'MULTI_STORAGE': 'multi-storage'
+    ]
+
+    envVarToCategory.each { envVar, category ->
+        if (Boolean.parseBoolean(System.getenv(envVar))) {
+            testCategoriesToKeep.add(category)
+        }
     }
 
     // Filter tests to keep only those in the categories or labels to keep

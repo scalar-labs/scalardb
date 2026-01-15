@@ -14,7 +14,7 @@ on:
         type: boolean
         default: true
       BASIC:
-        description: Run basic integration tests
+        description: Run integration tests for DynamoDB, PostgreSQL 17, and multi-storage
         type: boolean
         default: false
       BLOB_STORAGE:

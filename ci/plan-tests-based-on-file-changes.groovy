@@ -49,12 +49,21 @@ def initializeEnvVar(changedDirectories) {
 
     // Create environment variables by writing to GITHUB_ENV file
     new File(githubEnvFile).withWriterAppend { writer ->
+        def envVarToDirectory = [
+                'BLOB_STORAGE': 'objectstorage',
+                'CASSANDRA'   : 'cassandra',
+                'COSMOS'      : 'cosmos',
+                'DYNAMO'      : 'dynamo',
+                'JDBC'        : 'jdbc'
+        ]
+        writer.writeLine("ALL=false")
+        //Basic tests set are always run
         writer.writeLine("BASIC=true")
-        writer.writeLine("BLOB_STORAGE=${changedDirectories.contains('objectstorage')}")
-        writer.writeLine("CASSANDRA=${changedDirectories.contains('cassandra')}")
-        writer.writeLine("COSMOS=${changedDirectories.contains('cosmos')}")
-        writer.writeLine("DYNAMO=${changedDirectories.contains('dynamo')}")
-        writer.writeLine("JDBC=${changedDirectories.contains('jdbc')}")
+        //Multi-storage tests are already contained in the basic tests set
+        writer.writeLine("MULTI_STORAGE=false")
+        envVarToDirectory.each { envVar, dir ->
+            writer.writeLine("${envVar}=${changedDirectories.contains(dir)}")
+        }
     }
 }
 

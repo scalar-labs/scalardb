@@ -1,8 +1,7 @@
 name: CI for Data Loader CLI
 
 on:
-#  TODO revert this
-#  pull_request:
+  pull_request:
   workflow_dispatch:
 
 jobs:
