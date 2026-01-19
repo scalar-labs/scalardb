@@ -19,6 +19,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
@@ -227,6 +228,22 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void validateRecords_ValidationNotRequired_ShouldNotCallToSerializable()
+      throws ValidationException, ExecutionException {
+    super.validateRecords_ValidationNotRequired_ShouldNotCallToSerializable();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void validateRecords_ValidationRequired_ShouldCallToSerializable()
+      throws ValidationException, ExecutionException {
+    super.validateRecords_ValidationRequired_ShouldCallToSerializable();
+    groupCommitter.remove(anyId());
   }
 
   @Test
