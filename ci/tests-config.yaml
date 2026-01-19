@@ -1,0 +1,231 @@
+# Define all integration tests to be run in the CI.
+
+# Each test follows the following format:
+# test_category:
+#   - label: a unique label for the test
+#     display_name: a human-readable name
+#     runner: (optional) the image name of a hosted Github action runner. The default is "ubuntu-latest".
+#     versions: (optional) an array of database versions to test. If present, a matrix entry for each version will be added and the placeholder %VERSION% will be substituted.
+#     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, a matrix entry with group commit enabled and another one with group commit disabled will be added.
+#     setup: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+#     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+
+blob-storage:
+  - label: blob-storage
+    display_name: Blob Storage
+    setup: docker run -d --name azurite -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
+    run: |
+      az storage container create \
+            --name test-container \
+            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
+      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
+
+cassandra:
+  - label: cassandra_%VERSION%
+    display_name: Cassandra %VERSION%
+    setup: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
+    versions:
+      - 3.0
+      - 3.11
+      - 4.1
+      - 5.0
+    run: ./gradlew integrationTestCassandra
+
+cosmos:
+  - label: cosmos
+    display_name: Cosmos DB
+    runner: windows-latest
+    setup: |
+      Write-Host "Launching Cosmos DB Emulator"
+      Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+      # Set startup timeout to 10min (600s), the default is 4min
+      Start-CosmosDbEmulator -Consistency Strong -Timeout 600
+
+    run: |
+      Write-Host "Install TLS/SSL certificate to Java keystore\n"
+      $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
+      $params = @{
+        Cert = $cert
+        Type = "CERT"
+        FilePath = "$home/tmp-cert.cer"
+        NoClobber = $true
+      }
+      Export-Certificate @params
+      certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
+      Remove-Item $home/tmp-cert.cer
+      # Setting the keystore option differs between Java 8 and Java 11+
+      if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
+        $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
+      } else {
+        $keystore = "-cacerts"
+      }
+      & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
+      & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
+      
+      Write-Host "Run tests\n"
+      ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
+
+dynamo:
+  - label: dynamo
+    display_name: DynamoDB Local
+    setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
+    run: ./gradlew integrationTestDynamo
+
+jdbc:
+  - label: alloydb_%VERSION%
+    display_name: AlloyDB %VERSION%
+    setup: docker run -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
+    versions:
+      - 15
+      - 16
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+  - label: db2_%VERSION%
+    display_name: Db2 %VERSION%
+    setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
+    versions:
+      - 11.5.9.0
+      - 12.1.1.0
+    run: |
+      # Waiting for the container to be ready (10 minutes timeout)
+      SECONDS=0
+      while ! docker logs db2 2>&1 | grep -q "Setup has completed"
+        do
+          if (( SECONDS > 600 )); then
+            echo "Timeout: Container failed to start within 10 minutes"
+            exit 1
+          fi
+          echo "Container is not yet ready"
+          sleep 5s
+        done
+      echo "Container is ready"
+      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
+
+  - label: mariadb_%VERSION%
+    display_name: MariaDB %VERSION%
+    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    versions:
+      - 10.11
+      - 11.4
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+  - label: mysql_%VERSION%
+    display_name: MySQL %VERSION%
+    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    versions:
+      - 5.7
+      - 8.0
+      - 8.4
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+  - label: oracle_%VERSION%
+    display_name: Oracle %VERSION%
+    versions:
+      - 19
+      - 21
+      - 23
+    setup: |
+      echo "Free up storage to accommodate large Oracle Docker image"
+      echo "Storage available before deletion"
+      df -h /
+      echo
+      sudo rm -r /usr/local/lib/android
+      echo "Storage available after deletion"
+      df -h /
+      echo ${CR_PAT} | docker login ghcr.io -u ${GITHUB_REPOSITORY_OWNER} --password-stdin
+      docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:%VERSION%
+    run: |
+      # Oracle connection endpoint depends on the Oracle version used
+      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+
+  - label: postgresql_%VERSION%
+    display_name: PostgreSQL %VERSION%
+    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
+    versions:
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+    run: ./gradlew integrationTestJdbc
+
+  - label: sqlserver_%VERSION%
+    display_name: SQL Server %VERSION%
+    setup: docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
+    versions:
+      - 2017
+      - 2019
+      - 2022
+    run: |
+      if [ "%VERSION%" = "2017" ]; then
+        SQLCMD="/opt/mssql-tools/bin/sqlcmd"
+      else
+        SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
+      fi
+
+      # Waiting for SQL Server to be ready (2 minutes timeout)
+      SECONDS=0
+      while ! docker exec sqlserver ${SQLCMD} -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1" > /dev/null 2>&1; do
+        if (( SECONDS > 120 )); then
+          echo "Timeout: SQL Server failed to start within 2 minutes"
+          exit 1
+        fi
+        echo "Waiting for SQL Server to be ready..."
+        sleep 5
+      done
+      echo "SQL Server is ready"
+
+      docker exec sqlserver ${SQLCMD} -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+      ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer1
+
+  - label: sqlite_3
+    display_name: SQLite 3
+    setup: sudo apt-get install -y sqlite3
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+
+  - label: tidb_%VERSION%
+    display_name: TiDB %VERSION%
+    versions:
+      - 6.5
+      - 7.5
+      - 8.5
+    setup: |
+      echo "Install TiUP\n"
+      curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+      echo "\nTiUP installation complete\n"
+      echo "Start TiDB\n"
+      $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
+    run: |
+      # Waiting for TiDB to be ready (5 minutes timeout)
+      SECONDS=0
+      while true; do
+        if mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1" > /dev/null 2>&1; then
+          echo "TiDB is ready"
+          break
+        fi
+        if (( SECONDS > 300 )); then
+          echo "Timeout: TiDB failed to start within 5 minutes"
+          exit 1
+        fi
+        echo "Waiting for TiDB to be ready..."
+        sleep 5
+      done
+      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=
+
+  - label: yugabytedb
+    display_name: YugabyteDB 2
+    setup: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+multi-storage:
+  - label: multi-storage
+    display_name: Multi-Storage
+    disable_group_commit: true
+    setup: |
+      docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:5.0
+    run: ./gradlew integrationTestMultiStorage
+
+
+
