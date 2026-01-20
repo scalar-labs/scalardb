@@ -156,29 +156,27 @@ public class CommitHandler {
       }
     }
 
-    if (context.isValidationRequired()) {
-      try {
-        validateRecords(context);
-      } catch (ValidationException e) {
-        safelyCallOnFailureBeforeCommit(context);
+    try {
+      validateRecords(context);
+    } catch (ValidationException e) {
+      safelyCallOnFailureBeforeCommit(context);
 
-        // If the transaction has no writes and deletes, we don't need to abort-state and
-        // rollback-records since there are no changes to be made.
-        if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-          abortState(context.transactionId);
-        }
-        if (hasWritesOrDeletesInSnapshot) {
-          rollbackRecords(context);
-        }
-
-        if (e instanceof ValidationConflictException) {
-          throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
-        }
-        throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
-      } catch (Exception e) {
-        safelyCallOnFailureBeforeCommit(context);
-        throw e;
+      // If the transaction has no writes and deletes, we don't need to abort-state and
+      // rollback-records since there are no changes to be made.
+      if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+        abortState(context.transactionId);
       }
+      if (hasWritesOrDeletesInSnapshot) {
+        rollbackRecords(context);
+      }
+
+      if (e instanceof ValidationConflictException) {
+        throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+      }
+      throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (Exception e) {
+      safelyCallOnFailureBeforeCommit(context);
+      throw e;
     }
 
     waitBeforePreparationHookFuture(context, beforePreparationHookFuture.orElse(null));
@@ -335,6 +333,10 @@ public class CommitHandler {
   }
 
   public void validateRecords(TransactionContext context) throws ValidationException {
+    if (!context.isValidationRequired()) {
+      return;
+    }
+
     try {
       // validation is executed when SERIALIZABLE is chosen.
       context.snapshot.toSerializable(storage);
