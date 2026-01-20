@@ -28,6 +28,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -37,7 +38,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -50,8 +50,8 @@ public class JdbcDatabaseTest {
   private static final String TABLE = "tbl";
 
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private BasicDataSource dataSource;
-  @Mock private BasicDataSource tableMetadataDataSource;
+  @Mock private HikariDataSource dataSource;
+  @Mock private HikariDataSource tableMetadataDataSource;
   @Mock private TableMetadataManager tableMetadataManager;
   @Mock private VirtualTableInfoManager virtualTableInfoManager;
   @Mock private JdbcCrudService jdbcCrudService;
