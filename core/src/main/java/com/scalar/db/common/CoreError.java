@@ -456,12 +456,6 @@ public enum CoreError implements ScalarDbError {
           + " Please read the target record beforehand or enable implicit pre-read: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0104",
-      "Writing data already-deleted by the same transaction is not allowed",
-      "",
-      ""),
   CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
       Category.USER_ERROR,
       "0106",
