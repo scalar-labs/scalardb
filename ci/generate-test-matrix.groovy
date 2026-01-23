@@ -130,6 +130,10 @@ def static filterTestsByEnvVar(expandedTests) {
     def testLabelsToKeep = [] as Set
 
     if (Boolean.parseBoolean(System.getenv('BASIC'))) {
+        // At minimum, only the integration tests for PostgreSQL 17, Dynamo, and Multi-Storage are
+        // run when the CI is triggered on a PR. PostgresSQL 17, and Dynamo are the
+        // fastest tests among RDBMS and NoSQL storages, respectively, and multi-storage provides
+        // test provide test coverage for a feature that is not tested by the others.
         testLabelsToKeep.add("postgresql_17")
         testCategoriesToKeep.add("dynamo")
         testCategoriesToKeep.add("multi-storage")
