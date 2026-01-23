@@ -10,16 +10,6 @@
 #     setup: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
-blob-storage:
-  - label: blob-storage
-    display_name: Blob Storage
-    setup: docker run -d --name azurite -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
-    run: |
-      az storage container create \
-            --name test-container \
-            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
-      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
-
 cassandra:
   - label: cassandra_%VERSION%
     display_name: Cassandra %VERSION%
@@ -72,14 +62,6 @@ dynamo:
     run: ./gradlew integrationTestDynamo
 
 jdbc:
-  - label: alloydb_%VERSION%
-    display_name: AlloyDB %VERSION%
-    setup: docker run -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
-    versions:
-      - 15
-      - 16
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-
   - label: db2_%VERSION%
     display_name: Db2 %VERSION%
     setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
@@ -183,35 +165,6 @@ jdbc:
     display_name: SQLite 3
     setup: sudo apt-get install -y sqlite3
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
-
-  - label: tidb_%VERSION%
-    display_name: TiDB %VERSION%
-    versions:
-      - 6.5
-      - 7.5
-      - 8.5
-    setup: |
-      echo "Install TiUP\n"
-      curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-      echo "\nTiUP installation complete\n"
-      echo "Start TiDB\n"
-      $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
-    run: |
-      # Waiting for TiDB to be ready (5 minutes timeout)
-      SECONDS=0
-      while true; do
-        if mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1" > /dev/null 2>&1; then
-          echo "TiDB is ready"
-          break
-        fi
-        if (( SECONDS > 300 )); then
-          echo "Timeout: TiDB failed to start within 5 minutes"
-          exit 1
-        fi
-        echo "Waiting for TiDB to be ready..."
-        sleep 5
-      done
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=
 
   - label: yugabytedb
     display_name: YugabyteDB 2

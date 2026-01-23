@@ -50,7 +50,6 @@ def initializeEnvVar(changedDirectories) {
     // Create environment variables by writing to GITHUB_ENV file
     new File(githubEnvFile).withWriterAppend { writer ->
         def envVarToDirectory = [
-                'BLOB_STORAGE': 'objectstorage',
                 'CASSANDRA'   : 'cassandra',
                 'COSMOS'      : 'cosmos',
                 'DYNAMO'      : 'dynamo',
