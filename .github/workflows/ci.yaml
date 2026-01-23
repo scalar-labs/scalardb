@@ -2266,12 +2266,14 @@ jobs:
             group_commit_enabled: true
 
     services:
-      postgres:
+      azurite:
         image: mcr.microsoft.com/azure-storage/azurite
         env:
           AZURITE_ACCOUNTS: "test:test"
         ports:
           - 10000:10000
+        options: >
+          --skipApiVersionCheck
 
     steps:
       - uses: actions/checkout@v6
@@ -2310,7 +2312,8 @@ jobs:
         run: |
           az storage container create \
             --name test-container \
-            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
+            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;" \
+            --skipApiVersionCheck
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
         run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
