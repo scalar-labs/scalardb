@@ -49,7 +49,6 @@ static def validateEnvironmentVariables() {
     def requiredEnvVars = [
             'ALL',
             'BASIC',
-            'BLOB_STORAGE',
             'CASSANDRA',
             'COSMOS',
             'DYNAMO',
@@ -140,7 +139,6 @@ def static filterTestsByEnvVar(expandedTests) {
     }
 
     def envVarToCategory = [
-            'BLOB_STORAGE' : 'blob-storage',
             'CASSANDRA'    : 'cassandra',
             'COSMOS'       : 'cosmos',
             'DYNAMO'       : 'dynamo',
