@@ -27,7 +27,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (JdbcTestUtils.isOracle(rdbEngine)) {
+    // TODO: Revisit here. Use JdbcEnv methods because rdbEngine is not yet initialized when this
+    // method is called.
+    if (JdbcEnv.isOracle() || JdbcEnv.isYugabyte()) {
       return 1;
     }
     return super.getThreadNum();
