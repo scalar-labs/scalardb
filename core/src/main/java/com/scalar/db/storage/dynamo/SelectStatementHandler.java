@@ -132,7 +132,7 @@ public class SelectStatementHandler {
 
     String expressionColumnName = DynamoOperation.COLUMN_NAME_ALIAS + "0";
     String condition = expressionColumnName + " = " + DynamoOperation.VALUE_ALIAS + "0";
-    ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS);
+    ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS, true);
     keyColumn.accept(binder);
     Map<String, AttributeValue> bindMap = binder.build();
     builder.keyConditionExpression(condition).expressionAttributeValues(bindMap);
