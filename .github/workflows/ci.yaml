@@ -17,10 +17,6 @@ on:
         description: Run basic integration tests covering DynamoDB, PostgreSQL 17, and multi-storage
         type: boolean
         default: false
-      BLOB_STORAGE:
-        description: Run Blob Storage integration tests
-        type: boolean
-        default: false
       CASSANDRA:
         description: Run Cassandra integration tests
         type: boolean
@@ -179,7 +175,6 @@ jobs:
     env:
       ALL: ${{ inputs.ALL }}
       BASIC: ${{ inputs.BASIC }}
-      BLOB_STORAGE: ${{ inputs.BLOB_STORAGE }}
       CASSANDRA: ${{ inputs.CASSANDRA }}
       COSMOS: ${{ inputs.COSMOS }}
       DYNAMO: ${{ inputs.DYNAMO }}
@@ -212,14 +207,13 @@ jobs:
           if [ "$ALL" != "true" ]; then
             # Check if at least one specific test category is enabled
             if [ "$BASIC" != "true" ] && \
-               [ "$BLOB_STORAGE" != "true" ] && \
                [ "$CASSANDRA" != "true" ] && \
                [ "$COSMOS" != "true" ] && \
                [ "$DYNAMO" != "true" ] && \
                [ "$JDBC" != "true" ] && \
                [ "$MULTI_STORAGE" != "true" ]; then
               echo "Error: When the ALL workflow input is false, at least one specific test category must be enabled."
-              echo "Please enable at least one of: BASIC, BLOB_STORAGE, CASSANDRA, COSMOS, DYNAMO, JDBC, MULTI_STORAGE."
+              echo "Please enable at least one of: BASIC, CASSANDRA, COSMOS, DYNAMO, JDBC, MULTI_STORAGE."
               exit 1
             fi
           fi
