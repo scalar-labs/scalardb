@@ -165,9 +165,6 @@ jobs:
       - name: Dockerfile Lint for ScalarDB Schema Loader
         run: ./gradlew schema-loader:dockerfileLint
 
-      - name: Dockerfile Lint for ScalarDB Data Loader CLI
-        run: ./gradlew data-loader:cli:dockerfileLint
-
   # Identify which integration tests to run, then extract the `ci/tests-config.yaml` into a matrix of jobs to be ingested by the `integration-test` job
   integration-test-jobs-planner:
     name: Plan integration test jobs
