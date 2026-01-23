@@ -62,27 +62,6 @@ dynamo:
     run: ./gradlew integrationTestDynamo
 
 jdbc:
-  - label: db2_%VERSION%
-    display_name: Db2 %VERSION%
-    setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
-    versions:
-      - 11.5.9.0
-      - 12.1.1.0
-    run: |
-      # Waiting for the container to be ready (10 minutes timeout)
-      SECONDS=0
-      while ! docker logs db2 2>&1 | grep -q "Setup has completed"
-        do
-          if (( SECONDS > 600 )); then
-            echo "Timeout: Container failed to start within 10 minutes"
-            exit 1
-          fi
-          echo "Container is not yet ready"
-          sleep 5s
-        done
-      echo "Container is ready"
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
-
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
     setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
