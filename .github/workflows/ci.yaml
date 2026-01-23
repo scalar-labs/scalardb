@@ -1,14 +1,49 @@
 name: CI
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run integration test with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run CI with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
 
 on:
+  # When triggered by a pull request, basic integration tests will run in addition to the tests related
+  # to the file changes. JDK 8 (Temurin) will be used at runtime.
   pull_request:
+
+  # When triggered by a dispatch, selected tests will run with the given integration tests JDK runtime.
   workflow_dispatch:
     inputs:
+      ALL:
+        description: Run all integration tests
+        type: boolean
+        default: true
+      BASIC:
+        description: Run basic integration tests covering DynamoDB, PostgreSQL 17, and multi-storage
+        type: boolean
+        default: false
+      CASSANDRA:
+        description: Run Cassandra integration tests
+        type: boolean
+        default: false
+      COSMOS:
+        description: Run Cosmos DB integration tests
+        type: boolean
+        default: false
+      DYNAMO:
+        description: Run DynamoDB integration tests
+        type: boolean
+        default: false
+      JDBC:
+        description: Run JDBC storages integration tests
+        type: boolean
+        default: false
+      MULTI_STORAGE:
+        description: Run multi-storage integration tests
+        type: boolean
+        default: false
+      INTEGRATION_TEST_ONLY:
+        description: Run only integration tests. Unit tests and static analysis will be skipped.
+        type: boolean
+        default: false
       INT_TEST_JAVA_RUNTIME_VERSION:
         description: JDK version used to run the integration test
         type: choice
-        required: false
         default: '8'
         options:
           - '8'
@@ -18,7 +53,6 @@ on:
       INT_TEST_JAVA_RUNTIME_VENDOR:
         description: Vendor of the JDK used to run the integration test
         type: choice
-        required: false
         default: 'temurin'
         options:
           - 'corretto'
@@ -26,40 +60,49 @@ on:
           - 'oracle'
           - 'temurin'
 
+  # When triggered by another action, all tests will run with the given integration test JDK runtime.
+  workflow_call:
+    inputs:
+      ALL:
+        description: Run all integration tests
+        type: boolean
+        default: true
+      INT_TEST_JAVA_RUNTIME_VERSION:
+        description: JDK version used to run the integration test
+        type: string
+        required: true
+      INT_TEST_JAVA_RUNTIME_VENDOR:
+        description: Vendor of the JDK used to run the integration test
+        type: string
+        required: true
+      INTEGRATION_TEST_ONLY:
+        description: Run only integration tests
+        type: boolean
+        default: false
 env:
   TERM: dumb
-  JAVA_VERSION: '8'
-  JAVA_VENDOR: 'temurin'
-  INT_TEST_JAVA_RUNTIME_VERSION: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
-  INT_TEST_JAVA_RUNTIME_VENDOR: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
-  # Gradle will parse 'ORG_GRADLE_PROJECT_<project_property_name>' environment variables as project properties.
-  # The following variables configure the 'com.scalar.db.jdk-configuration' Gradle plugin.
-  ORG_GRADLE_PROJECT_javaVersion: '8'
-  ORG_GRADLE_PROJECT_javaVendor: 'temurin'
-  ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ github.event_name != 'workflow_dispatch' && '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION }}"
-  ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ github.event_name != 'workflow_dispatch' && 'temurin' || inputs.INT_TEST_JAVA_RUNTIME_VENDOR }}"
-  # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK)} then {true} else {false}
-  # Oracle JDK that are linux compatible and publicly available through direct download exist for all LTS versions
-  SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle')) && 'true' || 'false' }}"
-  INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
+  ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
 
 jobs:
   check:
     name: Gradle check
     runs-on: ubuntu-latest
+    if: ${{ !inputs.INTEGRATION_TEST_ONLY }}
+
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+      - name: Set up JDK 8
         uses: actions/setup-java@v5
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
+          java-version: 8
+          distribution: temurin
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
       - name: Execute Gradle 'check' task
+        id: run-gradle-check
         run: ./gradlew check buildSrc:check
 
       - name: Save Gradle test reports
@@ -67,14 +110,18 @@ jobs:
         run: |
           mkdir -p /tmp/gradle_test_reports/core
           mkdir -p /tmp/gradle_test_reports/schema-loader
+          mkdir -p /tmp/gradle_test_reports/data-loader/core
+          mkdir -p /tmp/gradle_test_reports/data-loader/cli
           cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
           cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
+          cp -a data-loader/core/build/reports/tests/test /tmp/gradle_test_reports/data-loader/core/
+          cp -a data-loader/cli/build/reports/tests/test /tmp/gradle_test_reports/data-loader/cli/
 
       - name: Upload Gradle test reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: gradle_check_reports
+          name: ${{ steps.run-gradle-check.outcome == 'success' && 'success' || 'failure' }}_gradle_check_reports_${{ env.ARTIFACT_SUFFIX }}
           path: /tmp/gradle_test_reports
 
       - name: Save SpotBugs reports
@@ -83,29 +130,34 @@ jobs:
           mkdir -p /tmp/gradle_spotbugs_reports/core
           mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
           mkdir -p /tmp/gradle_spotbugs_reports/integration-test
+          mkdir -p /tmp/gradle_spotbugs_reports/data-loader/core
+          mkdir -p /tmp/gradle_spotbugs_reports/data-loader/cli
           cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
           cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
           cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
+          cp -a data-loader/core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/data-loader/core/
+          cp -a data-loader/cli/build/reports/spotbugs /tmp/gradle_spotbugs_reports/data-loader/cli/
 
       - name: Upload Spotbugs reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: gradle_spotbugs_reports
+          name: ${{ steps.run-gradle-check.outcome == 'success' && 'success' || 'failure' }}_gradle_spotbugs_reports_${{ env.ARTIFACT_SUFFIX }}
           path: /tmp/gradle_spotbugs_reports
 
   dockerfile-lint:
     name: Lint dockerfiles
     runs-on: ubuntu-latest
+    if: ${{ !inputs.INTEGRATION_TEST_ONLY }}
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+      - name: Set up JDK 8
         uses: actions/setup-java@v5
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
+          java-version: 8
+          distribution: temurin
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -113,1214 +165,158 @@ jobs:
       - name: Dockerfile Lint for ScalarDB Schema Loader
         run: ./gradlew schema-loader:dockerfileLint
 
-  integration-test-for-cassandra-3-0:
-    name: Cassandra 3.0 integration test (${{ matrix.mode.label }})
+  # Identify which integration tests to run, then extract the `ci/tests-config.yaml` into a matrix of jobs to be ingested by the `integration-test` job
+  integration-test-jobs-planner:
+    name: Plan integration test jobs
     runs-on: ubuntu-latest
-
-    services:
-      cassandra:
-        image: cassandra:3.0
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestCassandra' task
-        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: cassandra_3.0_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestCassandra
-
-  integration-test-for-cassandra-3-11:
-    name: Cassandra 3.11 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      cassandra:
-        image: cassandra:3.11
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestCassandra' task
-        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: cassandra_3.11_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestCassandra
-
-  integration-test-for-cassandra-4-1:
-    name: Cassandra 4.1 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      cassandra:
-        image: cassandra:4.1
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestCassandra' task
-        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: cassandra_4.1_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestCassandra
-
-  integration-test-for-cassandra-5-0:
-    name: Cassandra 5.0 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      cassandra:
-        image: cassandra:5.0
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestCassandra' task
-        run: ./gradlew integrationTestCassandra ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: cassandra_5.0_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestCassandra
-
-  integration-test-for-cosmos:
-    name: Cosmos DB integration test (${{ matrix.mode.label }})
-    runs-on: windows-latest
     env:
-      # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
-      # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
-      SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
-      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
+      ALL: ${{ inputs.ALL }}
+      BASIC: ${{ inputs.BASIC }}
+      CASSANDRA: ${{ inputs.CASSANDRA }}
+      COSMOS: ${{ inputs.COSMOS }}
+      DYNAMO: ${{ inputs.DYNAMO }}
+      JDBC: ${{ inputs.JDBC }}
+      MULTI_STORAGE: ${{ inputs.MULTI_STORAGE }}
+      TRIGGERED_BY_WF_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
+      EXPANDED_TESTS_CONFIG_FILE: expanded-tests-config.json
+    outputs:
+      test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+      - name: Install Groovy
         run: |
-          $container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
-          docker cp "${container_id}:oracle-jdk.exe" .
-          docker rm "$container_id"
-          Write-Host "Install Oracle JDK"
-          Start-Process "oracle-jdk.exe" -NoNewWindow -Wait -ArgumentList "/s"
-          Write-Host "Oracle JDK installation successful"
-          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
-            $jdk_root_dir = "jdk-1.8"
-          } else {
-            $jdk_root_dir = "jdk-11"
-          }
-          echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
+          curl -s "https://get.sdkman.io?ci=true" | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install groovy
+          echo "$HOME/.sdkman/candidates/groovy/current/bin" >> $GITHUB_PATH
 
-      - name: Start Azure Cosmos DB emulator
-        run: |
-          Write-Host "Launching Cosmos DB Emulator"
-          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
-          # Set startup timeout to 10min (600s), the default is 4min
-          Start-CosmosDbEmulator -Consistency Strong -Timeout 600
-
-      - name: Install TLS/SSL certificate
-        run: |
-          $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
-          $params = @{
-            Cert = $cert
-            Type = "CERT"
-            FilePath = "$home/tmp-cert.cer"
-            NoClobber = $true
-          }
-          Export-Certificate @params
-          certutil -encode $home/tmp-cert.cer $home/cosmosdbcert.cer
-          Remove-Item $home/tmp-cert.cer
-          # Setting the keystore option differs between Java 8 and Java 11+
-          if ( ${env:INT_TEST_JAVA_RUNTIME_VERSION} -eq '8' ) {
-            $keystore = "-keystore", "${env:JAVA_HOME}/jre/lib/security/cacerts"
-          } else {
-            $keystore = "-cacerts"
-          }
-          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -importcert -noprompt -alias cosmos_emulator -file $home/cosmosdbcert.cer
-          & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestCosmos' task
-        run: ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: cosmos_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestCosmos
-
-  integration-test-for-dynamo:
-    name: DynamoDB integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      dynamodb:
-        image: amazon/dynamodb-local:1.17.0
-        ports:
-          - 8000:8000
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestDynamo' task
-        run: ./gradlew integrationTestDynamo ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: dynamo_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestDynamo
-
-  integration-test-for-jdbc-mysql-5-7:
-    name: MySQL 5.7 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Run MySQL 5.7
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:5.7 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: mysql_5.7_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-mysql-8-0:
-    name: MySQL 8.0 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Run MySQL 8.0
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: mysql_8.0_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-mysql-8-4:
-    name: MySQL 8.4 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Run MySQL 8.4
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mysql:8.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: mysql_8.4_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-postgresql-13:
-    name: PostgreSQL 13 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:13-alpine
+      - name: Check file changes and init environment variables indicating which tests to run
+        id: generate-matrix-by-changes
+        if: ${{ env.TRIGGERED_BY_WF_DISPATCH == 'false' }}
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
+          PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: groovy ci/plan-tests-based-on-file-changes.groovy
 
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
+      - name: Validate workflow dispatch inputs
+        if: env.TRIGGERED_BY_WF_DISPATCH
         run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+          if [ "$ALL" != "true" ]; then
+            # Check if at least one specific test category is enabled
+            if [ "$BASIC" != "true" ] && \
+               [ "$CASSANDRA" != "true" ] && \
+               [ "$COSMOS" != "true" ] && \
+               [ "$DYNAMO" != "true" ] && \
+               [ "$JDBC" != "true" ] && \
+               [ "$MULTI_STORAGE" != "true" ]; then
+              echo "Error: When the ALL workflow input is false, at least one specific test category must be enabled."
+              echo "Please enable at least one of: BASIC, CASSANDRA, COSMOS, DYNAMO, JDBC, MULTI_STORAGE."
+              exit 1
+            fi
+          fi
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+      - name: Generate the integration tests matrix
+        id: generate-matrix-for-wf-dispatch
+        run: |
+          # Generate minimal JSON matrix (stdout) and full JSON config ($EXPANDED_TESTS_CONFIG_FILE)
+          MATRIX_JSON=$(groovy ci/generate-test-matrix.groovy)
+          echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
 
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
+#       Github does not allow outputting passwords, contained in setup and run scripts of the tests configuration,
+#       directly as matrix strategy parameters because they are flagged as sensitive data.
+#       So, we upload the full test configurations as an artifact for the integration test jobs to consume
+      - name: Upload expanded tests configuration
         uses: actions/upload-artifact@v6
         with:
-          name: postgresql_13_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-postgresql-14:
-    name: PostgreSQL 14 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:14-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: postgresql_14_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-postgresql-15:
-    name: PostgreSQL 15 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: postgresql_15_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-postgresql-16:
-    name: PostgreSQL 16 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: postgresql_16_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-postgresql-17:
-    name: PostgreSQL 17 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: postgresql_17_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-oracle-19:
-    name: Oracle 19 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:19
-        credentials:
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-        ports:
-          - 1521:1521
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/ORCLPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: oracle_19_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-oracle-21:
-    name: Oracle 21 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      oracle:
-        image: ghcr.io/scalar-labs/oracle/db-prebuilt:21
-        credentials:
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-        env:
-          ORACLE_PWD: Oracle
-        ports:
-          - 1521:1521
-        options: >-
-          --health-cmd "/opt/oracle/checkDBStatus.sh"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 120
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: oracle_21_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-oracle-23:
-    name: Oracle 23 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Free up ~14GB of disk space by removing the Android SDK
-        run: |
-          echo "Storage available before deletion"
-          df -h /
-          echo
-          sudo rm -r /usr/local/lib/android
-          echo "Storage available after deletion"
-          df -h /
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Start Oracle 23 container
-        run: docker run -d --name oracle-23 -p 1521:1521  ghcr.io/scalar-labs/oracle/db-prebuilt:23
-
-      - name: Wait for the container to be ready
-        timeout-minutes: 5
-        run: |
-          while [ "`docker inspect -f {{.State.Health.Status}} oracle-23`" != "healthy" ]
-          do
-            sleep 10
-            echo "Container is not yet ready"
-          done
-          echo "Container is ready"
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/FREEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Stop Oracle 23 container
-        if: always()
-        run: docker stop oracle-23 | xargs docker rm
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: oracle_23_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-sqlserver-2017:
-    name: SQL Server 2017 integration test (${{ matrix.mode.label }})
-    runs-on: windows-latest
+          name: ci_internal_tests_config-${{ env.ARTIFACT_SUFFIX }}
+          path: ${{ env.EXPANDED_TESTS_CONFIG_FILE }}
+          overwrite: true
+
+      - name: Print expanded tests configuration
+        run: cat ${{ env.EXPANDED_TESTS_CONFIG_FILE }}
+
+  integration-test:
+    name: ${{ matrix.display_name }} integration test (${{ (matrix.group_commit_enabled == 'true') && 'group commit' || 'default' }})
+    needs:
+      - integration-test-jobs-planner
+    runs-on: ${{ matrix.runner }}
     env:
-      # Official Oracle JDK images that are windows compatible and publicly available through direct download do not exist for JDK 8 and 11 so we use instead cached versions hosted on the Scalar container registry.
-      # This variable evaluates to: if {!(Temurin JDK 8) && !(Oracle JDK 8 or 11)} then {true} else {false}
-      SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11: "${{ (github.event_name == 'workflow_dispatch' && !(inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'temurin') && !(inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11'))) && 'true' || 'false' }}"
-      SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11: "${{ ((inputs.INT_TEST_JAVA_RUNTIME_VERSION == '8' || inputs.INT_TEST_JAVA_RUNTIME_VERSION == '11') && inputs.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle') &&  'true' || 'false' }}"
+      INT_TEST_JAVA_RUNTIME_VERSION: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}
+      INT_TEST_JAVA_RUNTIME_VENDOR: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
+      GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+      CR_PAT: ${{ secrets.CR_PAT }}
 
     strategy:
       fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
+      # The matrix parameters are:
+      # - label
+      # - display_name
+      # - group_commit_enabled
+      # - runner
+      matrix: ${{ fromJSON(needs.integration-test-jobs-planner.outputs.test_matrix) }}
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Sql Server 2017
-        uses: rails-sqlserver/setup-mssql@v1
+      - name: Download test configuration
+        uses: actions/download-artifact@v4
         with:
-          components: sqlcmd,sqlengine
-          sa-password: "SqlServer17"
-          version: 2017
+          name: ci_internal_tests_config-${{ env.ARTIFACT_SUFFIX }}
 
-      - name: Create database with Japanese collation for integration test
+      - name: Load test configuration
+        shell: bash
         run: |
-          sqlcmd -S localhost -U sa -P SqlServer17 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+          # Find the test entry matching label and group_commit_enabled
+          LABEL="${{ matrix.label }}"
+          GROUP_COMMIT="${{ matrix.group_commit_enabled }}"
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+          # Extract the test configuration using jq
+          CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests-config.json)
+          
+          # Set the SETUP_CMD and RUN_CMD environment variables for the setup and run commands
+          SETUP_CMD=$(echo "$CONFIG" | jq -r '.setup // ""')
+          echo "SETUP_CMD<<EOF" >> $GITHUB_ENV
+          echo "$SETUP_CMD" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          RUN_CMD=$(echo "$CONFIG" | jq -r '.run // ""')
+          echo "RUN_CMD<<EOF" >> $GITHUB_ENV
+          echo "$RUN_CMD" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Set up the database
+        run: ${{ env.SETUP_CMD }}
+
+      - name: Set up JDK 8
         uses: actions/setup-java@v5
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
+          java-version: 8
+          distribution: temurin
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        id: setup-int-test-jdk
         uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_JDK_WHEN_NOT_ORACLE_8_OR_11 == 'true'}}
+        # On Linux runner, skip if Oracle JDK is specified
+        # On Windows runner, skip if Oracle JDK 8 or 11 is specified
+        if: ${{ (runner.os == 'Linux' && env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle') || (runner.os == 'Windows' && !(env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (env.INT_TEST_JAVA_RUNTIME_VERSION == '8' || env.INT_TEST_JAVA_RUNTIME_VERSION == '11')))  }}
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_ORACLE_JDK_8_OR_11 == 'true'}}
+      - name: For Linux runner, set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ runner.os == 'Linux' && steps.setup-int-test-jdk.outcome == 'skipped' }}
+        # For Linux runner, install Oracle JDK for any versions from Oracle Container Registry
         run: |
+          # For Linux runner, install Oracle JDK for any versions from Oracle Container Registry
+          echo ${{ secrets.OCR_TOKEN }} | docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} --password-stdin
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: For Windows runner, set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ runner.os == 'Windows' && steps.setup-int-test-jdk.outcome == 'skipped' }}
+        # For Windows runner, install Oracle JDK 8 or 11 from Scalar Container Registry
+        run: |
+          echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
           $container_id=$(docker create "ghcr.io/scalar-labs/oracle/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}-windows")
           docker cp "${container_id}:oracle-jdk.exe" .
           docker rm "$container_id"
@@ -1337,466 +333,58 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew.bat integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" "-Dfile.encoding=UTF-8" "-Dscalardb.jdbc.username=sa" "-Dscalardb.jdbc.password=SqlServer17" ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: sqlserver_2017_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-sqlserver-2019:
-    name: SQL Server 2019 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2019-latest
+      - name: Run integration test
+        id: run-integration-test
         env:
-          MSSQL_PID: "Express"
-          SA_PASSWORD: "SqlServer19"
-          ACCEPT_EULA: "Y"
-        ports:
-          - 1433:1433
-        options: --name sqlserver19
+          ORG_GRADLE_PROJECT_javaVersion: '8'
+          ORG_GRADLE_PROJECT_javaVendor: 'temurin'
+          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}"
+          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+          GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
+        run: ${{ env.RUN_CMD }} ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
 
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Create database with Japanese collation for integration test
+      - name: Detect test report folder
+        id: detect-report-folder
+        if: always()
+        shell: bash
         run: |
-          docker exec sqlserver19 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer19 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
+          report_dir="core/build/reports/tests"
+          folder_name=$(ls -1 "$report_dir" | head -n 1)
+          report_path=$report_dir/$folder_name
+          if [ -d "$report_path" ]; then
+            echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+            echo "Detected test report folder: $report_path"
+          else
+            echo "Test report folder could not be found"
+          fi
 
       - name: Upload Gradle test reports
-        if: always()
+        if: ${{ always() && steps.detect-report-folder.outputs.report_path != '' }}
         uses: actions/upload-artifact@v6
         with:
-          name: sqlserver_2019_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
+          name: ${{ steps.run-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_test_${{ env.ARTIFACT_SUFFIX }}
+          path: ${{ steps.detect-report-folder.outputs.report_path }}
 
-  integration-test-for-jdbc-sqlserver-2022:
-    name: SQL Server 2022 integration test (${{ matrix.mode.label }})
+  merge-artifacts:
+    if: always()
+    name: Merge all artifacts
     runs-on: ubuntu-latest
-
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          MSSQL_PID: "Express"
-          SA_PASSWORD: "SqlServer22"
-          ACCEPT_EULA: "Y"
-        ports:
-          - 1433:1433
-        options: --name sqlserver22
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
+    needs:
+      - check
+      - dockerfile-lint
+      - integration-test
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Create database with Japanese collation for integration test
-        run: |
-          docker exec sqlserver22 /opt/mssql-tools18/bin/sqlcmd -S localhost -C  -U sa -P SqlServer22 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
+      - name: Delete test configuration
+        uses: geekyeggo/delete-artifact@v5
+        if: needs.integration-test.result == 'success'
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
+          name: ci_internal_tests_config-${{ env.ARTIFACT_SUFFIX }}
+          failOnError: false
 
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
+      - name: Merge all artifacts
+        uses: actions/upload-artifact/merge@v5
         with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer22 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: sqlserver_2022_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-sqlite-3:
-    name: SQLite 3 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Set up SQLite3
-        run: sudo apt-get install -y sqlite3
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: sqlite_3_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-mariadb-10:
-    name: MariaDB 10 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Run MariaDB 10.11
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:10.11 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: mariadb_10_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-mariadb-11-4:
-    name: MariaDB 11.4 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Run MariaDB 11.4
-        run: |
-          docker run -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:11.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: mariadb_11.4_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-jdbc-yugabytedb-2:
-    name: YugabyteDB 2 integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - name: Run YugabyteDB 2
-        run: |
-          docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
-
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestJdbc' task
-        run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4 ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: yugabytedb_2_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestJdbc
-
-  integration-test-for-multi-storage:
-    name: Multi-storage integration test (${{ matrix.mode.label }})
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-
-      cassandra:
-        image: cassandra:3.11
-        env:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
-        ports:
-          - 9042:9042
-
-    strategy:
-      fail-fast: false
-      matrix:
-        mode:
-          - label: default
-            group_commit_enabled: false
-          - label: with_group_commit
-            group_commit_enabled: true
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        uses: actions/setup-java@v5
-        if: ${{ env.SET_UP_INT_TEST_RUNTIME_NON_ORACLE_JDK == 'true'}}
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Login to Oracle container registry
-        uses: docker/login-action@v3
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        with:
-          registry: container-registry.oracle.com
-          username: ${{ secrets.OCR_USERNAME }}
-          password: ${{ secrets.OCR_TOKEN }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
-        run: |
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Execute Gradle 'integrationTestMultiStorage' task
-        run: ./gradlew integrationTestMultiStorage ${{ matrix.mode.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }}
-
-      - name: Upload Gradle test reports
-        uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: multi_storage_integration_test_reports_${{ matrix.mode.label }}
-          path: core/build/reports/tests/integrationTestMultiStorage
+          name: scalardb_core_ci_report_${{ env.ARTIFACT_SUFFIX }}_run_#${{ github.run_attempt }}
+          pattern: "*_${{ env.ARTIFACT_SUFFIX }}"
+          separate-directories: true
+          delete-merged: true
