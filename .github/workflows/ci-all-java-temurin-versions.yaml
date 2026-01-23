@@ -1,0 +1,60 @@
+name: CI with all Temurin Java versions
+# This CI runs all the tests with Java 8, 11, 17, and 21 provided by Temurin.
+
+on:
+  workflow_dispatch:
+    inputs:
+      REPORT_ON_SLACK:
+        description: Whether to report the result to Slack or not
+        type: boolean
+        default: false
+
+jobs:
+  ci:
+    name: CI with Java ${{ matrix.java_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java_version: ['8', '11', '17', '21']
+    uses: ./.github/workflows/ci.yaml
+    with:
+      INT_TEST_JAVA_RUNTIME_VERSION: ${{ matrix.java_version }}
+      INT_TEST_JAVA_RUNTIME_VENDOR: 'temurin'
+      INTEGRATION_TEST_ONLY: ${{ matrix.java_version != '8' }}
+    secrets: inherit
+
+  report:
+    if: ${{ always() && github.event.inputs.REPORT_ON_SLACK == 'true' && github.run_attempt == '1' }}
+    name: Report on Slack
+    runs-on: ubuntu-latest
+    needs:
+      - ci
+    env:
+      ACTION_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      BRANCH_NAME: ${{ github.ref_name }}
+    steps:
+      - name: Report the success on Slack
+        uses: slackapi/slack-github-action@v2.1.1
+        if: needs.ci.result == 'success'
+        with:
+          webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: ":large_green_circle:【ScalarDB Core】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|passed>"
+
+      - name: Report the failure on Slack
+        uses: slackapi/slack-github-action@v2.1.1
+        if: needs.ci.result == 'failure'
+        with:
+          webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: ":red_circle:【ScalarDB Core】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|failed>"
