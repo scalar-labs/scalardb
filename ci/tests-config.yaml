@@ -217,9 +217,9 @@ jdbc:
     display_name: YugabyteDB %VERSION%
     versions:
       # YugabyteDB manages a global schema catalog version. A session using a stale version fails.
-      # Our integration tests address this limitation with some waits.
-      # However, version 2024.x gets more senstive to the schema catalog version missmatch. Therefore, we skip the version.
-      # As for 2025.x, YugabyteDB teams aim to remove the limitation, the integration tests pass with the version.
+      # Our integration tests address this limitation with some workarounds.
+      # However, version 2024.x is more sensitive to the schema catalog version mismatch, so we skip it.
+      # Since the YugabyteDB team aims to remove this limitation in 2025.x, the integration tests pass with that version.
       - 2.20.4.0-b50
       - 2025.1.0.1-b3
     setup: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:%VERSION% bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""

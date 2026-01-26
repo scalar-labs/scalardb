@@ -710,6 +710,36 @@ jobs:
           name: yugabytedb_2_permission_integration_test_reports
           path: core/build/reports/tests/integrationTestJdbcPermission
 
+  integration-test-permission-jdbc-yugabytedb-2025:
+    name: YugabyteDB 2025 Permission Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run YugabyteDB 2025
+        run: |
+          docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2025.1.0.1-b3 bin/yugabyted start --background=false --master_flag="ysql_enable_db_catalog_version_mode=false" --tserver_flags="ysql_enable_db_catalog_version_mode=false"
+
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_VENDOR }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Execute Gradle 'integrationTestJdbcPermission' task
+        run: ./gradlew integrationTestJdbcPermission -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/yugabyte?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: yugabytedb_2025_permission_integration_test_reports
+          path: core/build/reports/tests/integrationTestJdbcPermission
+
   integration-test-permission-jdbc-db2-11-5:
     name: Db2 11.5 Permission Integration Test
     runs-on: ubuntu-latest
