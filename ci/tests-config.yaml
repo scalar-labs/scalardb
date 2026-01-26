@@ -13,7 +13,13 @@
 blob-storage:
   - label: blob-storage
     display_name: Blob Storage
-    setup: docker run -d --name azurite -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
+    # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
+    setup: |
+      docker run -d --name azurite \
+        -e AZURITE_ACCOUNTS=test:test \
+        -p 10000:10000 \
+        mcr.microsoft.com/azure-storage/azurite \
+        azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data --skipApiVersionCheck
     run: |
       az storage container create \
             --name test-container \
