@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 
 public class ScanBuilder extends SelectionBuilder {
@@ -348,30 +349,35 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableScanWithOngoingWhere(this, condition);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       return new BuildableScanWithOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       return new BuildableScanWithOngoingWhereOr(this, andConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
       checkNotNull(orConditionSets);
       return new BuildableScanWithOngoingWhereAnd(this, orConditionSets);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
       checkNotNull(andConditionSets);
       return new BuildableScanWithOngoingWhereOr(this, andConditionSets);
@@ -587,30 +593,35 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithIndexOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableScanWithIndexOngoingWhere(this, condition);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithIndexOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       return new BuildableScanWithIndexOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithIndexOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       return new BuildableScanWithIndexOngoingWhereOr(this, andConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithIndexOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
       checkNotNull(orConditionSets);
       return new BuildableScanWithIndexOngoingWhereAnd(this, orConditionSets);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanWithIndexOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
       checkNotNull(andConditionSets);
       return new BuildableScanWithIndexOngoingWhereOr(this, andConditionSets);
@@ -914,30 +925,35 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanAllWithOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableScanAllWithOngoingWhere(this, condition);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanAllWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       return new BuildableScanAllWithOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanAllWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       return new BuildableScanAllWithOngoingWhereOr(this, andConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanAllWithOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
       checkNotNull(orConditionSets);
       return new BuildableScanAllWithOngoingWhereAnd(this, orConditionSets);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanAllWithOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
       checkNotNull(andConditionSets);
       return new BuildableScanAllWithOngoingWhereOr(this, andConditionSets);
@@ -1346,6 +1362,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanFromExistingWithOngoingWhere where(ConditionalExpression condition) {
       checkConditionsEmpty();
       checkNotNull(condition);
@@ -1353,6 +1370,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanFromExistingWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkConditionsEmpty();
       checkNotNull(orConditionSet);
@@ -1360,6 +1378,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanFromExistingWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkConditionsEmpty();
       checkNotNull(andConditionSet);
@@ -1367,6 +1386,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanFromExistingWithOngoingWhereAnd whereAnd(
         Set<OrConditionSet> orConditionSets) {
       checkConditionsEmpty();
@@ -1375,6 +1395,7 @@ public class ScanBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableScanFromExistingWithOngoingWhereOr whereOr(
         Set<AndConditionSet> andConditionSets) {
       checkConditionsEmpty();
