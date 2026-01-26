@@ -26,9 +26,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    // TODO: Revisit here. Use JdbcEnv methods because rdbEngine is not yet initialized when this
-    // method is called.
-    if (JdbcEnv.isOracle() || JdbcEnv.isYugabyte()) {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isYugabyte(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
