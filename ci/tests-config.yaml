@@ -213,9 +213,16 @@ jdbc:
       done
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=
 
-  - label: yugabytedb
-    display_name: YugabyteDB 2
-    setup: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
+  - label: yugabytedb_%VERSION%
+    display_name: YugabyteDB %VERSION%
+    versions:
+      # YugabyteDB manages a global schema catalog version. A session using a stale version fails.
+      # Our integration tests address this limitation with some waits.
+      # However, version 2024.x gets more senstive to the schema catalog version missmatch. Therefore, we skip the version.
+      # As for 2025.x, YugabyteDB teams aim to remove the limitation, the integration tests pass with the version.
+      - 2.20.4.0-b50
+      - 2025.1.0.1-b3
+    setup: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:%VERSION% bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
 multi-storage:
