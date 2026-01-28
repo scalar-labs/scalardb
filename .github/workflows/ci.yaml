@@ -282,10 +282,20 @@ jobs:
           # Extract the test configuration using jq
           CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"$GROUP_COMMIT\")" expanded-tests-config.json)
           
-          # Set the SETUP_CMD and RUN_CMD environment variables for the setup and run commands
+          # Set the SETUP_CMD, DB_HEALTHCHECK_CMD, CREATE_TEST_USER_CMD, and RUN_CMD environment variables
           SETUP_CMD=$(echo "$CONFIG" | jq -r '.setup // ""')
           echo "SETUP_CMD<<EOF" >> $GITHUB_ENV
           echo "$SETUP_CMD" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          DB_HEALTHCHECK_CMD=$(echo "$CONFIG" | jq -r '.db_healthcheck // ""')
+          echo "DB_HEALTHCHECK_CMD<<EOF" >> $GITHUB_ENV
+          echo "$DB_HEALTHCHECK_CMD" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          CREATE_TEST_USER_CMD=$(echo "$CONFIG" | jq -r '.create_test_user // ""')
+          echo "CREATE_TEST_USER_CMD<<EOF" >> $GITHUB_ENV
+          echo "$CREATE_TEST_USER_CMD" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
           RUN_CMD=$(echo "$CONFIG" | jq -r '.run // ""')
@@ -341,6 +351,27 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
+
+      - name: Wait for the database to be ready
+        if: ${{ env.DB_HEALTHCHECK_CMD != '' }}
+        shell: bash
+        run: |
+          # Waiting for the database to be ready (10 minutes timeout)
+          SECONDS=0
+          until bash -c "${DB_HEALTHCHECK_CMD}";
+            do
+              if (( SECONDS > 600 )); then
+                echo "Timeout: Database failed to start within 10 minutes"
+                exit 1
+              fi
+              echo "The database is not yet ready"
+              sleep 2s
+            done
+          echo "The database is ready"
+
+      - name: Create test user
+        if : ${{ env.CREATE_TEST_USER_CMD != '' }}
+        run: ${{ env.CREATE_TEST_USER_CMD }}
 
       - name: Run integration test
         id: run-integration-test
