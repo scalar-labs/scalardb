@@ -15,9 +15,10 @@ blob-storage:
     display_name: Blob Storage
     setup: docker run -d --name azurite -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
     run: |
-      az storage container create \
-            --name test-container \
-            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
+      docker run --rm --network host mcr.microsoft.com/azure-cli:2.81.0-azurelinux3.0 \
+        az storage container create \
+          --name test-container \
+          --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
       ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
 
 cassandra:
