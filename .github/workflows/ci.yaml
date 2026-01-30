@@ -370,7 +370,7 @@ jobs:
           echo "The database is ready"
 
       - name: Create test user
-        if : ${{ env.CREATE_TEST_USER_CMD != '' }}
+        if: ${{ env.CREATE_TEST_USER_CMD != '' }}
         run: ${{ env.CREATE_TEST_USER_CMD }}
 
       - name: Run integration test
