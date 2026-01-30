@@ -218,7 +218,7 @@ jdbc:
   - label: sqlserver_%VERSION%
     display_name: SQL Server %VERSION%
     setup: |
-      docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+      docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
       if [ "%VERSION%" != "2017" ]; then
         # SQL 2017 contains mssql-tools in /opt/mssql-tools already, but later versions have it in /opt/mssql-tools18
         # so we create a symlink for later versions
