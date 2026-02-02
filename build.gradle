@@ -28,7 +28,7 @@ subprojects {
         slf4jVersion = '1.7.36'
         cassandraDriverVersion = '3.12.1'
         azureCosmosVersion = '4.76.0'
-        azureBlobStorageVersion = '12.32.0'
+        azureBlobStorageVersion = '12.33.0'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.41.1'
         hikariCpVersion = '4.0.3'
