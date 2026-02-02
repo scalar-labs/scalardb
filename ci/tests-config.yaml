@@ -9,13 +9,19 @@
 #     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, a matrix entry with group commit enabled and another one with group commit disabled will be added.
 #     setup: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 #     db_healthcheck: (optional) a bash script that succeed if the database is ready. The script will be run repeatedly with a delay until it succeeds with a 10 minutes timeout. If not provided, it is assumed the database is ready before the run script is executed.
-#     create_test_user: (optional) a script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
+#     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
 blob-storage:
   - label: blob-storage
     display_name: Blob Storage
-    setup: docker run -d --name azurite -e AZURITE_ACCOUNTS=test:test -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
+    # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
+    setup: |
+      docker run -d --name azurite \
+        -e AZURITE_ACCOUNTS=test:test \
+        -p 10000:10000 \
+        mcr.microsoft.com/azure-storage/azurite \
+        azurite --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
     # ScalarDB requires an access key, which has full access to Azure Blob Storage, for authentication.
     create_test_user: # Do nothing
     run: |
