@@ -15,5 +15,5 @@ jobs:
     with:
       INT_TEST_JAVA_RUNTIME_VERSION: ${{ matrix.java_version }}
       INT_TEST_JAVA_RUNTIME_VENDOR: ${{ matrix.java_vendor }}
-      INTEGRATION_TEST_ONLY: ${{ matrix.java_version != '8' && matrix.java_vendor != 'temurin' }}
+      INTEGRATION_TEST_ONLY: ${{ !(matrix.java_version == '8' && matrix.java_vendor == 'temurin') }}
     secrets: inherit
