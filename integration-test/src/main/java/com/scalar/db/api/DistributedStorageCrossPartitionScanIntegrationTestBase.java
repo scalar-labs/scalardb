@@ -102,8 +102,8 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    executorService = Executors.newFixedThreadPool(getThreadNum());
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
+    executorService = Executors.newFixedThreadPool(getThreadNum());
     admin = factory.getStorageAdmin();
     storage = factory.getStorage();
     namespaceBaseName = getNamespaceBaseName();

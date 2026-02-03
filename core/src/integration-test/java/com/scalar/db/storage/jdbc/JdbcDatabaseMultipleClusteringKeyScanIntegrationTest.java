@@ -26,7 +26,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (JdbcTestUtils.isOracle(rdbEngine)) {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isYugabyte(rdbEngine)) {
       return 1;
     }
     return super.getThreadNum();
