@@ -8,18 +8,32 @@
 #     versions: (optional) an array of database versions to test. If present, a matrix entry for each version will be added and the placeholder %VERSION% will be substituted.
 #     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, a matrix entry with group commit enabled and another one with group commit disabled will be added.
 #     setup: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+#     db_healthcheck: (optional) a bash script that succeed if the database is ready. The script will be run repeatedly with a delay until it succeeds with a 10 minutes timeout. If not provided, it is assumed the database is ready before the run script is executed.
+#     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
 cassandra:
   - label: cassandra_%VERSION%
     display_name: Cassandra %VERSION%
-    setup: docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
+    setup: |
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
+      docker exec cassandra sed -i 's/^authenticator:.*/authenticator: org.apache.cassandra.auth.PasswordAuthenticator/' /etc/cassandra/cassandra.yaml
+      docker exec cassandra sed -i 's/^authorizer:.*/authorizer: org.apache.cassandra.auth.CassandraAuthorizer/' /etc/cassandra/cassandra.yaml
+      docker restart cassandra
     versions:
       - 3.0
       - 3.11
       - 4.1
       - 5.0
-    run: ./gradlew integrationTestCassandra
+    db_healthcheck: docker exec cassandra cqlsh -u cassandra -p cassandra -e "SELECT now() FROM system.local;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec cassandra cqlsh -u cassandra -p cassandra -e "CREATE ROLE test WITH PASSWORD = 'test' AND LOGIN = true;
+        GRANT CREATE ON ALL KEYSPACES TO test;
+        GRANT DROP ON ALL KEYSPACES TO test;
+        GRANT ALTER ON ALL KEYSPACES TO test;
+        GRANT SELECT ON ALL KEYSPACES TO test;
+        GRANT MODIFY ON ALL KEYSPACES TO test;"
+    run: ./gradlew integrationTestCassandra -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
 
 cosmos:
   - label: cosmos
@@ -30,7 +44,8 @@ cosmos:
       Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
       # Set startup timeout to 10min (600s), the default is 4min
       Start-CosmosDbEmulator -Consistency Strong -Timeout 600
-
+    # ScalarDB requires an Azure Cosmos DB key, which has full access to Azure Cosmos DB for NoSQL, for authentication.
+    create_test_user: # Do nothing
     run: |
       Write-Host "Install TLS/SSL certificate to Java keystore\n"
       $cert = Get-ChildItem Cert:\LocalMachine\My | where{$_.FriendlyName -eq 'DocumentDbEmulatorCertificate'}
@@ -59,6 +74,8 @@ dynamo:
   - label: dynamo
     display_name: DynamoDB Local
     setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
+    # Permissions cannot be tested on DynamoDB local
+    create_test_user: # Do nothing
     run: ./gradlew integrationTestDynamo
 
 jdbc:
@@ -68,20 +85,12 @@ jdbc:
     versions:
       - 11.5.9.0
       - 12.1.1.0
-    run: |
-      # Waiting for the container to be ready (10 minutes timeout)
-      SECONDS=0
-      while ! docker logs db2 2>&1 | grep -q "Setup has completed"
-        do
-          if (( SECONDS > 600 )); then
-            echo "Timeout: Container failed to start within 10 minutes"
-            exit 1
-          fi
-          echo "Container is not yet ready"
-          sleep 5s
-        done
-      echo "Container is ready"
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=db2inst1 -Dscalardb.jdbc.password=db2inst1
+    db_healthcheck: docker logs db2 2>&1 | grep -i -q "Setup has completed"
+    create_test_user: |
+      docker exec db2 bash -c "useradd -m -s /bin/bash test"
+      docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+      docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
@@ -89,7 +98,18 @@ jdbc:
     versions:
       - 10.11
       - 11.4
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+    create_test_user: |
+      docker exec mariadb mariadb -uroot -pmysql -e "
+        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+        GRANT CREATE ON *.* TO 'test'@'%%';
+        GRANT DROP ON *.* TO 'test'@'%%';
+        GRANT INDEX ON *.* TO 'test'@'%%';
+        GRANT ALTER ON *.* TO 'test'@'%%';
+        GRANT SELECT ON *.* TO 'test'@'%%';
+        GRANT INSERT ON *.* TO 'test'@'%%';
+        GRANT UPDATE ON *.* TO 'test'@'%%';
+        GRANT DELETE ON *.* TO 'test'@'%%';"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
@@ -98,7 +118,18 @@ jdbc:
       - 5.7
       - 8.0
       - 8.4
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+    create_test_user: |
+      docker exec mysql mysql -uroot -pmysql -e "
+        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+        GRANT CREATE ON *.* TO 'test'@'%%';
+        GRANT DROP ON *.* TO 'test'@'%%';
+        GRANT INDEX ON *.* TO 'test'@'%%';
+        GRANT ALTER ON *.* TO 'test'@'%%';
+        GRANT SELECT ON *.* TO 'test'@'%%';
+        GRANT INSERT ON *.* TO 'test'@'%%';
+        GRANT UPDATE ON *.* TO 'test'@'%%';
+        GRANT DELETE ON *.* TO 'test'@'%%';"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: oracle_%VERSION%
     display_name: Oracle %VERSION%
@@ -111,15 +142,34 @@ jdbc:
       echo "Storage available before deletion"
       df -h /
       echo
-      sudo rm -r /usr/local/lib/android
+      sudo rm -r $ANDROID_HOME
       echo "Storage available after deletion"
       df -h /
       echo ${CR_PAT} | docker login ghcr.io -u ${GITHUB_REPOSITORY_OWNER} --password-stdin
       docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:%VERSION%
-    run: |
+    db_healthcheck: docker logs oracle 2>&1 | grep -i -q "DATABASE IS READY TO USE"
+    create_test_user: |
       # Oracle connection endpoint depends on the Oracle version used
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle
+      echo "CREATE USER test IDENTIFIED BY test;
+      ALTER USER test QUOTA UNLIMITED ON USERS;
+      GRANT CREATE SESSION TO test;
+      GRANT CREATE USER TO test;
+      GRANT DROP USER TO test;
+      GRANT ALTER USER TO test;
+      GRANT CREATE ANY TABLE TO test;
+      GRANT DROP ANY TABLE TO test;
+      GRANT CREATE ANY INDEX TO test;
+      GRANT DROP ANY INDEX TO test;
+      GRANT ALTER ANY TABLE TO test;
+      GRANT SELECT ANY TABLE TO test;
+      GRANT INSERT ANY TABLE TO test;
+      GRANT UPDATE ANY TABLE TO test;
+      GRANT DELETE ANY TABLE TO test;
+      EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
+    run: |
+      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
@@ -130,36 +180,33 @@ jdbc:
       - 15
       - 16
       - 17
-    run: ./gradlew integrationTestJdbc
+    create_test_user: |
+      docker exec postgresql psql -U postgres -c "
+        CREATE USER test WITH PASSWORD 'test';
+        GRANT CREATE ON DATABASE postgres TO test;"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: sqlserver_%VERSION%
     display_name: SQL Server %VERSION%
-    setup: docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
+    setup: |
+      docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
+      if [ "%VERSION%" != "2017" ]; then
+        # SQL 2017 contains mssql-tools in /opt/mssql-tools already, but later versions have it in /opt/mssql-tools18
+        # so we create a symlink for later versions
+        docker exec -u root sqlserver ln -s /opt/mssql-tools18 /opt/mssql-tools
+      fi
+      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
     versions:
       - 2017
       - 2019
       - 2022
-    run: |
-      if [ "%VERSION%" = "2017" ]; then
-        SQLCMD="/opt/mssql-tools/bin/sqlcmd"
-      else
-        SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
-      fi
-
-      # Waiting for SQL Server to be ready (2 minutes timeout)
-      SECONDS=0
-      while ! docker exec sqlserver ${SQLCMD} -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1" > /dev/null 2>&1; do
-        if (( SECONDS > 120 )); then
-          echo "Timeout: SQL Server failed to start within 2 minutes"
-          exit 1
-        fi
-        echo "Waiting for SQL Server to be ready..."
-        sleep 5
-      done
-      echo "SQL Server is ready"
-
-      docker exec sqlserver ${SQLCMD} -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
-      ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer1
+    create_test_user: |
+      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
+        CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
+        CREATE USER test FOR LOGIN test;
+        GRANT CREATE SCHEMA TO test;
+        GRANT CREATE TABLE TO test;"
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: sqlite_3
     display_name: SQLite 3
@@ -168,8 +215,12 @@ jdbc:
 
   - label: yugabytedb
     display_name: YugabyteDB 2
-    setup: "docker run -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/?load-balance=any -Dscalardb.jdbc.username=yugabyte -Dscalardb.jdbc.password=yugabyte -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+    setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
+    create_test_user: |
+      docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
+        CREATE USER test WITH PASSWORD 'test';
+        GRANT CREATE ON DATABASE postgres TO test;\""
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
 multi-storage:
   - label: multi-storage
@@ -177,8 +228,22 @@ multi-storage:
     disable_group_commit: true
     setup: |
       docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
-      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:5.0
-    run: ./gradlew integrationTestMultiStorage
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:3.0
+      docker exec cassandra sed -i 's/^authenticator:.*/authenticator: org.apache.cassandra.auth.PasswordAuthenticator/' /etc/cassandra/cassandra.yaml
+      docker exec cassandra sed -i 's/^authorizer:.*/authorizer: org.apache.cassandra.auth.CassandraAuthorizer/' /etc/cassandra/cassandra.yaml
+      docker restart cassandra
+    db_healthcheck: docker exec cassandra cqlsh -u cassandra -p cassandra -e "SELECT now() FROM system.local;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec postgresql psql -U postgres -c "
+        CREATE USER test WITH PASSWORD 'test';
+        GRANT CREATE ON DATABASE postgres TO test;"
+      docker exec cassandra cqlsh -u cassandra -p cassandra -e "CREATE ROLE test WITH PASSWORD = 'test' AND LOGIN = true;
+        GRANT CREATE ON ALL KEYSPACES TO test;
+        GRANT DROP ON ALL KEYSPACES TO test;
+        GRANT ALTER ON ALL KEYSPACES TO test;
+        GRANT SELECT ON ALL KEYSPACES TO test;
+        GRANT MODIFY ON ALL KEYSPACES TO test;"
+    run: ./gradlew integrationTestMultiStorage -Dscalardb.jdbc.contact_points=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
 
 
 
