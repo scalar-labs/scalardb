@@ -114,7 +114,6 @@ jdbc:
       docker exec mariadb mariadb -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
         GRANT CREATE ON *.* TO 'test'@'%%';
-        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
         GRANT DROP ON *.* TO 'test'@'%%';
         GRANT INDEX ON *.* TO 'test'@'%%';
         GRANT ALTER ON *.* TO 'test'@'%%';
@@ -135,7 +134,6 @@ jdbc:
       docker exec mysql mysql -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
         GRANT CREATE ON *.* TO 'test'@'%%';
-        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
         GRANT DROP ON *.* TO 'test'@'%%';
         GRANT INDEX ON *.* TO 'test'@'%%';
         GRANT ALTER ON *.* TO 'test'@'%%';
@@ -174,15 +172,12 @@ jdbc:
       GRANT CREATE ANY TABLE TO test;
       GRANT DROP ANY TABLE TO test;
       GRANT CREATE ANY INDEX TO test;
-      GRANT ALTER ANY INDEX TO test;
       GRANT DROP ANY INDEX TO test;
       GRANT ALTER ANY TABLE TO test;
       GRANT SELECT ANY TABLE TO test;
       GRANT INSERT ANY TABLE TO test;
       GRANT UPDATE ANY TABLE TO test;
       GRANT DELETE ANY TABLE TO test;
-      GRANT CREATE ANY VIEW TO test;
-      GRANT DROP ANY VIEW TO test;
       EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
     run: |
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
@@ -222,8 +217,7 @@ jdbc:
         CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
         CREATE USER test FOR LOGIN test;
         GRANT CREATE SCHEMA TO test;
-        GRANT CREATE TABLE TO test;
-        GRANT CREATE VIEW to test;"
+        GRANT CREATE TABLE TO test;"
     run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: sqlite_3
