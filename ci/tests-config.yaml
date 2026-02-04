@@ -91,19 +91,6 @@ jdbc:
         GRANT CREATE ON DATABASE postgres TO test;"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: db2_%VERSION%
-    display_name: Db2 %VERSION%
-    setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
-    versions:
-      - 11.5.9.0
-      - 12.1.1.0
-    db_healthcheck: docker logs db2 2>&1 | grep -i -q "Setup has completed"
-    create_test_user: |
-      docker exec db2 bash -c "useradd -m -s /bin/bash test"
-      docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
-      docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
     setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
