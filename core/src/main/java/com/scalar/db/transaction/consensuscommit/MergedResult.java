@@ -4,18 +4,8 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.AbstractResult;
-import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BlobColumn;
-import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.DateColumn;
-import com.scalar.db.io.DoubleColumn;
-import com.scalar.db.io.FloatColumn;
-import com.scalar.db.io.IntColumn;
-import com.scalar.db.io.TextColumn;
-import com.scalar.db.io.TimeColumn;
-import com.scalar.db.io.TimestampColumn;
-import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -245,39 +235,12 @@ public class MergedResult extends AbstractResult {
         if (putColumns.containsKey(columnName)) {
           builder.put(columnName, putColumns.get(columnName));
         } else {
-          builder.put(columnName, getNullColumn(columnName));
+          builder.put(
+              columnName,
+              ScalarDbUtils.createNullColumn(columnName, metadata.getColumnDataType(columnName)));
         }
       }
     }
     return builder.build();
-  }
-
-  private Column<?> getNullColumn(String columnName) {
-    switch (metadata.getColumnDataType(columnName)) {
-      case BOOLEAN:
-        return BooleanColumn.ofNull(columnName);
-      case INT:
-        return IntColumn.ofNull(columnName);
-      case BIGINT:
-        return BigIntColumn.ofNull(columnName);
-      case FLOAT:
-        return FloatColumn.ofNull(columnName);
-      case DOUBLE:
-        return DoubleColumn.ofNull(columnName);
-      case TEXT:
-        return TextColumn.ofNull(columnName);
-      case BLOB:
-        return BlobColumn.ofNull(columnName);
-      case DATE:
-        return DateColumn.ofNull(columnName);
-      case TIME:
-        return TimeColumn.ofNull(columnName);
-      case TIMESTAMP:
-        return TimestampColumn.ofNull(columnName);
-      case TIMESTAMPTZ:
-        return TimestampTZColumn.ofNull(columnName);
-      default:
-        throw new AssertionError();
-    }
   }
 }
