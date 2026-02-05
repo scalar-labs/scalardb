@@ -29,6 +29,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -175,7 +176,7 @@ public class CommitHandlerTest {
         .build();
   }
 
-  private Snapshot prepareSnapshotWithDifferentPartitionPut() {
+  private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
 
     // different partition
@@ -190,7 +191,7 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  private Snapshot prepareSnapshotWithSamePartitionPut() {
+  private Snapshot prepareSnapshotWithSamePartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
 
     // same partition
@@ -230,7 +231,7 @@ public class CommitHandlerTest {
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -255,7 +256,7 @@ public class CommitHandlerTest {
   public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -280,7 +281,7 @@ public class CommitHandlerTest {
   public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
@@ -401,7 +402,7 @@ public class CommitHandlerTest {
   public void commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -427,7 +428,7 @@ public class CommitHandlerTest {
   public void commit_SerializableIsolationWithReads_ShouldValidateRecords(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -451,7 +452,7 @@ public class CommitHandlerTest {
 
   @Test
   public void validateRecords_ValidationNotRequired_ShouldNotCallToSerializable()
-      throws ValidationException, ExecutionException {
+      throws ValidationException, ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     // With SNAPSHOT isolation, validation is not required
@@ -467,7 +468,7 @@ public class CommitHandlerTest {
 
   @Test
   public void validateRecords_ValidationRequired_ShouldCallToSerializable()
-      throws ValidationException, ExecutionException {
+      throws ValidationException, ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(snapshot).toSerializable(storage);
@@ -484,7 +485,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_NoMutationExceptionThrownInPrepareRecords_ShouldThrowCCException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(NoMutationException.class).when(storage).mutate(anyList());
@@ -509,7 +510,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_RetriableExecutionExceptionThrownInPrepareRecords_ShouldThrowCCException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
@@ -534,7 +535,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInPrepareRecords_ShouldAbortAndRollbackRecords()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -560,7 +561,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -592,7 +593,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -622,7 +623,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -652,7 +653,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorExceptionThrownInCoordinatorAbort_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -679,7 +680,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ValidationConflictExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
-      throws ExecutionException, CoordinatorException, ValidationConflictException {
+      throws ExecutionException, CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -705,7 +706,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
-      throws ExecutionException, CoordinatorException, ValidationConflictException {
+      throws ExecutionException, CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -732,7 +733,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -765,7 +767,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -796,7 +799,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -827,7 +831,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorExceptionThrownInCoordinatorAbort_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -857,7 +862,7 @@ public class CommitHandlerTest {
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenCommittedReturnedInGetState_ShouldBeIgnored()
           throws ExecutionException, CoordinatorException, CommitException,
-              UnknownTransactionStatusException {
+              UnknownTransactionStatusException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -883,7 +888,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenAbortedReturnedInGetState_ShouldRollbackRecords()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -909,7 +914,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -934,7 +939,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -958,7 +963,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInCoordinatorCommit_ShouldThrowUnknown()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -980,7 +985,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_BeforePreparationHookGiven_ShouldWaitBeforePreparationHookFinishesBeforeCommitState()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -1020,7 +1025,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_FailingBeforePreparationHookGiven_ShouldThrowCommitException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(new RuntimeException("Something is wrong"))
@@ -1045,7 +1050,7 @@ public class CommitHandlerTest {
   @Test
   public void commit_FailingBeforePreparationHookFutureGiven_ShouldThrowCommitException()
       throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
-          InterruptedException {
+          InterruptedException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -1252,7 +1257,8 @@ public class CommitHandlerTest {
 
   @Test
   public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
-      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException,
+          CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -1270,7 +1276,7 @@ public class CommitHandlerTest {
   @Test
   public void
       onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(NoMutationException.class).when(storage).mutate(anyList());
@@ -1286,7 +1292,7 @@ public class CommitHandlerTest {
   @Test
   public void
       onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
@@ -1302,7 +1308,7 @@ public class CommitHandlerTest {
   @Test
   public void
       onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -1317,7 +1323,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
@@ -1339,7 +1345,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws CommitException, UnknownTransactionStatusException {
+          throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();

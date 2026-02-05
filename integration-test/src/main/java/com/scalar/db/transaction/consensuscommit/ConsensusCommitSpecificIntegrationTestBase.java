@@ -4083,8 +4083,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException(Isolation isolation)
-      throws TransactionException {
+  void put_DeleteCalledBefore_ShouldPutNewRecord(Isolation isolation) throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     DistributedTransaction transaction = manager.begin();
@@ -4097,17 +4096,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    Throwable thrown =
-        catchThrowable(
-            () ->
-                transaction1.put(
-                    Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
-                        .intValue(BALANCE, 2)
-                        .build()));
-    transaction1.rollback();
+    transaction1.put(
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).intValue(BALANCE, 2).build());
+    transaction1.commit();
 
     // Assert
-    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+    DistributedTransaction transaction2 = manager.begin();
+    Optional<Result> result = transaction2.get(get);
+    transaction2.commit();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(2);
   }
 
   @ParameterizedTest
