@@ -35,6 +35,8 @@ import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatColumn;
@@ -44,6 +46,9 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.io.Value;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -478,5 +483,34 @@ public final class ScalarDbUtils {
       builder.add(column);
     }
     return Optional.of(builder.build());
+  }
+
+  public static Column<?> createNullColumn(String columnName, DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return BooleanColumn.ofNull(columnName);
+      case INT:
+        return IntColumn.ofNull(columnName);
+      case BIGINT:
+        return BigIntColumn.ofNull(columnName);
+      case FLOAT:
+        return FloatColumn.ofNull(columnName);
+      case DOUBLE:
+        return DoubleColumn.ofNull(columnName);
+      case TEXT:
+        return TextColumn.ofNull(columnName);
+      case BLOB:
+        return BlobColumn.ofNull(columnName);
+      case DATE:
+        return DateColumn.ofNull(columnName);
+      case TIME:
+        return TimeColumn.ofNull(columnName);
+      case TIMESTAMP:
+        return TimestampColumn.ofNull(columnName);
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.ofNull(columnName);
+      default:
+        throw new AssertionError("Unsupported data type: " + dataType);
+    }
   }
 }

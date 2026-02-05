@@ -65,28 +65,43 @@ public class DynamoMutation extends DynamoOperation {
 
   private String getUpdateExpression(boolean withKey) {
     Put put = (Put) getOperation();
-    List<String> expressions = new ArrayList<>();
+    List<String> setExpressions = new ArrayList<>();
+    List<String> removeExpressions = new ArrayList<>();
     int i = 0;
 
     if (withKey) {
       for (Column<?> unusedKey : put.getPartitionKey().getColumns()) {
-        expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
+        setExpressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
         i++;
       }
       if (put.getClusteringKey().isPresent()) {
         for (Column<?> unusedKey : put.getClusteringKey().get().getColumns()) {
-          expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
+          setExpressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
           i++;
         }
       }
     }
 
-    for (String unusedName : put.getColumns().keySet()) {
-      expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
+    for (Column<?> column : put.getColumns().values()) {
+      if (!column.hasNullValue()) {
+        setExpressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
+      } else {
+        removeExpressions.add(COLUMN_NAME_ALIAS + i);
+      }
       i++;
     }
 
-    return "SET " + String.join(", ", expressions);
+    StringBuilder expression = new StringBuilder();
+    if (!setExpressions.isEmpty()) {
+      expression.append("SET ").append(String.join(", ", setExpressions));
+    }
+    if (!removeExpressions.isEmpty()) {
+      if (expression.length() > 0) {
+        expression.append(" ");
+      }
+      expression.append("REMOVE ").append(String.join(", ", removeExpressions));
+    }
+    return expression.toString();
   }
 
   @Nonnull
@@ -141,7 +156,7 @@ public class DynamoMutation extends DynamoOperation {
 
   @Nonnull
   public Map<String, AttributeValue> getConditionBindMap() {
-    ValueBinder binder = new ValueBinder(CONDITION_VALUE_ALIAS);
+    ValueBinder binder = new ValueBinder(CONDITION_VALUE_ALIAS, true);
     Mutation mutation = (Mutation) getOperation();
     mutation
         .getCondition()
@@ -161,7 +176,7 @@ public class DynamoMutation extends DynamoOperation {
   }
 
   private Map<String, AttributeValue> getValueBindMap(boolean withKey) {
-    ValueBinder binder = new ValueBinder(VALUE_ALIAS);
+    ValueBinder binder = new ValueBinder(VALUE_ALIAS, false);
     Put put = (Put) getOperation();
 
     if (withKey) {
