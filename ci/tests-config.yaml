@@ -85,6 +85,7 @@ jdbc:
     versions:
       - 10.11
       - 11.4
+    db_healthcheck: docker exec mariadb mariadb -uroot -pmysql -e "SELECT 1" > /dev/null 2>&1
     create_test_user: |
       docker exec mariadb mariadb -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
@@ -105,6 +106,7 @@ jdbc:
       - 5.7
       - 8.0
       - 8.4
+    db_healthcheck: docker exec mysql mysql -uroot -pmysql -e "SELECT 1" > /dev/null 2>&1
     create_test_user: |
       docker exec mysql mysql -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
