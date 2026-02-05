@@ -13,7 +13,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.FilterableScanner;
-import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -37,7 +36,7 @@ public class DynamoTest {
   @Mock private PutStatementHandler putStatementHandler;
   @Mock private DeleteStatementHandler deleteStatementHandler;
   @Mock private BatchHandler batchHandler;
-  @Mock private OperationChecker operationChecker;
+  @Mock private DynamoOperationChecker operationChecker;
   @Mock private ScannerImpl scanner;
   @Mock private Key partitionKey;
 
