@@ -361,10 +361,10 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_ENCODER_CANNOT_ENCODE_TEXT_VALUE_CONTAINING_0X0000(
       Category.USER_ERROR, "0079", "Cannot encode a Text value that contains '\\u0000'", "", ""),
-  DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY(
+  DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_EMPTY(
       Category.USER_ERROR,
       "0081",
-      "An index column cannot be set to null or an empty value for Text or Blob in DynamoDB. Operation: %s",
+      "An index column cannot be set to an empty value for Text or Blob in DynamoDB. Operation: %s",
       "",
       ""),
   DYNAMO_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BOOLEAN_TYPE(

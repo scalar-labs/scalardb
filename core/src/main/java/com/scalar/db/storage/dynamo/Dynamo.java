@@ -17,7 +17,6 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
@@ -49,7 +48,7 @@ public class Dynamo extends AbstractDistributedStorage {
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
-  private final OperationChecker operationChecker;
+  private final DynamoOperationChecker operationChecker;
 
   @Inject
   public Dynamo(DatabaseConfig databaseConfig) {
@@ -103,7 +102,7 @@ public class Dynamo extends AbstractDistributedStorage {
       PutStatementHandler put,
       DeleteStatementHandler delete,
       BatchHandler batch,
-      OperationChecker operationChecker) {
+      DynamoOperationChecker operationChecker) {
     super(databaseConfig);
     this.client = client;
     this.selectStatementHandler = select;
