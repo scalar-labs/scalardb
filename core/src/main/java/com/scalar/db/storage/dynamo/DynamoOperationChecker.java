@@ -32,9 +32,9 @@ public class DynamoOperationChecker extends OperationChecker {
         .filter(column -> metadata.getSecondaryIndexNames().contains(column.getName()))
         .forEach(
             column -> {
-              if (!new ColumnChecker(metadata, true, false, true, false).check(column)) {
+              if (!new ColumnChecker(metadata, false, false, true, false).check(column)) {
                 throw new IllegalArgumentException(
-                    CoreError.DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY.buildMessage(put));
+                    CoreError.DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_EMPTY.buildMessage(put));
               }
             });
     checkCondition(put, metadata);
