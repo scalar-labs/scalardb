@@ -5,8 +5,6 @@ on:
 
 env:
   TERM: dumb
-  JAVA_VERSION: '8'
-  JAVA_VENDOR: 'temurin'
 
 jobs:
   integration-test-permission-dynamo:
@@ -20,11 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
+      - name: Set up JDK 8 (Temurin)
         uses: actions/setup-java@v5
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_VENDOR }}
+          java-version: 8
+          distribution: temurin
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -36,11 +34,11 @@ jobs:
           AWS_DEFAULT_REGION: ${{ env.DYNAMO_REGION }}
         run: bash -x ./ci/dynamo-permission-setup.sh
 
-      - name: Execute Gradle 'integrationTestDynamoPermission' task
+      - name: Execute Gradle 'integrationTestDynamo' task
         run: >-
           ./gradlew integrationTestDynamo
           --tests DynamoColumnValueIntegrationTest
-          -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1
+          -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:false,dynamodb_permission_test_run_id:1
           -Dscalardb.dynamo.emulator_used=false
           -Dscalardb.dynamo.region=${{ env.DYNAMO_REGION }}
           -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY }}
@@ -50,5 +48,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: dynamo_permission_integration_test_reports
-          path: core/build/reports/tests/integrationTestDynamoPermission
+          name: dynamo_integration_test_reports
+          path: core/build/reports/tests/integrationTestDynamo
