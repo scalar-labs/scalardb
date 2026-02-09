@@ -13,7 +13,7 @@ jobs:
     name: DynamoDB Permission Integration Test
     runs-on: ubuntu-latest
     env:
-      DYNAMO_ACCESS_KEY_ID: ${{ secrets.DYNAMO_ACCESS_KEY }}
+      DYNAMO_ACCESS_KEY: ${{ secrets.DYNAMO_ACCESS_KEY }}
       DYNAMO_SECRET_ACCESS_KEY: ${{ secrets.DYNAMO_SECRET_ACCESS_KEY }}
       DYNAMO_REGION: ap-northeast-1
 
@@ -43,7 +43,7 @@ jobs:
           -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1
           -Dscalardb.dynamo.emulator_used=false
           -Dscalardb.dynamo.region=${{ env.DYNAMO_REGION }}
-          -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }}
+          -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY }}
           -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
 
       - name: Upload Gradle test reports
