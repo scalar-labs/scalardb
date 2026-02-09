@@ -37,7 +37,14 @@ jobs:
         run: bash -x ./ci/dynamo-permission-setup.sh
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
-        run: ./gradlew integrationTestDynamo --tests DynamoColumnValueIntegrationTest -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1 -Dscalardb.dynamo.emulator_used=false -Dscalardb.dynamo.region=${{ env.DYNAMO_REGION }} -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
+        run: >-
+          ./gradlew integrationTestDynamo
+          --tests DynamoColumnValueIntegrationTest
+          -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1
+          -Dscalardb.dynamo.emulator_used=false
+          -Dscalardb.dynamo.region=${{ env.DYNAMO_REGION }}
+          -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }}
+          -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
 
       - name: Upload Gradle test reports
         if: always()
