@@ -33,10 +33,7 @@ jobs:
         run: bash -x ./ci/dynamo-permission-setup.sh
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
-        run: ./gradlew :core:integrationTestDynamo \
-                --tests DynamoColumnValueIntegrationTest \
-                -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1 \
-                -Dscalardb.dynamo.emulator_used=false
+        run: ./gradlew integrationTestDynamo --tests DynamoColumnValueIntegrationTest -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1 -Dscalardb.dynamo.emulator_used=false
 
       - name: Upload Gradle test reports
         if: always()
