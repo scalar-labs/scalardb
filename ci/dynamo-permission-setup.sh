@@ -51,7 +51,6 @@ POLICY_DOCUMENT='{
       "application-autoscaling:PutScalingPolicy",
       "application-autoscaling:DeregisterScalableTarget",
       "application-autoscaling:TagResource",
-
       "dynamodb:TagResource",
     ],
     "Resource": "*"
