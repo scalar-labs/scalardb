@@ -7,8 +7,6 @@ env:
   TERM: dumb
   JAVA_VERSION: '8'
   JAVA_VENDOR: 'temurin'
-  DYNAMO_ACCESS_KEY_ID: ${{ secrets.DYNAMO_ACCESS_KEY }}
-  DYNAMO_SECRET_ACCESS_KEY: ${{ secrets.DYNAMO_SECRET_ACCESS_KEY }}
 
 jobs:
   integration-test-permission-dynamo:
@@ -27,8 +25,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Setup DynamoDB test permissions
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DYNAMO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DYNAMO_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+        run: bash -x ./ci/dynamo-permission-setup.sh
+
       - name: Execute Gradle 'integrationTestDynamoPermission' task
-        run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator_used=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
+        run: ./gradlew :core:integrationTestDynamo \
+                --tests DynamoColumnValueIntegrationTest \
+                -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:true,dynamodb_permission_test_run_id:1 \
+                -Dscalardb.dynamo.emulator_used=false
 
       - name: Upload Gradle test reports
         if: always()

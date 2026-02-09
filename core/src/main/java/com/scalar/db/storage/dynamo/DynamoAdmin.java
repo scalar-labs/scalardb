@@ -84,6 +84,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
+import software.amazon.awssdk.services.dynamodb.model.Tag;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 
@@ -300,6 +301,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
 
     CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
+    requestBuilder.tags(
+        Tag.builder().key("dynamodb_permission_test_run_id").value(options.get("dynamodb_permission_test_run_id")).build(),
+        Tag.builder().key("created_by").value("vincent.guilpain").build());
     buildAttributeDefinitions(requestBuilder, metadata);
     buildPrimaryKey(requestBuilder, metadata);
     buildSecondaryIndexes(namespace, table, requestBuilder, metadata, ru);
