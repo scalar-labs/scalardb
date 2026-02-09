@@ -26,6 +26,7 @@ POLICY_ARN=$(aws iam list-attached-user-policies \
   --output text 2>/dev/null || echo "")
 
 # Policy document with minimum required permissions for ScalarDB DynamoDB operations
+# TODO Remove dynamodb:TagResource
 POLICY_DOCUMENT='{
   "Version": "2012-10-17",
   "Statement": [{
@@ -49,7 +50,9 @@ POLICY_DOCUMENT='{
       "application-autoscaling:DeleteScalingPolicy",
       "application-autoscaling:PutScalingPolicy",
       "application-autoscaling:DeregisterScalableTarget",
-      "application-autoscaling:TagResource"
+      "application-autoscaling:TagResource",
+
+      "dynamodb:TagResource",
     ],
     "Resource": "*"
   }]
