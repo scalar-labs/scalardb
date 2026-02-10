@@ -2,9 +2,9 @@ name: Trigger the CI weekly on Sunday night for all development branches with al
 
 on:
   schedule:
-    # Runs at 1:00 AM JST (Tokyo time) every Monday
-    # JST is UTC+9, so 1:00 AM JST = 4:00 PM UTC (previous day)
-    - cron: '0 16 * * 0'
+    # Runs at 10:00 PM JST (Tokyo time) every Saturday
+    # JST is UTC+9, so 10:00 PM JST = 1:00 PM UTC
+    - cron: '0 13 * * SAT'
   workflow_dispatch:
 
 jobs:
