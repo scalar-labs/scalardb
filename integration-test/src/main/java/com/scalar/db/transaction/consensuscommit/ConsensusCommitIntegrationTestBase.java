@@ -793,9 +793,8 @@ public abstract class ConsensusCommitIntegrationTestBase
   }
 
   @Test
-  public void
-      deleteAndInsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnInsert()
-          throws TransactionException {
+  public void deleteAndInsert_forSameRecord_whenRecordExists_shouldInsertNewRecord()
+      throws TransactionException {
     // Arrange
     put(preparePut(0, 0));
 
@@ -804,7 +803,7 @@ public abstract class ConsensusCommitIntegrationTestBase
 
     DistributedTransaction transaction = manager.start();
 
-    // Act Assert
+    // Act
     transaction.delete(
         Delete.newBuilder()
             .namespace(namespace)
@@ -812,25 +811,26 @@ public abstract class ConsensusCommitIntegrationTestBase
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build());
-    assertThatThrownBy(
-            () ->
-                transaction.insert(
-                    Insert.newBuilder()
-                        .namespace(namespace)
-                        .table(TABLE)
-                        .partitionKey(partitionKey)
-                        .clusteringKey(clusteringKey)
-                        .intValue(BALANCE, INITIAL_BALANCE)
-                        .build()))
-        .isInstanceOf(IllegalArgumentException.class);
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    transaction.commit();
 
-    transaction.rollback();
+    // Assert
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult).isPresent();
+    assertThat(optResult.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(optResult.get().isNull(SOME_COLUMN)).isTrue();
   }
 
   @Test
-  public void
-      deleteAndUpsert_forSameRecord_whenRecordExists_shouldThrowIllegalArgumentExceptionOnUpsert()
-          throws TransactionException {
+  public void deleteAndUpsert_forSameRecord_whenRecordExists_shouldUpsertNewRecord()
+      throws TransactionException {
     // Arrange
     put(preparePut(0, 0));
 
@@ -839,7 +839,7 @@ public abstract class ConsensusCommitIntegrationTestBase
 
     DistributedTransaction transaction = manager.start();
 
-    // Act Assert
+    // Act
     transaction.delete(
         Delete.newBuilder()
             .namespace(namespace)
@@ -847,19 +847,21 @@ public abstract class ConsensusCommitIntegrationTestBase
             .partitionKey(partitionKey)
             .clusteringKey(clusteringKey)
             .build());
-    assertThatThrownBy(
-            () ->
-                transaction.upsert(
-                    Upsert.newBuilder()
-                        .namespace(namespace)
-                        .table(TABLE)
-                        .partitionKey(partitionKey)
-                        .clusteringKey(clusteringKey)
-                        .intValue(BALANCE, INITIAL_BALANCE)
-                        .build()))
-        .isInstanceOf(IllegalArgumentException.class);
+    transaction.upsert(
+        Upsert.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+    transaction.commit();
 
-    transaction.rollback();
+    // Assert
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult).isPresent();
+    assertThat(optResult.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(optResult.get().isNull(SOME_COLUMN)).isTrue();
   }
 
   @Test
