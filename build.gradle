@@ -56,7 +56,7 @@ subprojects {
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
         errorpronePluginVersion = '3.1.0'
-        shadowPluginVersion = '7.1.2'
+        shadowPluginVersion = '8.1.1'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
         commonsIoVersion = '2.16.1'
