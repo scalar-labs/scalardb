@@ -54,7 +54,7 @@ subprojects {
         errorproneJavacVersion = '9+181-r4173-1'
         gsonVersion = '2.13.2'
         stefanbirknerSystemLambdaVersion = '1.2.1'
-        spotbugsPluginVersion = '5.2.5'
+        spotbugsPluginVersion = '6.4.8'
         errorpronePluginVersion = '3.1.0'
         shadowPluginVersion = '8.1.1'
         // Make JDK11+ use the same version as JDK8 uses
