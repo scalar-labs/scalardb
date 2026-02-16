@@ -112,8 +112,8 @@ public class TimeColumn implements Column<LocalTime> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
   /**
-   * Returns a Time column instance with the specified column name and value. If the value has
-   * sub-microsecond precision, it is silently truncated to microsecond precision.
+   * Returns a Time column instance with the specified column name and value. Sub-microsecond
+   * precision is silently truncated.
    *
    * @param columnName a column name
    * @param value a column value
@@ -124,8 +124,8 @@ public class TimeColumn implements Column<LocalTime> {
   }
 
   /**
-   * Returns a Time column instance with the specified column name and value. If the value has
-   * sub-microsecond precision, an {@link IllegalArgumentException} is thrown.
+   * Returns a Time column instance with the specified column name and value. Unlike {@link #of},
+   * this method does not truncate and throws if the value has sub-microsecond precision.
    *
    * @param columnName a column name
    * @param value a column value

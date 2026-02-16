@@ -117,12 +117,14 @@ public class TimestampColumn implements Column<LocalDateTime> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
   /**
-   * Returns a Timestamp column instance with the specified column name and value. If the value has
-   * sub-millisecond precision, it is silently truncated to millisecond precision.
+   * Returns a Timestamp column instance with the specified column name and value. Sub-millisecond
+   * precision is silently truncated.
    *
    * @param columnName a column name
    * @param value a column value
    * @return a Timestamp column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000 to
+   *     9999-12-31T23:59:59.999
    */
   public static TimestampColumn of(String columnName, LocalDateTime value) {
     return new TimestampColumn(
@@ -130,13 +132,15 @@ public class TimestampColumn implements Column<LocalDateTime> {
   }
 
   /**
-   * Returns a Timestamp column instance with the specified column name and value. If the value has
-   * sub-millisecond precision, an {@link IllegalArgumentException} is thrown.
+   * Returns a Timestamp column instance with the specified column name and value. Unlike {@link
+   * #of}, this method does not truncate and throws if the value has sub-millisecond precision.
    *
    * @param columnName a column name
    * @param value a column value
    * @return a Timestamp column instance with the specified column name and value
    * @throws IllegalArgumentException if the value has sub-millisecond precision
+   * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000 to
+   *     9999-12-31T23:59:59.999
    */
   public static TimestampColumn ofStrict(String columnName, LocalDateTime value) {
     return new TimestampColumn(columnName, value);
