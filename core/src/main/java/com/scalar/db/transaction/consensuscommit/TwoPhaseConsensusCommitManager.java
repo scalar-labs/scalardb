@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -38,7 +39,6 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import com.google.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
