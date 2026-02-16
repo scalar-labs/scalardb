@@ -348,21 +348,21 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
-    return TimeColumn.of(
+    return TimeColumn.ofStrict(
         columnName, TimeRelatedColumnEncodingUtils.decodeTime(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
       throws SQLException {
-    return TimestampColumn.of(
+    return TimestampColumn.ofStrict(
         columnName, TimeRelatedColumnEncodingUtils.decodeTimestamp(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
       throws SQLException {
-    return TimestampTZColumn.of(
+    return TimestampTZColumn.ofStrict(
         columnName,
         TimeRelatedColumnEncodingUtils.decodeTimestampTZ(resultSet.getLong(columnName)));
   }

@@ -102,19 +102,19 @@ public class ResultInterpreter {
       case TIME:
         return recordValue == null
             ? TimeColumn.ofNull(name)
-            : TimeColumn.of(
+            : TimeColumn.ofStrict(
                 name,
                 TimeRelatedColumnEncodingUtils.decodeTime(((Number) recordValue).longValue()));
       case TIMESTAMP:
         return recordValue == null
             ? TimestampColumn.ofNull(name)
-            : TimestampColumn.of(
+            : TimestampColumn.ofStrict(
                 name,
                 TimeRelatedColumnEncodingUtils.decodeTimestamp(((Number) recordValue).longValue()));
       case TIMESTAMPTZ:
         return recordValue == null
             ? TimestampTZColumn.ofNull(name)
-            : TimestampTZColumn.of(
+            : TimestampTZColumn.ofStrict(
                 name,
                 TimeRelatedColumnEncodingUtils.decodeTimestampTZ(
                     ((Number) recordValue).longValue()));
