@@ -38,7 +38,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import jakarta.inject.Inject;
+import com.google.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
