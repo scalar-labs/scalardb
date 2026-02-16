@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.common.CoreError;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
@@ -116,13 +117,28 @@ public class TimestampColumn implements Column<LocalDateTime> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
   /**
-   * Returns a Timestamp column instance with the specified column name and value.
+   * Returns a Timestamp column instance with the specified column name and value. If the value has
+   * sub-millisecond precision, it is silently truncated to millisecond precision.
    *
    * @param columnName a column name
    * @param value a column value
    * @return a Timestamp column instance with the specified column name and value
    */
   public static TimestampColumn of(String columnName, LocalDateTime value) {
+    return new TimestampColumn(
+        columnName, value == null ? null : value.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  /**
+   * Returns a Timestamp column instance with the specified column name and value. If the value has
+   * sub-millisecond precision, an {@link IllegalArgumentException} is thrown.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Timestamp column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value has sub-millisecond precision
+   */
+  public static TimestampColumn ofStrict(String columnName, LocalDateTime value) {
     return new TimestampColumn(columnName, value);
   }
 
