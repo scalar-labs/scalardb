@@ -32,7 +32,7 @@ subprojects {
         jooqVersion = '3.14.16'
         awssdkVersion = '2.41.1'
         hikariCpVersion = '4.0.3'
-        mysqlDriverVersion = '8.4.0'
+        mysqlDriverVersion = '9.6.0'
         postgresqlDriverVersion = '42.7.10'
         oracleDriverVersion = '23.26.1.0.0'
         sqlserverDriverVersion = '12.8.2.jre8'
