@@ -27,22 +27,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Setup DynamoDB test permissions
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
         env:
           AWS_ACCESS_KEY_ID: ${{ env.DYNAMO_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ env.DYNAMO_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ env.DYNAMO_REGION }}
-        run: bash -x ./ci/dynamo-permission-setup.sh
-
-      - name: Execute Gradle 'integrationTestDynamo' task
-        run: >-
-          ./gradlew integrationTestDynamo
-          --tests DynamoColumnValueIntegrationTest
-          -Dscalardb.dynamo.create_options=ru:1000,no-scaling:false,no-backup:false,dynamodb_permission_test_run_id:2
-          -Dscalardb.dynamo.emulator_used=false
-          -Dscalardb.dynamo.region=${{ env.DYNAMO_REGION }}
-          -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY }}
-          -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
+        with:
+          limit-access-to-actor: true
 
       - name: Upload Gradle test reports
         if: always()
