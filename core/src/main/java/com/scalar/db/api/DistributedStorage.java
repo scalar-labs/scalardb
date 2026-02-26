@@ -142,7 +142,7 @@ public interface DistributedStorage extends AutoCloseable {
    * </ul>
    *
    * @param scan a {@link Scan}, {@link ScanAll}, or {@link ScanWithIndex} command
-   * @return {@link Scanner} to iterate over the results
+   * @return a {@link Scanner} to iterate over the results
    * @throws ExecutionException if the operation fails
    */
   Scanner scan(Scan scan) throws ExecutionException;
