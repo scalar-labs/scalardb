@@ -1,6 +1,6 @@
 package com.scalar.db.dataloader.cli.command.dataimport;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.scalar.db.dataloader.core.dataimport.datachunk.ImportDataChunkStatus;
@@ -16,7 +16,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class ConsoleImportProgressListenerTest {
 
@@ -123,10 +125,6 @@ class ConsoleImportProgressListenerTest {
     assertTrue(
         output.contains("❌ Chunk id: 7, Transaction batch id: 2 failed"),
         "Expected failure message");
-    //        assertTrue(output.contains("5 records failed to be imported"), "Expected failed record
-    // count in batch");
-    //        assertTrue(output.contains("✅ Import completed: 0 records succeeded, 5 failed"),
-    // "Expected final summary with failure count");
   }
 
   @Test
