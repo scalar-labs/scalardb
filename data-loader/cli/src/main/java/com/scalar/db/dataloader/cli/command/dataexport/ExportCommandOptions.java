@@ -1,6 +1,7 @@
 package com.scalar.db.dataloader.cli.command.dataexport;
 
 import com.scalar.db.api.Scan;
+import com.scalar.db.dataloader.cli.ScalarDbMode;
 import com.scalar.db.dataloader.core.ColumnKeyValue;
 import com.scalar.db.dataloader.core.FileFormat;
 import java.util.ArrayList;
@@ -21,6 +22,13 @@ public class ExportCommandOptions {
   public static final String DEPRECATED_THREADS_OPTION = "--threads";
   public static final String DEPRECATED_INCLUDE_METADATA_OPTION = "--include-metadata";
   public static final String DEPRECATED_INCLUDE_METADATA_OPTION_SHORT = "-m";
+
+  @CommandLine.Option(
+      names = {"--mode"},
+      description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
+      paramLabel = "<MODE>",
+      defaultValue = "STORAGE")
+  protected ScalarDbMode scalarDbMode;
 
   @CommandLine.Option(
       names = {"--config", "-c"},
