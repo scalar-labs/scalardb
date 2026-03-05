@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.scalar.db.dataloader.cli.ScalarDbMode;
 import com.scalar.db.dataloader.core.DataLoaderError;
 import com.scalar.db.dataloader.core.FileFormat;
 import java.io.File;
@@ -326,6 +327,53 @@ class ExportCommandTest {
         cmdShort
             .getParseResult()
             .hasMatchedOption(ExportCommandOptions.DEPRECATED_INCLUDE_METADATA_OPTION_SHORT));
+  }
+
+  @Test
+  void call_withModeStorage_shouldParseCorrectly() {
+    String[] args = {
+      "--config", "scalardb.properties",
+      "--namespace", "scalar",
+      "--table", "asset",
+      "--format", "JSON",
+      "--mode", "STORAGE"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    assertEquals(ScalarDbMode.STORAGE, command.scalarDbMode);
+  }
+
+  @Test
+  void call_withModeTransaction_shouldParseCorrectly() {
+    String[] args = {
+      "--config", "scalardb.properties",
+      "--namespace", "scalar",
+      "--table", "asset",
+      "--format", "JSON",
+      "--mode", "TRANSACTION"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    assertEquals(ScalarDbMode.TRANSACTION, command.scalarDbMode);
+  }
+
+  @Test
+  void call_withoutMode_shouldDefaultToStorage() {
+    String[] args = {
+      "--config", "scalardb.properties",
+      "--namespace", "scalar",
+      "--table", "asset",
+      "--format", "JSON"
+    };
+    ExportCommand command = new ExportCommand();
+    CommandLine cmd = new CommandLine(command);
+    cmd.parseArgs(args);
+
+    assertEquals(ScalarDbMode.STORAGE, command.scalarDbMode);
   }
 
   @Test
