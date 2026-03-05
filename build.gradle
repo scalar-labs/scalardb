@@ -42,6 +42,7 @@ subprojects {
         junitVersion = '5.11.2'
         commonsLangVersion = '3.17.0'
         caffeineVersion = '2.9.3'
+        jacksonVersion = '2.21.1'
         assertjVersion = '3.26.3'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
@@ -54,12 +55,16 @@ subprojects {
         shadowPluginVersion = '7.1.2'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
-        commonsIoVersion = '2.16.1'
-        lombokVersion = '1.18.34'
     }
 
     repositories {
         mavenCentral()
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+        }
     }
 
     tasks.withType(Test) {
