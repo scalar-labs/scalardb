@@ -31,7 +31,7 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageAdminImportTableIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "storage_admin_import_table";
+  private static final String TEST_NAME = "storage_import";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
   protected final List<TestData> testDataList = new ArrayList<>();
   protected DistributedStorageAdmin admin;

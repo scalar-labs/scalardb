@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +41,7 @@ import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class JdbcServiceTest {
+public class JdbcCrudServiceTest {
 
   private static final int SCAN_FETCH_SIZE = 10;
   private static final String NAMESPACE = "ns";
@@ -68,13 +70,13 @@ public class JdbcServiceTest {
   @Mock private ResultSet resultSet;
   @Mock private SQLException sqlException;
 
-  private JdbcService jdbcService;
+  private JdbcCrudService jdbcCrudService;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcService =
-        new JdbcService(
+    jdbcCrudService =
+        new JdbcCrudService(
             tableMetadataManager, operationChecker, rdbEngine, queryBuilder, SCAN_FETCH_SIZE);
 
     // Arrange
@@ -106,7 +108,7 @@ public class JdbcServiceTest {
             .table(TABLE)
             .partitionKey(Key.ofText("p1", "val"))
             .build();
-    jdbcService.get(get, connection);
+    jdbcCrudService.get(get, connection);
 
     // Assert
     verify(operationChecker).check(any(Get.class));
@@ -136,7 +138,7 @@ public class JdbcServiceTest {
             .table(TABLE)
             .partitionKey(Key.ofText("p1", "val"))
             .build();
-    Scanner scanner = jdbcService.getScanner(scan, connection);
+    Scanner scanner = jdbcCrudService.getScanner(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(Scan.class));
@@ -164,7 +166,7 @@ public class JdbcServiceTest {
 
     // Act
     Scan scan = Scan.newBuilder().namespace(NAMESPACE).table(TABLE).all().build();
-    Scanner scanner = jdbcService.getScanner(scan, connection);
+    Scanner scanner = jdbcCrudService.getScanner(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
@@ -199,7 +201,7 @@ public class JdbcServiceTest {
             .all()
             .where(ConditionBuilder.column("column").isEqualToInt(10))
             .build();
-    Scanner scanner = jdbcService.getScanner(scan, connection);
+    Scanner scanner = jdbcCrudService.getScanner(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
@@ -237,7 +239,7 @@ public class JdbcServiceTest {
             .table(TABLE)
             .partitionKey(Key.ofText("p1", "val"))
             .build();
-    jdbcService.scan(scan, connection);
+    jdbcCrudService.scan(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(Scan.class));
@@ -261,7 +263,7 @@ public class JdbcServiceTest {
 
     // Act
     Scan scanAll = Scan.newBuilder().namespace(NAMESPACE).table(TABLE).all().build();
-    jdbcService.scan(scanAll, connection);
+    jdbcCrudService.scan(scanAll, connection);
 
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
@@ -290,7 +292,7 @@ public class JdbcServiceTest {
             .all()
             .where(ConditionBuilder.column("p1").isLessThanText("val"))
             .build();
-    jdbcService.scan(scan, connection);
+    jdbcCrudService.scan(scan, connection);
 
     // Assert
     verify(operationChecker).check(any(ScanAll.class));
@@ -317,7 +319,7 @@ public class JdbcServiceTest {
             .partitionKey(Key.ofText("p1", "val1"))
             .textValue("v1", "val2")
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -346,7 +348,7 @@ public class JdbcServiceTest {
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column("v1").isEqualToText("val2")).build())
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -375,7 +377,7 @@ public class JdbcServiceTest {
             .condition(
                 ConditionBuilder.putIf(ConditionBuilder.column("v1").isEqualToText("val2")).build())
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isFalse();
@@ -403,7 +405,7 @@ public class JdbcServiceTest {
             .textValue("v1", "val2")
             .condition(ConditionBuilder.putIfExists())
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -431,7 +433,7 @@ public class JdbcServiceTest {
             .textValue("v1", "val2")
             .condition(ConditionBuilder.putIfExists())
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isFalse();
@@ -448,6 +450,7 @@ public class JdbcServiceTest {
     when(insertQueryBuilder.values(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.build()).thenReturn(insertQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeUpdate()).thenReturn(1);
 
     // Act
     Put put =
@@ -458,7 +461,7 @@ public class JdbcServiceTest {
             .textValue("v1", "val2")
             .condition(ConditionBuilder.putIfNotExists())
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -487,7 +490,7 @@ public class JdbcServiceTest {
             .textValue("v1", "val2")
             .condition(ConditionBuilder.putIfNotExists())
             .build();
-    boolean ret = jdbcService.put(put, connection);
+    boolean ret = jdbcCrudService.put(put, connection);
 
     // Assert
     assertThat(ret).isFalse();
@@ -510,7 +513,7 @@ public class JdbcServiceTest {
             .table(TABLE)
             .partitionKey(Key.ofText("p1", "val1"))
             .build();
-    boolean ret = jdbcService.delete(delete, connection);
+    boolean ret = jdbcCrudService.delete(delete, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -538,7 +541,7 @@ public class JdbcServiceTest {
                 ConditionBuilder.deleteIf(ConditionBuilder.column("v1").isEqualToText("val2"))
                     .build())
             .build();
-    boolean ret = jdbcService.delete(delete, connection);
+    boolean ret = jdbcCrudService.delete(delete, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -566,7 +569,7 @@ public class JdbcServiceTest {
                 ConditionBuilder.deleteIf(ConditionBuilder.column("v1").isEqualToText("val2"))
                     .build())
             .build();
-    boolean ret = jdbcService.delete(delete, connection);
+    boolean ret = jdbcCrudService.delete(delete, connection);
 
     // Assert
     assertThat(ret).isFalse();
@@ -593,7 +596,7 @@ public class JdbcServiceTest {
             .partitionKey(Key.ofText("p1", "val1"))
             .condition(ConditionBuilder.deleteIfExists())
             .build();
-    boolean ret = jdbcService.delete(delete, connection);
+    boolean ret = jdbcCrudService.delete(delete, connection);
 
     // Assert
     assertThat(ret).isTrue();
@@ -620,7 +623,7 @@ public class JdbcServiceTest {
             .partitionKey(Key.ofText("p1", "val1"))
             .condition(ConditionBuilder.deleteIfExists())
             .build();
-    boolean ret = jdbcService.delete(delete, connection);
+    boolean ret = jdbcCrudService.delete(delete, connection);
 
     // Assert
     assertThat(ret).isFalse();
@@ -636,10 +639,12 @@ public class JdbcServiceTest {
     when(queryBuilder.upsertInto(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
+    when(upsertQuery.sql()).thenReturn("UPSERT_SQL");
 
     when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
+    when(deleteQuery.sql()).thenReturn("DELETE_SQL");
 
     // Act
     Put put =
@@ -655,12 +660,213 @@ public class JdbcServiceTest {
             .table(TABLE)
             .partitionKey(Key.ofText("p1", "val1"))
             .build();
-    boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection);
+    boolean ret = jdbcCrudService.mutate(Arrays.asList(put, delete), connection);
 
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(anyList());
     verify(queryBuilder).upsertInto(any(), any(), any());
     verify(queryBuilder).deleteFrom(any(), any(), any());
+  }
+
+  @Test
+  public void mutate_withMultiplePutsHavingSameSql_shouldExecuteBatch() throws Exception {
+    // Arrange
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeBatch()).thenReturn(new int[] {1, 1, 1});
+
+    when(queryBuilder.upsertInto(any(), any(), any())).thenReturn(upsertQueryBuilder);
+    when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
+    when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
+    when(upsertQuery.sql()).thenReturn("UPSERT_SQL");
+
+    // Act
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .textValue("v1", "val2")
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val3"))
+            .textValue("v1", "val4")
+            .build();
+    Put put3 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val5"))
+            .textValue("v1", "val6")
+            .build();
+    boolean ret = jdbcCrudService.mutate(Arrays.asList(put1, put2, put3), connection);
+
+    // Assert
+    assertThat(ret).isTrue();
+    verify(preparedStatement, times(3)).addBatch();
+    verify(preparedStatement).executeBatch();
+    verify(preparedStatement, never()).executeUpdate();
+  }
+
+  @Test
+  public void mutate_withMultipleDeletesHavingSameSql_shouldExecuteBatch() throws Exception {
+    // Arrange
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeBatch()).thenReturn(new int[] {1, 1});
+
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
+    when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
+    when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
+    when(deleteQuery.sql()).thenReturn("DELETE_SQL");
+
+    // Act
+    Delete delete1 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .build();
+    Delete delete2 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val2"))
+            .build();
+    boolean ret = jdbcCrudService.mutate(Arrays.asList(delete1, delete2), connection);
+
+    // Assert
+    assertThat(ret).isTrue();
+    verify(preparedStatement, times(2)).addBatch();
+    verify(preparedStatement).executeBatch();
+    verify(preparedStatement, never()).executeUpdate();
+  }
+
+  @Test
+  public void mutate_withPutIfNotExists_shouldExecuteIndividually() throws Exception {
+    // Arrange
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeUpdate()).thenReturn(1);
+
+    when(queryBuilder.insertInto(any(), any(), any())).thenReturn(insertQueryBuilder);
+    when(insertQueryBuilder.values(any(), any(), any())).thenReturn(insertQueryBuilder);
+    when(insertQueryBuilder.build()).thenReturn(insertQuery);
+    when(insertQuery.sql()).thenReturn("INSERT_SQL");
+
+    // Act
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .textValue("v1", "val2")
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val3"))
+            .textValue("v1", "val4")
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    boolean ret = jdbcCrudService.mutate(Arrays.asList(put1, put2), connection);
+
+    // Assert
+    assertThat(ret).isTrue();
+    verify(preparedStatement, never()).addBatch();
+    verify(preparedStatement, never()).executeBatch();
+    verify(preparedStatement, times(2)).executeUpdate();
+  }
+
+  @Test
+  public void mutate_withConditionalMutationsBatch_whenConditionNotMet_shouldReturnFalse()
+      throws Exception {
+    // Arrange
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeBatch()).thenReturn(new int[] {1, 0}); // Second mutation fails
+
+    when(queryBuilder.update(any(), any(), any())).thenReturn(updateQueryBuilder);
+    when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
+    when(updateQueryBuilder.where(any(), any())).thenReturn(updateQueryBuilder);
+    when(updateQueryBuilder.build()).thenReturn(updateQuery);
+    when(updateQuery.sql()).thenReturn("UPDATE_SQL");
+
+    // Act
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .textValue("v1", "val2")
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val3"))
+            .textValue("v1", "val4")
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    boolean ret = jdbcCrudService.mutate(Arrays.asList(put1, put2), connection);
+
+    // Assert
+    assertThat(ret).isFalse();
+    verify(preparedStatement, times(2)).addBatch();
+    verify(preparedStatement).executeBatch();
+  }
+
+  @Test
+  public void mutate_withDifferentSqls_shouldExecuteInSeparateBatches() throws Exception {
+    // Arrange
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeBatch()).thenReturn(new int[] {1, 1});
+
+    when(queryBuilder.upsertInto(any(), any(), any())).thenReturn(upsertQueryBuilder);
+    when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
+    when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
+    when(upsertQuery.sql()).thenReturn("UPSERT_SQL");
+
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
+    when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
+    when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
+    when(deleteQuery.sql()).thenReturn("DELETE_SQL");
+
+    // Act
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val1"))
+            .textValue("v1", "val2")
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val3"))
+            .textValue("v1", "val4")
+            .build();
+    Delete delete1 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val5"))
+            .build();
+    Delete delete2 =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "val6"))
+            .build();
+    boolean ret = jdbcCrudService.mutate(Arrays.asList(put1, put2, delete1, delete2), connection);
+
+    // Assert
+    assertThat(ret).isTrue();
+    verify(preparedStatement, times(4)).addBatch();
+    verify(preparedStatement, times(2)).executeBatch(); // Two separate batches
   }
 }

@@ -35,11 +35,12 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcCrudService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.ThrowableFunction;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -47,7 +48,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +55,10 @@ import org.slf4j.LoggerFactory;
 public class JdbcTransactionManager extends AbstractDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
-  private final BasicDataSource dataSource;
-  private final BasicDataSource tableMetadataDataSource;
+  private final HikariDataSource dataSource;
+  private final HikariDataSource tableMetadataDataSource;
   private final RdbEngineStrategy rdbEngine;
-  private final JdbcService jdbcService;
+  private final JdbcCrudService jdbcCrudService;
 
   @Inject
   public JdbcTransactionManager(DatabaseConfig databaseConfig) {
@@ -76,23 +76,23 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         new OperationChecker(
             databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin));
 
-    jdbcService =
-        new JdbcService(
+    jdbcCrudService =
+        new JdbcCrudService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
   }
 
   @VisibleForTesting
   JdbcTransactionManager(
       DatabaseConfig databaseConfig,
-      BasicDataSource dataSource,
-      BasicDataSource tableMetadataDataSource,
+      HikariDataSource dataSource,
+      HikariDataSource tableMetadataDataSource,
       RdbEngineStrategy rdbEngine,
-      JdbcService jdbcService) {
+      JdbcCrudService jdbcCrudService) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
     this.rdbEngine = rdbEngine;
-    this.jdbcService = jdbcService;
+    this.jdbcCrudService = jdbcCrudService;
   }
 
   @Override
@@ -126,9 +126,9 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         rdbEngine.setConnectionToReadOnly(connection, true);
         transaction =
             new ReadOnlyDistributedTransaction(
-                new JdbcTransaction(txId, jdbcService, connection, rdbEngine));
+                new JdbcTransaction(txId, jdbcCrudService, connection, rdbEngine));
       } else {
-        transaction = new JdbcTransaction(txId, jdbcService, connection, rdbEngine);
+        transaction = new JdbcTransaction(txId, jdbcCrudService, connection, rdbEngine);
       }
 
       getNamespace().ifPresent(transaction::withNamespace);
@@ -443,15 +443,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
 
   @Override
   public void close() {
-    try {
-      dataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the dataSource", e);
-    }
-    try {
-      tableMetadataDataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the table metadata dataSource", e);
-    }
+    dataSource.close();
+    tableMetadataDataSource.close();
   }
 }

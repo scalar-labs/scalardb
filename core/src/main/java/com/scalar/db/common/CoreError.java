@@ -17,13 +17,13 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_INDEX_NON_INDEXED_COLUMN_SPECIFIED(
       Category.USER_ERROR,
       "0001",
-      "The column of the specified index key is not indexed. Operation: %s",
+      "The column of the specified index key is not indexed. Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_INDEX_INDEX_KEY_NOT_PROPERLY_SPECIFIED(
       Category.USER_ERROR,
       "0002",
-      "The index key is not properly specified. Operation: %s",
+      "The index key is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED(
@@ -57,46 +57,50 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_PROJECTION(
       Category.USER_ERROR,
       "0009",
-      "The specified projection is not found. Projection: %s, Operation: %s",
+      "The specified projection is not found. Projection: %s, Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_CLUSTERING_KEY_BOUNDARY(
       Category.USER_ERROR,
       "0010",
-      "The clustering key boundary is not properly specified. Operation: %s",
+      "The clustering key boundary is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_START_CLUSTERING_KEY(
       Category.USER_ERROR,
       "0011",
-      "The start clustering key is not properly specified. Operation: %s",
+      "The start clustering key is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_END_CLUSTERING_KEY(
       Category.USER_ERROR,
       "0012",
-      "The end clustering key is not properly specified. Operation: %s",
+      "The end clustering key is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED(
-      Category.USER_ERROR, "0013", "Orderings are not properly specified. Operation: %s", "", ""),
+      Category.USER_ERROR,
+      "0013",
+      "Orderings are not properly specified. Operation: %s; Table metadata: %s",
+      "",
+      ""),
   OPERATION_CHECK_ERROR_ORDERING_COLUMN_NOT_FOUND(
       Category.USER_ERROR,
       "0014",
-      "The specified ordering column is not found. Ordering: %s, Operation: %s",
+      "The specified ordering column is not found. Ordering: %s, Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_CONDITION(
       Category.USER_ERROR,
       "0015",
-      "The condition is not properly specified. Operation: %s",
+      "The condition is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   TABLE_NOT_FOUND(Category.USER_ERROR, "0016", "The table does not exist. Table: %s", "", ""),
   OPERATION_CHECK_ERROR_INVALID_COLUMN(
       Category.USER_ERROR,
       "0017",
-      "The column value is not properly specified. Column: %s, Operation: %s",
+      "The column value is not properly specified. Column: %s, Operation: %s; Table metadata: %s",
       "",
       ""),
   EMPTY_MUTATIONS_SPECIFIED(Category.USER_ERROR, "0018", "The mutations are empty", "", ""),
@@ -109,13 +113,13 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_PARTITION_KEY(
       Category.USER_ERROR,
       "0020",
-      "The partition key is not properly specified. Operation: %s",
+      "The partition key is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   OPERATION_CHECK_ERROR_CLUSTERING_KEY(
       Category.USER_ERROR,
       "0021",
-      "The clustering key is not properly specified. Operation: %s",
+      "The clustering key is not properly specified. Operation: %s; Table metadata: %s",
       "",
       ""),
   AUTH_NOT_ENABLED(
@@ -357,10 +361,10 @@ public enum CoreError implements ScalarDbError {
       ""),
   DYNAMO_ENCODER_CANNOT_ENCODE_TEXT_VALUE_CONTAINING_0X0000(
       Category.USER_ERROR, "0079", "Cannot encode a Text value that contains '\\u0000'", "", ""),
-  DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_NULL_OR_EMPTY(
+  DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_EMPTY(
       Category.USER_ERROR,
       "0081",
-      "An index column cannot be set to null or an empty value for Text or Blob in DynamoDB. Operation: %s",
+      "An index column cannot be set to an empty value for Text or Blob in DynamoDB. Operation: %s",
       "",
       ""),
   DYNAMO_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BOOLEAN_TYPE(
@@ -450,12 +454,6 @@ public enum CoreError implements ScalarDbError {
       "0103",
       "Put cannot have a condition when the target record is unread and implicit pre-read is disabled."
           + " Please read the target record beforehand or enable implicit pre-read: %s",
-      "",
-      ""),
-  CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0104",
-      "Writing data already-deleted by the same transaction is not allowed",
       "",
       ""),
   CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
@@ -1007,6 +1005,37 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0275",
       "Source tables cannot be dropped while virtual tables depending on them exist. Source table: %s; Virtual tables: %s",
+      "",
+      ""),
+  DELETE_IF_IS_NULL_FOR_RIGHT_SOURCE_TABLE_NOT_ALLOWED_FOR_LEFT_OUTER_VIRTUAL_TABLES(
+      Category.USER_ERROR,
+      "0276",
+      "The DeleteIf IS_NULL condition for right source table columns is not allowed in LEFT_OUTER virtual tables. Virtual table: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_TRANSACTION_METADATA_DECOUPLING_NOT_SUPPORTED_STORAGE(
+      Category.USER_ERROR,
+      "0277",
+      "The transaction metadata decoupling feature is not supported in the storage. Storage %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_TRANSACTION_METADATA_CONSISTENT_READS_NOT_GUARANTEED_STORAGE(
+      Category.USER_ERROR,
+      "0278",
+      "The storage does not guarantee consistent reads for virtual tables. Depending on the storage configuration, "
+          + "you may be able to adjust the settings to enable consistent reads. Please refer to the storage configuration for details. Storage: %s",
+      "",
+      ""),
+  OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED(
+      Category.USER_ERROR,
+      "0279",
+      "The size of a BLOB column value exceeds the maximum allowed size of %d bytes. Column: %s; Size: %d bytes",
+      "",
+      ""),
+  OPERATION_CHECK_ERROR_UPDATE_CONDITION(
+      Category.USER_ERROR,
+      "0280",
+      "The condition for the Update operation must be UpdateIf or UpdateIfExists. Operation: %s",
       "",
       ""),
 

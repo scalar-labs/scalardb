@@ -35,6 +35,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Column;
+import com.scalar.db.util.ScalarDbUtils;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -45,7 +47,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,11 +63,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   private static final Logger logger = LoggerFactory.getLogger(JdbcDatabase.class);
 
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
-  private final BasicDataSource tableMetadataDataSource;
+  private final HikariDataSource dataSource;
+  private final HikariDataSource tableMetadataDataSource;
   private final TableMetadataManager tableMetadataManager;
   private final VirtualTableInfoManager virtualTableInfoManager;
-  private final JdbcService jdbcService;
+  private final JdbcCrudService jdbcCrudService;
+  private final boolean requiresExplicitCommit;
 
   @Inject
   public JdbcDatabase(DatabaseConfig databaseConfig) {
@@ -75,17 +77,18 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSource(config, rdbEngine);
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
-    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config);
+    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config, requiresExplicitCommit);
     tableMetadataManager =
         new TableMetadataManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     OperationChecker operationChecker =
         new JdbcOperationChecker(
             databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin), rdbEngine);
 
-    jdbcService =
-        new JdbcService(
+    jdbcCrudService =
+        new JdbcCrudService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
 
     virtualTableInfoManager =
@@ -96,18 +99,20 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   JdbcDatabase(
       DatabaseConfig databaseConfig,
       RdbEngineStrategy rdbEngine,
-      BasicDataSource dataSource,
-      BasicDataSource tableMetadataDataSource,
+      HikariDataSource dataSource,
+      HikariDataSource tableMetadataDataSource,
       TableMetadataManager tableMetadataManager,
       VirtualTableInfoManager virtualTableInfoManager,
-      JdbcService jdbcService) {
+      JdbcCrudService jdbcCrudService,
+      boolean requiresExplicitCommit) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.jdbcService = jdbcService;
+    this.jdbcCrudService = jdbcCrudService;
     this.rdbEngine = rdbEngine;
     this.tableMetadataManager = tableMetadataManager;
     this.virtualTableInfoManager = virtualTableInfoManager;
+    this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
   @Override
@@ -116,9 +121,23 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
       rdbEngine.setConnectionToReadOnly(connection, true);
-      return jdbcService.get(get, connection);
+      Optional<Result> result = jdbcCrudService.get(get, connection);
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
+      return result;
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     } finally {
@@ -134,7 +153,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection = dataSource.getConnection();
       connection.setAutoCommit(false);
       rdbEngine.setConnectionToReadOnly(connection, true);
-      return jdbcService.getScanner(scan, connection);
+      return jdbcCrudService.getScanner(scan, connection);
     } catch (SQLException e) {
       try {
         if (connection != null) {
@@ -177,11 +196,24 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      if (!jdbcService.put(put, connection)) {
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
+      if (!jdbcCrudService.put(put, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
@@ -209,11 +241,24 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      if (!jdbcService.delete(delete, connection)) {
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
+      if (!jdbcCrudService.delete(delete, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
@@ -280,7 +325,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     }
 
     try {
-      if (!jdbcService.mutate(mutations, connection)) {
+      if (!jdbcCrudService.mutate(mutations, connection)) {
         try {
           connection.rollback();
         } catch (SQLException e) {
@@ -395,7 +440,19 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           putBuilderForLeftSourceTable.condition(ConditionBuilder.putIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          putBuilderForRightSourceTable.condition(ConditionBuilder.putIf(rightExpressions));
+          if (isAllIsNullOnRightColumnsInLeftOuterJoin(virtualTableInfo, rightExpressions)
+              && JdbcOperationAttributes
+                  .isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(put)) {
+            // In a LEFT_OUTER join, when all conditions on the right source table columns are
+            // IS_NULL, we cannot distinguish whether we should check for the existence of a
+            // right-side record with NULL values or for the case where the right-side record does
+            // not exist at all. Therefore, this behavior is controlled by the operation attribute.
+            // By default, we convert the condition to PutIfNotExists, assuming that the more common
+            // use case is to check that the right-side record does not exist.
+            putBuilderForRightSourceTable.condition(ConditionBuilder.putIfNotExists());
+          } else {
+            putBuilderForRightSourceTable.condition(ConditionBuilder.putIf(rightExpressions));
+          }
         }
       }
     }
@@ -464,7 +521,25 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           deleteBuilderForLeftSourceTable.condition(ConditionBuilder.deleteIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          deleteBuilderForRightSourceTable.condition(ConditionBuilder.deleteIf(rightExpressions));
+          if (isAllIsNullOnRightColumnsInLeftOuterJoin(virtualTableInfo, rightExpressions)
+              && !JdbcOperationAttributes
+                  .isLeftOuterVirtualTableDeleteIfIsNullOnRightColumnsAllowed(delete)) {
+            // In a LEFT_OUTER join, when all conditions on the right source table columns are
+            // IS_NULL, we cannot distinguish whether we should check for the existence of a
+            // right-side record with NULL values or for the case where the right-side record does
+            // not exist at all. This makes the delete operation semantically ambiguous. Therefore,
+            // this behavior is controlled by the operation attribute. By default, we disallow this
+            // operation to prevent unintended behavior.
+            assert delete.forNamespace().isPresent() && delete.forTable().isPresent();
+            throw new IllegalArgumentException(
+                CoreError
+                    .DELETE_IF_IS_NULL_FOR_RIGHT_SOURCE_TABLE_NOT_ALLOWED_FOR_LEFT_OUTER_VIRTUAL_TABLES
+                    .buildMessage(
+                        ScalarDbUtils.getFullTableName(
+                            delete.forNamespace().get(), delete.forTable().get())));
+          } else {
+            deleteBuilderForRightSourceTable.condition(ConditionBuilder.deleteIf(rightExpressions));
+          }
         }
       }
     }
@@ -472,6 +547,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Delete deleteForLeftSourceTable = deleteBuilderForLeftSourceTable.build();
     Delete deleteForRightSourceTable = deleteBuilderForRightSourceTable.build();
     return Arrays.asList(deleteForLeftSourceTable, deleteForRightSourceTable);
+  }
+
+  private boolean isAllIsNullOnRightColumnsInLeftOuterJoin(
+      VirtualTableInfo virtualTableInfo, List<ConditionalExpression> rightExpressions) {
+    return virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+        && rightExpressions.stream()
+            .allMatch(e -> e.getOperator() == ConditionalExpression.Operator.IS_NULL);
   }
 
   private void close(Connection connection) {
@@ -486,15 +568,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Override
   public void close() {
-    try {
-      dataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the dataSource", e);
-    }
-    try {
-      tableMetadataDataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the table metadata dataSource", e);
-    }
+    dataSource.close();
+    tableMetadataDataSource.close();
   }
 }

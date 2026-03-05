@@ -35,6 +35,8 @@ import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatColumn;
@@ -44,11 +46,15 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.io.Value;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
@@ -309,7 +315,7 @@ public final class ScalarDbUtils {
             c -> {
               if (!(c instanceof UpdateIf) && !(c instanceof UpdateIfExists)) {
                 throw new IllegalArgumentException(
-                    CoreError.OPERATION_CHECK_ERROR_CONDITION.buildMessage(update));
+                    CoreError.OPERATION_CHECK_ERROR_UPDATE_CONDITION.buildMessage(update));
               }
             });
   }
@@ -424,8 +430,8 @@ public final class ScalarDbUtils {
    * @param escape an escape character.
    * @return the equivalent Java regular expression of the given pattern
    */
-  private static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
-    assert likePattern != null : "LIKE pattern must not be null";
+  public static String convertRegexPatternFrom(String likePattern, @Nullable Character escape) {
+    Objects.requireNonNull(likePattern, "LIKE pattern must not be null");
 
     StringBuilder out = new StringBuilder();
     char[] chars = likePattern.toCharArray();
@@ -477,5 +483,34 @@ public final class ScalarDbUtils {
       builder.add(column);
     }
     return Optional.of(builder.build());
+  }
+
+  public static Column<?> createNullColumn(String columnName, DataType dataType) {
+    switch (dataType) {
+      case BOOLEAN:
+        return BooleanColumn.ofNull(columnName);
+      case INT:
+        return IntColumn.ofNull(columnName);
+      case BIGINT:
+        return BigIntColumn.ofNull(columnName);
+      case FLOAT:
+        return FloatColumn.ofNull(columnName);
+      case DOUBLE:
+        return DoubleColumn.ofNull(columnName);
+      case TEXT:
+        return TextColumn.ofNull(columnName);
+      case BLOB:
+        return BlobColumn.ofNull(columnName);
+      case DATE:
+        return DateColumn.ofNull(columnName);
+      case TIME:
+        return TimeColumn.ofNull(columnName);
+      case TIMESTAMP:
+        return TimestampColumn.ofNull(columnName);
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.ofNull(columnName);
+      default:
+        throw new AssertionError("Unsupported data type: " + dataType);
+    }
   }
 }

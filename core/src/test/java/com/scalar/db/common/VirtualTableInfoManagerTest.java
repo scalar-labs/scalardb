@@ -157,7 +157,7 @@ public class VirtualTableInfoManagerTest {
   }
 
   @Test
-  public void getVirtualTableInfo_VirtualTableDoesNotExist_ShouldNotCacheNullResult()
+  public void getVirtualTableInfo_VirtualTableDoesNotExist_ShouldCacheEmptyResult()
       throws Exception {
     // Arrange
     manager = new VirtualTableInfoManager(admin, -1);
@@ -168,8 +168,8 @@ public class VirtualTableInfoManagerTest {
     manager.getVirtualTableInfo("ns", "table");
     manager.getVirtualTableInfo("ns", "table");
 
-    // Assert - admin should be called multiple times because null is not cached
-    verify(admin, times(3)).getVirtualTableInfo("ns", "table");
+    // Assert - admin should be called only once because Optional.empty() is cached
+    verify(admin, times(1)).getVirtualTableInfo("ns", "table");
   }
 
   @Test

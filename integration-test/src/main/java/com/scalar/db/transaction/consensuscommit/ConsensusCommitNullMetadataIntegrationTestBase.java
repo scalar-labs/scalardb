@@ -19,6 +19,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
@@ -49,9 +50,8 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
-  private static final String TEST_NAME = "cc_null_metadata";
-  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
-  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
+  private static final String TEST_NAME = "cc_null";
+  private static final String NAMESPACE_BASE_NAME = "int_test_";
   private static final String TABLE_1 = "test_table1";
   private static final String TABLE_2 = "test_table2";
   private static final String ACCOUNT_ID = "account_id";
@@ -67,8 +67,8 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   private DatabaseConfig databaseConfig;
   private ConsensusCommitConfig consensusCommitConfig;
   private ConsensusCommitAdmin consensusCommitAdmin;
-  private String namespace1;
-  private String namespace2;
+  protected String namespace1;
+  protected String namespace2;
   private ParallelExecutor parallelExecutor;
 
   private ConsensusCommitManager manager;
@@ -80,34 +80,37 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
   @BeforeAll
   public void beforeAll() throws Exception {
-    initialize();
-    Properties properties = getProperties(TEST_NAME);
+    String testName = getTestName();
+    initialize(testName);
+
+    namespace1 = getNamespaceBaseName() + testName + "1";
+    namespace2 = getNamespaceBaseName() + testName + "2";
+
+    Properties properties = getProperties(testName);
 
     // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);
     consensusCommitConfig = new ConsensusCommitConfig(databaseConfig);
     consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
-    namespace1 = getNamespace1();
-    namespace2 = getNamespace2();
     createTables();
     originalStorage = factory.getStorage();
     parallelExecutor = new ParallelExecutor(consensusCommitConfig);
   }
 
-  protected void initialize() throws Exception {}
+  protected void initialize(String testName) throws Exception {}
+
+  protected String getTestName() {
+    return TEST_NAME;
+  }
 
   protected abstract Properties getProperties(String testName);
 
-  protected String getNamespace1() {
-    return NAMESPACE_1;
-  }
-
-  protected String getNamespace2() {
-    return NAMESPACE_2;
+  protected String getNamespaceBaseName() {
+    return NAMESPACE_BASE_NAME;
   }
 
   private void createTables() throws ExecutionException {
@@ -466,6 +469,28 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   @Test
+  public void getScanner_ScanGivenForCommittedRecord_ShouldReturnRecord()
+      throws TransactionException, ExecutionException {
+    // Arrange
+    populateRecordsWithNullMetadata(namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+
+    // Act
+    List<Result> results;
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      results = scanner.all();
+    }
+    transaction.commit();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+    Assertions.assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
+        .isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
   public void get_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
       throws TransactionException, ExecutionException {
     // Arrange
@@ -475,25 +500,6 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
     // Act
     Optional<Result> result1 = transaction.get(get);
-    Optional<Result> result2 = transaction.get(get);
-    transaction.commit();
-
-    // Assert
-    verify(storage).get(any(Get.class));
-    assertThat(result1).isEqualTo(result2);
-  }
-
-  @Test
-  public void
-      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
-          throws TransactionException, ExecutionException {
-    // Arrange
-    DistributedTransaction transaction = manager.begin();
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-
-    // Act
-    Optional<Result> result1 = transaction.get(get);
-    populateRecordsWithNullMetadata(namespace1, TABLE_1);
     Optional<Result> result2 = transaction.get(get);
     transaction.commit();
 
@@ -556,6 +562,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(scan);
   }
 
+  @Test
+  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
+      throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
+  }
+
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
       Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
@@ -605,6 +618,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(scan);
   }
 
+  @Test
+  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
+      throws TransactionException, ExecutionException, CoordinatorException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(scanAll);
+  }
+
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
@@ -649,6 +669,15 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scan);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+        scanAll);
   }
 
   private void
@@ -705,6 +734,15 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
         scan);
   }
 
+  @Test
+  public void
+      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
+        scanAll);
+  }
+
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
@@ -748,6 +786,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(scan);
+  }
+
+  @Test
+  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
+      throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
   }
 
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
@@ -799,6 +844,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(scan);
   }
 
+  @Test
+  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
+      throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(scanAll);
+  }
+
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
@@ -843,6 +895,15 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         scan);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+        scanAll);
   }
 
   private void
@@ -897,6 +958,15 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         scan);
+  }
+
+  @Test
+  public void
+      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
+        scanAll);
   }
 
   @Test
@@ -1120,69 +1190,5 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     Assertions.assertThat(
             ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
-  }
-
-  @Test
-  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
-      throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(scanAll);
-  }
-
-  @Test
-  public void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
-  }
-
-  @Test
-  public void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scanAll);
-  }
-
-  @Test
-  public void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scanAll);
-  }
-
-  @Test
-  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
-      throws TransactionException, ExecutionException, CoordinatorException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(scanAll);
-  }
-
-  @Test
-  public void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(scanAll);
-  }
-
-  @Test
-  public void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        scanAll);
-  }
-
-  @Test
-  public void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, TransactionException {
-    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scanAll);
   }
 }

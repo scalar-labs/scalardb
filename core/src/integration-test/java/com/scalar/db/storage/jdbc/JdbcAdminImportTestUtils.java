@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.storage.jdbc.JdbcAdmin.withConnection;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
@@ -24,6 +26,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -42,7 +45,6 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminImportTestUtils {
   static final String SUPPORTED_TABLE_NAME = "supported_table";
@@ -119,13 +121,15 @@ public class JdbcAdminImportTestUtils {
 
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
-  private final BasicDataSource dataSource;
+  private final HikariDataSource dataSource;
+  private final boolean requiresExplicitCommit;
 
   public JdbcAdminImportTestUtils(Properties properties) {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     majorVersion = getMajorVersion();
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
   }
 
   public List<TestData> createExistingDatabaseWithAllDataTypes(String namespace)
@@ -184,15 +188,21 @@ public class JdbcAdminImportTestUtils {
   }
 
   public void execute(String sql) throws SQLException {
-    try (Connection connection = dataSource.getConnection()) {
-      JdbcAdmin.execute(connection, sql);
-    }
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          JdbcAdmin.execute(connection, sql, requiresExplicitCommit);
+        });
   }
 
-  public void execute(String[] sql) throws SQLException {
-    try (Connection connection = dataSource.getConnection()) {
-      JdbcAdmin.execute(connection, sql);
-    }
+  public void execute(String[] sqls) throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          JdbcAdmin.execute(connection, sqls, requiresExplicitCommit);
+        });
   }
 
   private LinkedHashMap<String, String> prepareColumnsForMysql() {
@@ -358,12 +368,20 @@ public class JdbcAdminImportTestUtils {
     columns.put("col19", "TIMESTAMP"); // override to TIME
     columns.put("col20", "TIMESTAMP WITH TIME ZONE");
     columns.put("col21", "TIMESTAMP WITH LOCAL TIME ZONE");
+    columns.put("col22", "NUMBER(1)"); // override to BOOLEAN
     return columns;
   }
 
   private Map<String, DataType> prepareOverrideColumnsTypeForOracle() {
     return ImmutableMap.of(
-        "col16", DataType.TIME, "col17", DataType.TIMESTAMP, "col19", DataType.TIME);
+        "col16",
+        DataType.TIME,
+        "col17",
+        DataType.TIMESTAMP,
+        "col19",
+        DataType.TIME,
+        "col22",
+        DataType.BOOLEAN);
   }
 
   private TableMetadata prepareTableMetadataForOracle() {
@@ -391,6 +409,7 @@ public class JdbcAdminImportTestUtils {
         .addColumn("col19", DataType.TIME)
         .addColumn("col20", DataType.TIMESTAMPTZ)
         .addColumn("col21", DataType.TIMESTAMPTZ)
+        .addColumn("col22", DataType.BOOLEAN)
         .addPartitionKey("pk1")
         .addPartitionKey("pk2")
         .build();
@@ -904,7 +923,7 @@ public class JdbcAdminImportTestUtils {
     try (Connection connection = dataSource.getConnection()) {
       return connection.getMetaData().getDatabaseMajorVersion();
     } catch (SQLException e) {
-      throw new RuntimeException("Get database major version failed");
+      throw new RuntimeException("Get database major version failed", e);
     }
   }
 
@@ -954,6 +973,89 @@ public class JdbcAdminImportTestUtils {
             LocalDateTime.of(1003, 3, 2, 8, 35, 12, 123_000_000).toInstant(ZoneOffset.UTC));
       default:
         throw new AssertionError();
+    }
+  }
+
+  /**
+   * Returns the supported data types for primary key columns in the current database engine.
+   *
+   * <p>Currently, this method returns only those data types that are mapped to the ScalarDB
+   * primitive types: BOOLEAN, INT, BIGINT, FLOAT, DOUBLE, and TEXT.
+   *
+   * @return a map of supported data types for primary key columns
+   */
+  public Map<String, DataType> getSupportedDataTypeMapForPrimaryKey() {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("BOOLEAN", DataType.BOOLEAN)
+          .put("INT", DataType.INT)
+          .put("INT UNSIGNED", DataType.BIGINT)
+          .put("TINYINT", DataType.INT)
+          .put("SMALLINT", DataType.INT)
+          .put("MEDIUMINT", DataType.INT)
+          .put("BIGINT", DataType.BIGINT)
+          .put("FLOAT", DataType.FLOAT)
+          .put("DOUBLE", DataType.DOUBLE)
+          .put("CHAR(8)", DataType.TEXT)
+          .put("VARCHAR(512)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("boolean", DataType.BOOLEAN)
+          .put("smallint", DataType.INT)
+          .put("integer", DataType.INT)
+          .put("bigint", DataType.BIGINT)
+          .put("real", DataType.FLOAT)
+          .put("double precision", DataType.DOUBLE)
+          .put("char(3)", DataType.TEXT)
+          .put("varchar(512)", DataType.TEXT)
+          .put("text", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("NUMERIC(15,0)", DataType.BIGINT)
+          .put("NUMERIC(15,2)", DataType.DOUBLE)
+          .put("FLOAT(53)", DataType.DOUBLE)
+          .put("BINARY_FLOAT", DataType.FLOAT)
+          .put("BINARY_DOUBLE", DataType.DOUBLE)
+          .put("CHAR(3)", DataType.TEXT)
+          .put("VARCHAR2(512)", DataType.TEXT)
+          .put("NCHAR(3)", DataType.TEXT)
+          .put("NVARCHAR2(512)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("bit", DataType.BOOLEAN)
+          .put("tinyint", DataType.INT)
+          .put("smallint", DataType.INT)
+          .put("int", DataType.INT)
+          .put("bigint", DataType.BIGINT)
+          .put("real", DataType.FLOAT)
+          .put("float", DataType.DOUBLE)
+          .put("char(3)", DataType.TEXT)
+          .put("varchar(512)", DataType.TEXT)
+          .put("nchar(3)", DataType.TEXT)
+          .put("nvarchar(512)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("SMALLINT", DataType.INT)
+          .put("INT", DataType.INT)
+          .put("BIGINT", DataType.BIGINT)
+          .put("REAL", DataType.FLOAT)
+          .put("FLOAT(24)", DataType.FLOAT)
+          .put("DOUBLE", DataType.DOUBLE)
+          .put("FLOAT", DataType.DOUBLE)
+          .put("FLOAT(25)", DataType.DOUBLE)
+          .put("CHAR(3)", DataType.TEXT)
+          .put("VARCHAR(512)", DataType.TEXT)
+          .put("GRAPHIC(3)", DataType.TEXT)
+          .put("VARGRAPHIC(32)", DataType.TEXT)
+          .put("NCHAR(3)", DataType.TEXT)
+          .put("NVARCHAR(32)", DataType.TEXT)
+          .build();
+    } else {
+      throw new AssertionError("Unsupported database engine: " + rdbEngine);
     }
   }
 

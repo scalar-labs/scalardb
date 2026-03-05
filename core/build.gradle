@@ -178,7 +178,7 @@ dependencies {
     implementation 'software.amazon.awssdk:aws-crt-client'
     testImplementation 'software.amazon.awssdk:iam'
     testImplementation 'software.amazon.awssdk:iam-policy-builder'
-    implementation "org.apache.commons:commons-dbcp2:${commonsDbcp2Version}"
+    implementation "com.zaxxer:HikariCP:${hikariCpVersion}"
     implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8:${oracleDriverVersion}"
@@ -336,6 +336,14 @@ spotless {
         target 'src/*/java/**/*.java'
         importOrder()
         removeUnusedImports()
+        // Spotless v6 doesn't have forbidWildcardImports (added in v8). As a workaround, use custom step
+        // with the regex from: https://github.com/diffplug/spotless/blob/67f7df71cb29833c2f94789dc31e9ecff18a71c5/lib/src/main/java/com/diffplug/spotless/java/ForbidWildcardImportsStep.java#L31
+        custom 'forbidWildcardImports', { source ->
+            if (source =~ /(?m)^import\s+(?:static\s+)?[^;\n]*\*;\R?/) {
+                throw new AssertionError('Wildcard imports are not allowed')
+            }
+            source
+        }
         googleJavaFormat(googleJavaFormatVersion)
     }
 }

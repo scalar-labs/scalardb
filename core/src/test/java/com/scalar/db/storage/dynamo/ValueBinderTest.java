@@ -46,7 +46,7 @@ public class ValueBinderTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    binder = new ValueBinder(":foo");
+    binder = new ValueBinder(":foo", true);
   }
 
   @Test
@@ -399,5 +399,51 @@ public class ValueBinderTest {
             entry(":foo1", AttributeValue.builder().bool(ANY_BOOL).build()),
             entry(":foo2", AttributeValue.builder().nul(true).build()),
             entry(":foo3", AttributeValue.builder().n(String.valueOf(ANY_LONG)).build()));
+  }
+
+  @Test
+  public void visit_NullColumnWithBindNullValuesFalse_ShouldNotBindValue() {
+    // Arrange
+    ValueBinder binderWithoutNull = new ValueBinder(":bar", false);
+    IntColumn nullColumn = IntColumn.ofNull(ANY_NAME);
+    IntColumn nonNullColumn = IntColumn.of(ANY_NAME, ANY_INT);
+
+    // Act
+    nullColumn.accept(binderWithoutNull);
+    nonNullColumn.accept(binderWithoutNull);
+
+    // Assert
+    Map<String, AttributeValue> values = binderWithoutNull.build();
+    // The null column (index 0) should not be in the map
+    // Only the non-null column (index 1) should be present
+    assertThat(values)
+        .containsOnly(entry(":bar1", AttributeValue.builder().n(String.valueOf(ANY_INT)).build()));
+  }
+
+  @Test
+  public void visit_SeveralColumnsWithBindNullValuesFalse_ShouldBindOnlyNonNullColumns() {
+    // Arrange
+    ValueBinder binderWithoutNull = new ValueBinder(":bar", false);
+    BooleanColumn booleanColumn = BooleanColumn.of(ANY_NAME, ANY_BOOL);
+    IntColumn nullIntColumn = IntColumn.ofNull(ANY_NAME);
+    TextColumn nullTextColumn = TextColumn.ofNull(ANY_NAME);
+    BigIntColumn bigIntColumn = BigIntColumn.of(ANY_NAME, ANY_LONG);
+
+    // Act
+    booleanColumn.accept(binderWithoutNull);
+    nullIntColumn.accept(binderWithoutNull);
+    nullTextColumn.accept(binderWithoutNull);
+    bigIntColumn.accept(binderWithoutNull);
+
+    // Assert
+    Map<String, AttributeValue> values = binderWithoutNull.build();
+    // Index 0: booleanColumn (non-null) - should be present
+    // Index 1: nullIntColumn (null) - should NOT be present
+    // Index 2: nullTextColumn (null) - should NOT be present
+    // Index 3: bigIntColumn (non-null) - should be present
+    assertThat(values)
+        .containsOnly(
+            entry(":bar0", AttributeValue.builder().bool(ANY_BOOL).build()),
+            entry(":bar3", AttributeValue.builder().n(String.valueOf(ANY_LONG)).build()));
   }
 }

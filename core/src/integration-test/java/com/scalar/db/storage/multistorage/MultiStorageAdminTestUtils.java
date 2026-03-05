@@ -17,6 +17,7 @@ import com.scalar.db.storage.jdbc.RdbEngineFactory;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.storage.jdbc.TableMetadataService;
 import com.scalar.db.util.AdminTestUtils;
+import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -24,7 +25,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 public class MultiStorageAdminTestUtils extends AdminTestUtils {
   // for Cassandra
@@ -33,7 +33,7 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   // for JDBC
   private final String jdbcMetadataSchema;
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
+  private final HikariDataSource dataSource;
 
   public MultiStorageAdminTestUtils(Properties cassandraProperties, Properties jdbcProperties) {
     // Cassandra has the coordinator tables

@@ -55,7 +55,6 @@ import org.slf4j.LoggerFactory;
 public class Snapshot {
   private static final Logger logger = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
-  private final Isolation isolation;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
@@ -83,11 +82,9 @@ public class Snapshot {
 
   public Snapshot(
       String id,
-      Isolation isolation,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.id = id;
-    this.isolation = isolation;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     readSet = new ConcurrentHashMap<>();
@@ -101,7 +98,6 @@ public class Snapshot {
   @VisibleForTesting
   Snapshot(
       String id,
-      Isolation isolation,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
@@ -111,7 +107,6 @@ public class Snapshot {
       Map<Key, Delete> deleteSet,
       List<ScannerInfo> scannerSet) {
     this.id = id;
-    this.isolation = isolation;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
@@ -138,12 +133,38 @@ public class Snapshot {
     scanSet.put(scan, results);
   }
 
-  public void putIntoWriteSet(Key key, Put put) {
+  public void putIntoWriteSet(Key key, Put put) throws CrudException {
     if (deleteSet.containsKey(key)) {
-      throw new IllegalArgumentException(
-          CoreError.CONSENSUS_COMMIT_WRITING_ALREADY_DELETED_DATA_NOT_ALLOWED.buildMessage());
-    }
-    if (writeSet.containsKey(key)) {
+      // If a Put is performed on a previously deleted record within the same transaction, move it
+      // from the delete set to the write set. Since Delete clears all column values, any columns
+      // not explicitly specified in the Put must be set to null to ensure correct behavior.
+
+      deleteSet.remove(key);
+
+      PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(put);
+
+      TableMetadata metadata = getTableMetadata(key);
+      for (String columnName : metadata.getColumnNames()) {
+        if (!metadata.getPartitionKeyNames().contains(columnName)
+            && !metadata.getClusteringKeyNames().contains(columnName)
+            && !put.containsColumn(columnName)) {
+          putBuilder =
+              putBuilder.value(
+                  ScalarDbUtils.createNullColumn(
+                      columnName, metadata.getColumnDataType(columnName)));
+        }
+      }
+
+      // Disable insert mode since the record previously existed and was deleted within this
+      // transaction, so the operation should be treated as an update rather than an insert.
+      putBuilder = putBuilder.disableInsertMode();
+
+      // Enable implicit pre-read to ensure the previous record state is read for proper
+      // preparation.
+      putBuilder = putBuilder.enableImplicitPreRead();
+
+      writeSet.put(key, putBuilder.build());
+    } else if (writeSet.containsKey(key)) {
       if (isInsertModeEnabled(put)) {
         throw new IllegalArgumentException(
             CoreError.CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED.buildMessage());
@@ -231,6 +252,18 @@ public class Snapshot {
 
   public boolean hasWritesOrDeletes() {
     return !writeSet.isEmpty() || !deleteSet.isEmpty();
+  }
+
+  public boolean isScanSetEmpty() {
+    return scanSet.isEmpty();
+  }
+
+  public boolean isScannerSetEmpty() {
+    return scannerSet.isEmpty();
+  }
+
+  public boolean isGetSetEmpty() {
+    return getSet.isEmpty();
   }
 
   public boolean hasReads() {
@@ -523,10 +556,6 @@ public class Snapshot {
   @VisibleForTesting
   void toSerializable(DistributedStorage storage)
       throws ExecutionException, ValidationConflictException {
-    if (isolation != Isolation.SERIALIZABLE) {
-      return;
-    }
-
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Scan set is re-validated to check if there is no anti-dependency

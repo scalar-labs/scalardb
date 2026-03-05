@@ -21,7 +21,6 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -59,8 +58,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public Driver getDriver() {
-    return new com.ibm.db2.jcc.DB2Driver();
+  public String getDriverClassName() {
+    return com.ibm.db2.jcc.DB2Driver.class.getName();
   }
 
   @Override

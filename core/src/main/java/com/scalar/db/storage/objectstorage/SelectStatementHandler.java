@@ -158,7 +158,8 @@ public class SelectStatementHandler extends StatementHandler {
       String clusteringKeyName = iterator.next();
       if (!ordering.getColumnName().equals(clusteringKeyName)) {
         throw new IllegalArgumentException(
-            CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan));
+            CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(
+                scan, metadata));
       }
       boolean isValidOrder =
           ordering.getOrder() != metadata.getClusteringOrder(ordering.getColumnName());
@@ -167,7 +168,8 @@ public class SelectStatementHandler extends StatementHandler {
       } else {
         if (reverse != isValidOrder) {
           throw new IllegalArgumentException(
-              CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(scan));
+              CoreError.OPERATION_CHECK_ERROR_ORDERING_NOT_PROPERLY_SPECIFIED.buildMessage(
+                  scan, metadata));
         }
       }
     }

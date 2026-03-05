@@ -15,10 +15,10 @@ public class BlobStorageConfigTest {
   private static final String ANY_CONTACT_POINT = ANY_ENDPOINT + "/" + ANY_BUCKET;
   private static final String BLOB_STORAGE = "blob-storage";
   private static final String ANY_TABLE_METADATA_NAMESPACE = "any_namespace";
-  private static final String ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES = "5242880"; // 5MB
-  private static final String ANY_PARALLEL_UPLOAD_MAX_PARALLELISM = "4";
-  private static final String ANY_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES = "10485760"; // 10MB
-  private static final String ANY_REQUEST_TIMEOUT_IN_SECONDS = "30";
+  private static final String ANY_PARALLEL_UPLOAD_BLOCK_SIZE_BYTES = "5242880"; // 5MB
+  private static final String ANY_PARALLEL_UPLOAD_MAX_CONCURRENCY = "4";
+  private static final String ANY_PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES = "10485760"; // 10MB
+  private static final String ANY_REQUEST_TIMEOUT_SECS = "30";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -30,14 +30,13 @@ public class BlobStorageConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, BLOB_STORAGE);
     props.setProperty(DatabaseConfig.SYSTEM_NAMESPACE_NAME, ANY_TABLE_METADATA_NAMESPACE);
     props.setProperty(
-        BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES,
-        ANY_PARALLEL_UPLOAD_BLOCK_SIZE_IN_BYTES);
+        BlobStorageConfig.PARALLEL_UPLOAD_BLOCK_SIZE_BYTES, ANY_PARALLEL_UPLOAD_BLOCK_SIZE_BYTES);
     props.setProperty(
-        BlobStorageConfig.PARALLEL_UPLOAD_MAX_PARALLELISM, ANY_PARALLEL_UPLOAD_MAX_PARALLELISM);
+        BlobStorageConfig.PARALLEL_UPLOAD_MAX_CONCURRENCY, ANY_PARALLEL_UPLOAD_MAX_CONCURRENCY);
     props.setProperty(
-        BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_IN_BYTES,
-        ANY_PARALLEL_UPLOAD_THRESHOLD_IN_BYTES);
-    props.setProperty(BlobStorageConfig.REQUEST_TIMEOUT_IN_SECONDS, ANY_REQUEST_TIMEOUT_IN_SECONDS);
+        BlobStorageConfig.PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES,
+        ANY_PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES);
+    props.setProperty(BlobStorageConfig.REQUEST_TIMEOUT_SECS, ANY_REQUEST_TIMEOUT_SECS);
 
     // Act
     BlobStorageConfig config = new BlobStorageConfig(new DatabaseConfig(props));
@@ -48,14 +47,18 @@ public class BlobStorageConfigTest {
     assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
     assertThat(config.getMetadataNamespace()).isEqualTo(ANY_TABLE_METADATA_NAMESPACE);
-    assertThat(config.getParallelUploadBlockSizeInBytes()).isNotEmpty();
-    assertThat(config.getParallelUploadBlockSizeInBytes().get()).isEqualTo(5242880);
-    assertThat(config.getParallelUploadMaxParallelism()).isNotEmpty();
-    assertThat(config.getParallelUploadMaxParallelism().get()).isEqualTo(4);
-    assertThat(config.getParallelUploadThresholdInBytes()).isNotEmpty();
-    assertThat(config.getParallelUploadThresholdInBytes().get()).isEqualTo(10485760);
-    assertThat(config.getRequestTimeoutInSeconds()).isNotEmpty();
-    assertThat(config.getRequestTimeoutInSeconds().get()).isEqualTo(30);
+    assertThat(config.getParallelUploadBlockSizeBytes()).isNotEmpty();
+    assertThat(config.getParallelUploadBlockSizeBytes().get())
+        .isEqualTo(Long.parseLong(ANY_PARALLEL_UPLOAD_BLOCK_SIZE_BYTES));
+    assertThat(config.getParallelUploadMaxConcurrency()).isNotEmpty();
+    assertThat(config.getParallelUploadMaxConcurrency().get())
+        .isEqualTo(Integer.parseInt(ANY_PARALLEL_UPLOAD_MAX_CONCURRENCY));
+    assertThat(config.getParallelUploadThresholdSizeBytes()).isNotEmpty();
+    assertThat(config.getParallelUploadThresholdSizeBytes().get())
+        .isEqualTo(Long.parseLong(ANY_PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES));
+    assertThat(config.getRequestTimeoutSecs()).isNotEmpty();
+    assertThat(config.getRequestTimeoutSecs().get())
+        .isEqualTo(Integer.parseInt(ANY_REQUEST_TIMEOUT_SECS));
   }
 
   @Test
@@ -77,10 +80,10 @@ public class BlobStorageConfigTest {
     assertThat(config.getBucket()).isEqualTo(ANY_BUCKET);
     assertThat(config.getMetadataNamespace())
         .isEqualTo(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
-    assertThat(config.getParallelUploadBlockSizeInBytes()).isEmpty();
-    assertThat(config.getParallelUploadMaxParallelism()).isEmpty();
-    assertThat(config.getParallelUploadThresholdInBytes()).isEmpty();
-    assertThat(config.getRequestTimeoutInSeconds()).isEmpty();
+    assertThat(config.getParallelUploadBlockSizeBytes()).isEmpty();
+    assertThat(config.getParallelUploadMaxConcurrency()).isEmpty();
+    assertThat(config.getParallelUploadThresholdSizeBytes()).isEmpty();
+    assertThat(config.getRequestTimeoutSecs()).isEmpty();
   }
 
   @Test

@@ -19,11 +19,9 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiConsumer;
 
 public abstract class DecoratedTwoPhaseCommitTransactionManager
-    implements TwoPhaseCommitTransactionManager,
-        TwoPhaseCommitTransactionExpirationHandlerSettable {
+    implements TwoPhaseCommitTransactionManager {
 
   private final TwoPhaseCommitTransactionManager transactionManager;
 
@@ -196,14 +194,5 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
           .getOriginalTransactionManager();
     }
     return transactionManager;
-  }
-
-  @Override
-  public void setTransactionExpirationHandler(
-      BiConsumer<String, TwoPhaseCommitTransaction> handler) {
-    if (transactionManager instanceof TwoPhaseCommitTransactionExpirationHandlerSettable) {
-      ((TwoPhaseCommitTransactionExpirationHandlerSettable) transactionManager)
-          .setTransactionExpirationHandler(handler);
-    }
   }
 }

@@ -19,7 +19,6 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -236,7 +235,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public boolean isConflict(SQLException e) {
     // ORA-08177: can't serialize access for this transaction
     // ORA-00060: deadlock detected while waiting for resource
-    return e.getErrorCode() == 8177 || e.getErrorCode() == 60;
+    // ORA-08176: consistent read failure; rollback data not available
+    return e.getErrorCode() == 8177 || e.getErrorCode() == 60 || e.getErrorCode() == 8176;
   }
 
   @Override
@@ -308,6 +308,9 @@ class RdbEngineOracle extends AbstractRdbEngine {
                   numericTypeDescription, columnDescription));
         }
         if (digits == 0) {
+          if (columnSize == 1 && overrideDataType == DataType.BOOLEAN) {
+            return DataType.BOOLEAN;
+          }
           logger.info(
               "Data type larger than that of underlying database is assigned: {} to BIGINT",
               numericTypeDescription);
@@ -433,8 +436,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public Driver getDriver() {
-    return new oracle.jdbc.driver.OracleDriver();
+  public String getDriverClassName() {
+    return oracle.jdbc.driver.OracleDriver.class.getName();
   }
 
   @Override
@@ -546,5 +549,13 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
     // In Oracle, only the SERIALIZABLE isolation level guarantees consistent reads
     return Connection.TRANSACTION_SERIALIZABLE;
+  }
+
+  @Override
+  public boolean requiresExplicitCommit(int isolationLevel) {
+    // In Oracle with SERIALIZABLE isolation level, the snapshot is not updated until an explicit
+    // commit is performed. Without explicit commit, subsequent reads will continue to see the same
+    // snapshot from the beginning of the first transaction, even with autocommit enabled.
+    return isolationLevel == Connection.TRANSACTION_SERIALIZABLE;
   }
 }

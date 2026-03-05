@@ -9,16 +9,17 @@ import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
-/** A class that manages and caches virtual table information */
+/** A class that manages and caches virtual table information. */
 @ThreadSafe
 public class VirtualTableInfoManager {
 
-  private final LoadingCache<TableKey, VirtualTableInfo> virtualTableInfoCache;
+  private final LoadingCache<TableKey, Optional<VirtualTableInfo>> virtualTableInfoCache;
 
   public VirtualTableInfoManager(DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
@@ -26,7 +27,7 @@ public class VirtualTableInfoManager {
       builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
     virtualTableInfoCache =
-        builder.build(key -> admin.getVirtualTableInfo(key.namespace, key.table).orElse(null));
+        builder.build(key -> admin.getVirtualTableInfo(key.namespace, key.table));
   }
 
   /**
@@ -60,7 +61,9 @@ public class VirtualTableInfoManager {
       throws ExecutionException {
     try {
       TableKey key = new TableKey(namespace, table);
-      return virtualTableInfoCache.get(key);
+      Optional<VirtualTableInfo> virtualTableInfo = virtualTableInfoCache.get(key);
+      assert virtualTableInfo != null;
+      return virtualTableInfo.orElse(null);
     } catch (CompletionException e) {
       throw new ExecutionException(
           CoreError.GETTING_VIRTUAL_TABLE_INFO_FAILED.buildMessage(

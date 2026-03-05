@@ -3,11 +3,14 @@ package com.scalar.db.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +53,55 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManagerTest {
     assertThat(transaction2)
         .isInstanceOf(
             ActiveTransactionManagedTwoPhaseCommitTransactionManager.ActiveTransaction.class);
+  }
+
+  @Test
+  public void begin_TransactionAlreadyExists_ShouldRollbackAndThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+
+    TwoPhaseCommitTransaction wrappedTransaction1 = mock(TwoPhaseCommitTransaction.class);
+    when(wrappedTransaction1.getId()).thenReturn(txId);
+
+    TwoPhaseCommitTransaction wrappedTransaction2 = mock(TwoPhaseCommitTransaction.class);
+    when(wrappedTransaction2.getId()).thenReturn(txId);
+
+    when(wrappedTransactionManager.begin(txId))
+        .thenReturn(wrappedTransaction1)
+        .thenReturn(wrappedTransaction2);
+
+    transactionManager.begin(txId);
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.begin(txId))
+        .isInstanceOf(TransactionException.class);
+    verify(wrappedTransaction2).rollback();
+  }
+
+  @Test
+  public void begin_TransactionAlreadyExistsAndRollbackFails_ShouldThrowTransactionException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+
+    TwoPhaseCommitTransaction wrappedTransaction1 = mock(TwoPhaseCommitTransaction.class);
+    when(wrappedTransaction1.getId()).thenReturn(txId);
+
+    TwoPhaseCommitTransaction wrappedTransaction2 = mock(TwoPhaseCommitTransaction.class);
+    when(wrappedTransaction2.getId()).thenReturn(txId);
+    doThrow(new RollbackException("rollback failed", txId)).when(wrappedTransaction2).rollback();
+
+    when(wrappedTransactionManager.begin(txId))
+        .thenReturn(wrappedTransaction1)
+        .thenReturn(wrappedTransaction2);
+
+    transactionManager.begin(txId);
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.begin(txId))
+        .isInstanceOf(TransactionException.class);
+    verify(wrappedTransaction2).rollback();
   }
 
   @Test

@@ -8,7 +8,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -21,14 +20,19 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
+import com.scalar.db.api.StorageInfo;
+import com.scalar.db.api.StorageInfo.MutationAtomicityUnit;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.common.checker.ConditionChecker;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,8 +47,8 @@ public class ConsensusCommitOperationCheckerTest {
   private static final String ANY_METADATA_COL_1 = "any_metadata_col_1";
   private static final String ANY_METADATA_COL_2 = "any_metadata_col_2";
   @Mock private TransactionTableMetadataManager metadataManager;
-  @Mock private Put put;
-  @Mock private Delete delete;
+  @Mock private VirtualTableInfoManager virtualTableInfoManager;
+  @Mock private StorageInfoProvider storageInfoProvider;
   @Mock private TransactionTableMetadata tableMetadata;
   @Mock private ConditionChecker conditionChecker;
   private ConsensusCommitOperationChecker checker;
@@ -52,7 +56,10 @@ public class ConsensusCommitOperationCheckerTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    checker = spy(new ConsensusCommitOperationChecker(metadataManager, false));
+    checker =
+        spy(
+            new ConsensusCommitOperationChecker(
+                metadataManager, virtualTableInfoManager, storageInfoProvider, false));
     when(checker.createConditionChecker(any())).thenReturn(conditionChecker);
     when(metadataManager.getTransactionTableMetadata(any())).thenReturn(tableMetadata);
     LinkedHashSet<String> metadataColumns = new LinkedHashSet<>();
@@ -66,7 +73,13 @@ public class ConsensusCommitOperationCheckerTest {
   public void checkForPut_WithNonAllowedCondition_ShouldThrowIllegalArgumentException(
       Class<? extends MutationCondition> deleteConditonClass) {
     // Arrange
-    when(put.getCondition()).thenReturn(Optional.of(mock(deleteConditonClass)));
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(mock(deleteConditonClass))
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> checker.check(put)).isInstanceOf(IllegalArgumentException.class);
@@ -78,7 +91,13 @@ public class ConsensusCommitOperationCheckerTest {
       Class<? extends MutationCondition> putConditionClass) {
     // Arrange
     MutationCondition condition = mock(putConditionClass);
-    when(put.getCondition()).thenReturn(Optional.of(condition));
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
 
     // Act Assert
     assertThatCode(() -> checker.check(put)).doesNotThrowAnyException();
@@ -90,9 +109,15 @@ public class ConsensusCommitOperationCheckerTest {
       throws ExecutionException {
     // Arrange
     String fullTableName = "ns.tbl";
-    Set<String> columns = ImmutableSet.of(ANY_COL_1, ANY_METADATA_COL_1, ANY_COL_2);
-    when(put.forFullTableName()).thenReturn(Optional.of(fullTableName));
-    when(put.getContainedColumnNames()).thenReturn(columns);
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue(ANY_COL_1, 1)
+            .textValue(ANY_METADATA_COL_1, "metadata")
+            .intValue(ANY_COL_2, 2)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> checker.check(put))
@@ -106,8 +131,14 @@ public class ConsensusCommitOperationCheckerTest {
   public void checkForPut_ThatDoNotMutateMetadataColumns_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
-    Set<String> columns = ImmutableSet.of(ANY_COL_1, ANY_COL_2);
-    when(put.getContainedColumnNames()).thenReturn(columns);
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue(ANY_COL_1, 1)
+            .intValue(ANY_COL_2, 2)
+            .build();
 
     // Act Assert
     assertThatCode(() -> checker.check(put)).doesNotThrowAnyException();
@@ -123,8 +154,13 @@ public class ConsensusCommitOperationCheckerTest {
         ConditionBuilder.putIf(ConditionBuilder.column(ANY_COL_1).isNullInt())
             .and(ConditionBuilder.column(ANY_METADATA_COL_1).isNullText())
             .build();
-    when(put.getCondition()).thenReturn(Optional.of(condition));
-    when(put.forFullTableName()).thenReturn(Optional.of("ns.tbl"));
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> checker.check(put)).isInstanceOf(IllegalArgumentException.class);
@@ -139,7 +175,13 @@ public class ConsensusCommitOperationCheckerTest {
         ConditionBuilder.putIf(ConditionBuilder.column(ANY_COL_1).isNullInt())
             .and(ConditionBuilder.column(ANY_COL_2).isNullText())
             .build();
-    when(put.getCondition()).thenReturn(Optional.of(condition));
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
 
     // Act Assert
     assertThatCode(() -> checker.check(put)).doesNotThrowAnyException();
@@ -152,7 +194,13 @@ public class ConsensusCommitOperationCheckerTest {
   public void checkForDelete_WithNonAllowedCondition_ShouldThrowIllegalArgumentException(
       Class<? extends MutationCondition> putConditionClass) {
     // Arrange
-    when(delete.getCondition()).thenReturn(Optional.of(mock(putConditionClass)));
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(mock(putConditionClass))
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> checker.check(delete)).isInstanceOf(IllegalArgumentException.class);
@@ -164,7 +212,13 @@ public class ConsensusCommitOperationCheckerTest {
       Class<? extends MutationCondition> deleteConditionClass) {
     // Arrange
     MutationCondition condition = mock(deleteConditionClass);
-    when(delete.getCondition()).thenReturn(Optional.of(condition));
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
 
     // Act Assert
     assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
@@ -180,8 +234,13 @@ public class ConsensusCommitOperationCheckerTest {
         ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_COL_1).isNullInt())
             .and(ConditionBuilder.column(ANY_METADATA_COL_1).isNullText())
             .build();
-    when(delete.getCondition()).thenReturn(Optional.of(condition));
-    when(delete.forFullTableName()).thenReturn(Optional.of("ns.tbl"));
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
 
     // Act Assert
     assertThatThrownBy(() -> checker.check(delete)).isInstanceOf(IllegalArgumentException.class);
@@ -197,7 +256,13 @@ public class ConsensusCommitOperationCheckerTest {
         ConditionBuilder.deleteIf(ConditionBuilder.column(ANY_COL_1).isNullInt())
             .and(ConditionBuilder.column(ANY_COL_2).isNullText())
             .build();
-    when(delete.getCondition()).thenReturn(Optional.of(condition));
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
 
     // Act Assert
     assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
@@ -246,7 +311,10 @@ public class ConsensusCommitOperationCheckerTest {
   @Test
   public void checkForGet_IncludeMetadataEnabled_ShouldNotThrowException() {
     // Arrange
-    checker = spy(new ConsensusCommitOperationChecker(metadataManager, true));
+    checker =
+        spy(
+            new ConsensusCommitOperationChecker(
+                metadataManager, virtualTableInfoManager, storageInfoProvider, true));
 
     Get get =
         Get.newBuilder()
@@ -404,7 +472,10 @@ public class ConsensusCommitOperationCheckerTest {
   @Test
   public void checkForScan_IncludeMetadataEnabled_ShouldNotThrowException() {
     // Arrange
-    checker = spy(new ConsensusCommitOperationChecker(metadataManager, true));
+    checker =
+        spy(
+            new ConsensusCommitOperationChecker(
+                metadataManager, virtualTableInfoManager, storageInfoProvider, true));
 
     Scan scan =
         Scan.newBuilder()
@@ -631,19 +702,160 @@ public class ConsensusCommitOperationCheckerTest {
   }
 
   @Test
-  public void checkForScan_ValidScan_ShouldNotThrowException() {
+  public void
+      checkForGet_ForVirtualTableButConsistentReadsNotGuaranteed_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
     // Arrange
-    Scan scan =
-        Scan.newBuilder()
-            .namespace("ns")
-            .table("tbl")
-            .partitionKey(Key.ofInt("pk", 1))
-            .projections(ANY_COL_1, ANY_COL_2)
-            .build();
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
     TransactionContext context =
         new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
 
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(get)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, false);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(get, context))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void checkForGet_ForVirtualTableAndConsistentReadsGuaranteed_ShouldNotThrowException()
+      throws ExecutionException {
+    // Arrange
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(get)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(get, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForScan_ForVirtualTableButConsistentReadsNotGuaranteed_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(scan)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, false);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(scan, context))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void checkForScan_ForVirtualTableAndConsistentReadsGuaranteed_ShouldNotThrowException()
+      throws ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(scan)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
     // Act Assert
     assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForPut_ForVirtualTableButConsistentReadsNotGuaranteed_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Put put =
+        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(put)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, false);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(put)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void checkForPut_ForVirtualTableAndConsistentReadsGuaranteed_ShouldNotThrowException()
+      throws ExecutionException {
+    // Arrange
+    Put put =
+        Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(put)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(put)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForDelete_ForVirtualTableButConsistentReadsNotGuaranteed_ShouldThrowIllegalArgumentException()
+          throws ExecutionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(delete)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, false);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(delete)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void checkForDelete_ForVirtualTableAndConsistentReadsGuaranteed_ShouldNotThrowException()
+      throws ExecutionException {
+    // Arrange
+    Delete delete =
+        Delete.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
+
+    VirtualTableInfo virtualTableInfo = mock(VirtualTableInfo.class);
+    when(virtualTableInfoManager.getVirtualTableInfo(delete)).thenReturn(virtualTableInfo);
+
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(storageInfoProvider.getStorageInfo("ns")).thenReturn(storageInfo);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
   }
 }

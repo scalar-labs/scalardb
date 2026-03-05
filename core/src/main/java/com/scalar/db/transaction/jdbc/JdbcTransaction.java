@@ -28,7 +28,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
-import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcCrudService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -51,14 +51,17 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   private static final Logger logger = LoggerFactory.getLogger(JdbcTransaction.class);
 
   private final String txId;
-  private final JdbcService jdbcService;
+  private final JdbcCrudService jdbcCrudService;
   private final Connection connection;
   private final RdbEngineStrategy rdbEngine;
 
   JdbcTransaction(
-      String txId, JdbcService jdbcService, Connection connection, RdbEngineStrategy rdbEngine) {
+      String txId,
+      JdbcCrudService jdbcCrudService,
+      Connection connection,
+      RdbEngineStrategy rdbEngine) {
     this.txId = txId;
-    this.jdbcService = jdbcService;
+    this.jdbcCrudService = jdbcCrudService;
     this.connection = connection;
     this.rdbEngine = rdbEngine;
   }
@@ -72,7 +75,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   public Optional<Result> get(Get get) throws CrudException {
     get = copyAndSetTargetToIfNot(get);
     try {
-      return jdbcService.get(get, connection);
+      return jdbcCrudService.get(get, connection);
     } catch (SQLException e) {
       throw createCrudException(
           e, CoreError.JDBC_TRANSACTION_GET_OPERATION_FAILED.buildMessage(e.getMessage()));
@@ -85,7 +88,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   public List<Result> scan(Scan scan) throws CrudException {
     scan = copyAndSetTargetToIfNot(scan);
     try {
-      return jdbcService.scan(scan, connection);
+      return jdbcCrudService.scan(scan, connection);
     } catch (SQLException e) {
       throw createCrudException(
           e, CoreError.JDBC_TRANSACTION_SCAN_OPERATION_FAILED.buildMessage(e.getMessage()));
@@ -100,7 +103,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     com.scalar.db.api.Scanner scanner;
     try {
-      scanner = jdbcService.getScanner(scan, connection, false);
+      scanner = jdbcCrudService.getScanner(scan, connection, false);
     } catch (SQLException e) {
       throw createCrudException(
           e, CoreError.JDBC_TRANSACTION_GETTING_SCANNER_FAILED.buildMessage(e.getMessage()));
@@ -145,7 +148,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     put = copyAndSetTargetToIfNot(put);
 
     try {
-      if (!jdbcService.put(put, connection)) {
+      if (!jdbcCrudService.put(put, connection)) {
         throwUnsatisfiedConditionException(put);
       }
     } catch (SQLException e) {
@@ -169,7 +172,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     delete = copyAndSetTargetToIfNot(delete);
 
     try {
-      if (!jdbcService.delete(delete, connection)) {
+      if (!jdbcCrudService.delete(delete, connection)) {
         throwUnsatisfiedConditionException(delete);
       }
     } catch (SQLException e) {
@@ -203,7 +206,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     Put put = buildable.build();
 
     try {
-      if (!jdbcService.put(put, connection)) {
+      if (!jdbcCrudService.put(put, connection)) {
         throw new CrudConflictException(
             CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_INSERT.buildMessage(), txId);
       }
@@ -229,7 +232,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     Put put = buildable.build();
 
     try {
-      jdbcService.put(put, connection);
+      jdbcCrudService.put(put, connection);
     } catch (SQLException e) {
       throw createCrudException(
           e, CoreError.JDBC_TRANSACTION_UPSERT_OPERATION_FAILED.buildMessage(e.getMessage()));
@@ -263,7 +266,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     Put put = buildable.build();
 
     try {
-      if (!jdbcService.put(put, connection)) {
+      if (!jdbcCrudService.put(put, connection)) {
         if (update.getCondition().isPresent()) {
           throwUnsatisfiedConditionException(update);
         }

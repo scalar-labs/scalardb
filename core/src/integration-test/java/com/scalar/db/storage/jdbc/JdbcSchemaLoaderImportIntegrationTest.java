@@ -11,12 +11,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@DisabledIf("isSqlite")
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSqlite")
 public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportIntegrationTestBase {
 
   private static final Logger logger =
@@ -179,19 +178,6 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     testUtils.dropTable(namespace, table);
   }
 
-  @Test
-  @Override
-  public void importTables_ImportableTablesGiven_ShouldImportProperly() throws Exception {
-    super.importTables_ImportableTablesGiven_ShouldImportProperly();
-  }
-
-  @Test
-  @Override
-  public void importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly()
-      throws Exception {
-    super.importTables_ImportableTablesAndNonRelatedSameNameTableGiven_ShouldImportProperly();
-  }
-
   @AfterAll
   @Override
   public void afterAll() {
@@ -208,11 +194,6 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     } catch (Exception e) {
       logger.warn("Failed to close test utils", e);
     }
-  }
-
-  @SuppressWarnings("unused")
-  private static boolean isSqlite() {
-    return JdbcEnv.isSqlite();
   }
 
   @Override

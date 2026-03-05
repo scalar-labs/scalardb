@@ -6,6 +6,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -119,5 +120,20 @@ public final class JdbcTestUtils {
               return true;
             })
         .collect(Collectors.toList());
+  }
+
+  public static Isolation getIsolationLevel(int isolationLevel) {
+    switch (isolationLevel) {
+      case Connection.TRANSACTION_READ_UNCOMMITTED:
+        return Isolation.READ_UNCOMMITTED;
+      case Connection.TRANSACTION_READ_COMMITTED:
+        return Isolation.READ_COMMITTED;
+      case Connection.TRANSACTION_REPEATABLE_READ:
+        return Isolation.REPEATABLE_READ;
+      case Connection.TRANSACTION_SERIALIZABLE:
+        return Isolation.SERIALIZABLE;
+      default:
+        throw new IllegalArgumentException("Invalid isolation level: " + isolationLevel);
+    }
   }
 }

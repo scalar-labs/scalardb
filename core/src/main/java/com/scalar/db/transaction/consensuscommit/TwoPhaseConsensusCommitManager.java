@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -24,6 +25,7 @@ import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
 import com.scalar.db.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -42,7 +44,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,18 +86,24 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             parallelExecutor);
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
             storage,
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(new StorageInfoProvider(admin)),
+            new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
-            tableMetadataManager, config.isIncludeMetadataEnabled());
+            tableMetadataManager,
+            virtualTableInfoManager,
+            storageInfoProvider,
+            config.isIncludeMetadataEnabled());
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -119,18 +126,24 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             parallelExecutor);
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
             storage,
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(new StorageInfoProvider(admin)),
+            new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
-            tableMetadataManager, config.isIncludeMetadataEnabled());
+            tableMetadataManager,
+            virtualTableInfoManager,
+            storageInfoProvider,
+            config.isIncludeMetadataEnabled());
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -157,9 +170,15 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
-            tableMetadataManager, config.isIncludeMetadataEnabled());
+            tableMetadataManager,
+            virtualTableInfoManager,
+            storageInfoProvider,
+            config.isIncludeMetadataEnabled());
   }
 
   private void throwIfGroupCommitIsEnabled() {
@@ -208,7 +227,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
-    Snapshot snapshot = new Snapshot(txId, isolation, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
     TwoPhaseConsensusCommit transaction =

@@ -27,7 +27,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class BlobStorageWrapper implements ObjectStorageWrapper {
   private final BlobContainerClient client;
-  private final Duration requestTimeoutInSeconds;
+  private final Duration requestTimeoutSecs;
   private final ParallelTransferOptions parallelTransferOptions;
 
   public BlobStorageWrapper(BlobStorageConfig config) {
@@ -37,18 +37,17 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
             .credential(new StorageSharedKeyCredential(config.getUsername(), config.getPassword()))
             .buildClient()
             .getBlobContainerClient(config.getBucket());
-    this.requestTimeoutInSeconds =
-        config.getRequestTimeoutInSeconds().map(Duration::ofSeconds).orElse(null);
+    this.requestTimeoutSecs = config.getRequestTimeoutSecs().map(Duration::ofSeconds).orElse(null);
     this.parallelTransferOptions = new ParallelTransferOptions();
-    if (config.getParallelUploadBlockSizeInBytes().isPresent()) {
-      parallelTransferOptions.setBlockSizeLong(config.getParallelUploadBlockSizeInBytes().get());
+    if (config.getParallelUploadBlockSizeBytes().isPresent()) {
+      parallelTransferOptions.setBlockSizeLong(config.getParallelUploadBlockSizeBytes().get());
     }
-    if (config.getParallelUploadMaxParallelism().isPresent()) {
-      parallelTransferOptions.setMaxConcurrency(config.getParallelUploadMaxParallelism().get());
+    if (config.getParallelUploadMaxConcurrency().isPresent()) {
+      parallelTransferOptions.setMaxConcurrency(config.getParallelUploadMaxConcurrency().get());
     }
-    if (config.getParallelUploadThresholdInBytes().isPresent()) {
+    if (config.getParallelUploadThresholdSizeBytes().isPresent()) {
       parallelTransferOptions.setMaxSingleUploadSizeLong(
-          config.getParallelUploadThresholdInBytes().get());
+          config.getParallelUploadThresholdSizeBytes().get());
     }
   }
 
@@ -58,7 +57,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
     try {
       BlobClient blobClient = client.getBlobClient(key);
       BlobDownloadContentResponse response =
-          blobClient.downloadContentWithResponse(null, null, requestTimeoutInSeconds, null);
+          blobClient.downloadContentWithResponse(null, null, requestTimeoutSecs, null);
       String data = response.getValue().toString();
       String eTag = response.getHeaders().getValue(HttpHeaderName.ETAG);
       return Optional.of(new ObjectStorageWrapperResponse(data, eTag));
@@ -77,8 +76,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   @Override
   public Set<String> getKeys(String prefix) throws ObjectStorageWrapperException {
     try {
-      return client.listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
-          .stream()
+      return client.listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutSecs).stream()
           .map(BlobItem::getName)
           .collect(Collectors.toSet());
     } catch (Exception e) {
@@ -95,7 +93,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
           new BlobParallelUploadOptions(BinaryData.fromString(object))
               .setRequestConditions(new BlobRequestConditions().setIfNoneMatch("*"))
               .setParallelTransferOptions(parallelTransferOptions);
-      blobClient.uploadWithResponse(options, requestTimeoutInSeconds, null);
+      blobClient.uploadWithResponse(options, requestTimeoutSecs, null);
     } catch (BlobStorageException e) {
       if (e.getErrorCode().equals(BlobErrorCode.BLOB_ALREADY_EXISTS)) {
         throw new PreconditionFailedException(
@@ -120,7 +118,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
           new BlobParallelUploadOptions(BinaryData.fromString(object))
               .setRequestConditions(new BlobRequestConditions().setIfMatch(version))
               .setParallelTransferOptions(parallelTransferOptions);
-      blobClient.uploadWithResponse(options, requestTimeoutInSeconds, null);
+      blobClient.uploadWithResponse(options, requestTimeoutSecs, null);
     } catch (BlobStorageException e) {
       if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)
           || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
@@ -162,7 +160,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
     try {
       BlobClient blobClient = client.getBlobClient(key);
       blobClient.deleteWithResponse(
-          null, new BlobRequestConditions().setIfMatch(version), requestTimeoutInSeconds, null);
+          null, new BlobRequestConditions().setIfMatch(version), requestTimeoutSecs, null);
     } catch (BlobStorageException e) {
       if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)
           || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
@@ -183,7 +181,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
       client
-          .listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutInSeconds)
+          .listBlobs(new ListBlobsOptions().setPrefix(prefix), requestTimeoutSecs)
           .forEach(
               blobItem -> {
                 try {

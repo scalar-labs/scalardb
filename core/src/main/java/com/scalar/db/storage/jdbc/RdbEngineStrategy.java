@@ -13,7 +13,6 @@ import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -163,7 +162,7 @@ public interface RdbEngineStrategy {
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
 
-  Driver getDriver();
+  String getDriverClassName();
 
   default void throwIfImportNotSupported() {}
 
@@ -338,4 +337,26 @@ public interface RdbEngineStrategy {
    * @return the minimum isolation level required for consistent virtual table reads
    */
   int getMinimumIsolationLevelForConsistentVirtualTableRead();
+
+  /**
+   * Returns whether explicit commit is required for single operations.
+   *
+   * <p>When this method returns true, single operations (get, put, delete) will use explicit
+   * transaction control (setAutoCommit(false) and commit()) instead of relying on autocommit mode.
+   *
+   * @param isolationLevel the transaction isolation level
+   * @return true if explicit commit is required, false otherwise
+   */
+  default boolean requiresExplicitCommit(int isolationLevel) {
+    return false;
+  }
+
+  /**
+   * Returns the highest isolation level supported by the underlying database.
+   *
+   * @return the highest isolation level
+   */
+  default int getHighestIsolationLevel() {
+    return Connection.TRANSACTION_SERIALIZABLE;
+  }
 }
