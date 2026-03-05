@@ -1,6 +1,7 @@
 subprojects {
     ext {
-        jacksonVersion = '2.17.0'
+        commonsIoVersion = '2.16.1'
+        lombokVersion = '1.18.34'
     }
     dependencies {
         // AssertJ
@@ -32,6 +33,5 @@ subprojects {
         implementation("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}")
         implementation("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
         implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}")
-
     }
 }
