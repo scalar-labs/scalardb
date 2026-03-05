@@ -25,7 +25,9 @@ public class ExportCommandOptions {
 
   @CommandLine.Option(
       names = {"--mode"},
-      description = "ScalarDB mode (STORAGE, TRANSACTION) (default: STORAGE)",
+      description =
+          "ScalarDB mode (STORAGE, TRANSACTION). Accepted for import/export parity and "
+              + "currently has no effect on export. (default: STORAGE)",
       paramLabel = "<MODE>",
       defaultValue = "STORAGE")
   protected ScalarDbMode scalarDbMode;
