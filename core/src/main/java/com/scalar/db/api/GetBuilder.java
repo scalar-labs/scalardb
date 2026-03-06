@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 
 public class GetBuilder extends SelectionBuilder {
@@ -245,30 +246,35 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableGetWithOngoingWhere(this, condition);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       return new BuildableGetWithOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       return new BuildableGetWithOngoingWhereOr(this, andConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
       checkNotNull(orConditionSets);
       return new BuildableGetWithOngoingWhereAnd(this, orConditionSets);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
       checkNotNull(andConditionSets);
       return new BuildableGetWithOngoingWhereOr(this, andConditionSets);
@@ -474,30 +480,35 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithIndexOngoingWhere where(ConditionalExpression condition) {
       checkNotNull(condition);
       return new BuildableGetWithIndexOngoingWhere(this, condition);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithIndexOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkNotNull(orConditionSet);
       return new BuildableGetWithIndexOngoingWhereAnd(this, orConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithIndexOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkNotNull(andConditionSet);
       return new BuildableGetWithIndexOngoingWhereOr(this, andConditionSet);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithIndexOngoingWhereAnd whereAnd(Set<OrConditionSet> orConditionSets) {
       checkNotNull(orConditionSets);
       return new BuildableGetWithIndexOngoingWhereAnd(this, orConditionSets);
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetWithIndexOngoingWhereOr whereOr(Set<AndConditionSet> andConditionSets) {
       checkNotNull(andConditionSets);
       return new BuildableGetWithIndexOngoingWhereOr(this, andConditionSets);
@@ -811,6 +822,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetFromExistingWithOngoingWhere where(ConditionalExpression condition) {
       checkConditionsEmpty();
       checkNotNull(condition);
@@ -818,6 +830,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetFromExistingWithOngoingWhereAnd where(OrConditionSet orConditionSet) {
       checkConditionsEmpty();
       checkNotNull(orConditionSet);
@@ -825,6 +838,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetFromExistingWithOngoingWhereOr where(AndConditionSet andConditionSet) {
       checkConditionsEmpty();
       checkNotNull(andConditionSet);
@@ -832,6 +846,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetFromExistingWithOngoingWhereAnd whereAnd(
         Set<OrConditionSet> orConditionSets) {
       checkConditionsEmpty();
@@ -840,6 +855,7 @@ public class GetBuilder extends SelectionBuilder {
     }
 
     @Override
+    @CheckReturnValue
     public BuildableGetFromExistingWithOngoingWhereOr whereOr(
         Set<AndConditionSet> andConditionSets) {
       checkConditionsEmpty();

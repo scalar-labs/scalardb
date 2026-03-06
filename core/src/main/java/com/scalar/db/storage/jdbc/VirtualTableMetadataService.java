@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcAdmin.execute;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.executeQuery;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.executeUpdate;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.api.VirtualTableInfo;
@@ -9,10 +11,8 @@ import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -32,10 +32,13 @@ public class VirtualTableMetadataService {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final boolean requiresExplicitCommit;
 
-  VirtualTableMetadataService(String metadataSchema, RdbEngineStrategy rdbEngine) {
+  VirtualTableMetadataService(
+      String metadataSchema, RdbEngineStrategy rdbEngine, boolean requiresExplicitCommit) {
     this.metadataSchema = metadataSchema;
     this.rdbEngine = rdbEngine;
+    this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
   void createVirtualTablesTableIfNotExists(Connection connection) throws SQLException {
@@ -77,10 +80,7 @@ public class VirtualTableMetadataService {
 
   private boolean isVirtualTablesTableEmpty(Connection connection) throws SQLException {
     String selectAllTables = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
-    try (Statement statement = connection.createStatement();
-        ResultSet results = statement.executeQuery(selectAllTables)) {
-      return !results.next();
-    }
+    return executeQuery(connection, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
   }
 
   void insertIntoVirtualTablesTable(
@@ -96,14 +96,17 @@ public class VirtualTableMetadataService {
       throws SQLException {
     String insertStatement =
         "INSERT INTO " + encloseFullTableName(metadataSchema, TABLE_NAME) + " VALUES (?,?,?,?,?)";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(insertStatement)) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
-      preparedStatement.setString(2, getFullTableName(leftSourceNamespace, leftSourceTable));
-      preparedStatement.setString(3, getFullTableName(rightSourceNamespace, rightSourceTable));
-      preparedStatement.setString(4, joinType.name());
-      preparedStatement.setString(5, attributes);
-      preparedStatement.execute();
-    }
+    executeUpdate(
+        connection,
+        insertStatement,
+        requiresExplicitCommit,
+        ps -> {
+          ps.setString(1, getFullTableName(namespace, table));
+          ps.setString(2, getFullTableName(leftSourceNamespace, leftSourceTable));
+          ps.setString(3, getFullTableName(rightSourceNamespace, rightSourceTable));
+          ps.setString(4, joinType.name());
+          ps.setString(5, attributes);
+        });
   }
 
   void deleteFromVirtualTablesTable(Connection connection, String namespace, String table)
@@ -114,10 +117,11 @@ public class VirtualTableMetadataService {
             + " WHERE "
             + enclose(COL_FULL_TABLE_NAME)
             + " = ?";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(deleteStatement)) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
-      preparedStatement.execute();
-    }
+    executeUpdate(
+        connection,
+        deleteStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, getFullTableName(namespace, table)));
   }
 
   @Nullable
@@ -133,16 +137,17 @@ public class VirtualTableMetadataService {
             + " WHERE "
             + enclose(COL_FULL_TABLE_NAME)
             + " = ?";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(selectStatement)) {
-      preparedStatement.setString(1, getFullTableName(namespace, table));
-      try (ResultSet results = preparedStatement.executeQuery()) {
-        if (results.next()) {
-          return createVirtualTableInfoFromResultSet(results);
-        }
-
-        return null;
-      }
-    }
+    return executeQuery(
+        connection,
+        selectStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, getFullTableName(namespace, table)),
+        results -> {
+          if (results.next()) {
+            return createVirtualTableInfoFromResultSet(results);
+          }
+          return null;
+        });
   }
 
   List<VirtualTableInfo> getVirtualTableInfosBySourceTable(
@@ -159,18 +164,22 @@ public class VirtualTableMetadataService {
             + " = ? OR "
             + enclose(COL_RIGHT_SOURCE_TABLE_FULL_TABLE_NAME)
             + " = ?";
-    try (PreparedStatement preparedStatement = connection.prepareStatement(selectStatement)) {
-      String sourceTableFullTableName = getFullTableName(sourceNamespace, sourceTable);
-      preparedStatement.setString(1, sourceTableFullTableName);
-      preparedStatement.setString(2, sourceTableFullTableName);
-      try (ResultSet results = preparedStatement.executeQuery()) {
-        List<VirtualTableInfo> ret = new ArrayList<>();
-        while (results.next()) {
-          ret.add(createVirtualTableInfoFromResultSet(results));
-        }
-        return ret;
-      }
-    }
+    return executeQuery(
+        connection,
+        selectStatement,
+        requiresExplicitCommit,
+        ps -> {
+          String sourceTableFullTableName = getFullTableName(sourceNamespace, sourceTable);
+          ps.setString(1, sourceTableFullTableName);
+          ps.setString(2, sourceTableFullTableName);
+        },
+        results -> {
+          List<VirtualTableInfo> ret = new ArrayList<>();
+          while (results.next()) {
+            ret.add(createVirtualTableInfoFromResultSet(results));
+          }
+          return ret;
+        });
   }
 
   private VirtualTableInfo createVirtualTableInfoFromResultSet(ResultSet results)
@@ -243,19 +252,20 @@ public class VirtualTableMetadataService {
             + " WHERE "
             + enclose(COL_FULL_TABLE_NAME)
             + " LIKE ?";
-    try (PreparedStatement preparedStatement =
-        connection.prepareStatement(selectTablesOfNamespaceStatement)) {
-      String prefix = namespace + ".";
-      preparedStatement.setString(1, prefix + "%");
-      try (ResultSet results = preparedStatement.executeQuery()) {
-        Set<String> tableNames = new HashSet<>();
-        while (results.next()) {
-          String tableName = results.getString(COL_FULL_TABLE_NAME).substring(prefix.length());
-          tableNames.add(tableName);
-        }
-        return tableNames;
-      }
-    }
+    String prefix = namespace + ".";
+    return executeQuery(
+        connection,
+        selectTablesOfNamespaceStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, prefix + "%"),
+        results -> {
+          Set<String> tableNames = new HashSet<>();
+          while (results.next()) {
+            String tableName = results.getString(COL_FULL_TABLE_NAME).substring(prefix.length());
+            tableNames.add(tableName);
+          }
+          return tableNames;
+        });
   }
 
   Set<String> getNamespaceNamesOfExistingTables(Connection connection) throws SQLException {
@@ -268,16 +278,19 @@ public class VirtualTableMetadataService {
             + enclose(COL_FULL_TABLE_NAME)
             + " FROM "
             + encloseFullTableName(metadataSchema, TABLE_NAME);
-    try (Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(selectAllTableNames)) {
-      Set<String> namespaceOfExistingTables = new HashSet<>();
-      while (rs.next()) {
-        String fullTableName = rs.getString(COL_FULL_TABLE_NAME);
-        String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
-        namespaceOfExistingTables.add(namespaceName);
-      }
-      return namespaceOfExistingTables;
-    }
+    return executeQuery(
+        connection,
+        selectAllTableNames,
+        requiresExplicitCommit,
+        rs -> {
+          Set<String> namespaceOfExistingTables = new HashSet<>();
+          while (rs.next()) {
+            String fullTableName = rs.getString(COL_FULL_TABLE_NAME);
+            String namespaceName = fullTableName.substring(0, fullTableName.indexOf('.'));
+            namespaceOfExistingTables.add(namespaceName);
+          }
+          return namespaceOfExistingTables;
+        });
   }
 
   private String getTextType(int charLength, boolean isKey) {
@@ -291,7 +304,7 @@ public class VirtualTableMetadataService {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt);
+      execute(connection, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -305,11 +318,10 @@ public class VirtualTableMetadataService {
     String fullTableName = encloseFullTableName(namespace, table);
     String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try {
-      execute(connection, sql);
+      execute(connection, sql, requiresExplicitCommit);
       return true;
     } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select
-      // query
+      // An exception will be thrown if the table does not exist when executing the select query
       if (rdbEngine.isUndefinedTableError(e)) {
         return false;
       }
@@ -319,8 +331,7 @@ public class VirtualTableMetadataService {
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {
     String dropTableStatement = "DROP TABLE " + fullTableName;
-
-    execute(connection, dropTableStatement);
+    execute(connection, dropTableStatement, requiresExplicitCommit);
   }
 
   private String enclose(String name) {

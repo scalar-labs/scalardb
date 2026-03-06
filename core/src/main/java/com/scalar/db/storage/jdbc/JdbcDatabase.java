@@ -36,6 +36,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -46,7 +47,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
-import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,11 +63,12 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   private static final Logger logger = LoggerFactory.getLogger(JdbcDatabase.class);
 
   private final RdbEngineStrategy rdbEngine;
-  private final BasicDataSource dataSource;
-  private final BasicDataSource tableMetadataDataSource;
+  private final HikariDataSource dataSource;
+  private final HikariDataSource tableMetadataDataSource;
   private final TableMetadataManager tableMetadataManager;
   private final VirtualTableInfoManager virtualTableInfoManager;
-  private final JdbcService jdbcService;
+  private final JdbcCrudService jdbcCrudService;
+  private final boolean requiresExplicitCommit;
 
   @Inject
   public JdbcDatabase(DatabaseConfig databaseConfig) {
@@ -76,17 +77,18 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSource(config, rdbEngine);
+    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
-    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config);
+    JdbcAdmin jdbcAdmin = new JdbcAdmin(tableMetadataDataSource, config, requiresExplicitCommit);
     tableMetadataManager =
         new TableMetadataManager(jdbcAdmin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     OperationChecker operationChecker =
         new JdbcOperationChecker(
             databaseConfig, tableMetadataManager, new StorageInfoProvider(jdbcAdmin), rdbEngine);
 
-    jdbcService =
-        new JdbcService(
+    jdbcCrudService =
+        new JdbcCrudService(
             tableMetadataManager, operationChecker, rdbEngine, databaseConfig.getScanFetchSize());
 
     virtualTableInfoManager =
@@ -97,18 +99,20 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   JdbcDatabase(
       DatabaseConfig databaseConfig,
       RdbEngineStrategy rdbEngine,
-      BasicDataSource dataSource,
-      BasicDataSource tableMetadataDataSource,
+      HikariDataSource dataSource,
+      HikariDataSource tableMetadataDataSource,
       TableMetadataManager tableMetadataManager,
       VirtualTableInfoManager virtualTableInfoManager,
-      JdbcService jdbcService) {
+      JdbcCrudService jdbcCrudService,
+      boolean requiresExplicitCommit) {
     super(databaseConfig);
     this.dataSource = dataSource;
     this.tableMetadataDataSource = tableMetadataDataSource;
-    this.jdbcService = jdbcService;
+    this.jdbcCrudService = jdbcCrudService;
     this.rdbEngine = rdbEngine;
     this.tableMetadataManager = tableMetadataManager;
     this.virtualTableInfoManager = virtualTableInfoManager;
+    this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
   @Override
@@ -117,9 +121,23 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
       rdbEngine.setConnectionToReadOnly(connection, true);
-      return jdbcService.get(get, connection);
+      Optional<Result> result = jdbcCrudService.get(get, connection);
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
+      return result;
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     } finally {
@@ -135,7 +153,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       connection = dataSource.getConnection();
       connection.setAutoCommit(false);
       rdbEngine.setConnectionToReadOnly(connection, true);
-      return jdbcService.getScanner(scan, connection);
+      return jdbcCrudService.getScanner(scan, connection);
     } catch (SQLException e) {
       try {
         if (connection != null) {
@@ -178,11 +196,24 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      if (!jdbcService.put(put, connection)) {
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
+      if (!jdbcCrudService.put(put, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(put));
       }
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
@@ -210,11 +241,24 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      if (!jdbcService.delete(delete, connection)) {
+      if (requiresExplicitCommit) {
+        connection.setAutoCommit(false);
+      }
+      if (!jdbcCrudService.delete(delete, connection)) {
         throw new NoMutationException(
             CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete));
       }
+      if (requiresExplicitCommit) {
+        connection.commit();
+      }
     } catch (SQLException e) {
+      try {
+        if (connection != null && requiresExplicitCommit) {
+          connection.rollback();
+        }
+      } catch (SQLException ex) {
+        e.addSuppressed(ex);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
@@ -281,7 +325,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     }
 
     try {
-      if (!jdbcService.mutate(mutations, connection)) {
+      if (!jdbcCrudService.mutate(mutations, connection)) {
         try {
           connection.rollback();
         } catch (SQLException e) {
@@ -524,15 +568,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Override
   public void close() {
-    try {
-      dataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the dataSource", e);
-    }
-    try {
-      tableMetadataDataSource.close();
-    } catch (SQLException e) {
-      logger.warn("Failed to close the table metadata dataSource", e);
-    }
+    dataSource.close();
+    tableMetadataDataSource.close();
   }
 }

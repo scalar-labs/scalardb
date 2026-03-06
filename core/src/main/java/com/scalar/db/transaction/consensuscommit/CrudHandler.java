@@ -309,7 +309,7 @@ public class CrudHandler {
   }
 
   private boolean isValidationOrSnapshotReadRequired(TransactionContext context) {
-    return context.isValidationRequired() || isSnapshotReadRequired(context);
+    return context.isValidationPossiblyRequired() || isSnapshotReadRequired(context);
   }
 
   private void putIntoGetSetInSnapshot(
@@ -337,7 +337,7 @@ public class CrudHandler {
       LinkedHashMap<Snapshot.Key, TransactionResult> results,
       TransactionContext context) {
     // if validation is not required, we don't need to put the results into the scanner set
-    if (context.isValidationRequired()) {
+    if (context.isValidationPossiblyRequired()) {
       context.snapshot.putIntoScannerSet(scan, results);
     }
   }
@@ -470,7 +470,7 @@ public class CrudHandler {
       try {
         if (context.snapshot.containsKeyInWriteSet(recoveryResult.key)
             || context.snapshot.containsKeyInDeleteSet(recoveryResult.key)
-            || context.isValidationRequired()) {
+            || context.isValidationPossiblyRequired()) {
           recoveryResult.recoveryFuture.get();
         }
       } catch (java.util.concurrent.ExecutionException e) {

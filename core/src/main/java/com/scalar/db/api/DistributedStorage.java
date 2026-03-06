@@ -115,30 +115,34 @@ public interface DistributedStorage extends AutoCloseable {
   Optional<String> getTable();
 
   /**
-   * Retrieves a result from the underlying storage with the specified {@link Get} command with a
-   * primary key and returns the result.
+   * Retrieves a result from the underlying storage with the specified {@link Get} or {@link
+   * GetWithIndex} command.
    *
-   * @param get a {@code Get} command
+   * <ul>
+   *   <li>{@link Get} : retrieves a result by specifying a primary key (partition key and optional
+   *       clustering key).
+   *   <li>{@link GetWithIndex} : retrieves a result by specifying an index key.
+   * </ul>
+   *
+   * @param get a {@link Get} or {@link GetWithIndex} command
    * @return an {@code Optional} with the returned result
    * @throws ExecutionException if the operation fails
    */
   Optional<Result> get(Get get) throws ExecutionException;
 
   /**
-   * Retrieves results from the underlying storage with the specified {@link Scan} or {@link
-   * ScanAll} or {@link ScanWithIndex} command and returns {@link Scanner} to iterate the results.
+   * Retrieves results from the underlying storage with the specified {@link Scan}, {@link ScanAll},
+   * or {@link ScanWithIndex} command and returns a {@link Scanner} to iterate over the results.
    *
    * <ul>
-   *   <li>{@link Scan} : by specifying a partition key, it will return results within the
-   *       partition. Results can be filtered by specifying a range of clustering keys.
-   *   <li>{@link ScanAll} : for a given table, it will return all its records even if they span
-   *       several partitions.
-   *   <li>{@link ScanWithIndex} : by specifying an index key, it will return results within the
-   *       index.
+   *   <li>{@link Scan} : retrieves results within a partition by specifying a partition key.
+   *       Results can be filtered by specifying a range of clustering keys.
+   *   <li>{@link ScanAll} : retrieves all records in a table even if they span several partitions.
+   *   <li>{@link ScanWithIndex} : retrieves results by specifying an index key.
    * </ul>
    *
-   * @param scan a {@code Scan} or {@code ScanAll} command
-   * @return {@link Scanner} to iterate results
+   * @param scan a {@link Scan}, {@link ScanAll}, or {@link ScanWithIndex} command
+   * @return a {@link Scanner} to iterate over the results
    * @throws ExecutionException if the operation fails
    */
   Scanner scan(Scan scan) throws ExecutionException;
@@ -180,6 +184,9 @@ public interface DistributedStorage extends AutoCloseable {
 
   /**
    * Mutates entries of the underlying storage with the specified list of {@link Mutation} commands.
+   *
+   * <p>The execution order of mutations is not guaranteed. Users must not specify multiple
+   * mutations for the same record(s) if the outcome depends on the execution order.
    *
    * <p>Note that this method only supports mutations within the atomicity unit specified by {@link
    * StorageInfo#getMutationAtomicityUnit()}. For example, if the atomicity unit of the storage is

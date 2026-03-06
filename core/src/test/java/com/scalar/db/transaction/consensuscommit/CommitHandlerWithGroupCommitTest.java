@@ -17,8 +17,10 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
@@ -132,7 +134,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
         withBeforePreparationHook);
 
@@ -146,7 +148,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withBeforePreparationHook);
 
     // Assert
@@ -159,7 +161,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     groupCommitter.remove(anyId());
     clearInvocations(groupCommitter);
@@ -206,10 +208,24 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   @Override
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
+  public void commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
-    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withBeforePreparationHook);
+          CoordinatorException, ValidationConflictException, CrudException {
+    super.commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(withBeforePreparationHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void commit_SerializableIsolationWithReads_ShouldValidateRecords(
+      boolean withBeforePreparationHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException, CrudException {
+    super.commit_SerializableIsolationWithReads_ShouldValidateRecords(withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -217,8 +233,25 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
   @Test
   @Override
+  public void validateRecords_ValidationNotRequired_ShouldNotCallToSerializable()
+      throws ValidationException, ExecutionException, CrudException {
+    super.validateRecords_ValidationNotRequired_ShouldNotCallToSerializable();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void validateRecords_ValidationRequired_ShouldCallToSerializable()
+      throws ValidationException, ExecutionException, CrudException {
+    super.validateRecords_ValidationRequired_ShouldCallToSerializable();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
   public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
-      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException,
+          CrudException {
     super.onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations();
 
     // Assert
@@ -229,7 +262,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     super.onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException();
 
     // Assert
@@ -240,7 +273,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     super
         .onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException();
 
@@ -252,7 +285,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     super
         .onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException();
 
@@ -264,13 +297,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() throws Exception {
     super.canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
-    super.canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse();
     groupCommitter.remove(anyId());
   }
 
@@ -305,6 +331,21 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
   @Test
   @Override
+  public void canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse()
+      throws Exception {
+    super.canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue() throws Exception {
+    super.canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
   public void
       canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException()
           throws ExecutionException {
@@ -318,7 +359,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Test
   @Override
   public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     super.commit_OnePhaseCommitted_ShouldNotThrowAnyException();
     groupCommitter.remove(anyId());
   }
@@ -327,7 +368,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void
       commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws CommitException, UnknownTransactionStatusException {
+          throws CommitException, UnknownTransactionStatusException, CrudException {
     super
         .commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException();
     groupCommitter.remove(anyId());

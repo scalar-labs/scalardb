@@ -7,9 +7,7 @@ import com.scalar.db.schemaloader.SchemaLoaderWithMetadataDecouplingIntegrationT
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
 public class JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
     extends SchemaLoaderWithMetadataDecouplingIntegrationTestBase {
   @LazyInit private RdbEngineStrategy rdbEngine;

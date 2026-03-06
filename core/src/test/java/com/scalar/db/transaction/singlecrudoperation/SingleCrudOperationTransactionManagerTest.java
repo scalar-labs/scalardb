@@ -251,7 +251,7 @@ public class SingleCrudOperationTransactionManagerTest {
   }
 
   @Test
-  public void getScanner_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+  public void getScanner_WhenExecutionExceptionThrown_ShouldThrowCrudException()
       throws ExecutionException {
     // Arrange
     Scan scan =

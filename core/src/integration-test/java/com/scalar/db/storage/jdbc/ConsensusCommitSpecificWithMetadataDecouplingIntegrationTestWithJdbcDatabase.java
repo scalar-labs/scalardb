@@ -3,9 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase;
 import java.util.Properties;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
 public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase {
 

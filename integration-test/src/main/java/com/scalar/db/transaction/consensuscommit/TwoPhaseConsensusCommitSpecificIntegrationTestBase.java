@@ -3,7 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -2100,8 +2099,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
+  public void put_DeleteCalledBefore_ShouldPutNewRecord() throws TransactionException {
     // Arrange
     TwoPhaseCommitTransaction transaction = manager1.begin();
     transaction.put(
@@ -2114,17 +2112,18 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
     transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    Throwable thrown =
-        catchThrowable(
-            () ->
-                transaction1.put(
-                    Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
-                        .intValue(BALANCE, 2)
-                        .build()));
-    transaction1.rollback();
+    transaction1.put(
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1)).intValue(BALANCE, 2).build());
+    transaction1.prepare();
+    transaction1.commit();
 
     // Assert
-    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+    TwoPhaseCommitTransaction transaction2 = manager1.begin();
+    Optional<Result> result = transaction2.get(get);
+    transaction2.prepare();
+    transaction2.commit();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(2);
   }
 
   @Test

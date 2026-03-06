@@ -24,8 +24,10 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
@@ -56,18 +58,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private static final String TEST_NAME = "cc_import";
   private static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE = "test_table";
-  private static final String ACCOUNT_ID = "account_id";
-  private static final String BALANCE = "balance";
+  protected static final String ACCOUNT_ID = "account_id";
+  protected static final String BALANCE = "balance";
   private static final int INITIAL_BALANCE = 1000;
   private static final int NUM_ACCOUNTS = 4;
   private static final String ANY_ID_1 = "id1";
-
-  private static final TableMetadata TABLE_METADATA =
-      TableMetadata.newBuilder()
-          .addColumn(ACCOUNT_ID, DataType.INT)
-          .addColumn(BALANCE, DataType.INT)
-          .addPartitionKey(ACCOUNT_ID)
-          .build();
 
   private DistributedStorage originalStorage;
   private DistributedStorageAdmin admin;
@@ -216,13 +211,16 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void prepareImportedTableAndRecords() throws Exception {
     createStorageTable();
 
+    // Wait for cache expiry
+    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+
     for (int i = 0; i < NUM_ACCOUNTS; i++) {
       Put put =
           Put.newBuilder()
               .namespace(namespace)
               .table(TABLE)
               .partitionKey(Key.ofInt(ACCOUNT_ID, i))
-              .value(IntColumn.of(BALANCE, INITIAL_BALANCE))
+              .intValue(BALANCE, INITIAL_BALANCE)
               .build();
       originalStorage.put(put);
     }
@@ -249,8 +247,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
         Put.newBuilder()
             .namespace(namespace)
             .table(getImportedTableName())
-            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
-            .value(IntColumn.of(BALANCE, INITIAL_BALANCE))
+            .partitionKey(createPartitionKey(0))
+            .value(createBalanceColumn(INITIAL_BALANCE))
             .value(TextColumn.of(Attribute.ID, ANY_ID_1))
             .value(IntColumn.of(Attribute.STATE, recordState.get()))
             .value(IntColumn.of(Attribute.VERSION, 1))
@@ -261,7 +259,17 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             .value(BigIntColumn.ofNull(Attribute.BEFORE_PREPARED_AT))
             .value(BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
             .build();
-    originalStorage.put(put);
+
+    // When using Oracle with the SERIALIZABLE isolation level, a RetriableExecutionException may
+    // occur even without any conflicts. So, we retry the put operation in such a case.
+    while (true) {
+      try {
+        originalStorage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry
+      }
+    }
 
     consensusCommitAdmin.createCoordinatorTables(true, getCreationOptions());
 
@@ -275,7 +283,16 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void createStorageTable() throws ExecutionException {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(this.namespace, true, options);
-    admin.createTable(namespace, TABLE, TABLE_METADATA, true, options);
+    admin.createTable(
+        namespace,
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .build(),
+        true,
+        options);
   }
 
   private void importTable() throws ExecutionException {
@@ -287,7 +304,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     return Get.newBuilder()
         .namespace(namespace)
         .table(getImportedTableName())
-        .partitionKey(Key.ofInt(ACCOUNT_ID, id))
+        .partitionKey(createPartitionKey(id))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -311,7 +328,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     return Put.newBuilder()
         .namespace(namespace)
         .table(getImportedTableName())
-        .partitionKey(Key.ofInt(ACCOUNT_ID, id))
+        .partitionKey(createPartitionKey(id))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -320,8 +337,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     return Put.newBuilder()
         .namespace(namespace)
         .table(getImportedTableName())
-        .partitionKey(Key.ofInt(ACCOUNT_ID, id))
-        .value(IntColumn.of(BALANCE, balance))
+        .partitionKey(createPartitionKey(id))
+        .value(createBalanceColumn(balance))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -336,7 +353,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     return Delete.newBuilder()
         .namespace(namespace)
         .table(getImportedTableName())
-        .partitionKey(Key.ofInt(ACCOUNT_ID, id))
+        .partitionKey(createPartitionKey(id))
         .consistency(Consistency.LINEARIZABLE)
         .build();
   }
@@ -347,7 +364,15 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     return deletes;
   }
 
-  private int getBalance(Result result) {
+  protected Key createPartitionKey(int id) {
+    return Key.ofInt(ACCOUNT_ID, id);
+  }
+
+  protected Column<?> createBalanceColumn(int balance) {
+    return IntColumn.of(BALANCE, balance);
+  }
+
+  protected int getBalance(Result result) {
     assertThat(result.getColumns()).containsKey(BALANCE);
     assertThat(result.getColumns().get(BALANCE).hasNullValue()).isFalse();
     return result.getColumns().get(BALANCE).getIntValue();
@@ -366,9 +391,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     int toBalance = getBalance(toResult.get()) + amount;
 
     List<Put> puts = preparePuts();
-    Put fromPut =
-        Put.newBuilder(puts.get(fromId)).value(IntColumn.of(BALANCE, fromBalance)).build();
-    Put toPut = Put.newBuilder(puts.get(toId)).value(IntColumn.of(BALANCE, toBalance)).build();
+    Put fromPut = Put.newBuilder(puts.get(fromId)).value(createBalanceColumn(fromBalance)).build();
+    Put toPut = Put.newBuilder(puts.get(toId)).value(createBalanceColumn(toBalance)).build();
     transaction.put(fromPut);
     transaction.put(toPut);
 
@@ -901,11 +925,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     Optional<Result> fromResult = another.get(gets.get(from));
     assertThat(fromResult).isPresent();
     assertThat(fromResult.get().getColumns()).containsKey(BALANCE);
-    assertThat(fromResult.get().getInt(BALANCE)).isEqualTo(fromBalance);
+    assertThat(getBalance(fromResult.get())).isEqualTo(fromBalance);
     Optional<Result> toResult = another.get(gets.get(to));
     assertThat(toResult).isPresent();
     assertThat(toResult.get().getColumns()).containsKey(BALANCE);
-    assertThat(toResult.get().getInt(BALANCE)).isEqualTo(toBalance);
+    assertThat(getBalance(toResult.get())).isEqualTo(toBalance);
     another.commit();
   }
 

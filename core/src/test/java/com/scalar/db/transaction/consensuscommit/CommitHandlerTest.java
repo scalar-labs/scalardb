@@ -29,8 +29,10 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.time.Duration;
 import java.time.Instant;
@@ -174,7 +176,7 @@ public class CommitHandlerTest {
         .build();
   }
 
-  private Snapshot prepareSnapshotWithDifferentPartitionPut() {
+  private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
 
     // different partition
@@ -189,7 +191,7 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  private Snapshot prepareSnapshotWithSamePartitionPut() {
+  private Snapshot prepareSnapshotWithSamePartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
 
     // same partition
@@ -213,25 +215,8 @@ public class CommitHandlerTest {
     return snapshot;
   }
 
-  private Snapshot prepareSnapshotWithoutReads() {
-    Snapshot snapshot = prepareSnapshot();
-
-    // same partition
-    Put put1 = preparePut1();
-    Put put3 = preparePut3();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put3), put3);
-
-    return snapshot;
-  }
-
-  private Snapshot prepareSnapshotWithIsolation(Isolation isolation) {
-    return new Snapshot(anyId(), isolation, tableMetadataManager, new ParallelExecutor(config));
-  }
-
   private Snapshot prepareSnapshot() {
-    return new Snapshot(
-        anyId(), Isolation.SNAPSHOT, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(anyId(), tableMetadataManager, new ParallelExecutor(config));
   }
 
   private void setBeforePreparationHookIfNeeded(boolean withBeforePreparationHook) {
@@ -246,7 +231,7 @@ public class CommitHandlerTest {
   public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -260,7 +245,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(4)).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -271,7 +256,7 @@ public class CommitHandlerTest {
   public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -285,7 +270,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -296,7 +281,7 @@ public class CommitHandlerTest {
   public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
       boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
@@ -308,7 +293,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, never()).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verify(coordinator, never()).putState(any());
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -332,7 +317,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, never()).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verify(coordinator, never()).putState(any());
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -357,7 +342,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(storage, never()).mutate(anyList());
-    verify(snapshot).toSerializable(storage);
+    verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -374,7 +359,7 @@ public class CommitHandlerTest {
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -399,7 +384,7 @@ public class CommitHandlerTest {
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -414,11 +399,12 @@ public class CommitHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
+  public void commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException {
+          CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
-    Snapshot snapshot = spy(prepareSnapshotWithoutReads());
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
     doNothingWhenCoordinatorPutState();
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
@@ -429,16 +415,77 @@ public class CommitHandlerTest {
     handler.commit(context);
 
     // Assert
-    verify(storage, times(2)).mutate(anyList());
+    verify(storage, times(4)).mutate(anyList());
+    // With SNAPSHOT isolation, validation should not be performed even if there are reads
     verify(snapshot, never()).toSerializable(storage);
     verifyCoordinatorPutState(TransactionState.COMMITTED);
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  public void commit_SerializableIsolationWithReads_ShouldValidateRecords(
+      boolean withBeforePreparationHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException, CrudException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(storage).mutate(anyList());
+    doNothing().when(snapshot).toSerializable(storage);
+    doNothingWhenCoordinatorPutState();
+    setBeforePreparationHookIfNeeded(withBeforePreparationHook);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+
+    // Act
+    handler.commit(context);
+
+    // Assert
+    verify(storage, times(4)).mutate(anyList());
+    // With SERIALIZABLE isolation, validation should be performed when there are reads
+    verify(snapshot).toSerializable(storage);
+    verifyCoordinatorPutState(TransactionState.COMMITTED);
+    verifyBeforePreparationHook(withBeforePreparationHook, context);
+    verify(handler, never()).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void validateRecords_ValidationNotRequired_ShouldNotCallToSerializable()
+      throws ValidationException, ExecutionException, CrudException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    // With SNAPSHOT isolation, validation is not required
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    handler.validateRecords(context);
+
+    // Assert
+    verify(snapshot, never()).toSerializable(storage);
+  }
+
+  @Test
+  public void validateRecords_ValidationRequired_ShouldCallToSerializable()
+      throws ValidationException, ExecutionException, CrudException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
+    doNothing().when(snapshot).toSerializable(storage);
+    // With SERIALIZABLE isolation, validation is required when there are reads
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+
+    // Act
+    handler.validateRecords(context);
+
+    // Assert
+    verify(snapshot).toSerializable(storage);
+  }
+
   @Test
   public void commit_NoMutationExceptionThrownInPrepareRecords_ShouldThrowCCException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(NoMutationException.class).when(storage).mutate(anyList());
@@ -463,7 +510,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_RetriableExecutionExceptionThrownInPrepareRecords_ShouldThrowCCException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
@@ -488,7 +535,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInPrepareRecords_ShouldAbortAndRollbackRecords()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -514,7 +561,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -546,7 +593,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -576,7 +623,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -606,7 +653,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndCoordinatorExceptionThrownInCoordinatorAbort_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -633,7 +680,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ValidationConflictExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
-      throws ExecutionException, CoordinatorException, ValidationConflictException {
+      throws ExecutionException, CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -641,7 +688,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -659,7 +706,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInValidation_ShouldAbortAndRollbackRecords()
-      throws ExecutionException, CoordinatorException, ValidationConflictException {
+      throws ExecutionException, CoordinatorException, ValidationConflictException, CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -667,7 +714,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -686,7 +733,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollbackRecords()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -699,7 +747,7 @@ public class CommitHandlerTest {
         .getState(anyId());
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -719,7 +767,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -729,7 +778,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -750,7 +799,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -760,7 +810,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -781,7 +831,8 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInValidationAndCoordinatorExceptionThrownInCoordinatorAbort_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException, ValidationConflictException {
+          throws ExecutionException, CoordinatorException, ValidationConflictException,
+              CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -790,7 +841,7 @@ public class CommitHandlerTest {
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), TransactionState.ABORTED));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -811,7 +862,7 @@ public class CommitHandlerTest {
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenCommittedReturnedInGetState_ShouldBeIgnored()
           throws ExecutionException, CoordinatorException, CommitException,
-              UnknownTransactionStatusException {
+              UnknownTransactionStatusException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -837,7 +888,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenAbortedReturnedInGetState_ShouldRollbackRecords()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -863,7 +914,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -888,7 +939,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -912,7 +963,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInCoordinatorCommit_ShouldThrowUnknown()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -934,7 +985,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_BeforePreparationHookGiven_ShouldWaitBeforePreparationHookFinishesBeforeCommitState()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -974,7 +1025,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_FailingBeforePreparationHookGiven_ShouldThrowCommitException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(new RuntimeException("Something is wrong"))
@@ -999,7 +1050,7 @@ public class CommitHandlerTest {
   @Test
   public void commit_FailingBeforePreparationHookFutureGiven_ShouldThrowCommitException()
       throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
-          InterruptedException {
+          InterruptedException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -1036,10 +1087,21 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
+  public void canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse()
+      throws Exception {
     // Arrange
     CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
-    Snapshot snapshot = prepareSnapshotWithIsolation(Isolation.SERIALIZABLE);
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    // Add a read that is not in the write set or delete set to trigger validation
+    Get get = prepareGet();
+    snapshot.putIntoGetSet(get, Optional.empty());
+
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
@@ -1047,8 +1109,39 @@ public class CommitHandlerTest {
     boolean actual = handler.canOnePhaseCommit(context);
 
     // Assert
+    // With SERIALIZABLE isolation and reads that require validation, one-phase commit is not
+    // allowed
     assertThat(actual).isFalse();
     verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  public void canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue() throws Exception {
+    // Arrange
+    CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
+    Snapshot snapshot = prepareSnapshot();
+
+    Delete delete = prepareDelete();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    TransactionResult result = mock(TransactionResult.class);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+
+    // Add a read that is not in the write set or delete set
+    Get get = prepareGet();
+    snapshot.putIntoGetSet(get, Optional.empty());
+
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    boolean actual = handler.canOnePhaseCommit(context);
+
+    // Assert
+    // With SNAPSHOT isolation, validation is not required, so one-phase commit is allowed
+    assertThat(actual).isTrue();
+    verify(mutationsGrouper).canBeGroupedAltogether(anyList());
   }
 
   @Test
@@ -1164,7 +1257,8 @@ public class CommitHandlerTest {
 
   @Test
   public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
-      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException {
+      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException,
+          CrudException {
     // Arrange
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
@@ -1182,7 +1276,7 @@ public class CommitHandlerTest {
   @Test
   public void
       onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(NoMutationException.class).when(storage).mutate(anyList());
@@ -1198,7 +1292,7 @@ public class CommitHandlerTest {
   @Test
   public void
       onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
@@ -1214,7 +1308,7 @@ public class CommitHandlerTest {
   @Test
   public void
       onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
@@ -1229,7 +1323,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
@@ -1251,7 +1345,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws CommitException, UnknownTransactionStatusException {
+          throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     CommitHandler handler = spy(createCommitHandlerWithOnePhaseCommit());
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();

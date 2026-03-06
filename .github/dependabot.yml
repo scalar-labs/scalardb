@@ -1,11 +1,15 @@
 version: 2
 updates:
-  # For Gradle, update dependencies and plugins to the latest non-major version
+  # For Gradle, update dependencies and plugins
+  # Individual PR will be created for major version updates while minor and patch updates are grouped
   - package-ecosystem: "gradle"
     groups:
-      dependencies:
+      minor-and-patch-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -13,8 +17,6 @@ updates:
       time: "01:00"
       timezone: "Asia/Tokyo"
     ignore:
-      - dependency-name: "*"
-        update-types: [ "version-update:semver-major" ]
       - dependency-name: "software.amazon.awssdk:*"
         update-types: [ "version-update:semver-patch" ]
 

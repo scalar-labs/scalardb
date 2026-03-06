@@ -114,7 +114,7 @@ public class SnapshotTest {
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
   }
 
-  private Snapshot prepareSnapshot(Isolation isolation) {
+  private Snapshot prepareSnapshot() {
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -125,7 +125,6 @@ public class SnapshotTest {
     return spy(
         new Snapshot(
             ANY_ID,
-            isolation,
             tableMetadataManager,
             new ParallelExecutor(config),
             readSet,
@@ -326,7 +325,7 @@ public class SnapshotTest {
   @Test
   public void putIntoReadSet_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
 
@@ -340,7 +339,7 @@ public class SnapshotTest {
   @Test
   public void putIntoGetSet_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Get get = prepareGet();
     TransactionResult result = prepareResult(ANY_ID);
 
@@ -352,9 +351,9 @@ public class SnapshotTest {
   }
 
   @Test
-  public void putIntoWriteSet_PutGiven_ShouldHoldWhatsGivenInWriteSet() {
+  public void putIntoWriteSet_PutGiven_ShouldHoldWhatsGivenInWriteSet() throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key key = new Snapshot.Key(put);
 
@@ -366,9 +365,9 @@ public class SnapshotTest {
   }
 
   @Test
-  public void putIntoWriteSet_PutGivenTwice_ShouldHoldMergedPut() {
+  public void putIntoWriteSet_PutGivenTwice_ShouldHoldMergedPut() throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put1 = preparePut();
     Snapshot.Key key = new Snapshot.Key(put1);
 
@@ -402,26 +401,88 @@ public class SnapshotTest {
   }
 
   @Test
-  public void putIntoWriteSet_PutGivenAfterDelete_ShouldThrowIllegalArgumentException() {
+  public void putIntoWriteSet_PutGivenAfterDelete_ShouldMoveFromDeleteSetToWriteSetWithNullColumns()
+      throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    Snapshot.Key deleteKey = new Snapshot.Key(delete);
     snapshot.putIntoDeleteSet(deleteKey, delete);
 
-    Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    // Put with only ANY_NAME_3 specified (ANY_NAME_4 is not specified)
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .build();
+    Snapshot.Key putKey = new Snapshot.Key(put);
 
-    // Act Assert
-    assertThatThrownBy(() -> snapshot.putIntoWriteSet(putKey, put))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Act
+    snapshot.putIntoWriteSet(putKey, put);
+
+    // Assert
+    assertThat(deleteSet).isEmpty();
+    assertThat(writeSet).containsKey(putKey);
+    Put actualPut = writeSet.get(putKey);
+    // The Put should contain the specified column
+    assertThat(actualPut.getColumns().get(ANY_NAME_3))
+        .isEqualTo(TextColumn.of(ANY_NAME_3, ANY_TEXT_3));
+    // The unspecified non-key column should be set to null
+    assertThat(actualPut.getColumns().get(ANY_NAME_4)).isEqualTo(TextColumn.ofNull(ANY_NAME_4));
+    // Insert mode should be disabled since the record previously existed
+    assertThat(ConsensusCommitOperationAttributes.isInsertModeEnabled(actualPut)).isFalse();
+    // Implicit pre-read should be enabled for proper preparation
+    assertThat(ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(actualPut)).isTrue();
   }
 
   @Test
   public void
-      putIntoWriteSet_PutWithInsertModeEnabledGivenAfterPut_ShouldThrowIllegalArgumentException() {
+      putIntoWriteSet_PutWithInsertModeEnabledGivenAfterDelete_ShouldDisableInsertModeAndEnableImplicitPreRead()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
+    Delete delete = prepareDelete();
+    Snapshot.Key deleteKey = new Snapshot.Key(delete);
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+
+    // Put with insert mode enabled
+    Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .textValue(ANY_NAME_3, ANY_TEXT_3)
+            .enableInsertMode()
+            .build();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+
+    // Act
+    snapshot.putIntoWriteSet(putKey, put);
+
+    // Assert
+    assertThat(deleteSet).isEmpty();
+    assertThat(writeSet).containsKey(putKey);
+    Put actualPut = writeSet.get(putKey);
+    // Insert mode should be disabled even if the original Put had insert mode enabled
+    assertThat(ConsensusCommitOperationAttributes.isInsertModeEnabled(actualPut)).isFalse();
+    // Implicit pre-read should be enabled for proper preparation
+    assertThat(ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(actualPut)).isTrue();
+  }
+
+  @Test
+  public void
+      putIntoWriteSet_PutWithInsertModeEnabledGivenAfterPut_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Put putWithInsertModeEnabled = Put.newBuilder(put).enableInsertMode().build();
     Snapshot.Key key = new Snapshot.Key(put);
@@ -434,9 +495,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      putIntoWriteSet_PutWithImplicitPreReadEnabledGivenAfterWithInsertModeEnabled_ShouldHoldMergedPutWithoutImplicitPreRead() {
+      putIntoWriteSet_PutWithImplicitPreReadEnabledGivenAfterWithInsertModeEnabled_ShouldHoldMergedPutWithoutImplicitPreRead()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put putWithInsertModeEnabled = Put.newBuilder(preparePut()).enableInsertMode().build();
 
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
@@ -474,7 +536,7 @@ public class SnapshotTest {
   @Test
   public void putIntoDeleteSet_DeleteGiven_ShouldHoldWhatsGivenInDeleteSet() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
     Snapshot.Key key = new Snapshot.Key(delete);
 
@@ -486,9 +548,9 @@ public class SnapshotTest {
   }
 
   @Test
-  public void putIntoDeleteSet_DeleteGivenAfterPut_PutSupercedesDelete() {
+  public void putIntoDeleteSet_DeleteGivenAfterPut_PutSupercedesDelete() throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(preparePut());
     snapshot.putIntoWriteSet(putKey, put);
@@ -507,9 +569,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      putIntoDeleteSet_DeleteGivenAfterPutWithInsertModeEnabled_ShouldThrowIllegalArgumentException() {
+      putIntoDeleteSet_DeleteGivenAfterPutWithInsertModeEnabled_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
     Snapshot.Key key = new Snapshot.Key(delete);
 
@@ -524,7 +587,7 @@ public class SnapshotTest {
   @Test
   public void putIntoScanSet_ScanGiven_ShouldHoldWhatsGivenInScanSet() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
@@ -542,7 +605,7 @@ public class SnapshotTest {
   public void getResult_KeyNeitherContainedInWriteSetNorReadSet_ShouldReturnEmpty()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
 
     // Act
@@ -556,7 +619,7 @@ public class SnapshotTest {
   public void getResult_KeyContainedInWriteSetButNotContainedInReadSet_ShouldReturnProperResult()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     snapshot.putIntoWriteSet(key, put);
@@ -581,7 +644,7 @@ public class SnapshotTest {
   public void getResult_KeyContainedInWriteSetAndReadSetGiven_ShouldReturnMergedResult()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePutForMergeTest();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
@@ -600,7 +663,7 @@ public class SnapshotTest {
   public void getResult_KeyContainedInDeleteSetAndReadSetGiven_ShouldReturnEmpty()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
     Snapshot.Key key = new Snapshot.Key(delete);
     TransactionResult result = prepareResult(ANY_ID);
@@ -619,7 +682,7 @@ public class SnapshotTest {
       getResult_KeyNeitherContainedInDeleteSetNorWriteSetButContainedInAndReadSetGiven_ShouldReturnOriginalResult()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoReadSet(key, Optional.of(result));
@@ -635,7 +698,7 @@ public class SnapshotTest {
   public void getResult_KeyContainedInWriteSetAndGetNotContainedInGetSet_ShouldReturnEmpty()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
 
@@ -650,7 +713,7 @@ public class SnapshotTest {
   public void getResult_KeyContainedInWriteSetAndGetNotContainedInGetSet_ShouldReturnProperResult()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -677,7 +740,7 @@ public class SnapshotTest {
       getResult_KeyContainedInWriteSetAndGetContainedInGetSetGiven_ShouldReturnMergedResult()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePutForMergeTest();
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -697,7 +760,7 @@ public class SnapshotTest {
   public void getResult_KeyContainedInDeleteSetAndGetContainedInGetSetGiven_ShouldReturnEmpty()
       throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
@@ -717,7 +780,7 @@ public class SnapshotTest {
       getResult_KeyNeitherContainedInDeleteSetNorWriteSetAndGetContainedInGetSetGiven_ShouldReturnOriginalResult()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Get get = prepareGet();
     Snapshot.Key key = new Snapshot.Key(get);
     TransactionResult result = prepareResult(ANY_ID);
@@ -735,7 +798,7 @@ public class SnapshotTest {
       getResult_KeyContainedInWriteSetAndGetContainedInGetSetWithMatchedConjunctionGiven_ShouldReturnMergedResult()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePutForMergeTest();
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_5);
     Get get = Get.newBuilder(prepareGet()).where(condition).build();
@@ -757,7 +820,7 @@ public class SnapshotTest {
       getResult_KeyNeitherContainedInDeleteSetNorWriteSetAndGetContainedInGetSetWithUnmatchedConjunction_ShouldReturnOriginalResult()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2);
@@ -776,7 +839,7 @@ public class SnapshotTest {
       getResult_KeyContainedInWriteSetAndGetContainedInGetSetWithUnmatchedConjunctionGiven_ShouldReturnEmpty()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePutForMergeTest();
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3);
     Get get = Get.newBuilder(prepareGet()).where(condition).build();
@@ -795,7 +858,7 @@ public class SnapshotTest {
   @Test
   public void getResults_ScanNotContainedInScanSetGiven_ShouldReturnEmpty() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
 
     // Act
@@ -808,7 +871,7 @@ public class SnapshotTest {
   @Test
   public void getResults_ScanContainedInScanSetGiven_ShouldReturnProperResults() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
 
     TransactionResult result1 = mock(TransactionResult.class);
@@ -898,9 +961,9 @@ public class SnapshotTest {
 
   @Test
   public void to_PrepareMutationComposerGivenAndSnapshotIsolationSet_ShouldCallComposerProperly()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
@@ -920,9 +983,9 @@ public class SnapshotTest {
 
   @Test
   public void to_CommitMutationComposerGiven_ShouldCallComposerProperly()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
@@ -941,9 +1004,9 @@ public class SnapshotTest {
 
   @Test
   public void to_RollbackMutationComposerGiven_ShouldCallComposerProperly()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
@@ -963,9 +1026,9 @@ public class SnapshotTest {
 
   @Test
   public void toSerializable_ReadSetNotChanged_ShouldProcessWithoutExceptions()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult result = prepareResult(ANY_ID);
@@ -986,9 +1049,9 @@ public class SnapshotTest {
 
   @Test
   public void toSerializable_ReadSetUpdated_ShouldThrowValidationConflictException()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
@@ -1010,9 +1073,9 @@ public class SnapshotTest {
 
   @Test
   public void toSerializable_ReadSetExtended_ShouldThrowValidationConflictException()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get get = prepareAnotherGet();
     Put put = preparePut();
     snapshot.putIntoGetSet(get, Optional.empty());
@@ -1035,7 +1098,7 @@ public class SnapshotTest {
   public void toSerializable_GetSetWithGetWithIndex_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get getWithIndex = prepareGetWithIndex();
     TransactionResult txResult = prepareResult(ANY_ID + "x");
     snapshot.putIntoGetSet(getWithIndex, Optional.of(txResult));
@@ -1059,7 +1122,7 @@ public class SnapshotTest {
       toSerializable_GetSetWithGetWithIndex_RecordInserted_ShouldThrowValidationConflictException()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get getWithIndex = prepareGetWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_3);
@@ -1088,7 +1151,7 @@ public class SnapshotTest {
       toSerializable_GetSetWithGetWithIndex_RecordInsertedByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get getWithIndex = prepareGetWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_3);
@@ -1115,7 +1178,7 @@ public class SnapshotTest {
   public void toSerializable_ScanSetNotChanged_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID + "x");
     Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
@@ -1138,7 +1201,7 @@ public class SnapshotTest {
   public void toSerializable_ScanSetUpdated_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
@@ -1163,7 +1226,7 @@ public class SnapshotTest {
   public void toSerializable_ScanSetUpdatedByMyself_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
@@ -1187,7 +1250,7 @@ public class SnapshotTest {
   public void toSerializable_ScanSetExtended_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID + "x");
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.emptyMap()));
@@ -1212,7 +1275,7 @@ public class SnapshotTest {
       toSerializable_ScanSetWithMultipleRecordsExtended_ShouldThrowValidationConflictException()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
@@ -1240,7 +1303,7 @@ public class SnapshotTest {
   public void toSerializable_ScanSetExtendedByMyself_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.emptyMap()));
@@ -1264,7 +1327,7 @@ public class SnapshotTest {
       toSerializable_ScanSetWithMultipleRecordsExtendedByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
@@ -1291,7 +1354,7 @@ public class SnapshotTest {
   public void toSerializable_ScanSetDeleted_ShouldThrowValidationConflictException()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
     Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
@@ -1316,7 +1379,7 @@ public class SnapshotTest {
       toSerializable_ScanSetWithMultipleRecordsDeleted_ShouldThrowValidationConflictException()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
@@ -1344,7 +1407,7 @@ public class SnapshotTest {
   public void toSerializable_MultipleScansInScanSetExist_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
 
     Scan scan1 =
         Scan.newBuilder()
@@ -1427,9 +1490,9 @@ public class SnapshotTest {
 
   @Test
   public void toSerializable_NullMetadataInReadSetNotChanged_ShouldProcessWithoutExceptions()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
@@ -1449,9 +1512,9 @@ public class SnapshotTest {
 
   @Test
   public void toSerializable_NullMetadataInReadSetChanged_ShouldThrowValidationConflictException()
-      throws ExecutionException {
+      throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Get get = prepareAnotherGet();
     Put put = preparePut();
     TransactionResult result = prepareResultWithNullMetadata();
@@ -1474,7 +1537,7 @@ public class SnapshotTest {
   public void toSerializable_ScanWithLimitInScanSet_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithLimit(1);
     TransactionResult result1 = prepareResult(ANY_ID + "x");
     TransactionResult result2 = prepareResult(ANY_ID + "x");
@@ -1502,7 +1565,7 @@ public class SnapshotTest {
       toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRange_ShouldThrowValidationConflictException()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithLimit(1);
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
@@ -1533,7 +1596,7 @@ public class SnapshotTest {
       toSerializable_ScanWithLimitInScanSet_WhenInsertingFirstRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithLimit(1);
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
@@ -1563,7 +1626,7 @@ public class SnapshotTest {
       toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRange_ShouldThrowValidationConflictException()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithLimit(3);
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
@@ -1596,7 +1659,7 @@ public class SnapshotTest {
       toSerializable_ScanWithLimitInScanSet_WhenInsertingLastRecordIntoScanRangeByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithLimit(3);
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
@@ -1629,7 +1692,7 @@ public class SnapshotTest {
       toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecords_ShouldThrowValidationConflictException()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
@@ -1661,9 +1724,9 @@ public class SnapshotTest {
   @Test
   public void
       toSerializable_ScanWithIndexInScanSet_WhenUpdatingRecordsByMyself_ShouldProcessWithoutExceptions()
-          throws ExecutionException {
+          throws ExecutionException, CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
@@ -1698,7 +1761,7 @@ public class SnapshotTest {
       toSerializable_ScanWithIndexInScanSet_WhenDeletingRecordsByMyself_ShouldProcessWithoutExceptions()
           throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScanWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
@@ -1731,7 +1794,7 @@ public class SnapshotTest {
   public void toSerializable_ScannerSetNotChanged_ShouldProcessWithoutExceptions()
       throws ExecutionException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
@@ -1757,7 +1820,7 @@ public class SnapshotTest {
   public void
       verifyNoOverlap_ScanGivenAndDeleteKeyAlreadyPresentInDeleteSet_ShouldThrowIllegalArgumentException() {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
     Snapshot.Key deleteKey = new Snapshot.Key(delete);
     snapshot.putIntoDeleteSet(deleteKey, delete);
@@ -1775,9 +1838,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanGivenAndPutKeyAlreadyPresentInScanSet_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1795,9 +1859,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePutWithPartitionKeyOnly();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1812,9 +1877,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
@@ -1836,9 +1902,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithNoRangeGivenButPutInWriteSetNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
+      verifyNoOverlap_ScanWithNoRangeGivenButPutInWriteSetNotOverlappedWithScanWithConjunctions_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -1859,9 +1926,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
@@ -1919,9 +1987,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
@@ -1967,9 +2036,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
+      verifyNoOverlap_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
@@ -2014,9 +2084,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verifyNoOverlap_ScanWithIndexGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
+  public void verifyNoOverlap_ScanWithIndexGivenAndPutInWriteSetInSameTable_ShouldThrowException()
+      throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2039,9 +2110,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithIndexGivenAndPutInWriteSetInDifferentTable_ShouldNotThrowException() {
+      verifyNoOverlap_ScanWithIndexGivenAndPutInWriteSetInDifferentTable_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put =
         Put.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -2069,9 +2141,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verifyNoOverlap_ScanWithIndexAndPutWithSameIndexKeyGiven_ShouldThrowException() {
+  public void verifyNoOverlap_ScanWithIndexAndPutWithSameIndexKeyGiven_ShouldThrowException()
+      throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put1 =
         Put.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -2111,9 +2184,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithIndexAndPutWithSameIndexKeyGivenButNotOverlappedWithScanWithConjunctions_ShouldNotThrowException() {
+      verifyNoOverlap_ScanWithIndexAndPutWithSameIndexKeyGivenButNotOverlappedWithScanWithConjunctions_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put1 =
         Put.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -2154,9 +2228,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verifyNoOverlap_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException() {
+  public void verifyNoOverlap_ScanAllGivenAndPutInWriteSetInSameTable_ShouldThrowException()
+      throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
@@ -2177,9 +2252,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldNotThrowException() {
+      verifyNoOverlap_ScanAllGivenAndPutInWriteSetNotOverlappingWithScanAll_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
@@ -2199,9 +2275,10 @@ public class SnapshotTest {
   }
 
   @Test
-  public void verifyNoOverlap_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException() {
+  public void verifyNoOverlap_CrossPartitionScanGivenAndPutInSameTable_ShouldThrowException()
+      throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2219,9 +2296,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanGivenAndPutInDifferentNamespace_ShouldNotThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndPutInDifferentNamespace_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2239,9 +2317,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanGivenAndPutInDifferentTable_ShouldNotThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndPutInDifferentTable_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2259,9 +2338,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndAllConditionsMatch_ShouldThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2292,9 +2372,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndAnyConjunctionMatch_ShouldThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2314,9 +2395,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableAndLikeConditionsMatch_ShouldThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2336,9 +2418,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException() {
+      verifyNoOverlap_CrossPartitionScanGivenAndNewPutInSameTableButConditionNotMatch_ShouldNotThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePut();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);
@@ -2358,9 +2441,10 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_CrossPartitionScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException() {
+      verifyNoOverlap_CrossPartitionScanWithoutConjunctionGivenAndNewPutInSameTable_ShouldThrowException()
+          throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot();
     Put put = preparePutWithIntColumns();
     Snapshot.Key putKey = new Snapshot.Key(put);
     snapshot.putIntoWriteSet(putKey, put);

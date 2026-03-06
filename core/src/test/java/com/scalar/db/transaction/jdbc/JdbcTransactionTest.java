@@ -27,7 +27,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcCrudService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.io.IOException;
 import java.sql.Connection;
@@ -74,14 +74,14 @@ public class JdbcTransactionTest {
           .build();
 
   private JdbcTransaction transaction;
-  @Mock private JdbcService jdbcService;
+  @Mock private JdbcCrudService jdbcCrudService;
   @Mock private Connection connection;
   @Mock private RdbEngineStrategy rdbEngineStrategy;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    transaction = new JdbcTransaction(ANY_TX_ID, jdbcService, connection, rdbEngineStrategy);
+    transaction = new JdbcTransaction(ANY_TX_ID, jdbcCrudService, connection, rdbEngineStrategy);
   }
 
   @Test
@@ -106,7 +106,7 @@ public class JdbcTransactionTest {
         .thenReturn(Optional.of(result3))
         .thenReturn(Optional.empty());
 
-    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -116,7 +116,7 @@ public class JdbcTransactionTest {
     assertThat(actual.one()).isEmpty();
     actual.close();
 
-    verify(jdbcService).getScanner(scan, connection, false);
+    verify(jdbcCrudService).getScanner(scan, connection, false);
     verify(scanner).close();
   }
 
@@ -138,14 +138,14 @@ public class JdbcTransactionTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.all()).thenReturn(Arrays.asList(result1, result2, result3));
 
-    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
     assertThat(actual.all()).containsExactly(result1, result2, result3);
     actual.close();
 
-    verify(jdbcService).getScanner(scan, connection, false);
+    verify(jdbcCrudService).getScanner(scan, connection, false);
     verify(scanner).close();
   }
 
@@ -171,7 +171,7 @@ public class JdbcTransactionTest {
         .thenReturn(Optional.of(result3))
         .thenReturn(Optional.empty());
 
-    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -186,12 +186,12 @@ public class JdbcTransactionTest {
     assertThat(iterator.hasNext()).isFalse();
     actual.close();
 
-    verify(jdbcService).getScanner(scan, connection, false);
+    verify(jdbcCrudService).getScanner(scan, connection, false);
     verify(scanner).close();
   }
 
   @Test
-  public void getScanner_WhenSQLExceptionThrownByJdbcService_ShouldThrowCrudException()
+  public void getScanner_WhenSQLExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
       throws SQLException, ExecutionException {
     // Arrange
     Scan scan =
@@ -201,14 +201,14 @@ public class JdbcTransactionTest {
             .partitionKey(Key.ofText("p1", "val"))
             .build();
 
-    when(jdbcService.getScanner(scan, connection, false)).thenThrow(SQLException.class);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenThrow(SQLException.class);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.getScanner(scan)).isInstanceOf(CrudException.class);
   }
 
   @Test
-  public void getScanner_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+  public void getScanner_WhenExecutionExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
       throws SQLException, ExecutionException {
     // Arrange
     Scan scan =
@@ -220,7 +220,7 @@ public class JdbcTransactionTest {
 
     ExecutionException executionException = mock(ExecutionException.class);
     when(executionException.getMessage()).thenReturn("error");
-    when(jdbcService.getScanner(scan, connection, false)).thenThrow(executionException);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.getScanner(scan)).isInstanceOf(CrudException.class);
@@ -244,7 +244,7 @@ public class JdbcTransactionTest {
     when(executionException.getMessage()).thenReturn("error");
     when(scanner.one()).thenThrow(executionException);
 
-    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -269,7 +269,7 @@ public class JdbcTransactionTest {
     when(executionException.getMessage()).thenReturn("error");
     when(scanner.all()).thenThrow(executionException);
 
-    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -294,7 +294,7 @@ public class JdbcTransactionTest {
     when(ioException.getMessage()).thenReturn("error");
     doThrow(ioException).when(scanner).close();
 
-    when(jdbcService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -305,46 +305,46 @@ public class JdbcTransactionTest {
   public void put_putDoesNotSucceed_shouldThrowUnsatisfiedConditionException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(false);
+    when(jdbcCrudService.put(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.put(ANY_PUT))
         .isInstanceOf(UnsatisfiedConditionException.class);
-    verify(jdbcService).put(ANY_PUT, connection);
+    verify(jdbcCrudService).put(ANY_PUT, connection);
   }
 
   @Test
   public void put_putSucceed_shouldThrowUnsatisfiedConditionException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcCrudService.put(any(), any())).thenReturn(true);
 
     // Act Assert
     assertThatCode(() -> transaction.put(ANY_PUT)).doesNotThrowAnyException();
-    verify(jdbcService).put(ANY_PUT, connection);
+    verify(jdbcCrudService).put(ANY_PUT, connection);
   }
 
   @Test
   public void delete_deleteDoesNotSucceed_shouldThrowUnsatisfiedConditionException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenReturn(false);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.delete(ANY_DELETE))
         .isInstanceOf(UnsatisfiedConditionException.class);
-    verify(jdbcService).delete(ANY_DELETE, connection);
+    verify(jdbcCrudService).delete(ANY_DELETE, connection);
   }
 
   @Test
   public void delete_deleteSucceed_shouldThrowUnsatisfiedConditionException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenReturn(true);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(true);
 
     // Act Assert
     assertThatCode(() -> transaction.delete(ANY_DELETE)).doesNotThrowAnyException();
-    verify(jdbcService).delete(ANY_DELETE, connection);
+    verify(jdbcCrudService).delete(ANY_DELETE, connection);
   }
 
   @ParameterizedTest
@@ -353,7 +353,7 @@ public class JdbcTransactionTest {
       MutationCondition condition, String exceptionMessage)
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any())).thenReturn(false);
+    when(jdbcCrudService.put(any(), any())).thenReturn(false);
     Put put1 = Put.newBuilder(ANY_PUT).condition(condition).build();
 
     // Act Assert
@@ -361,7 +361,7 @@ public class JdbcTransactionTest {
         .isInstanceOf(UnsatisfiedConditionException.class)
         .hasMessageContaining(ANY_TX_ID)
         .hasMessageContaining(exceptionMessage);
-    verify(jdbcService).put(put1, connection);
+    verify(jdbcCrudService).put(put1, connection);
   }
 
   private static Stream<Arguments> provideConditionalPuts() {
@@ -388,7 +388,7 @@ public class JdbcTransactionTest {
       MutationCondition condition, String exceptionMessage)
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.delete(any(), any())).thenReturn(false);
+    when(jdbcCrudService.delete(any(), any())).thenReturn(false);
     Delete delete1 = Delete.newBuilder(ANY_DELETE).condition(condition).build();
 
     // Act Assert
@@ -396,7 +396,7 @@ public class JdbcTransactionTest {
         .isInstanceOf(UnsatisfiedConditionException.class)
         .hasMessageContaining(ANY_TX_ID)
         .hasMessageContaining(exceptionMessage);
-    verify(jdbcService).delete(delete1, connection);
+    verify(jdbcCrudService).delete(delete1, connection);
   }
 
   private static Stream<Arguments> provideConditionalDeletes() {
@@ -415,7 +415,7 @@ public class JdbcTransactionTest {
   }
 
   @Test
-  public void insert_InsertGiven_WhenRecordDoesNotExist_ShouldCallJdbcServiceProperly()
+  public void insert_InsertGiven_WhenRecordDoesNotExist_ShouldCallJdbcCrudServiceProperly()
       throws CrudException, ExecutionException, SQLException {
     // Arrange
     Insert insert =
@@ -436,13 +436,13 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfNotExists())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(true);
 
     // Act
     transaction.insert(insert);
 
     // Assert
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
@@ -467,16 +467,16 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfNotExists())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(false);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.insert(insert)).isInstanceOf(CrudConflictException.class);
 
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
-  public void insert_InsertGiven_WhenSQLExceptionThrownByJdbcService_ShouldThrowCrudException()
+  public void insert_InsertGiven_WhenSQLExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
       throws SQLException, ExecutionException {
     // Arrange
     Insert insert =
@@ -497,7 +497,7 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfNotExists())
             .build();
 
-    when(jdbcService.put(put, connection)).thenThrow(SQLException.class);
+    when(jdbcCrudService.put(put, connection)).thenThrow(SQLException.class);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.insert(insert)).isInstanceOf(CrudException.class);
@@ -505,7 +505,7 @@ public class JdbcTransactionTest {
 
   @Test
   public void
-      insert_InsertGiven_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+      insert_InsertGiven_WhenExecutionExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
           throws SQLException, ExecutionException {
     // Arrange
     Insert insert =
@@ -528,14 +528,14 @@ public class JdbcTransactionTest {
 
     ExecutionException executionException = mock(ExecutionException.class);
     when(executionException.getMessage()).thenReturn("error");
-    when(jdbcService.put(put, connection)).thenThrow(executionException);
+    when(jdbcCrudService.put(put, connection)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.insert(insert)).isInstanceOf(CrudException.class);
   }
 
   @Test
-  public void upsert_UpsertGiven_ShouldCallJdbcServiceProperly()
+  public void upsert_UpsertGiven_ShouldCallJdbcCrudServiceProperly()
       throws CrudException, ExecutionException, SQLException {
     // Arrange
     Upsert upsert =
@@ -555,17 +555,17 @@ public class JdbcTransactionTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(true);
 
     // Act
     transaction.upsert(upsert);
 
     // Assert
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
-  public void upsert_UpsertGiven_WhenSQLExceptionThrownByJdbcService_ShouldThrowCrudException()
+  public void upsert_UpsertGiven_WhenSQLExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
       throws SQLException, ExecutionException {
     // Arrange
     Upsert upsert =
@@ -585,7 +585,7 @@ public class JdbcTransactionTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .build();
 
-    when(jdbcService.put(put, connection)).thenThrow(SQLException.class);
+    when(jdbcCrudService.put(put, connection)).thenThrow(SQLException.class);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.upsert(upsert)).isInstanceOf(CrudException.class);
@@ -593,7 +593,7 @@ public class JdbcTransactionTest {
 
   @Test
   public void
-      upsert_UpsertGiven_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+      upsert_UpsertGiven_WhenExecutionExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
           throws SQLException, ExecutionException {
     // Arrange
     Upsert upsert =
@@ -615,15 +615,16 @@ public class JdbcTransactionTest {
 
     ExecutionException executionException = mock(ExecutionException.class);
     when(executionException.getMessage()).thenReturn("error");
-    when(jdbcService.put(put, connection)).thenThrow(executionException);
+    when(jdbcCrudService.put(put, connection)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.upsert(upsert)).isInstanceOf(CrudException.class);
   }
 
   @Test
-  public void update_UpdateWithoutConditionGiven_WhenRecordExists_ShouldCallJdbcServiceProperly()
-      throws CrudException, ExecutionException, SQLException {
+  public void
+      update_UpdateWithoutConditionGiven_WhenRecordExists_ShouldCallJdbcCrudServiceProperly()
+          throws CrudException, ExecutionException, SQLException {
     // Arrange
     Update update =
         Update.newBuilder()
@@ -643,13 +644,13 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(true);
 
     // Act
     transaction.update(update);
 
     // Assert
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
@@ -674,17 +675,17 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(false);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(false);
 
     // Act Assert
     assertThatCode(() -> transaction.update(update)).doesNotThrowAnyException();
 
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
   public void
-      update_UpdateWithUpdateIfConditionGiven_WhenConditionSatisfied_ShouldCallJdbcServiceProperly()
+      update_UpdateWithUpdateIfConditionGiven_WhenConditionSatisfied_ShouldCallJdbcCrudServiceProperly()
           throws CrudException, ExecutionException, SQLException {
     // Arrange
     Update update =
@@ -712,18 +713,18 @@ public class JdbcTransactionTest {
                     .build())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(true);
 
     // Act
     transaction.update(update);
 
     // Assert
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
   public void
-      update_UpdateWithUpdateIfExistsConditionGiven_WhenConditionSatisfied_ShouldCallJdbcServiceProperly()
+      update_UpdateWithUpdateIfExistsConditionGiven_WhenConditionSatisfied_ShouldCallJdbcCrudServiceProperly()
           throws CrudException, ExecutionException, SQLException {
     // Arrange
     Update update =
@@ -745,13 +746,13 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(true);
 
     // Act
     transaction.update(update);
 
     // Assert
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
@@ -784,13 +785,13 @@ public class JdbcTransactionTest {
                     .build())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(false);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
         .isInstanceOf(UnsatisfiedConditionException.class);
 
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
@@ -817,17 +818,17 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(expectedPut, connection)).thenReturn(false);
+    when(jdbcCrudService.put(expectedPut, connection)).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update))
         .isInstanceOf(UnsatisfiedConditionException.class);
 
-    verify(jdbcService).put(expectedPut, connection);
+    verify(jdbcCrudService).put(expectedPut, connection);
   }
 
   @Test
-  public void update_UpdateGiven_WhenSQLExceptionThrownByJdbcService_ShouldThrowCrudException()
+  public void update_UpdateGiven_WhenSQLExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
       throws SQLException, ExecutionException {
     // Arrange
     Update update =
@@ -848,7 +849,7 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(put, connection)).thenThrow(SQLException.class);
+    when(jdbcCrudService.put(put, connection)).thenThrow(SQLException.class);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update)).isInstanceOf(CrudException.class);
@@ -856,7 +857,7 @@ public class JdbcTransactionTest {
 
   @Test
   public void
-      update_UpdateGiven_WhenExecutionExceptionThrownByJdbcService_ShouldThrowCrudException()
+      update_UpdateGiven_WhenExecutionExceptionThrownByJdbcCrudService_ShouldThrowCrudException()
           throws SQLException, ExecutionException {
     // Arrange
     Update update =
@@ -879,14 +880,14 @@ public class JdbcTransactionTest {
 
     ExecutionException executionException = mock(ExecutionException.class);
     when(executionException.getMessage()).thenReturn("error");
-    when(jdbcService.put(put, connection)).thenThrow(executionException);
+    when(jdbcCrudService.put(put, connection)).thenThrow(executionException);
 
     // Act Assert
     assertThatThrownBy(() -> transaction.update(update)).isInstanceOf(CrudException.class);
   }
 
   @Test
-  public void mutate_MutationsGiven_ShouldCallJdbcServiceProperly()
+  public void mutate_MutationsGiven_ShouldCallJdbcCrudServiceProperly()
       throws CrudException, ExecutionException, SQLException {
     // Arrange
     Put put =
@@ -948,21 +949,21 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.put(put, connection)).thenReturn(true);
-    when(jdbcService.put(expectedPutFromInsert, connection)).thenReturn(true);
-    when(jdbcService.put(expectedPutFromUpsert, connection)).thenReturn(true);
-    when(jdbcService.put(expectedPutFromUpdate, connection)).thenReturn(true);
-    when(jdbcService.delete(delete, connection)).thenReturn(true);
+    when(jdbcCrudService.put(put, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPutFromInsert, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPutFromUpsert, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPutFromUpdate, connection)).thenReturn(true);
+    when(jdbcCrudService.delete(delete, connection)).thenReturn(true);
 
     // Act
     transaction.mutate(Arrays.asList(put, insert, upsert, update, delete));
 
     // Assert
-    verify(jdbcService).put(put, connection);
-    verify(jdbcService).put(expectedPutFromInsert, connection);
-    verify(jdbcService).put(expectedPutFromUpsert, connection);
-    verify(jdbcService).put(expectedPutFromUpdate, connection);
-    verify(jdbcService).delete(delete, connection);
+    verify(jdbcCrudService).put(put, connection);
+    verify(jdbcCrudService).put(expectedPutFromInsert, connection);
+    verify(jdbcCrudService).put(expectedPutFromUpsert, connection);
+    verify(jdbcCrudService).put(expectedPutFromUpdate, connection);
+    verify(jdbcCrudService).delete(delete, connection);
   }
 
   @Test
@@ -975,7 +976,7 @@ public class JdbcTransactionTest {
   }
 
   @Test
-  public void batch_OperationsGiven_ShouldCallJdbcServiceProperly()
+  public void batch_OperationsGiven_ShouldCallJdbcCrudServiceProperly()
       throws CrudException, ExecutionException, SQLException {
     // Arrange
     Get get =
@@ -1053,26 +1054,26 @@ public class JdbcTransactionTest {
             .condition(ConditionBuilder.putIfExists())
             .build();
 
-    when(jdbcService.get(get, connection)).thenReturn(Optional.of(result1));
-    when(jdbcService.scan(scan, connection)).thenReturn(Arrays.asList(result2, result3));
-    when(jdbcService.put(put, connection)).thenReturn(true);
-    when(jdbcService.put(expectedPutFromInsert, connection)).thenReturn(true);
-    when(jdbcService.put(expectedPutFromUpsert, connection)).thenReturn(true);
-    when(jdbcService.put(expectedPutFromUpdate, connection)).thenReturn(true);
-    when(jdbcService.delete(delete, connection)).thenReturn(true);
+    when(jdbcCrudService.get(get, connection)).thenReturn(Optional.of(result1));
+    when(jdbcCrudService.scan(scan, connection)).thenReturn(Arrays.asList(result2, result3));
+    when(jdbcCrudService.put(put, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPutFromInsert, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPutFromUpsert, connection)).thenReturn(true);
+    when(jdbcCrudService.put(expectedPutFromUpdate, connection)).thenReturn(true);
+    when(jdbcCrudService.delete(delete, connection)).thenReturn(true);
 
     // Act
     List<CrudOperable.BatchResult> results =
         transaction.batch(Arrays.asList(get, scan, put, insert, upsert, update, delete));
 
     // Assert
-    verify(jdbcService).get(get, connection);
-    verify(jdbcService).scan(scan, connection);
-    verify(jdbcService).put(put, connection);
-    verify(jdbcService).put(expectedPutFromInsert, connection);
-    verify(jdbcService).put(expectedPutFromUpsert, connection);
-    verify(jdbcService).put(expectedPutFromUpdate, connection);
-    verify(jdbcService).delete(delete, connection);
+    verify(jdbcCrudService).get(get, connection);
+    verify(jdbcCrudService).scan(scan, connection);
+    verify(jdbcCrudService).put(put, connection);
+    verify(jdbcCrudService).put(expectedPutFromInsert, connection);
+    verify(jdbcCrudService).put(expectedPutFromUpsert, connection);
+    verify(jdbcCrudService).put(expectedPutFromUpdate, connection);
+    verify(jdbcCrudService).delete(delete, connection);
     assertThat(results).hasSize(7);
     assertThat(results.get(0).getType()).isEqualTo(CrudOperable.BatchResult.Type.GET);
     assertThat(results.get(0).getGetResult()).hasValue(result1);
