@@ -63,7 +63,7 @@ public enum CoreError implements ScalarDbError {
   OPERATION_CHECK_ERROR_CLUSTERING_KEY_BOUNDARY(
       Category.USER_ERROR,
       "0010",
-      "The clustering key boundary is not properly specified. Operation: %s; Table metadata: %s",
+      "The clustering-key boundary is not properly specified. Operation: %s; Table metadata: %s",
       "",
       "Ensure the clustering-key boundary values match the table's clustering-key definition and are specified in the correct order."),
   OPERATION_CHECK_ERROR_START_CLUSTERING_KEY(
@@ -288,7 +288,7 @@ public enum CoreError implements ScalarDbError {
   CROSS_PARTITION_SCAN_MUST_BE_ENABLED_TO_USE_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING(
       Category.USER_ERROR,
       "0062",
-      "The property 'scalar.db.cross_partition_scan.enabled' must be set to true "
+      "The property 'scalar.db.cross_partition_scan.enabled' must be set to 'true' "
           + "to use cross-partition scan with filtering or ordering",
       "",
       "Set 'scalar.db.cross_partition_scan.enabled' to 'true' in your configuration."),
