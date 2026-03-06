@@ -39,9 +39,17 @@ public enum CoreError implements ScalarDbError {
       "",
       "Remove the ordering specification from your operation when using an index."),
   OPERATION_CHECK_ERROR_LIMIT(
-      Category.USER_ERROR, "0005", "The limit cannot be negative. Operation: %s", "", "Specify a non-negative value for the limit (0 or greater)."),
+      Category.USER_ERROR,
+      "0005",
+      "The limit cannot be negative. Operation: %s",
+      "",
+      "Specify a non-negative value for the limit (0 or greater)."),
   OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN(
-      Category.USER_ERROR, "0006", "Cross-partition scan is not enabled. Operation: %s", "", "Enable cross-partition scan by setting 'scalar.db.cross_partition_scan.enabled' to 'true' in your configuration."),
+      Category.USER_ERROR,
+      "0006",
+      "Cross-partition scan is not enabled. Operation: %s",
+      "",
+      "Enable cross-partition scan by setting 'scalar.db.cross_partition_scan.enabled' to 'true' in your configuration."),
   OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING(
       Category.USER_ERROR,
       "0007",
@@ -96,14 +104,24 @@ public enum CoreError implements ScalarDbError {
       "The condition is not properly specified. Operation: %s; Table metadata: %s",
       "",
       "Verify that the condition references valid columns with correct data types and uses supported operators."),
-  TABLE_NOT_FOUND(Category.USER_ERROR, "0016", "The table does not exist. Table: %s", "", "Verify the namespace and table name are correct, or create the table if it does not exist."),
+  TABLE_NOT_FOUND(
+      Category.USER_ERROR,
+      "0016",
+      "The table does not exist. Table: %s",
+      "",
+      "Verify the namespace and table name are correct, or create the table if it does not exist."),
   OPERATION_CHECK_ERROR_INVALID_COLUMN(
       Category.USER_ERROR,
       "0017",
       "The column value is not properly specified. Column: %s, Operation: %s; Table metadata: %s",
       "",
       "Verify that the column name exists in the table and that the value matches the column's data type."),
-  EMPTY_MUTATIONS_SPECIFIED(Category.USER_ERROR, "0018", "The mutations are empty", "", "Provide at least one mutation (Put, Delete, Insert, Update, or Upsert) in your request."),
+  EMPTY_MUTATIONS_SPECIFIED(
+      Category.USER_ERROR,
+      "0018",
+      "The mutations are empty",
+      "",
+      "Provide at least one mutation (Put, Delete, Insert, Update, or Upsert) in your request."),
   OPERATION_CHECK_ERROR_MULTI_PARTITION_MUTATION(
       Category.USER_ERROR,
       "0019",
@@ -142,7 +160,11 @@ public enum CoreError implements ScalarDbError {
       "",
       "Use only supported conditions for DeleteIf operations (DeleteIfExists or column-based conditions)."),
   LIKE_CHECK_ERROR_OPERATOR_MUST_BE_LIKE_OR_NOT_LIKE(
-      Category.USER_ERROR, "0025", "Operator must be LIKE or NOT_LIKE. Operator: %s", "", "Use LIKE or NOT_LIKE operators for pattern matching."),
+      Category.USER_ERROR,
+      "0025",
+      "Operator must be LIKE or NOT_LIKE. Operator: %s",
+      "",
+      "Use LIKE or NOT_LIKE operators for pattern matching."),
   LIKE_CHECK_ERROR_ESCAPE_CHARACTER_MUST_BE_STRING_OF_SINGLE_CHARACTER_OR_EMPTY_STRING(
       Category.USER_ERROR,
       "0026",
@@ -150,7 +172,11 @@ public enum CoreError implements ScalarDbError {
       "",
       "Specify a single character or an empty string for the escape character."),
   LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_BE_NULL(
-      Category.USER_ERROR, "0027", "The LIKE pattern must not be null", "", "Provide a non-null pattern for the LIKE operation."),
+      Category.USER_ERROR,
+      "0027",
+      "The LIKE pattern must not be null",
+      "",
+      "Provide a non-null pattern for the LIKE operation."),
   LIKE_CHECK_ERROR_LIKE_PATTERN_MUST_NOT_INCLUDE_ONLY_ESCAPE_CHARACTER(
       Category.USER_ERROR,
       "0028",
@@ -163,7 +189,12 @@ public enum CoreError implements ScalarDbError {
       "The LIKE pattern must not end with an escape character",
       "",
       "Remove the trailing escape character or add a character after it in the pattern."),
-  COLUMN_NOT_FOUND(Category.USER_ERROR, "0030", "The column %s does not exist", "", "Verify the column name exists in the table schema."),
+  COLUMN_NOT_FOUND(
+      Category.USER_ERROR,
+      "0030",
+      "The column %s does not exist",
+      "",
+      "Verify the column name exists in the table schema."),
   GET_BUILD_ERROR_OPERATION_NOT_SUPPORTED_WHEN_GETTING_RECORDS_OF_DATABASE_WITHOUT_USING_INDEX(
       Category.USER_ERROR,
       "0031",
@@ -203,9 +234,17 @@ public enum CoreError implements ScalarDbError {
       "",
       "Call clearConditions() before performing this operation."),
   TABLE_METADATA_BUILD_ERROR_NO_COLUMNS_SPECIFIED(
-      Category.USER_ERROR, "0038", "One or more columns must be specified", "", "Add at least one column to the table definition."),
+      Category.USER_ERROR,
+      "0038",
+      "One or more columns must be specified",
+      "",
+      "Add at least one column to the table definition."),
   TABLE_METADATA_BUILD_ERROR_NO_PARTITION_KEYS_SPECIFIED(
-      Category.USER_ERROR, "0039", "One or more partition keys must be specified", "", "Specify at least one partition key column in the table definition."),
+      Category.USER_ERROR,
+      "0039",
+      "One or more partition keys must be specified",
+      "",
+      "Specify at least one partition key column in the table definition."),
   TABLE_METADATA_BUILD_ERROR_PARTITION_KEY_COLUMN_DEFINITION_NOT_SPECIFIED(
       Category.USER_ERROR,
       "0040",
@@ -219,9 +258,17 @@ public enum CoreError implements ScalarDbError {
       "",
       "Add the column definition for the clustering-key column."),
   TRANSACTION_STATE_INSTANTIATION_ERROR_INVALID_ID(
-      Category.USER_ERROR, "0042", "Invalid ID specified. ID: %d", "", "Use a valid transaction state ID."),
+      Category.USER_ERROR,
+      "0042",
+      "Invalid ID specified. ID: %d",
+      "",
+      "Use a valid transaction state ID."),
   TRANSACTION_NOT_ACTIVE(
-      Category.USER_ERROR, "0043", "The transaction is not active. Status: %s", "", "Begin a new transaction before performing operations."),
+      Category.USER_ERROR,
+      "0043",
+      "The transaction is not active. Status: %s",
+      "",
+      "Begin a new transaction before performing operations."),
   TRANSACTION_ALREADY_COMMITTED(
       Category.USER_ERROR,
       "0044",
@@ -229,14 +276,23 @@ public enum CoreError implements ScalarDbError {
       "",
       "Begin a new transaction if you need to perform additional operations."),
   TRANSACTION_NOT_PREPARED(
-      Category.USER_ERROR, "0045", "The transaction has not been prepared. Status: %s", "", "Call 'prepare()' before committing a two-phase transaction."),
+      Category.USER_ERROR,
+      "0045",
+      "The transaction has not been prepared. Status: %s",
+      "",
+      "Call 'prepare()' before committing a two-phase transaction."),
   TRANSACTION_NOT_PREPARED_OR_VALIDATED(
       Category.USER_ERROR,
       "0046",
       "The transaction has not been prepared or validated. Status: %s",
       "",
       "Call 'prepare()' or 'validate()' before committing the transaction."),
-  TRANSACTION_ALREADY_EXISTS(Category.USER_ERROR, "0047", "The transaction already exists", "", "Use the existing transaction or close it before starting a new one with the same ID."),
+  TRANSACTION_ALREADY_EXISTS(
+      Category.USER_ERROR,
+      "0047",
+      "The transaction already exists",
+      "",
+      "Use the existing transaction or close it before starting a new one with the same ID."),
   TRANSACTION_NOT_FOUND(
       Category.USER_ERROR,
       "0048",
@@ -245,12 +301,29 @@ public enum CoreError implements ScalarDbError {
       "",
       "Begin a new transaction. Check your transaction timeout settings if this occurs frequently."),
   SYSTEM_NAMESPACE_SPECIFIED(
-      Category.USER_ERROR, "0049", "%s is the system namespace name", "", "Use a different namespace name. System namespaces are reserved."),
+      Category.USER_ERROR,
+      "0049",
+      "%s is the system namespace name",
+      "",
+      "Use a different namespace name. System namespaces are reserved."),
   NAMESPACE_ALREADY_EXISTS(
-      Category.USER_ERROR, "0050", "The namespace already exists. Namespace: %s", "", "Use the existing namespace or choose a different name."),
+      Category.USER_ERROR,
+      "0050",
+      "The namespace already exists. Namespace: %s",
+      "",
+      "Use the existing namespace or choose a different name."),
   NAMESPACE_NOT_FOUND(
-      Category.USER_ERROR, "0051", "The namespace does not exist. Namespace: %s", "", "Create the namespace or verify the namespace name is correct."),
-  TABLE_ALREADY_EXISTS(Category.USER_ERROR, "0052", "The table already exists. Table: %s", "", "Use the existing table, drop it first, or choose a different table name."),
+      Category.USER_ERROR,
+      "0051",
+      "The namespace does not exist. Namespace: %s",
+      "",
+      "Create the namespace or verify the namespace name is correct."),
+  TABLE_ALREADY_EXISTS(
+      Category.USER_ERROR,
+      "0052",
+      "The table already exists. Table: %s",
+      "",
+      "Use the existing table, drop it first, or choose a different table name."),
   NAMESPACE_NOT_EMPTY(
       Category.USER_ERROR,
       "0053",
@@ -258,13 +331,29 @@ public enum CoreError implements ScalarDbError {
       "",
       "Drop all tables in the namespace before dropping the namespace."),
   COLUMN_NOT_FOUND2(
-      Category.USER_ERROR, "0054", "The column does not exist. Table: %s; Column: %s", "", "Verify the column name exists in the table schema or add the column to the table."),
+      Category.USER_ERROR,
+      "0054",
+      "The column does not exist. Table: %s; Column: %s",
+      "",
+      "Verify the column name exists in the table schema or add the column to the table."),
   INDEX_ALREADY_EXISTS(
-      Category.USER_ERROR, "0055", "The index already exists. Table: %s; Column: %s", "", "Use the existing index or drop it first if you need to recreate it."),
+      Category.USER_ERROR,
+      "0055",
+      "The index already exists. Table: %s; Column: %s",
+      "",
+      "Use the existing index or drop it first if you need to recreate it."),
   INDEX_NOT_FOUND(
-      Category.USER_ERROR, "0056", "The index does not exist. Table: %s; Column: %s", "", "Create the index on the column or verify the column name is correct."),
+      Category.USER_ERROR,
+      "0056",
+      "The index does not exist. Table: %s; Column: %s",
+      "",
+      "Create the index on the column or verify the column name is correct."),
   COLUMN_ALREADY_EXISTS(
-      Category.USER_ERROR, "0057", "The column already exists. Table: %s; Column: %s", "", "Use a different column name or use the existing column."),
+      Category.USER_ERROR,
+      "0057",
+      "The column already exists. Table: %s; Column: %s",
+      "",
+      "Use a different column name or use the existing column."),
   OPERATION_DOES_NOT_HAVE_TARGET_NAMESPACE_OR_TABLE_NAME(
       Category.USER_ERROR,
       "0058",
@@ -284,7 +373,11 @@ public enum CoreError implements ScalarDbError {
       "",
       "Provide a valid boolean value ('true' or 'false') for the configuration property."),
   CONFIG_UTILS_READING_FILE_FAILED(
-      Category.USER_ERROR, "0061", "Reading the file failed. File: %s", "", "Verify the file path is correct and the file is readable."),
+      Category.USER_ERROR,
+      "0061",
+      "Reading the file failed. File: %s",
+      "",
+      "Verify the file path is correct and the file is readable."),
   CROSS_PARTITION_SCAN_MUST_BE_ENABLED_TO_USE_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING(
       Category.USER_ERROR,
       "0062",
@@ -299,10 +392,23 @@ public enum CoreError implements ScalarDbError {
       "",
       "Use a value within the valid range for BigInt ('Long.MIN_VALUE' to 'Long.MAX_VALUE')."),
   KEY_BUILD_ERROR_UNSUPPORTED_TYPE(
-      Category.USER_ERROR, "0064", "This type is not supported. Name: %s, Type: %s", "", "Use a supported data type for the key column."),
-  STORAGE_NOT_FOUND(Category.USER_ERROR, "0065", "Storage '%s' is not found", "", "Verify the storage name in your configuration and ensure the storage implementation is available."),
+      Category.USER_ERROR,
+      "0064",
+      "This type is not supported. Name: %s, Type: %s",
+      "",
+      "Use a supported data type for the key column."),
+  STORAGE_NOT_FOUND(
+      Category.USER_ERROR,
+      "0065",
+      "Storage '%s' is not found",
+      "",
+      "Verify the storage name in your configuration and ensure the storage implementation is available."),
   TRANSACTION_MANAGER_NOT_FOUND(
-      Category.USER_ERROR, "0066", "Transaction manager '%s' is not found", "", "Verify the transaction manager name in your configuration and ensure the transaction manager implementation is available."),
+      Category.USER_ERROR,
+      "0066",
+      "Transaction manager '%s' is not found",
+      "",
+      "Verify the transaction manager name in your configuration and ensure the transaction manager implementation is available."),
   GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION(
       Category.USER_ERROR,
       "0068",
@@ -316,7 +422,11 @@ public enum CoreError implements ScalarDbError {
       "",
       "Use schema creation and data loading instead of the import functionality for Cassandra."),
   CASSANDRA_NETWORK_STRATEGY_NOT_FOUND(
-      Category.USER_ERROR, "0070", "The %s network strategy does not exist", "", "Use a valid Cassandra network strategy ('SimpleStrategy' or 'NetworkTopologyStrategy')."),
+      Category.USER_ERROR,
+      "0070",
+      "The %s network strategy does not exist",
+      "",
+      "Use a valid Cassandra network strategy ('SimpleStrategy' or 'NetworkTopologyStrategy')."),
   INVALID_CONTACT_PORT(
       Category.USER_ERROR,
       "0071",
@@ -360,7 +470,11 @@ public enum CoreError implements ScalarDbError {
       "",
       "Avoid using 0x00 bytes in BLOB values for columns with DESC clustering order in DynamoDB."),
   DYNAMO_ENCODER_CANNOT_ENCODE_TEXT_VALUE_CONTAINING_0X0000(
-      Category.USER_ERROR, "0079", "Cannot encode a Text value that contains '\\u0000'", "", "Remove null characters (\\u0000) from the text value."),
+      Category.USER_ERROR,
+      "0079",
+      "Cannot encode a Text value that contains '\\u0000'",
+      "",
+      "Remove null characters (\\u0000) from the text value."),
   DYNAMO_INDEX_COLUMN_CANNOT_BE_SET_TO_EMPTY(
       Category.USER_ERROR,
       "0081",
@@ -380,7 +494,11 @@ public enum CoreError implements ScalarDbError {
       "",
       "Avoid nesting multi-storage configurations. Define each storage directly."),
   MULTI_STORAGE_STORAGE_NOT_FOUND(
-      Category.USER_ERROR, "0084", "Storage not found. Storage: %s", "", "Verify the storage name is defined in your multi-storage configuration."),
+      Category.USER_ERROR,
+      "0084",
+      "Storage not found. Storage: %s",
+      "",
+      "Verify the storage name is defined in your multi-storage configuration."),
   JDBC_SQLITE_NAMESPACE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
       "0085",
@@ -388,11 +506,23 @@ public enum CoreError implements ScalarDbError {
       "",
       "Use a valid SQLite database name that follows SQLite naming conventions."),
   JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
-      Category.USER_ERROR, "0086", "The table name is not acceptable in SQLite. Table: %s", "", "Use a valid SQLite table name that follows SQLite naming conventions."),
+      Category.USER_ERROR,
+      "0086",
+      "The table name is not acceptable in SQLite. Table: %s",
+      "",
+      "Use a valid SQLite table name that follows SQLite naming conventions."),
   JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
-      Category.USER_ERROR, "0087", "Importing tables is not allowed in SQLite", "", "Use schema creation and data loading instead of the import functionality for SQLite."),
+      Category.USER_ERROR,
+      "0087",
+      "Importing tables is not allowed in SQLite",
+      "",
+      "Use schema creation and data loading instead of the import functionality for SQLite."),
   JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY(
-      Category.USER_ERROR, "0088", "The %s table must have a primary key", "", "Add a primary key to the table before importing it."),
+      Category.USER_ERROR,
+      "0088",
+      "The %s table must have a primary key",
+      "",
+      "Add a primary key to the table before importing it."),
   JDBC_RDB_ENGINE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0089",
@@ -400,9 +530,17 @@ public enum CoreError implements ScalarDbError {
       "",
       "Use a supported JDBC database (MySQL, PostgreSQL, Oracle, SQL Server, SQLite, Db2, or TiDB)."),
   JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED(
-      Category.USER_ERROR, "0090", "Data type %s(%d) is not supported: %s", "", "Use a supported ScalarDB data type or check the import-type mapping configuration."),
+      Category.USER_ERROR,
+      "0090",
+      "Data type %s(%d) is not supported: %s",
+      "",
+      "Use a supported ScalarDB data type or check the import-type mapping configuration."),
   JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED(
-      Category.USER_ERROR, "0091", "Data type %s is not supported: %s", "", "Use a supported ScalarDB data type or check the import-type mapping configuration."),
+      Category.USER_ERROR,
+      "0091",
+      "Data type %s is not supported: %s",
+      "",
+      "Use a supported ScalarDB data type or check the import-type mapping configuration."),
   JDBC_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0092",
