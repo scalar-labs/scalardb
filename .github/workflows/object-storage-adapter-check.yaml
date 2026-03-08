@@ -131,7 +131,7 @@ jobs:
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Login to Oracle container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
           registry: container-registry.oracle.com
@@ -238,7 +238,7 @@ jobs:
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Login to Oracle container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' }}
         with:
           registry: container-registry.oracle.com
