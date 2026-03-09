@@ -20,4 +20,9 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
 
     return properties;
   }
+
+  @Override
+  protected String getTestName() {
+    return "cc_highest_iso";
+  }
 }

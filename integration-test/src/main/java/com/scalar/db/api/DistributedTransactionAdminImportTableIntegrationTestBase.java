@@ -86,7 +86,7 @@ public abstract class DistributedTransactionAdminImportTableIntegrationTestBase 
 
   @BeforeEach
   protected void setUp() throws Exception {
-    TransactionFactory factory = TransactionFactory.create(getProperties(TEST_NAME));
+    TransactionFactory factory = TransactionFactory.create(getProperties(getTestName()));
     admin = factory.getTransactionAdmin();
     manager = factory.getTransactionManager();
     admin.createCoordinatorTables(true);
