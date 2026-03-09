@@ -390,6 +390,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
   }
 
@@ -417,6 +418,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
   }
 
@@ -442,6 +444,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
@@ -469,6 +472,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
@@ -498,6 +502,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledForwardResult());
+    assertThat(result.rolledBack).isFalse();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
@@ -524,6 +529,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).isNotPresent();
+    assertThat(result.rolledBack).isFalse();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
@@ -550,6 +556,7 @@ public class RecoveryExecutorTest {
         .hasCauseInstanceOf(CrudException.class);
 
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
     verify(recovery, never()).recover(any(), any(), any());
@@ -579,6 +586,7 @@ public class RecoveryExecutorTest {
         .hasCauseInstanceOf(UncommittedRecordException.class);
 
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
     verify(recovery, never()).recover(any(), any(), any());
@@ -607,6 +615,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
   }
 
@@ -634,6 +643,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
   }
 
@@ -659,6 +669,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
@@ -686,6 +697,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
@@ -715,6 +727,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
@@ -741,6 +754,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
     verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
@@ -766,6 +780,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
     verify(recovery, never()).recover(any(), any(), any());
@@ -792,6 +807,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
     verify(recovery, never()).recover(any(), any(), any());
@@ -818,6 +834,7 @@ public class RecoveryExecutorTest {
 
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
     verify(recovery, never()).recover(any(), any(), any());

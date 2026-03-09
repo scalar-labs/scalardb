@@ -26,7 +26,8 @@ public class TransactionContext {
   // A list of scanners opened in the transaction
   public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
-  // A list of recovery results performed in the transaction
+  // A list of recovery results for asynchronously executed recoveries. These are tracked so that
+  // their completion can be awaited before committing the transaction if necessary.
   public final List<RecoveryExecutor.Result> recoveryResults = new ArrayList<>();
 
   public TransactionContext(

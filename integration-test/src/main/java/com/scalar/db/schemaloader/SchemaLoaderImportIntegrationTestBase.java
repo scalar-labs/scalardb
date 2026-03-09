@@ -33,7 +33,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "schema_loader_import";
+  private static final String TEST_NAME = "sl_import";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
       Paths.get("import_schema.json").toAbsolutePath();

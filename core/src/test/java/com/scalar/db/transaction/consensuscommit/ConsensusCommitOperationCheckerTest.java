@@ -563,14 +563,14 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnIndexedColumnInSerializable_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -591,14 +591,14 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnNonIndexedColumnInSerializable_ShouldNotThrowException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -618,16 +618,15 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnIndexedPartitionKeyColumnInSerializable_ShouldNotThrowException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata - indexed column is also a partition key
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
-    LinkedHashSet<String> partitionKeys = new LinkedHashSet<>();
-    partitionKeys.add("idx_col");
+    LinkedHashSet<String> partitionKeys = new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(partitionKeys);
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -647,16 +646,16 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnIndexedClusteringKeyColumnInSerializable_ShouldNotThrowException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata - indexed column is also a clustering key
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
-    LinkedHashSet<String> clusteringKeys = new LinkedHashSet<>();
-    clusteringKeys.add("idx_col");
+    LinkedHashSet<String> clusteringKeys =
+        new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(clusteringKeys);
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -683,9 +682,12 @@ public class ConsensusCommitOperationCheckerTest {
             .addPartitionKey("pk")
             .addSecondaryIndex("idx_col")
             .build();
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(tableMetadata.getTableMetadata()).thenReturn(metadata);
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         Scan.newBuilder()
