@@ -10,6 +10,7 @@ import com.scalar.db.util.AdminTestUtils;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.Disabled;
 
 public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegrationTestBase {
@@ -108,4 +109,11 @@ public class CassandraAdminIntegrationTest extends DistributedStorageAdminIntegr
   @Override
   @Disabled("Cassandra does not support renaming tables")
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly() {}
+
+  @Override
+  protected void assertNamespaceNames(Set<String> actual, String... expectedNamespaces) {
+    // When tests are run in parallel, there can be other namespaces created by other tests,
+    // so we don't check exactly all the returned namespaces
+    assertThat(actual).contains(expectedNamespaces);
+  }
 }

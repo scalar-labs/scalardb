@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -490,6 +491,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Assert
     assertThat(exitCodeAlteration).isZero();
+    waitForCreationIfNecessary();
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
         .isEqualTo(expectedTable1Metadata);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
@@ -512,8 +514,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
     // Assert
     assertThat(exitCodeUpgrade).isZero();
     waitForCreationIfNecessary();
-    assertThat(transactionAdmin.getNamespaceNames())
-        .containsOnly(namespace1, namespace2, systemNamespaceName);
+    assertNamespaceNames(
+        transactionAdmin.getNamespaceNames(), namespace1, namespace2, systemNamespaceName);
   }
 
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
@@ -584,5 +586,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected boolean isTimestampTypeSupported() {
     return true;
+  }
+
+  protected void assertNamespaceNames(Set<String> actual, String... expectedNamespaces) {
+    assertThat(actual).containsOnly(expectedNamespaces);
   }
 }

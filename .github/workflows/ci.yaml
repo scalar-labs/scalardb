@@ -86,7 +86,6 @@ on:
 env:
   TERM: dumb
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
-
 jobs:
   check:
     name: Gradle check

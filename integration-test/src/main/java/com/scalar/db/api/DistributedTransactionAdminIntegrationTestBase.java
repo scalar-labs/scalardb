@@ -1584,7 +1584,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     Set<String> namespaces = admin.getNamespaceNames();
 
     // Assert
-    assertThat(namespaces).containsOnly(namespace1, namespace2, systemNamespaceName);
+    assertNamespaceNames(namespaces, namespace1, namespace2, systemNamespaceName);
   }
 
   @Test
@@ -1600,8 +1600,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.upgrade(getCreationOptions());
 
       // Assert
-      assertThat(admin.getNamespaceNames())
-          .containsOnly(namespace1, namespace2, systemNamespaceName);
+      assertNamespaceNames(admin.getNamespaceNames(), namespace1, namespace2, systemNamespaceName);
     } finally {
       adminTestUtils.close();
     }
@@ -1626,4 +1625,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected abstract void transactionalInsert(Insert insert) throws TransactionException;
 
   protected abstract List<Result> transactionalScan(Scan scan) throws TransactionException;
+
+  protected void assertNamespaceNames(Set<String> actual, String... expectedNamespaces) {
+    assertThat(actual).containsOnly(expectedNamespaces);
+  }
 }
