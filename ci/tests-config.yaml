@@ -85,8 +85,9 @@ jdbc:
     versions:
       - 15
       - 16
+    db_healthcheck: docker exec alloydb psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
-      docker exec alloydb psql -h localhost -U postgres -c "
+      docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
@@ -97,6 +98,7 @@ jdbc:
     versions:
       - 10.11
       - 11.4
+    db_healthcheck: docker exec mariadb mariadb -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec mariadb mariadb -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
@@ -117,6 +119,7 @@ jdbc:
       - 5.7
       - 8.0
       - 8.4
+    db_healthcheck: docker exec mysql mysql -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec mysql mysql -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
@@ -179,6 +182,7 @@ jdbc:
       - 15
       - 16
       - 17
+    db_healthcheck: docker exec postgresql psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec postgresql psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
@@ -215,6 +219,7 @@ jdbc:
   - label: yugabytedb
     display_name: YugabyteDB 2
     setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
+    db_healthcheck: docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'SELECT 1;'" > /dev/null 2>&1
     create_test_user: |
       docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
         CREATE USER test WITH PASSWORD 'test';
