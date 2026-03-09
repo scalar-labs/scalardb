@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
@@ -7,6 +9,7 @@ import com.scalar.db.util.AdminTestUtils;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
@@ -58,5 +61,12 @@ public class CassandraSchemaLoaderIntegrationTest extends SchemaLoaderIntegratio
   @Override
   protected boolean isTimestampTypeSupported() {
     return false;
+  }
+
+  @Override
+  protected void assertNamespaceNames(Set<String> actual, String... expectedNamespaces) {
+    // When tests are run in parallel, there can be other namespaces created by other tests,
+    // so we don't check exactly all the returned namespaces
+    assertThat(actual).contains(expectedNamespaces);
   }
 }

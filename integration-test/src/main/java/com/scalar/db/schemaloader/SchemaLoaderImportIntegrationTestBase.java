@@ -34,9 +34,9 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
       LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
 
   private static final String TEST_NAME = "sl_import";
-  private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
-  private static final Path IMPORT_SCHEMA_FILE_PATH =
-      Paths.get("import_schema.json").toAbsolutePath();
+
+  private Path configFilePath;
+  private Path importSchemaFilePath;
 
   private static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE_1 = "tbl1";
@@ -50,12 +50,14 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     String testName = getTestName();
+    configFilePath = Paths.get(testName + "_config.properties").toAbsolutePath();
+    importSchemaFilePath = Paths.get(testName + "_import_schema.json").toAbsolutePath();
     initialize(testName);
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
     Properties properties = getProperties(testName);
     writeConfigFile(properties);
-    writeSchemaFile(IMPORT_SCHEMA_FILE_PATH, getImportSchemaJsonMap());
+    writeSchemaFile(importSchemaFilePath, getImportSchemaJsonMap());
     StorageFactory factory = StorageFactory.create(properties);
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
@@ -76,7 +78,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   protected abstract Properties getProperties(String testName);
 
   protected void writeConfigFile(Properties properties) throws IOException {
-    try (OutputStream outputStream = Files.newOutputStream(CONFIG_FILE_PATH)) {
+    try (OutputStream outputStream = Files.newOutputStream(configFilePath)) {
       properties.store(outputStream, null);
     }
   }
@@ -138,8 +140,8 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     }
 
     // Delete the files
-    Files.delete(CONFIG_FILE_PATH);
-    Files.delete(IMPORT_SCHEMA_FILE_PATH);
+    Files.delete(configFilePath);
+    Files.delete(importSchemaFilePath);
   }
 
   private void dropTablesIfExist() throws Exception {
@@ -182,8 +184,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
     // Act
     waitForDifferentSessionDdl();
-    int exitCode =
-        executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
+    int exitCode = executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -221,8 +222,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     try {
       // Act
       waitForDifferentSessionDdl();
-      int exitCode =
-          executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
+      int exitCode = executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
 
       // Assert
       assertThat(exitCode).isEqualTo(0);
@@ -262,8 +262,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
     // Act
     waitForDifferentSessionDdl();
-    int exitCode =
-        executeWithArgs(getCommandArgsForImport(CONFIG_FILE_PATH, IMPORT_SCHEMA_FILE_PATH));
+    int exitCode = executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(1);

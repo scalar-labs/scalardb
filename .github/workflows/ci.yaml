@@ -86,7 +86,7 @@ on:
 env:
   TERM: dumb
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
-
+  ORG_GRADLE_PROJECT_test.maxParallelForks: '4'
 jobs:
   check:
     name: Gradle check

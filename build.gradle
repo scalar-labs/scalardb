@@ -77,6 +77,9 @@ subprojects {
     tasks.withType(Test) {
         useJUnitPlatform()
         testLogging.showStandardStreams = true
+        def userDefinedForks = Integer.parseInt(project.findProperty('test.maxParallelForks') as String ?: '0')
+        maxParallelForks = userDefinedForks > 0 ? userDefinedForks : (Runtime.runtime.availableProcessors().intdiv(2) ?: 1)
+        logger.lifecycle("Task '${it.path}': maxParallelForks=${maxParallelForks} (property=${userDefinedForks}, cpus=${Runtime.runtime.availableProcessors()})")
     }
 
     group = projectGroup

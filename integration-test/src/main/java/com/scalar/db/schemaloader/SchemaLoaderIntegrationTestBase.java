@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,10 +44,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
       LoggerFactory.getLogger(SchemaLoaderIntegrationTestBase.class);
 
   private static final String TEST_NAME = "schema_loader";
-  private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
-  private static final Path SCHEMA_FILE_PATH = Paths.get("schema.json").toAbsolutePath();
-  private static final Path ALTERED_SCHEMA_FILE_PATH =
-      Paths.get("altered_schema.json").toAbsolutePath();
+
+  private Path configFilePath;
+  private Path schemaFilePath;
+  private Path alteredSchemaFilePath;
 
   private static final String NAMESPACE_BASE_NAME = "int_test_";
   protected static final String TABLE_1 = "tbl1";
@@ -101,13 +102,16 @@ public abstract class SchemaLoaderIntegrationTestBase {
   @BeforeAll
   public void beforeAll() throws Exception {
     String testName = getTestName();
+    configFilePath = Paths.get(testName + "_config.properties").toAbsolutePath();
+    schemaFilePath = Paths.get(testName + "_schema.json").toAbsolutePath();
+    alteredSchemaFilePath = Paths.get(testName + "_altered_schema.json").toAbsolutePath();
     initialize(testName);
     namespace1 = getNamespaceBaseName() + testName + "1";
     namespace2 = getNamespaceBaseName() + testName + "2";
     Properties properties = getProperties(testName);
     writeConfigFile(properties);
-    writeSchemaFile(SCHEMA_FILE_PATH, getSchemaJsonMap());
-    writeSchemaFile(ALTERED_SCHEMA_FILE_PATH, getAlteredSchemaJsonMap());
+    writeSchemaFile(schemaFilePath, getSchemaJsonMap());
+    writeSchemaFile(alteredSchemaFilePath, getAlteredSchemaJsonMap());
     StorageFactory factory = StorageFactory.create(properties);
     storageAdmin = factory.getStorageAdmin();
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
@@ -130,7 +134,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   protected abstract Properties getProperties(String testName);
 
   protected void writeConfigFile(Properties properties) throws IOException {
-    try (OutputStream outputStream = Files.newOutputStream(CONFIG_FILE_PATH)) {
+    try (OutputStream outputStream = Files.newOutputStream(configFilePath)) {
       properties.store(outputStream, null);
     }
   }
@@ -340,9 +344,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
     }
 
     // Delete the files
-    Files.delete(CONFIG_FILE_PATH);
-    Files.delete(SCHEMA_FILE_PATH);
-    Files.delete(ALTERED_SCHEMA_FILE_PATH);
+    Files.delete(configFilePath);
+    Files.delete(schemaFilePath);
+    Files.delete(alteredSchemaFilePath);
   }
 
   private void dropTablesIfExist() throws ExecutionException {
@@ -367,7 +371,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private void createTables_ShouldCreateTables() throws Exception {
     // Act
-    int exitCode = executeWithArgs(getCommandArgsForCreation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    int exitCode = executeWithArgs(getCommandArgsForCreation(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -378,13 +382,13 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private void deleteTables_ShouldDeleteTables() throws Exception {
     // Act
-    int exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    int exitCode = executeWithArgs(getCommandArgsForDeletion(configFilePath, schemaFilePath));
     // This retry that is basically only for YugabyteDB is inconsistent with other test cases.
     // But, without this, we need a very long wait, resulting in long duration in total.
     // This workaround can be removed if the catalog version mismatch issue is mitigated in the
     // future.
     if (exitCode != 0 && couldFailToReadNamespaceAfterDeletingTable()) {
-      exitCode = executeWithArgs(getCommandArgsForDeletion(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+      exitCode = executeWithArgs(getCommandArgsForDeletion(configFilePath, schemaFilePath));
     }
 
     // Assert
@@ -407,7 +411,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(getCommandArgsForCreation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForCreation(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
     adminTestUtils.dropNamespacesTable();
     adminTestUtils.dropTable(namespace1, TABLE_1);
@@ -415,7 +419,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     int exitCodeReparation =
-        executeWithArgs(getCommandArgsForReparation(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForReparation(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
@@ -437,8 +441,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
     adminTestUtils.dropMetadataTable();
     adminTestUtils.dropTable(namespace1, TABLE_1);
@@ -446,8 +449,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     int exitCodeReparation =
-        executeWithArgs(
-            getCommandArgsForReparationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForReparationWithCoordinator(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
@@ -468,8 +470,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   public void createTableThenAlterTables_ShouldExecuteProperly() throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
 
     TableMetadata expectedTable1Metadata =
@@ -486,10 +487,11 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     int exitCodeAlteration =
-        executeWithArgs(getCommandArgsForAlteration(CONFIG_FILE_PATH, ALTERED_SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForAlteration(configFilePath, alteredSchemaFilePath));
 
     // Assert
     assertThat(exitCodeAlteration).isZero();
+    waitForCreationIfNecessary();
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
         .isEqualTo(expectedTable1Metadata);
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2))
@@ -501,26 +503,24 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
     adminTestUtils.dropNamespacesTable();
 
     // Act
-    int exitCodeUpgrade = executeWithArgs(getCommandArgsForUpgrade(CONFIG_FILE_PATH));
+    int exitCodeUpgrade = executeWithArgs(getCommandArgsForUpgrade(configFilePath));
 
     // Assert
     assertThat(exitCodeUpgrade).isZero();
     waitForCreationIfNecessary();
-    assertThat(transactionAdmin.getNamespaceNames())
-        .containsOnly(namespace1, namespace2, systemNamespaceName);
+    assertNamespaceNames(
+        transactionAdmin.getNamespaceNames(), namespace1, namespace2, systemNamespaceName);
   }
 
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -551,7 +551,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     waitForCreationIfNecessary();
-    int exitCode = executeWithArgs(getCommandArgsForUpgrade(CONFIG_FILE_PATH));
+    int exitCode = executeWithArgs(getCommandArgsForUpgrade(configFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -564,8 +564,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeWithArgs(
-            getCommandArgsForDeletionWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+        executeWithArgs(getCommandArgsForDeletionWithCoordinator(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -584,5 +583,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   protected boolean isTimestampTypeSupported() {
     return true;
+  }
+
+  protected void assertNamespaceNames(Set<String> actual, String... expectedNamespaces) {
+    assertThat(actual).containsOnly(expectedNamespaces);
   }
 }

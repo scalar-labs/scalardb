@@ -249,6 +249,10 @@ task integrationTestCosmos(type: Test) {
             '-Dorg.slf4j.simpleLogger.log.com.azure.cosmos.implementation.Configs=warn',
             // ERROR com.scalar.db.storage.cosmos.MutateStatementHandler - {"innerErrorMessage":"[\"Encountered exception while executing Javascript. Exception = Error: no mutation...
             '-Dorg.slf4j.simpleLogger.log.com.scalar.db.storage.cosmos.MutateStatementHandler=off'
+
+    // The Cosmos DB Emulator is a single-instance local simulator that cannot handle concurrent
+    // DDL operations from parallel test classes. Force sequential execution.
+    maxParallelForks = 1
 }
 
 task integrationTestDynamo(type: Test) {
@@ -260,7 +264,6 @@ task integrationTestDynamo(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
-    maxParallelForks = 10
 }
 
 task integrationTestJdbc(type: Test) {
@@ -273,6 +276,19 @@ task integrationTestJdbc(type: Test) {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     maxHeapSize = "4g"
+
+    def jdbcUrl = System.getProperty('scalardb.jdbc.url', '')
+    if (jdbcUrl.startsWith('jdbc:oracle:') ||
+        jdbcUrl.startsWith('jdbc:sqlserver:') ||
+        jdbcUrl.startsWith('jdbc:yugabytedb:')) {
+        // Oracle, SQL Server, and YugabyteDB cannot handle concurrent DDL operations
+        // when multiple test classes run in parallel so they need to be run run sequentially.
+        maxParallelForks = 1
+    } else if (jdbcUrl.startsWith('jdbc:sqlite:')) {
+        // With SQLite, with 3+ forks there is too much lock contention causing frequent SQLITE_BUSY
+        // errors
+        maxParallelForks=2
+    }
 }
 
 task integrationTestObjectStorage(type: Test) {
