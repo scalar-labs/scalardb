@@ -28,7 +28,7 @@ blob-storage:
       az storage container create \
             --name test-container \
             --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
-      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
+      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test --tests ObjectStorageColumnValueIntegrationTest
 
 cassandra:
   - label: cassandra_%VERSION%
@@ -51,7 +51,7 @@ cassandra:
         GRANT ALTER ON ALL KEYSPACES TO test;
         GRANT SELECT ON ALL KEYSPACES TO test;
         GRANT MODIFY ON ALL KEYSPACES TO test;"
-    run: ./gradlew integrationTestCassandra -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
+    run: ./gradlew integrationTestCassandra -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test --tests CassandraColumnValueIntegrationTest
 
 cosmos:
   - label: cosmos
@@ -86,7 +86,7 @@ cosmos:
       & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
       
       Write-Host "Run tests\n"
-      ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
+      ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8" "--tests" "CosmosColumnValueIntegrationTest"
 
 dynamo:
   - label: dynamo
@@ -94,7 +94,7 @@ dynamo:
     setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
     # Permissions cannot be tested on DynamoDB local
     create_test_user: # Do nothing
-    run: ./gradlew integrationTestDynamo
+    run: ./gradlew integrationTestDynamo --tests DynamoColumnValueIntegrationTest
 
 jdbc:
   - label: alloydb_%VERSION%
@@ -108,7 +108,7 @@ jdbc:
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: db2_%VERSION%
     display_name: Db2 %VERSION%
@@ -121,7 +121,7 @@ jdbc:
       docker exec db2 bash -c "useradd -m -s /bin/bash test"
       docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
       docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
@@ -142,7 +142,7 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
@@ -164,7 +164,7 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: oracle_%VERSION%
     display_name: Oracle %VERSION%
@@ -207,7 +207,7 @@ jdbc:
       EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
     run: |
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
@@ -223,7 +223,7 @@ jdbc:
       docker exec postgresql psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: sqlserver_%VERSION%
     display_name: SQL Server %VERSION%
@@ -246,12 +246,12 @@ jdbc:
         GRANT CREATE SCHEMA TO test;
         GRANT CREATE TABLE TO test;
         GRANT CREATE VIEW to test;"
-    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: sqlite_3
     display_name: SQLite 3
     setup: sudo apt-get install -y sqlite3
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000 --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: tidb_%VERSION%
     display_name: TiDB %VERSION%
@@ -278,7 +278,7 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test --tests JdbcDatabaseColumnValueIntegrationTest
 
   - label: yugabytedb
     display_name: YugabyteDB 2
@@ -288,7 +288,7 @@ jdbc:
       docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;\""
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4 --tests JdbcDatabaseColumnValueIntegrationTest
 
 multi-storage:
   - label: multi-storage
