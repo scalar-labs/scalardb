@@ -232,6 +232,7 @@ task integrationTestCassandra(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 task integrationTestCosmos(type: Test) {
@@ -250,6 +251,7 @@ task integrationTestCosmos(type: Test) {
             '-Dorg.slf4j.simpleLogger.log.com.azure.cosmos.implementation.Configs=warn',
             // ERROR com.scalar.db.storage.cosmos.MutateStatementHandler - {"innerErrorMessage":"[\"Encountered exception while executing Javascript. Exception = Error: no mutation...
             '-Dorg.slf4j.simpleLogger.log.com.scalar.db.storage.cosmos.MutateStatementHandler=off'
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 task integrationTestDynamo(type: Test) {
@@ -261,7 +263,7 @@ task integrationTestDynamo(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
-    maxParallelForks = 10
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 task integrationTestJdbc(type: Test) {
@@ -274,6 +276,7 @@ task integrationTestJdbc(type: Test) {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     maxHeapSize = "4g"
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 task integrationTestObjectStorage(type: Test) {
@@ -285,6 +288,7 @@ task integrationTestObjectStorage(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 task integrationTestMultiStorage(type: Test) {
@@ -296,6 +300,7 @@ task integrationTestMultiStorage(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 task integrationTestCassandraPermission(type: Test) {
