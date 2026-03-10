@@ -691,7 +691,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
   @ParameterizedTest()
   @MethodSource("provideBlobSizes")
   public void put_largeBlobData_ShouldWorkCorrectly(int blobSize, String humanReadableBlobSize)
-      throws ExecutionException {
+      throws ExecutionException, InterruptedException {
     String tableName = TABLE + "_large_single_blob";
     try {
       // Arrange
@@ -712,11 +712,13 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
               .build();
 
       // Act
-      storage.put(put);
+      StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
+      DistributedStorage storageCopy = factory.getStorage();
+      storageCopy.put(put);
 
       // Assert
       Optional<Result> optionalResult =
-          storage.get(
+          storageCopy.get(
               Get.newBuilder()
                   .namespace(namespace)
                   .table(tableName)
@@ -732,7 +734,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   @Test
   public void put_largeBlobData_WithMultipleBlobColumnsShouldWorkCorrectly()
-      throws ExecutionException {
+      throws ExecutionException, InterruptedException {
     String tableName = TABLE + "_large_multiples_blob";
     try {
       // Arrange
@@ -742,7 +744,6 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
               .addColumn(COL_NAME2, DataType.BLOB)
               .addColumn(COL_NAME3, DataType.BLOB)
               .addPartitionKey(COL_NAME1);
-
       admin.createTable(namespace, tableName, metadata.build(), true, getCreationOptions());
       byte[] blobDataCol2 = createLargeBlob(32_766);
       byte[] blobDataCol3 = createLargeBlob(5000);
@@ -756,11 +757,13 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
               .build();
 
       // Act
-      storage.put(put);
+      StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
+      DistributedStorage storageCopy = factory.getStorage();
+      storageCopy.put(put);
 
       // Assert
       Optional<Result> optionalResult =
-          storage.get(
+          storageCopy.get(
               Get.newBuilder()
                   .namespace(namespace)
                   .table(tableName)

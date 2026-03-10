@@ -4,6 +4,8 @@ import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.provider.Arguments;
 
 public class CassandraColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
@@ -20,5 +22,11 @@ public class CassandraColumnValueIntegrationTest
   @Override
   protected boolean isTimestampTypeSupported() {
     return false;
+  }
+
+  protected Stream<Arguments> provideBlobSizes() {
+    return Stream.of(
+        // Cassandra has a default maximum mutation size is 16MB
+        Arguments.of(15_000_000, "15 MB"));
   }
 }

@@ -82,8 +82,19 @@ public class JdbcDatabaseColumnValueIntegrationTest
       // values around it.
       args.add(Arguments.of(32_766, "32.766 KB"));
       args.add(Arguments.of(32_767, "32.767 KB"));
+      args.add(Arguments.of(100_000_000, "100 MB"));
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
+      // MySQL default maximum packet is 67MB, but the Put operation is translated to an
+      // INSERT ... ON DUPLICATE KEY UPDATE SQL statement, which contains the non-key columns twice,
+      // so the maximum size of a BLOB value is around half the maximum packet size, about 33MB.
+      args.add(Arguments.of(33_000_000, "33 MB"));
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      // A BLOB column is mapped to SQLServer `varbinary(8000)` which accepts a maximum size of
+      // 8,000 bytes.
+      args.add(Arguments.of(8_000, "8 KB"));
+    } else {
+      args.add(Arguments.of(100_000_000, "100 MB"));
     }
-    args.add(Arguments.of(100_000_000, "100 MB"));
     return args.stream();
   }
 }
