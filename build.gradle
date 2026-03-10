@@ -75,6 +75,7 @@ subprojects {
     tasks.withType(Test) {
         useJUnitPlatform()
         testLogging.showStandardStreams = true
+        maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     }
 
     group = projectGroup
