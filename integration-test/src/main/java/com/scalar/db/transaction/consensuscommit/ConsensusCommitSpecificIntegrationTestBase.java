@@ -86,8 +86,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   private static final String TEST_NAME = "cc";
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  private static final String TABLE_1 = "test_table1";
-  private static final String TABLE_2 = "test_table2";
+  private static final String TABLE_1 = "tbl1";
+  private static final String TABLE_2 = "tbl2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -2195,8 +2195,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void get_GetWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnResult(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -2236,7 +2238,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void get_GetWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
+  public void get_GetWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
       Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
@@ -2278,8 +2280,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnResult(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -2320,8 +2324,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -2354,8 +2360,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void get_GetWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnEmpty(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      get_GetWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnEmpty(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -2393,7 +2401,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void get_GetWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
+  public void get_GetWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
       Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
@@ -2483,7 +2491,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2499,7 +2507,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2515,7 +2523,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2531,7 +2539,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2593,8 +2601,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void scan_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -2607,7 +2617,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2623,7 +2633,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2639,7 +2649,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2701,7 +2711,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2717,7 +2727,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2733,7 +2743,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2749,7 +2759,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2799,8 +2809,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -2813,7 +2825,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2829,7 +2841,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2845,7 +2857,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2910,7 +2922,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2926,7 +2938,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2942,7 +2954,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -2958,7 +2970,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -3019,8 +3031,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void scan_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
-      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+  public void
+      scan_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
     if (isolation == Isolation.SERIALIZABLE) {
       // skip for now
       return;
@@ -3033,7 +3047,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -3049,7 +3063,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
@@ -3065,7 +3079,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
-  void
+  public void
       getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {

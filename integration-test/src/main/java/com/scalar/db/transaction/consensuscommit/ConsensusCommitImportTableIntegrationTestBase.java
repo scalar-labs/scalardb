@@ -57,7 +57,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   private static final String TEST_NAME = "cc_import";
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String BALANCE = "balance";
   private static final int INITIAL_BALANCE = 1000;
