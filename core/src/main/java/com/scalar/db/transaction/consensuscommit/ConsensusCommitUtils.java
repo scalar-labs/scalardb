@@ -714,8 +714,12 @@ public final class ConsensusCommitUtils {
           }
 
           Set<String> secondaryIndexNames = metadata.getSecondaryIndexNames();
+          Set<String> partitionKeyNames = metadata.getPartitionKeyNames();
+          Set<String> clusteringKeyNames = metadata.getClusteringKeyNames();
           for (String indexName : secondaryIndexNames) {
             if (!indexName.startsWith(Attribute.BEFORE_PREFIX)
+                && !partitionKeyNames.contains(indexName)
+                && !clusteringKeyNames.contains(indexName)
                 && !secondaryIndexNames.contains(Attribute.BEFORE_PREFIX + indexName)) {
               tablesWithMissingIndexes.add(ScalarDbUtils.getFullTableName(namespace, table));
               break;

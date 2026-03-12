@@ -683,11 +683,6 @@ public class ConsensusCommitOperationCheckerTest {
             .addSecondaryIndex("idx_col")
             .build();
     when(tableMetadata.getTableMetadata()).thenReturn(metadata);
-    TableMetadata mockTableMetadata = mock(TableMetadata.class);
-    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
-    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         Scan.newBuilder()
