@@ -129,7 +129,7 @@ public class TimestampTZColumn implements Column<Instant> {
    * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000Z to
    *     9999-12-31T23:59:59.999Z
    */
-  public static TimestampTZColumn of(String columnName, Instant value) {
+  public static TimestampTZColumn of(String columnName, @Nullable Instant value) {
     return new TimestampTZColumn(
         columnName, value == null ? null : value.truncatedTo(ChronoUnit.MILLIS));
   }
@@ -145,7 +145,7 @@ public class TimestampTZColumn implements Column<Instant> {
    * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000Z to
    *     9999-12-31T23:59:59.999Z
    */
-  public static TimestampTZColumn ofStrict(String columnName, Instant value) {
+  public static TimestampTZColumn ofStrict(String columnName, @Nullable Instant value) {
     return new TimestampTZColumn(columnName, value);
   }
 

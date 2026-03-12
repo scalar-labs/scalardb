@@ -119,7 +119,7 @@ public class TimeColumn implements Column<LocalTime> {
    * @param value a column value
    * @return a Time column instance with the specified column name and value
    */
-  public static TimeColumn of(String columnName, LocalTime value) {
+  public static TimeColumn of(String columnName, @Nullable LocalTime value) {
     return new TimeColumn(columnName, value == null ? null : value.truncatedTo(ChronoUnit.MICROS));
   }
 
@@ -132,7 +132,7 @@ public class TimeColumn implements Column<LocalTime> {
    * @return a Time column instance with the specified column name and value
    * @throws IllegalArgumentException if the value has sub-microsecond precision
    */
-  public static TimeColumn ofStrict(String columnName, LocalTime value) {
+  public static TimeColumn ofStrict(String columnName, @Nullable LocalTime value) {
     return new TimeColumn(columnName, value);
   }
 

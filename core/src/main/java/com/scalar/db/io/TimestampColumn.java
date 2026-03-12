@@ -126,7 +126,7 @@ public class TimestampColumn implements Column<LocalDateTime> {
    * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000 to
    *     9999-12-31T23:59:59.999
    */
-  public static TimestampColumn of(String columnName, LocalDateTime value) {
+  public static TimestampColumn of(String columnName, @Nullable LocalDateTime value) {
     return new TimestampColumn(
         columnName, value == null ? null : value.truncatedTo(ChronoUnit.MILLIS));
   }
@@ -142,7 +142,7 @@ public class TimestampColumn implements Column<LocalDateTime> {
    * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000 to
    *     9999-12-31T23:59:59.999
    */
-  public static TimestampColumn ofStrict(String columnName, LocalDateTime value) {
+  public static TimestampColumn ofStrict(String columnName, @Nullable LocalDateTime value) {
     return new TimestampColumn(columnName, value);
   }
 
