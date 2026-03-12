@@ -1801,6 +1801,126 @@ public class ConsensusCommitUtilsTest {
   }
 
   @Test
+  public void requiresBeforeIndexCheck_ScanWithSecondaryIndex_shouldReturnTrue() {
+    // Arrange
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(
+                TableMetadata.newBuilder()
+                    .addColumn("pk", DataType.INT)
+                    .addColumn("idx", DataType.INT)
+                    .addPartitionKey("pk")
+                    .addSecondaryIndex("idx")
+                    .build()));
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("idx", 10)).build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.requiresBeforeIndexCheck(scan, metadata)).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_GetWithSecondaryIndex_shouldReturnTrue() {
+    // Arrange
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(
+                TableMetadata.newBuilder()
+                    .addColumn("pk", DataType.INT)
+                    .addColumn("idx", DataType.INT)
+                    .addPartitionKey("pk")
+                    .addSecondaryIndex("idx")
+                    .build()));
+    Get get = Get.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("idx", 10)).build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.requiresBeforeIndexCheck(get, metadata)).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_GetWithPrimaryKey_shouldReturnFalse() {
+    // Arrange
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(
+                TableMetadata.newBuilder()
+                    .addColumn("pk", DataType.INT)
+                    .addColumn("col", DataType.INT)
+                    .addPartitionKey("pk")
+                    .build()));
+    Get get =
+        Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 10)).build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.requiresBeforeIndexCheck(get, metadata)).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanWithPartitionKey_shouldReturnFalse() {
+    // Arrange
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(
+                TableMetadata.newBuilder()
+                    .addColumn("pk", DataType.INT)
+                    .addColumn("col", DataType.INT)
+                    .addPartitionKey("pk")
+                    .build()));
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 10)).build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.requiresBeforeIndexCheck(scan, metadata)).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanAllWithIndexedColumnCondition_shouldReturnTrue() {
+    // Arrange
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(
+                TableMetadata.newBuilder()
+                    .addColumn("pk", DataType.INT)
+                    .addColumn("idx", DataType.INT)
+                    .addPartitionKey("pk")
+                    .addSecondaryIndex("idx")
+                    .build()));
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(column("idx").isEqualToInt(10))
+            .build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.requiresBeforeIndexCheck(scan, metadata)).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanAllWithNonIndexedColumnCondition_shouldReturnFalse() {
+    // Arrange
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(
+                TableMetadata.newBuilder()
+                    .addColumn("pk", DataType.INT)
+                    .addColumn("col", DataType.INT)
+                    .addPartitionKey("pk")
+                    .build()));
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(column("col").isEqualToInt(10))
+            .build();
+
+    // Act Assert
+    assertThat(ConsensusCommitUtils.requiresBeforeIndexCheck(scan, metadata)).isFalse();
+  }
+
+  @Test
   public void createBeforeIndexScan_ScanWithIndex_shouldCreateScanWithBeforeIndexKey() {
     // Arrange
     Scan scanWithIndex =

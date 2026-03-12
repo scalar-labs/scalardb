@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -623,25 +622,7 @@ public class CrudHandler {
       return false;
     }
 
-    if (selection instanceof ScanAll) {
-      // For ScanAll, check if any conjunction condition is on a column that has a before-image
-      // secondary index
-      for (Selection.Conjunction conjunction : selection.getConjunctions()) {
-        for (ConditionalExpression condition : conjunction.getConditions()) {
-          if (metadata.hasBeforeImageSecondaryIndex(condition.getColumn().getName())) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-
-    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata.getTableMetadata())) {
-      String indexColumnName = selection.getPartitionKey().getColumns().get(0).getName();
-      return metadata.hasBeforeImageSecondaryIndex(indexColumnName);
-    }
-
-    return false;
+    return ConsensusCommitUtils.requiresBeforeIndexCheck(selection, metadata);
   }
 
   /**
