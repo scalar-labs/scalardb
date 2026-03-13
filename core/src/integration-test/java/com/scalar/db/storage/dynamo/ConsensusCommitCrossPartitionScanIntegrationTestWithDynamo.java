@@ -5,8 +5,10 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitCrossPartitionSc
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+@Tag("dynamo")
 public class ConsensusCommitCrossPartitionScanIntegrationTestWithDynamo
     extends ConsensusCommitCrossPartitionScanIntegrationTestBase {
 

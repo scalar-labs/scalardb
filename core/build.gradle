@@ -262,6 +262,9 @@ task integrationTestDynamo(type: Test) {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     maxParallelForks = 10
+    useJUnitPlatform{
+        includeTags 'dynamo'
+    }
 }
 
 task integrationTestJdbc(type: Test) {

@@ -302,7 +302,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
     requestBuilder.tags(
-        Tag.builder().key("dynamodb_permission_test_run_id").value(options.get("dynamodb_permission_test_run_id")).build(),
+        Tag.builder()
+            .key("dynamodb_permission_test_run_id")
+            .value(options.get("dynamodb_permission_test_run_id"))
+            .build(),
         Tag.builder().key("created_by").value("vincent.guilpain").build());
     buildAttributeDefinitions(requestBuilder, metadata);
     buildPrimaryKey(requestBuilder, metadata);

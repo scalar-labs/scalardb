@@ -3,7 +3,9 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
 import java.util.Map;
 import java.util.Properties;
+import org.junit.jupiter.api.Tag;
 
+@Tag("dynamo")
 public class ConsensusCommitSpecificIntegrationTestWithDynamo
     extends ConsensusCommitSpecificIntegrationTestBase {
 

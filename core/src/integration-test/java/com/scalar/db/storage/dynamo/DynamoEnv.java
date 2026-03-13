@@ -67,7 +67,7 @@ public final class DynamoEnv {
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
     for (String nameAndValue : createOptionsString.split(",", -1)) {
       String[] split = nameAndValue.split(":", -1);
-      //TODO fix for all branches
+      // TODO fix for all branches
       if (split.length != 2) {
         continue;
       }
