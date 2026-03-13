@@ -42,6 +42,7 @@ import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -9104,7 +9105,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
             .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
             .build();
-    storage.put(put);
+
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry
+      }
+    }
 
     if (coordinatorState == null) {
       return ongoingTxId;

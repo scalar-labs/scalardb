@@ -261,8 +261,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             .value(BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
             .build();
 
-    // When using Oracle with the SERIALIZABLE isolation level, a RetriableExecutionException may
-    // occur even without any conflicts. So, we retry the put operation in such a case.
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
     while (true) {
       try {
         originalStorage.put(put);
