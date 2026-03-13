@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.common.CoreError;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
@@ -111,13 +112,27 @@ public class TimeColumn implements Column<LocalTime> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
   /**
-   * Returns a Time column instance with the specified column name and value.
+   * Returns a Time column instance with the specified column name and value. Sub-microsecond
+   * precision is silently truncated.
    *
    * @param columnName a column name
    * @param value a column value
    * @return a Time column instance with the specified column name and value
    */
-  public static TimeColumn of(String columnName, LocalTime value) {
+  public static TimeColumn of(String columnName, @Nullable LocalTime value) {
+    return new TimeColumn(columnName, value == null ? null : value.truncatedTo(ChronoUnit.MICROS));
+  }
+
+  /**
+   * Returns a Time column instance with the specified column name and value. Unlike {@link #of},
+   * this method does not truncate and throws if the value has sub-microsecond precision.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Time column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value has sub-microsecond precision
+   */
+  public static TimeColumn ofStrict(String columnName, @Nullable LocalTime value) {
     return new TimeColumn(columnName, value);
   }
 

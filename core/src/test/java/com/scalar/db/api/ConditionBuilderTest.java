@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 
 public class ConditionBuilderTest {
@@ -1470,5 +1471,104 @@ public class ConditionBuilderTest {
     assertThat(actual.getExpressions().get(10).getColumn())
         .isEqualTo(TimestampTZColumn.ofNull("col11"));
     assertThat(actual.getExpressions().get(10).getOperator()).isEqualTo(Operator.IS_NOT_NULL);
+  }
+
+  @Test
+  public void
+      conditionBuilder_WithTimeTypesHavingOutOfRangeFractionalSeconds_ShouldTruncateProperly() {
+    // Arrange
+    LocalTime timeWithNanos = LocalTime.of(12, 34, 56, 123_456_789);
+    LocalTime expectedTime = timeWithNanos.truncatedTo(ChronoUnit.MICROS);
+
+    LocalDateTime timestampWithMicros = LocalDateTime.of(2025, 6, 15, 12, 34, 56, 123_456_789);
+    LocalDateTime expectedTimestamp = timestampWithMicros.truncatedTo(ChronoUnit.MILLIS);
+
+    Instant timestampTZWithMicros = Instant.parse("2025-06-15T12:34:56.123456789Z");
+    Instant expectedTimestampTZ = timestampTZWithMicros.truncatedTo(ChronoUnit.MILLIS);
+
+    // Act & Assert - isEqualTo
+    assertThat(ConditionBuilder.column("col").isEqualToTime(timeWithNanos).getTimeValue())
+        .isEqualTo(expectedTime);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isEqualToTimestamp(timestampWithMicros)
+                .getTimestampValue())
+        .isEqualTo(expectedTimestamp);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isEqualToTimestampTZ(timestampTZWithMicros)
+                .getTimestampTZValue())
+        .isEqualTo(expectedTimestampTZ);
+
+    // Act & Assert - isNotEqualTo
+    assertThat(ConditionBuilder.column("col").isNotEqualToTime(timeWithNanos).getTimeValue())
+        .isEqualTo(expectedTime);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isNotEqualToTimestamp(timestampWithMicros)
+                .getTimestampValue())
+        .isEqualTo(expectedTimestamp);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isNotEqualToTimestampTZ(timestampTZWithMicros)
+                .getTimestampTZValue())
+        .isEqualTo(expectedTimestampTZ);
+
+    // Act & Assert - isGreaterThan
+    assertThat(ConditionBuilder.column("col").isGreaterThanTime(timeWithNanos).getTimeValue())
+        .isEqualTo(expectedTime);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isGreaterThanTimestamp(timestampWithMicros)
+                .getTimestampValue())
+        .isEqualTo(expectedTimestamp);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isGreaterThanTimestampTZ(timestampTZWithMicros)
+                .getTimestampTZValue())
+        .isEqualTo(expectedTimestampTZ);
+
+    // Act & Assert - isGreaterThanOrEqualTo
+    assertThat(
+            ConditionBuilder.column("col").isGreaterThanOrEqualToTime(timeWithNanos).getTimeValue())
+        .isEqualTo(expectedTime);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isGreaterThanOrEqualToTimestamp(timestampWithMicros)
+                .getTimestampValue())
+        .isEqualTo(expectedTimestamp);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isGreaterThanOrEqualToTimestampTZ(timestampTZWithMicros)
+                .getTimestampTZValue())
+        .isEqualTo(expectedTimestampTZ);
+
+    // Act & Assert - isLessThan
+    assertThat(ConditionBuilder.column("col").isLessThanTime(timeWithNanos).getTimeValue())
+        .isEqualTo(expectedTime);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isLessThanTimestamp(timestampWithMicros)
+                .getTimestampValue())
+        .isEqualTo(expectedTimestamp);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isLessThanTimestampTZ(timestampTZWithMicros)
+                .getTimestampTZValue())
+        .isEqualTo(expectedTimestampTZ);
+
+    // Act & Assert - isLessThanOrEqualTo
+    assertThat(ConditionBuilder.column("col").isLessThanOrEqualToTime(timeWithNanos).getTimeValue())
+        .isEqualTo(expectedTime);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isLessThanOrEqualToTimestamp(timestampWithMicros)
+                .getTimestampValue())
+        .isEqualTo(expectedTimestamp);
+    assertThat(
+            ConditionBuilder.column("col")
+                .isLessThanOrEqualToTimestampTZ(timestampTZWithMicros)
+                .getTimestampTZValue())
+        .isEqualTo(expectedTimestampTZ);
   }
 }
