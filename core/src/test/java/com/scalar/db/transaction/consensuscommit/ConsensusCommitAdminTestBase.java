@@ -40,7 +40,7 @@ import org.mockito.MockitoAnnotations;
 public abstract class ConsensusCommitAdminTestBase {
 
   private static final String NAMESPACE = "test_namespace";
-  private static final String TABLE = "tbl";
+  private static final String TABLE = "test_table";
 
   @Mock private DistributedStorageAdmin distributedStorageAdmin;
   @Mock private ConsensusCommitConfig config;

@@ -25,7 +25,7 @@ import org.mockito.MockitoAnnotations;
 
 public class ObjectStoragePartitionTest {
   private static final String NAMESPACE = "test_namespace";
-  private static final String TABLE = "tbl";
+  private static final String TABLE = "test_table";
   private static final String PARTITION_KEY_NAME = "pk";
   private static final String CLUSTERING_KEY_NAME = "ck";
   private static final String COLUMN_NAME_1 = "col1";
