@@ -34,7 +34,7 @@ jobs:
       BRANCH_NAME: ${{ github.ref_name }}
     steps:
       - name: Report the success on Slack
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v3.0.1
         if: needs.ci.result == 'success'
         with:
           webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
@@ -47,7 +47,7 @@ jobs:
                   text: ":large_green_circle:【ScalarDB Core】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|passed>"
 
       - name: Report the failure on Slack
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v3.0.1
         if: needs.ci.result == 'failure'
         with:
           webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
