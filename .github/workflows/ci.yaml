@@ -415,7 +415,7 @@ jobs:
       - integration-test
     steps:
       - name: Delete test configuration
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         if: needs.integration-test.result == 'success'
         with:
           name: ci_internal_tests_config-${{ env.ARTIFACT_SUFFIX }}
