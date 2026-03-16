@@ -47,7 +47,7 @@ public interface AuthAdmin {
 
   /**
    * Creates a user with the given username, password, authentication methods and user options. If
-   * the password is null, the user is created without a password. If the authentication methods is
+   * the password is null, the user is created without a password. If the authentication methods are
    * null, the default authentication methods are used.
    *
    * @param username the username
@@ -70,7 +70,7 @@ public interface AuthAdmin {
   /**
    * Alters a user with the given username, password, authentication methods and user options. If
    * the password is null, the password is not changed. If empty, the password is deleted. If the
-   * authentication methods is null, the authentication methods are not changed.
+   * authentication methods are null, the authentication methods are not changed.
    *
    * @param username the username
    * @param password the password. If null, the password is not changed. If empty, the password is
