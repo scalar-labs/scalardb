@@ -30,22 +30,6 @@ public interface AuthAdmin {
   }
 
   /**
-   * Alters a user with the given username, password and user options. If the password is null, the
-   * password is not changed. If empty, the password is deleted.
-   *
-   * @param username the username
-   * @param password the password. If null, the password is not changed. If empty, the password is
-   *     deleted
-   * @param userOptions the user options
-   * @throws IllegalArgumentException if the user does not exist
-   * @throws ExecutionException if the operation fails
-   */
-  default void alterUser(String username, @Nullable String password, UserOption... userOptions)
-      throws ExecutionException {
-    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
-  }
-
-  /**
    * Creates a user with the given username, password, authentication methods and user options. If
    * the password is null, the user is created without a password. If the authentication methods are
    * null, the default authentication methods are used.
@@ -65,6 +49,22 @@ public interface AuthAdmin {
       UserOption... userOptions)
       throws ExecutionException {
     createUser(username, password, userOptions);
+  }
+
+  /**
+   * Alters a user with the given username, password and user options. If the password is null, the
+   * password is not changed. If empty, the password is deleted.
+   *
+   * @param username the username
+   * @param password the password. If null, the password is not changed. If empty, the password is
+   *     deleted
+   * @param userOptions the user options
+   * @throws IllegalArgumentException if the user does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void alterUser(String username, @Nullable String password, UserOption... userOptions)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**

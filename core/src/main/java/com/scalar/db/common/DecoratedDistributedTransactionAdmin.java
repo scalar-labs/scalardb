@@ -320,12 +320,6 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public void alterUser(String username, @Nullable String password, UserOption... userOptions)
-      throws ExecutionException {
-    distributedTransactionAdmin.alterUser(username, password, userOptions);
-  }
-
-  @Override
   public void createUser(
       String username,
       @Nullable String password,
@@ -333,6 +327,12 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
       UserOption... userOptions)
       throws ExecutionException {
     distributedTransactionAdmin.createUser(username, password, authenticationMethods, userOptions);
+  }
+
+  @Override
+  public void alterUser(String username, @Nullable String password, UserOption... userOptions)
+      throws ExecutionException {
+    distributedTransactionAdmin.alterUser(username, password, userOptions);
   }
 
   @Override
