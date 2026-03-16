@@ -85,18 +85,18 @@ public class ResultInterpreter {
       case TIME:
         return isNull
             ? TimeColumn.ofNull(name)
-            : TimeColumn.of(
+            : TimeColumn.ofStrict(
                 name, TimeRelatedColumnEncodingUtils.decodeTime(Long.parseLong(itemValue.n())));
       case TIMESTAMP:
         return isNull
             ? TimestampColumn.ofNull(name)
-            : TimestampColumn.of(
+            : TimestampColumn.ofStrict(
                 name,
                 TimeRelatedColumnEncodingUtils.decodeTimestamp(Long.parseLong(itemValue.n())));
       case TIMESTAMPTZ:
         return isNull
             ? TimestampTZColumn.ofNull(name)
-            : TimestampTZColumn.of(
+            : TimestampTZColumn.ofStrict(
                 name,
                 TimeRelatedColumnEncodingUtils.decodeTimestampTZ(Long.parseLong(itemValue.n())));
       default:

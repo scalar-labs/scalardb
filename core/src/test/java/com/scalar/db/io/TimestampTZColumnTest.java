@@ -135,7 +135,26 @@ class TimestampTZColumnTest {
   }
 
   @Test
-  public void constructor_valueWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException() {
+  public void of_valueWithSubMillisecondPrecision_ShouldTruncate() {
+    // Arrange
+    Instant timestampWithThreeDigitNano =
+        Instant.now().with(ChronoField.NANO_OF_SECOND, 123_456_789);
+    Instant timestampWithThreeDigitMicro =
+        Instant.now().with(ChronoField.NANO_OF_SECOND, 123_456_000);
+
+    // Act
+    TimestampTZColumn col1 = TimestampTZColumn.of("col", timestampWithThreeDigitNano);
+    TimestampTZColumn col2 = TimestampTZColumn.of("col", timestampWithThreeDigitMicro);
+
+    // Assert
+    assertThat(col1.getTimestampTZValue())
+        .isEqualTo(timestampWithThreeDigitNano.with(ChronoField.NANO_OF_SECOND, 123_000_000));
+    assertThat(col2.getTimestampTZValue())
+        .isEqualTo(timestampWithThreeDigitMicro.with(ChronoField.NANO_OF_SECOND, 123_000_000));
+  }
+
+  @Test
+  public void ofStrict_valueWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException() {
     // Arrange
     Instant timestampWithThreeDigitNano =
         Instant.now().with(ChronoField.NANO_OF_SECOND, 123_456_789);
@@ -149,17 +168,17 @@ class TimestampTZColumnTest {
         Instant.now().with(ChronoField.NANO_OF_SECOND, 123_400_700);
 
     // Act Assert
-    assertThatThrownBy(() -> TimestampTZColumn.of("col", timestampWithThreeDigitNano))
+    assertThatThrownBy(() -> TimestampTZColumn.ofStrict("col", timestampWithThreeDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampTZColumn.of("col", timestampWithTwoDigitNano))
+    assertThatThrownBy(() -> TimestampTZColumn.ofStrict("col", timestampWithTwoDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampTZColumn.of("col", timestampWithOneDigitNano))
+    assertThatThrownBy(() -> TimestampTZColumn.ofStrict("col", timestampWithOneDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampTZColumn.of("col", timestampWithThreeDigitMicro))
+    assertThatThrownBy(() -> TimestampTZColumn.ofStrict("col", timestampWithThreeDigitMicro))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampTZColumn.of("col", timestampWithTwoDigitMicro))
+    assertThatThrownBy(() -> TimestampTZColumn.ofStrict("col", timestampWithTwoDigitMicro))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampTZColumn.of("col", timestampWithOneDigitMicro))
+    assertThatThrownBy(() -> TimestampTZColumn.ofStrict("col", timestampWithOneDigitMicro))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }
