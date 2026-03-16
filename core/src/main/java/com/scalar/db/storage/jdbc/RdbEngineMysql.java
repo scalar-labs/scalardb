@@ -425,7 +425,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
     if (localDateTime == null) {
       return TimestampTZColumn.ofNull(columnName);
     } else {
-      return TimestampTZColumn.of(columnName, localDateTime.toInstant(ZoneOffset.UTC));
+      return TimestampTZColumn.ofStrict(columnName, localDateTime.toInstant(ZoneOffset.UTC));
     }
   }
 
