@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TransactionContext {
 
@@ -28,7 +29,7 @@ public class TransactionContext {
 
   // A list of recovery results for asynchronously executed recoveries. These are tracked so that
   // their completion can be awaited before committing the transaction if necessary.
-  public final List<RecoveryExecutor.Result> recoveryResults = new ArrayList<>();
+  public final List<RecoveryExecutor.Result> recoveryResults = new CopyOnWriteArrayList<>();
 
   public TransactionContext(
       String transactionId,
