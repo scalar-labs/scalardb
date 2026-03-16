@@ -183,12 +183,13 @@ public interface RdbEngineStrategy {
   }
 
   default TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
-    return TimeColumn.of(columnName, resultSet.getObject(columnName, LocalTime.class));
+    return TimeColumn.ofStrict(columnName, resultSet.getObject(columnName, LocalTime.class));
   }
 
   default TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
       throws SQLException {
-    return TimestampColumn.of(columnName, resultSet.getObject(columnName, LocalDateTime.class));
+    return TimestampColumn.ofStrict(
+        columnName, resultSet.getObject(columnName, LocalDateTime.class));
   }
 
   default TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
@@ -197,7 +198,7 @@ public interface RdbEngineStrategy {
     if (offsetDateTime == null) {
       return TimestampTZColumn.ofNull(columnName);
     } else {
-      return TimestampTZColumn.of(columnName, offsetDateTime.toInstant());
+      return TimestampTZColumn.ofStrict(columnName, offsetDateTime.toInstant());
     }
   }
 

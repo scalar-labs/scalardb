@@ -113,7 +113,7 @@ public class DateColumn implements Column<LocalDate> {
    * @param value a column value
    * @return a Date column instance with the specified column name and value
    */
-  public static DateColumn of(String columnName, LocalDate value) {
+  public static DateColumn of(String columnName, @Nullable LocalDate value) {
     return new DateColumn(columnName, value);
   }
 

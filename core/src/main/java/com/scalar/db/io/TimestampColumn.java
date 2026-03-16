@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.scalar.db.common.error.CoreError;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
@@ -116,13 +117,32 @@ public class TimestampColumn implements Column<LocalDateTime> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
   /**
-   * Returns a Timestamp column instance with the specified column name and value.
+   * Returns a Timestamp column instance with the specified column name and value. Sub-millisecond
+   * precision is silently truncated.
    *
    * @param columnName a column name
    * @param value a column value
    * @return a Timestamp column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000 to
+   *     9999-12-31T23:59:59.999
    */
-  public static TimestampColumn of(String columnName, LocalDateTime value) {
+  public static TimestampColumn of(String columnName, @Nullable LocalDateTime value) {
+    return new TimestampColumn(
+        columnName, value == null ? null : value.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  /**
+   * Returns a Timestamp column instance with the specified column name and value. Unlike {@link
+   * #of}, this method does not truncate and throws if the value has sub-millisecond precision.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a Timestamp column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value has sub-millisecond precision
+   * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000 to
+   *     9999-12-31T23:59:59.999
+   */
+  public static TimestampColumn ofStrict(String columnName, @Nullable LocalDateTime value) {
     return new TimestampColumn(columnName, value);
   }
 
