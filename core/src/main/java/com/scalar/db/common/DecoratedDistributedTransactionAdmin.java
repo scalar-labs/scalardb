@@ -326,6 +326,26 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void createUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
+      throws ExecutionException {
+    distributedTransactionAdmin.createUser(username, password, authenticationMethods, userOptions);
+  }
+
+  @Override
+  public void alterUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
+      throws ExecutionException {
+    distributedTransactionAdmin.alterUser(username, password, authenticationMethods, userOptions);
+  }
+
+  @Override
   public void dropUser(String username) throws ExecutionException {
     distributedTransactionAdmin.dropUser(username);
   }
