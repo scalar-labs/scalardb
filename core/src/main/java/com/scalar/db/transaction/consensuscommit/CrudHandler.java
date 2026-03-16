@@ -133,7 +133,7 @@ public class CrudHandler {
 
   @VisibleForTesting
   Optional<TransactionResult> read(
-      @Nullable Snapshot.Key key,
+      @Nullable Snapshot.Key originalKey,
       Get get,
       TransactionContext context,
       TransactionTableMetadata txMetadata)
@@ -142,6 +142,8 @@ public class CrudHandler {
     boolean beforeIndexCheckRequired = requiresBeforeIndexCheck(get, txMetadata);
 
     for (int i = 0; ; i++) {
+      @Nullable Snapshot.Key key = originalKey;
+
       Optional<TransactionResult> result = getFromStorage(get, metadata, context.transactionId);
       if (result.isPresent() && !result.get().isCommitted()) {
         // Lazy recovery

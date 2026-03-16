@@ -3156,6 +3156,63 @@ public class CrudHandlerTest {
   }
 
   @Test
+  public void
+      read_GetWithIndexAndBeforeIndexRollbackCausesDifferentResult_ShouldUseKeyFromSecondResult()
+          throws Exception {
+    // Arrange
+    Get getWithIndex = prepareGetWithIndex();
+    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // First get returns a committed result with partition key "text1"
+    TransactionResult committedResult1 =
+        prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
+    // Second get returns a different committed result with partition key "text4"
+    TransactionResult committedResult2 =
+        prepareResult(ANY_TEXT_4, ANY_TEXT_5, TransactionState.COMMITTED);
+    when(storage.get(getForStorage))
+        .thenReturn(Optional.of(committedResult1))
+        .thenReturn(Optional.of(committedResult2));
+
+    // Before-index scan: first call finds a rolled-back record, second call finds nothing
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner1 = mock(Scanner.class);
+    when(beforeIndexScanner1.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner2 = mock(Scanner.class);
+    when(beforeIndexScanner2.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(expectedBeforeIndexScan))
+        .thenReturn(beforeIndexScanner1)
+        .thenReturn(beforeIndexScanner2);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act
+    handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    // Verify key is created from the second result, not reusing the stale key from the first
+    Snapshot.Key expectedKey = new Snapshot.Key(getWithIndex, committedResult2, TABLE_METADATA);
+    verify(snapshot).putIntoReadSet(expectedKey, Optional.of(committedResult2));
+  }
+
+  @Test
   public void scan_ScanWithIndexAndBeforeIndexScanFindsRolledBackRecord_ShouldRetry()
       throws Exception {
     // Arrange
