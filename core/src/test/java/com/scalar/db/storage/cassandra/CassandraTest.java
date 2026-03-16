@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -235,5 +237,22 @@ public class CassandraTest {
     verify(handler).handle(captor.capture());
     Scan actualScan = captor.getValue();
     assertThat(actualScan.getProjections()).containsExactlyInAnyOrder("col1", "col2");
+  }
+
+  @Test
+  public void scan_WithScanAllWithOrdering_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .ordering(Scan.Ordering.asc("col1"))
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ORDERING_ENABLED, "true")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> cassandra.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 }

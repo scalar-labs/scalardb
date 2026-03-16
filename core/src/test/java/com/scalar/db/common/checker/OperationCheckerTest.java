@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -2042,6 +2043,72 @@ public class OperationCheckerTest {
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scanAll))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithCrossPartitionScanDisabledButAttributeEnabled_shouldNotThrowAnyException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .limit(10)
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(false);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(scanAll)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithOrderingsAndCrossPartitionScanOrderingDisabledButAttributeEnabled_shouldNotThrowAnyException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .ordering(Ordering.desc(COL1))
+            .limit(10)
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ORDERING_ENABLED, "true")
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(false);
+    when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(false);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(scanAll)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithConjunctionsAndCrossPartitionScanFilteringDisabledButAttributeEnabled_shouldNotThrowAnyException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(COL1).isEqualToInt(10))
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .limit(10)
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_FILTERING_ENABLED, "true")
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(false);
+    when(databaseConfig.isCrossPartitionScanFilteringEnabled()).thenReturn(false);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(scanAll)).doesNotThrowAnyException();
   }
 
   @ParameterizedTest
