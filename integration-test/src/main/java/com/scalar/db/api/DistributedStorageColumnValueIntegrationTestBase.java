@@ -49,7 +49,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_col_val";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String PARTITION_KEY = "pkey";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";

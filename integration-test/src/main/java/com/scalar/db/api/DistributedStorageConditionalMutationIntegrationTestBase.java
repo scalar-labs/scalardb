@@ -56,7 +56,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_cond_mutation";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private static final String TABLE = "test_table";
+  private static final String TABLE = "tbl";
   private static final String PARTITION_KEY = "pkey";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
