@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -504,5 +506,66 @@ public class UpdateBuilderTest {
     assertThat(newUpdate.getClusteringKey()).hasValue(clusteringKey1);
     assertThat(newUpdate.getColumns()).isEmpty();
     assertThat(newUpdate.getCondition()).isEmpty();
+  }
+
+  @Test
+  public void build_WithOutOfRangeFractionalSecondForTimeValues_ShouldTruncateTimeRelatedValues() {
+    // Arrange
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    Instant timestampTZWithSubMillis = timestampWithSubMillis.toInstant(ZoneOffset.UTC);
+
+    // Act
+    Update update =
+        Update.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .clusteringKey(clusteringKey1)
+            .timeValue("time", timeWithSubMicros)
+            .timestampValue("timestamp", timestampWithSubMillis)
+            .timestampTZValue("timestamptz", timestampTZWithSubMillis)
+            .build();
+
+    // Assert
+    assertThat(update.getColumns().get("time").getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+    assertThat(update.getColumns().get("timestamp").getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+    assertThat(update.getColumns().get("timestamptz").getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  @Test
+  public void
+      build_FromExistingWithOutOfRangeFractionalSecondForTimeValues_ShouldTruncateTimeRelatedValues() {
+    // Arrange
+    Update existingUpdate =
+        Update.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .clusteringKey(clusteringKey1)
+            .build();
+
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    Instant timestampTZWithSubMillis = timestampWithSubMillis.toInstant(ZoneOffset.UTC);
+
+    // Act
+    Update update =
+        Update.newBuilder(existingUpdate)
+            .timeValue("time", timeWithSubMicros)
+            .timestampValue("timestamp", timestampWithSubMillis)
+            .timestampTZValue("timestamptz", timestampTZWithSubMillis)
+            .build();
+
+    // Assert
+    assertThat(update.getColumns().get("time").getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+    assertThat(update.getColumns().get("timestamp").getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+    assertThat(update.getColumns().get("timestamptz").getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
   }
 }
