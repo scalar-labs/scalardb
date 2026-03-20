@@ -488,11 +488,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
     if (jdbcUrl.contains("permitMysqlScheme")) {
       return jdbcUrl;
     }
-    if (jdbcUrl.contains("?")) {
-      return jdbcUrl + "&permitMysqlScheme";
-    } else {
-      return jdbcUrl + "?permitMysqlScheme";
-    }
+    return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + "permitMysqlScheme=true";
   }
 
   @Override

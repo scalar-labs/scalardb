@@ -48,7 +48,7 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriverClassName()).thenReturn("org.mariadb.jdbc.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
     when(rdbEngine.adjustJdbcUrl("jdbc:mysql://localhost:3306/"))
-        .thenReturn("jdbc:mysql://localhost:3306/?permitMysqlScheme");
+        .thenReturn("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -72,7 +72,7 @@ public class JdbcUtilsTest {
     assertThat(hikariConfig).isNotNull();
     assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.mariadb.jdbc.Driver");
     assertThat(hikariConfig.getJdbcUrl())
-        .isEqualTo("jdbc:mysql://localhost:3306/?permitMysqlScheme");
+        .isEqualTo("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
     assertThat(hikariConfig.getUsername()).isEqualTo("root");
     assertThat(hikariConfig.getPassword()).isEqualTo("mysql");
 
