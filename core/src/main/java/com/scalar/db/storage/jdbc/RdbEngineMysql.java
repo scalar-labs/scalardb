@@ -20,8 +20,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -288,6 +286,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String columnDescription,
       @Nullable DataType overrideDataType) {
     switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
       case BIT:
         if (columnSize != 1) {
           throw new IllegalArgumentException(
@@ -422,7 +422,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String getDriverClassName() {
-    return com.mysql.cj.jdbc.Driver.class.getName();
+    return org.mariadb.jdbc.Driver.class.getName();
   }
 
   @Override
@@ -484,20 +484,15 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties(JdbcConfig config) {
-    if (config.getDatabaseConfig().getScanFetchSize() == Integer.MIN_VALUE) {
-      // If the scan fetch size is set to Integer.MIN_VALUE, use the streaming mode.
-      return Collections.emptyMap();
+  public String adjustJdbcUrl(String jdbcUrl) {
+    if (jdbcUrl.contains("permitMysqlScheme")) {
+      return jdbcUrl;
     }
-
-    // Otherwise, use the cursor fetch mode.
-    return Collections.singletonMap("useCursorFetch", "true");
-  }
-
-  @Override
-  public void setConnectionToReadOnly(Connection connection, boolean readOnly) throws SQLException {
-    // Observed performance degradation when using read-only connections in MySQL. So we do not
-    // set the read-only mode for MySQL connections.
+    if (jdbcUrl.contains("?")) {
+      return jdbcUrl + "&permitMysqlScheme";
+    } else {
+      return jdbcUrl + "?permitMysqlScheme";
+    }
   }
 
   @Override
