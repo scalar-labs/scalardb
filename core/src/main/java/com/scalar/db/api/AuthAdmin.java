@@ -408,6 +408,11 @@ public interface AuthAdmin {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
+  default boolean hasPrivilege(String namespaceName, String tableName, Privilege privilege)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
   /** Represents a user. */
   interface User {
     /**
