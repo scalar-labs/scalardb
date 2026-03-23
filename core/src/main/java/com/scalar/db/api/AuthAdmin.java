@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
