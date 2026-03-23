@@ -7,9 +7,6 @@ inputs:
     required: true
 
 outputs:
-  feature-name:
-    description: 'The extracted feature name (e.g., xxx)'
-    value: ${{ steps.extract.outputs.feature_name }}
   version:
     description: 'The generated version string (e.g., 4.0.0-feature-xxx-SNAPSHOT)'
     value: ${{ steps.extract.outputs.version }}
@@ -37,7 +34,5 @@ runs:
         # Create feature snapshot version (e.g., 4.0.0-feature-xxx-SNAPSHOT)
         VERSION="${BASE_VERSION}-feature-${FEATURE_NAME}-SNAPSHOT"
 
-        echo "feature_name=${FEATURE_NAME}" >> $GITHUB_OUTPUT
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        echo "Feature name: ${FEATURE_NAME}"
         echo "Version: ${VERSION}"
