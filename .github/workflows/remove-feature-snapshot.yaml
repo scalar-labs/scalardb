@@ -1,0 +1,67 @@
+name: Remove Feature SNAPSHOT
+
+on:
+  delete:
+
+jobs:
+  remove:
+    # Only run for feature branches
+    if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'feature/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Extract feature version
+        id: version
+        uses: ./.github/actions/extract-feature-version
+        with:
+          branch-name: ${{ github.event.ref }}
+
+      - name: Delete packages from GitHub Packages
+        env:
+          GH_TOKEN: ${{ secrets.CR_PAT }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ORG="${{ github.repository_owner }}"
+          PACKAGES=(
+            "com.scalar-labs.scalardb"
+            "com.scalar-labs.scalardb-schema-loader"
+            "com.scalar-labs.scalardb-integration-test"
+            "com.scalar-labs.scalardb-data-loader-core"
+            "com.scalar-labs.scalardb-data-loader-cli"
+          )
+
+          for PACKAGE in "${PACKAGES[@]}"; do
+            echo "Deleting ${PACKAGE}:${VERSION}..."
+
+            # Get all versions info
+            VERSIONS_JSON=$(gh api \
+              "/orgs/${ORG}/packages/maven/${PACKAGE}/versions" 2>/dev/null || echo "[]")
+
+            VERSION_ID=$(echo "$VERSIONS_JSON" | jq -r ".[] | select(.name == \"${VERSION}\") | .id")
+            VERSION_COUNT=$(echo "$VERSIONS_JSON" | jq 'length')
+
+            if [ -n "$VERSION_ID" ]; then
+              if [ "$VERSION_COUNT" -eq 1 ]; then
+                # Last version - delete entire package
+                gh api \
+                  --method DELETE \
+                  "/orgs/${ORG}/packages/maven/${PACKAGE}" \
+                  && echo "  Deleted entire package ${PACKAGE} (was last version)" \
+                  || { echo "  Failed to delete package ${PACKAGE}"; exit 1; }
+              else
+                # Multiple versions - delete only this version
+                gh api \
+                  --method DELETE \
+                  "/orgs/${ORG}/packages/maven/${PACKAGE}/versions/${VERSION_ID}" \
+                  && echo "  Deleted ${PACKAGE}:${VERSION}" \
+                  || { echo "  Failed to delete ${PACKAGE}:${VERSION}"; exit 1; }
+              fi
+            else
+              echo "  Version not found: ${PACKAGE}:${VERSION}"
+            fi
+          done

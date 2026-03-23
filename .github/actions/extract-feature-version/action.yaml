@@ -1,0 +1,43 @@
+name: 'Extract Feature Version'
+description: 'Extract feature name from branch and generate version string'
+
+inputs:
+  branch-name:
+    description: 'The branch name (e.g., feature/xxx or refs/heads/feature/xxx)'
+    required: true
+
+outputs:
+  feature-name:
+    description: 'The extracted feature name (e.g., xxx)'
+    value: ${{ steps.extract.outputs.feature_name }}
+  version:
+    description: 'The generated version string (e.g., 4.0.0-feature-xxx-SNAPSHOT)'
+    value: ${{ steps.extract.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract feature name and set version
+      id: extract
+      shell: bash
+      run: |
+        # Remove refs/heads/ prefix if present
+        BRANCH_NAME="${{ inputs.branch-name }}"
+        BRANCH_NAME=${BRANCH_NAME#refs/heads/}
+
+        # Extract feature name (e.g., feature/xxx -> xxx)
+        FEATURE_NAME=${BRANCH_NAME#feature/}
+
+        # Sanitize feature name (replace / with -)
+        FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '/' '-')
+
+        # Get base version from gradle (e.g., 4.0.0-SNAPSHOT -> 4.0.0)
+        BASE_VERSION=$(./gradlew :core:properties -q | grep "version:" | awk '{print $2}' | sed 's/-SNAPSHOT//')
+
+        # Create feature snapshot version (e.g., 4.0.0-feature-xxx-SNAPSHOT)
+        VERSION="${BASE_VERSION}-feature-${FEATURE_NAME}-SNAPSHOT"
+
+        echo "feature_name=${FEATURE_NAME}" >> $GITHUB_OUTPUT
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Feature name: ${FEATURE_NAME}"
+        echo "Version: ${VERSION}"
