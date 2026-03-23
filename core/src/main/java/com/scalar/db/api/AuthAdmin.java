@@ -48,7 +48,7 @@ public interface AuthAdmin {
       @Nullable Set<AuthenticationMethod> authenticationMethods,
       UserOption... userOptions)
       throws ExecutionException {
-    createUser(username, password, userOptions);
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -87,7 +87,7 @@ public interface AuthAdmin {
       @Nullable Set<AuthenticationMethod> authenticationMethods,
       UserOption... userOptions)
       throws ExecutionException {
-    alterUser(username, password, userOptions);
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /**
@@ -475,9 +475,7 @@ public interface AuthAdmin {
      *
      * @return the authentication methods
      */
-    default Set<AuthenticationMethod> getAuthenticationMethods() {
-      return Collections.emptySet();
-    }
+    Set<AuthenticationMethod> getAuthenticationMethods();
   }
 
   /** Represents a role, including its granted roles. */
