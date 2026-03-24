@@ -5,7 +5,7 @@ plugins {
 
 ext {
     projectGroup = 'com.scalar-labs'
-    projectVersion = '4.0.0-SNAPSHOT'
+    projectVersion = project.findProperty('projectVersion') ?: '4.0.0-SNAPSHOT'
 }
 
 group = projectGroup
@@ -36,7 +36,7 @@ subprojects {
         postgresqlDriverVersion = '42.7.10'
         oracleDriverVersion = '23.26.1.0.0'
         sqlserverDriverVersion = '12.8.2.jre8'
-        sqliteDriverVersion = '3.51.2.0'
+        sqliteDriverVersion = '3.51.3.0'
         yugabyteDriverVersion = '42.7.3-yb-4'
         db2DriverVersion = '12.1.4.0'
         mariadDbDriverVersion = '3.5.7'
@@ -47,7 +47,7 @@ subprojects {
         caffeineVersion = '2.9.3'
         junitVersion = '5.14.3'
         commonsLangVersion = '3.20.0'
-        jacksonVersion = '2.21.1'
+        jacksonVersion = '2.21.2'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
@@ -100,6 +100,26 @@ subprojects {
 
     installDist {
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
+    }
+
+    // For feature snapshots, add GitHub Packages repository to publish all subprojects
+    plugins.withType(MavenPublishPlugin).configureEach {
+        def isFeatureSnapshot = (project.version.toString() =~ /^\d+\.\d+\.\d+-feature-.+-SNAPSHOT$/).matches()
+
+        publishing {
+            repositories {
+                if (isFeatureSnapshot) {
+                    maven {
+                        name = 'GitHubPackages'
+                        url = uri('https://maven.pkg.github.com/scalar-labs/scalardb')
+                        credentials {
+                            username = project.findProperty('gprUsername') ?: System.getenv('GPR_USERNAME')
+                            password = project.findProperty('gprPassword') ?: System.getenv('GPR_PASSWORD')
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
