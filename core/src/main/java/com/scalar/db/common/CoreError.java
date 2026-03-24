@@ -457,7 +457,7 @@ public enum CoreError implements ScalarDbError {
       "Cosmos DB supports only EQ, NE, IS_NULL, and IS_NOT_NULL operations for the BLOB type in conditions. Mutation: %s",
       "",
       "Use only EQ, NE, IS_NULL, or IS_NOT_NULL operators for BLOB columns in Cosmos DB conditions."),
-  INVALID_CONSISTENCY_LEVEL(
+  COSMOS_INVALID_CONSISTENCY_LEVEL(
       Category.USER_ERROR,
       "0077",
       "The specified consistency level is not supported. Consistency level: %s",
