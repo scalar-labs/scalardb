@@ -33,9 +33,7 @@ import java.util.Random;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 public class JdbcDatabaseColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
@@ -97,70 +95,42 @@ public class JdbcDatabaseColumnValueIntegrationTest
     }
     return super.getColumnWithMaxValue(columnName, dataType);
   }
-  // TODO: Expand this test to cover all supported storages, not just Oracle/DB2.
-  // This test verifies that large BLOB data can be inserted and retrieved correctly.
-  // Currently, it is limited to Oracle and DB2 due to known differences in BLOB handling,
-  // potential resource constraints, or lack of support for large BLOBs in other engines.
-  // Before enabling for other storages, investigate their BLOB size limits and behavior,
-  // and ensure the test does not cause failures or excessive resource usage.
-  @EnabledIf("isDb2OrOracle")
-  @ParameterizedTest()
-  @MethodSource("provideBlobSizes")
-  public void put_largeBlobData_ShouldWorkCorrectly(int blobSize, String humanReadableBlobSize)
-      throws ExecutionException {
-    String tableName = TABLE + "_large_single_blob";
-    try {
-      // Arrange
-      TableMetadata.Builder metadata =
-          TableMetadata.newBuilder()
-              .addColumn(COL_NAME1, DataType.INT)
-              .addColumn(COL_NAME2, DataType.BLOB)
-              .addPartitionKey(COL_NAME1);
 
-      admin.createTable(namespace, tableName, metadata.build(), true, getCreationOptions());
-      byte[] blobData = createLargeBlob(blobSize);
-      Put put =
-          Put.newBuilder()
-              .namespace(namespace)
-              .table(tableName)
-              .partitionKey(Key.ofInt(COL_NAME1, 1))
-              .blobValue(COL_NAME2, blobData)
-              .build();
-
-      // Act
-      storage.put(put);
-
-      // Assert
-      Optional<Result> optionalResult =
-          storage.get(
-              Get.newBuilder()
-                  .namespace(namespace)
-                  .table(tableName)
-                  .partitionKey(Key.ofInt(COL_NAME1, 1))
-                  .build());
-      assertThat(optionalResult).isPresent();
-      Result result = optionalResult.get();
-      assertThat(result.getColumns().get(COL_NAME2).getBlobValueAsBytes()).isEqualTo(blobData);
-    } finally {
-      admin.dropTable(namespace, tableName, true);
-    }
-  }
-
-  Stream<Arguments> provideBlobSizes() {
+  protected Stream<Arguments> provideLargeBlobSizes() {
     List<Arguments> args = new ArrayList<>();
-    if (isOracle()) {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
       // As explained in
       // `com.scalar.db.storage.jdbc.RdbEngineOracle.bindBlobColumnToPreparedStatement()`,
       // handing a BLOB size bigger than 32,766 bytes requires a workaround so we particularly test
       // values around it.
       args.add(Arguments.of(32_766, "32.766 KB"));
       args.add(Arguments.of(32_767, "32.767 KB"));
+      args.add(Arguments.of(100_000_000, "100 MB"));
+    } else if (JdbcTestUtils.isTidb(rdbEngine)) {
+      // TiDB default row max size is 6MB
+      args.add(Arguments.of(6_000_000, "6 MB"));
+    } else if (JdbcTestUtils.isMariaDB(rdbEngine)) {
+      // MariaDB default maximum packet size is 16MB, but the Put operation is translated to an
+      // INSERT ... ON DUPLICATE KEY UPDATE SQL statement, which contains the non-key columns twice.
+      // So the maximum size of a BLOB value is around half the maximum packet size, about 8MB.
+      args.add(Arguments.of(8_000_000, "8 MB"));
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
+      // MySQL default maximum packet size is 4MB for Mysql 5.7 (64 MB for newer versions), but the
+      // Put operation is translated to an INSERT ... ON DUPLICATE KEY UPDATE SQL statement, which
+      // contains the non-key columns twice. So the maximum size of a BLOB value is around half
+      // the maximum packet size, about 2MB.
+      args.add(Arguments.of(2_000_000, "2 MB"));
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      // A BLOB column is mapped to SQLServer `varbinary(8000)` which accepts a maximum size of
+      // 8,000 bytes.
+      args.add(Arguments.of(8_000, "8 KB"));
+    } else {
+      return super.provideLargeBlobSizes();
     }
-    args.add(Arguments.of(100_000_000, "100 MB"));
     return args.stream();
   }
 
-  @EnabledIf("isOracle")
+  @EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
   @Test
   public void put_largeBlobData_WithMultipleBlobColumnsShouldWorkCorrectly()
       throws ExecutionException {
@@ -206,7 +176,7 @@ public class JdbcDatabaseColumnValueIntegrationTest
     }
   }
 
-  @EnabledIf("isOracle")
+  @EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isOracle")
   @Test
   public void put_largeBlobData_WithAllColumnsTypesShouldWorkCorrectly() throws ExecutionException {
     // Arrange
@@ -262,21 +232,5 @@ public class JdbcDatabaseColumnValueIntegrationTest
         col9Value,
         col10Value,
         column11Value);
-  }
-
-  private byte[] createLargeBlob(int size) {
-    byte[] blob = new byte[size];
-    random.nextBytes(blob);
-    return blob;
-  }
-
-  @SuppressWarnings("unused")
-  private boolean isDb2OrOracle() {
-    return JdbcEnv.isOracle() || JdbcEnv.isDb2();
-  }
-
-  @SuppressWarnings("unused")
-  private boolean isOracle() {
-    return JdbcEnv.isOracle();
   }
 }
