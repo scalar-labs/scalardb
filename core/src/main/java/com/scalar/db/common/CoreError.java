@@ -152,13 +152,13 @@ public enum CoreError implements ScalarDbError {
       "0023",
       "This condition is not allowed for the PutIf operation. Condition: %s",
       "",
-      "Use only supported conditions for PutIf operations (PutIfExists, PutIfNotExists, or column-based conditions)."),
+      "Use only supported conditions for PutIf operations."),
   CONDITION_BUILD_ERROR_CONDITION_NOT_ALLOWED_FOR_DELETE_IF(
       Category.USER_ERROR,
       "0024",
       "This condition is not allowed for the DeleteIf operation. Condition: %s",
       "",
-      "Use only supported conditions for DeleteIf operations (DeleteIfExists or column-based conditions)."),
+      "Use only supported conditions for DeleteIf operations."),
   LIKE_CHECK_ERROR_OPERATOR_MUST_BE_LIKE_OR_NOT_LIKE(
       Category.USER_ERROR,
       "0025",
@@ -528,7 +528,7 @@ public enum CoreError implements ScalarDbError {
       "0089",
       "The RDB engine is not supported. JDBC connection URL: %s",
       "",
-      "Use a supported JDBC database (MySQL, PostgreSQL, Oracle, SQL Server, SQLite, Db2, or TiDB)."),
+      "Use a supported JDBC database."),
   JDBC_IMPORT_DATA_TYPE_WITH_SIZE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0090",
