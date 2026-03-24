@@ -5,7 +5,7 @@ plugins {
 
 ext {
     projectGroup = 'com.scalar-labs'
-    projectVersion = '3.18.0-SNAPSHOT'
+    projectVersion = project.findProperty('projectVersion') ?: '3.18.0-SNAPSHOT'
 }
 
 group = projectGroup
@@ -100,6 +100,26 @@ subprojects {
 
     installDist {
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
+    }
+
+    // For feature snapshots, add GitHub Packages repository to publish all subprojects
+    plugins.withType(MavenPublishPlugin).configureEach {
+        def isFeatureSnapshot = (project.version.toString() =~ /^\d+\.\d+\.\d+-feature-.+-SNAPSHOT$/).matches()
+
+        publishing {
+            repositories {
+                if (isFeatureSnapshot) {
+                    maven {
+                        name = 'GitHubPackages'
+                        url = uri('https://maven.pkg.github.com/scalar-labs/scalardb')
+                        credentials {
+                            username = project.findProperty('gprUsername') ?: System.getenv('GPR_USERNAME')
+                            password = project.findProperty('gprPassword') ?: System.getenv('GPR_PASSWORD')
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
