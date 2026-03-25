@@ -420,9 +420,10 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
-  public boolean hasPrivilege(String namespaceName, String tableName, Privilege privilege)
+  public boolean hasPrivilege(
+      String username, String namespaceName, String tableName, Privilege privilege)
       throws ExecutionException {
-    return distributedTransactionAdmin.hasPrivilege(namespaceName, tableName, privilege);
+    return distributedTransactionAdmin.hasPrivilege(username, namespaceName, tableName, privilege);
   }
 
   @Override
