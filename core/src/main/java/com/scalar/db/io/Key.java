@@ -653,7 +653,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Creates a {@code Key} object with a single column with a TIME type
+   * Creates a {@code Key} object with a single column with a TIME type. If the value has
+   * sub-microsecond precision, it will be truncated to microseconds.
    *
    * @param columnName a column name
    * @param value a TIME value of the column as LocalTime type
@@ -664,7 +665,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Creates a {@code Key} object with a single column with a TIMESTAMP type
+   * Creates a {@code Key} object with a single column with a TIMESTAMP type. If the value has
+   * sub-millisecond precision, it will be truncated to milliseconds.
    *
    * @param columnName a column name
    * @param value a TIMESTAMP value of the column as LocalDateTime type
@@ -675,10 +677,11 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Creates a {@code Key} object with a single column with a TIMESTAMPTZ type
+   * Creates a {@code Key} object with a single column with a TIMESTAMPTZ type. If the value has
+   * sub-millisecond precision, it will be truncated to milliseconds.
    *
    * @param columnName a column name
-   * @param value a TIMESTAMPTZ value of the column as LocalDateTime type
+   * @param value a TIMESTAMPTZ value of the column as Instant type
    * @return a {@code Key} object
    */
   public static Key ofTimestampTZ(String columnName, Instant value) {
@@ -893,7 +896,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     }
 
     /**
-     * Adds TIME value as an element of Key.
+     * Adds TIME value as an element of Key. If the value has sub-microsecond precision, it will be
+     * truncated to microseconds.
      *
      * @param columnName a column name to add
      * @param value a TIME value to add as LocalTime type
@@ -904,7 +908,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return this;
     }
     /**
-     * Adds TIMESTAMP value as an element of Key.
+     * Adds TIMESTAMP value as an element of Key. If the value has sub-millisecond precision, it
+     * will be truncated to milliseconds.
      *
      * @param columnName a column name to add
      * @param value a TIMESTAMP value to add as LocalDateTime type
@@ -916,7 +921,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     }
 
     /**
-     * Adds TIMESTAMPTZ value as an element of Key.
+     * Adds TIMESTAMPTZ value as an element of Key. If the value has sub-millisecond precision, it
+     * will be truncated to milliseconds.
      *
      * @param columnName a column name to add
      * @param value a TIMESTAMPTZ value to add as Instant type

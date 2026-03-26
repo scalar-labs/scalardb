@@ -84,14 +84,14 @@ public class ResultInterpreter {
       case TIME:
         return row.isNull(name)
             ? TimeColumn.ofNull(name)
-            : TimeColumn.of(name, LocalTime.ofNanoOfDay(row.getTime(name)));
+            : TimeColumn.ofStrict(name, LocalTime.ofNanoOfDay(row.getTime(name)));
       case TIMESTAMP:
         throw new UnsupportedOperationException(
             CoreError.CASSANDRA_TIMESTAMP_TYPE_NOT_SUPPORTED.buildMessage(name));
       case TIMESTAMPTZ:
         return row.isNull(name)
             ? TimestampTZColumn.ofNull(name)
-            : TimestampTZColumn.of(name, row.getTimestamp(name).toInstant());
+            : TimestampTZColumn.ofStrict(name, row.getTimestamp(name).toInstant());
       default:
         throw new AssertionError();
     }
