@@ -687,11 +687,22 @@ public final class ConsensusCommitUtils {
   }
 
   /**
-   * Checks all tables for missing before-image secondary indexes and logs warnings. Tables that
-   * have secondary indexes but lack corresponding before-image indexes should be repaired using
-   * {@code repairTable()}. This check is only relevant when the isolation level is SNAPSHOT or
-   * READ_COMMITTED and the index eventually consistent read is disabled, because in those cases
-   * index-based operations can miss PREPARED/DELETED records without before-image indexes.
+   * Checks all tables for missing before-image secondary indexes and logs warnings at startup.
+   * Tables that have secondary indexes but lack corresponding before-image indexes should be
+   * repaired using {@code repairTable()}.
+   *
+   * <p>This check is skipped in the following cases:
+   *
+   * <ul>
+   *   <li>SERIALIZABLE isolation: Operations that require before-image index checks will fail with
+   *       an error prompting the user to run {@code repairTable()}, so a startup warning is
+   *       unnecessary.
+   *   <li>Index eventually consistent read is enabled: Before-image indexes are not used, so the
+   *       check is not relevant.
+   * </ul>
+   *
+   * <p>In other isolation levels (SNAPSHOT, READ_COMMITTED), index-based operations can silently
+   * miss PREPARED/DELETED records without before-image index checks, so the warning is important.
    *
    * @param admin a distributed storage admin
    * @param config a consensus commit config
