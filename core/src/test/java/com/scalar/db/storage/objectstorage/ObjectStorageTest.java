@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -315,5 +316,22 @@ public class ObjectStorageTest {
     // Act Assert
     assertThatThrownBy(() -> objectStorage.mutate(Arrays.asList(put, delete)))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_WithScanAllWithOrdering_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .ordering(Scan.Ordering.asc("col1"))
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ORDERING_ENABLED, "true")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> objectStorage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 }
