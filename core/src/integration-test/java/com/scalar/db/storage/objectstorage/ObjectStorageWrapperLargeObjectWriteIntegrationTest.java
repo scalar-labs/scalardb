@@ -27,9 +27,9 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
   private static final String TEST_KEY2 = "test-key2";
   private static final String TEST_KEY3 = "test-key3";
 
-  private String testObject1;
-  private String testObject2;
-  private String testObject3;
+  private byte[] testObject1;
+  private byte[] testObject2;
+  private byte[] testObject3;
 
   private ObjectStorageWrapper wrapper;
 
@@ -63,13 +63,13 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
       throw new AssertionError();
     }
 
-    char[] charArray = new char[(int) payloadSizeBytes];
-    Arrays.fill(charArray, 'a');
-    testObject1 = new String(charArray);
-    Arrays.fill(charArray, 'b');
-    testObject2 = new String(charArray);
-    Arrays.fill(charArray, 'c');
-    testObject3 = new String(charArray);
+    byte[] byteArray = new byte[(int) payloadSizeBytes];
+    Arrays.fill(byteArray, (byte) 'a');
+    testObject1 = byteArray.clone();
+    Arrays.fill(byteArray, (byte) 'b');
+    testObject2 = byteArray.clone();
+    Arrays.fill(byteArray, (byte) 'c');
+    testObject3 = byteArray.clone();
 
     ObjectStorageConfig objectStorageConfig =
         ObjectStorageUtils.getObjectStorageConfig(new DatabaseConfig(properties));
@@ -115,7 +115,7 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
   public void insert_NewObjectKeyGiven_ShouldInsertObjectSuccessfully() throws Exception {
     // Arrange
     String objectKey = "new-object-key";
-    String object = "new-object";
+    byte[] object = "new-object".getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
     try {
       // Act
@@ -135,14 +135,17 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> wrapper.insert(TEST_KEY2, "another-object"))
+    assertThatCode(
+            () ->
+                wrapper.insert(
+                    TEST_KEY2, "another-object".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
   @Test
   public void update_ExistingObjectKeyGiven_ShouldUpdateObjectSuccessfully() throws Exception {
     // Arrange
-    String updatedObject = "updated-object2";
+    byte[] updatedObject = "updated-object2".getBytes(java.nio.charset.StandardCharsets.UTF_8);
     Optional<ObjectStorageWrapperResponse> response1 = wrapper.get(TEST_KEY2);
     assertThat(response1.isPresent()).isTrue();
     String version = response1.get().getVersion();
@@ -167,7 +170,12 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
     String objectKey = "non-existing-key";
 
     // Act Assert
-    assertThatCode(() -> wrapper.update(objectKey, "some-object", "123456789"))
+    assertThatCode(
+            () ->
+                wrapper.update(
+                    objectKey,
+                    "some-object".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    "123456789"))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
@@ -177,7 +185,12 @@ public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
     String wrongVersion = "123456789";
 
     // Act Assert
-    assertThatCode(() -> wrapper.update(TEST_KEY2, "another-object", wrongVersion))
+    assertThatCode(
+            () ->
+                wrapper.update(
+                    TEST_KEY2,
+                    "another-object".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    wrongVersion))
         .isInstanceOf(PreconditionFailedException.class);
   }
 }

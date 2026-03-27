@@ -466,7 +466,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     try {
       wrapper.insert(
           ObjectStorageUtils.getObjectKey(metadataNamespace, table),
-          Serializer.serialize(metadataTable));
+          Serializer.serializeAsBytes(metadataTable));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to insert the metadata table.", e);
     }
@@ -477,7 +477,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     try {
       wrapper.update(
           ObjectStorageUtils.getObjectKey(metadataNamespace, table),
-          Serializer.serialize(metadataTable),
+          Serializer.serializeAsBytes(metadataTable),
           readVersion);
     } catch (Exception e) {
       throw new ExecutionException("Failed to update the metadata table.", e);

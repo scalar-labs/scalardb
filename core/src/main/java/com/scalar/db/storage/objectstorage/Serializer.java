@@ -5,13 +5,21 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.nio.charset.StandardCharsets;
 
 public class Serializer {
   public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
-  private static final ObjectMapper mapper = new ObjectMapper();
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper cborMapper = new ObjectMapper(new CBORFactory());
 
   static {
+    configureMapper(jsonMapper);
+    configureMapper(cborMapper);
+  }
+
+  private static void configureMapper(ObjectMapper mapper) {
     mapper
         .getFactory()
         .setStreamReadConstraints(
@@ -23,7 +31,20 @@ public class Serializer {
 
   public static <T> T deserialize(String json, TypeReference<T> typeReference) {
     try {
-      return mapper.readValue(json, typeReference);
+      return jsonMapper.readValue(json, typeReference);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to deserialize the object.", e);
+    }
+  }
+
+  public static <T> T deserialize(byte[] data, TypeReference<T> typeReference) {
+    try {
+      if (data.length > 0 && data[0] == '{') {
+        // JSON format (backward compatibility)
+        return jsonMapper.readValue(new String(data, StandardCharsets.UTF_8), typeReference);
+      }
+      // CBOR format
+      return cborMapper.readValue(data, typeReference);
     } catch (Exception e) {
       throw new RuntimeException("Failed to deserialize the object.", e);
     }
@@ -31,7 +52,15 @@ public class Serializer {
 
   public static <T> String serialize(T object) {
     try {
-      return mapper.writeValueAsString(object);
+      return jsonMapper.writeValueAsString(object);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to serialize the object.", e);
+    }
+  }
+
+  public static <T> byte[] serializeAsBytes(T object) {
+    try {
+      return cborMapper.writeValueAsBytes(object);
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize the object.", e);
     }

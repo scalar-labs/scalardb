@@ -58,7 +58,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
       BlobClient blobClient = client.getBlobClient(key);
       BlobDownloadContentResponse response =
           blobClient.downloadContentWithResponse(null, null, requestTimeoutSecs, null);
-      String data = response.getValue().toString();
+      byte[] data = response.getValue().toBytes();
       String eTag = response.getHeaders().getValue(HttpHeaderName.ETAG);
       return Optional.of(new ObjectStorageWrapperResponse(data, eTag));
     } catch (BlobStorageException e) {
@@ -86,11 +86,11 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void insert(String key, String object) throws ObjectStorageWrapperException {
+  public void insert(String key, byte[] object) throws ObjectStorageWrapperException {
     try {
       BlobClient blobClient = client.getBlobClient(key);
       BlobParallelUploadOptions options =
-          new BlobParallelUploadOptions(BinaryData.fromString(object))
+          new BlobParallelUploadOptions(BinaryData.fromBytes(object))
               .setRequestConditions(new BlobRequestConditions().setIfNoneMatch("*"))
               .setParallelTransferOptions(parallelTransferOptions);
       blobClient.uploadWithResponse(options, requestTimeoutSecs, null);
@@ -110,12 +110,12 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void update(String key, String object, String version)
+  public void update(String key, byte[] object, String version)
       throws ObjectStorageWrapperException {
     try {
       BlobClient blobClient = client.getBlobClient(key);
       BlobParallelUploadOptions options =
-          new BlobParallelUploadOptions(BinaryData.fromString(object))
+          new BlobParallelUploadOptions(BinaryData.fromBytes(object))
               .setRequestConditions(new BlobRequestConditions().setIfMatch(version))
               .setParallelTransferOptions(parallelTransferOptions);
       blobClient.uploadWithResponse(options, requestTimeoutSecs, null);

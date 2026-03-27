@@ -50,7 +50,7 @@ public class MutateStatementHandlerTest {
   @Mock private TableMetadata metadata;
 
   @Captor private ArgumentCaptor<String> objectKeyCaptor;
-  @Captor private ArgumentCaptor<String> payloadCaptor;
+  @Captor private ArgumentCaptor<byte[]> payloadCaptor;
   @Captor private ArgumentCaptor<String> versionCaptor;
 
   @BeforeEach
@@ -127,7 +127,7 @@ public class MutateStatementHandlerTest {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
     records.put(recordId, prepareExistingRecord());
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = Serializer.serializeAsBytes(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -141,7 +141,7 @@ public class MutateStatementHandlerTest {
       records.put(additionalRecordId, prepareExistingRecord());
     }
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = Serializer.serializeAsBytes(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
