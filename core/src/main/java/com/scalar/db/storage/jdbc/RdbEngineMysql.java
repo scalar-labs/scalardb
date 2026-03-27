@@ -367,8 +367,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
         return DataType.DATE;
       case TIME:
         return DataType.TIME;
-      // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
       case TIMESTAMP:
+        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
         if (overrideDataType == DataType.TIMESTAMPTZ || typeName.equalsIgnoreCase("TIMESTAMP")) {
           return DataType.TIMESTAMPTZ;
         }
