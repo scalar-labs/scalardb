@@ -367,7 +367,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
         return DataType.DATE;
       case TIME:
         return DataType.TIME;
-        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
+      // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
       case TIMESTAMP:
         if (overrideDataType == DataType.TIMESTAMPTZ || typeName.equalsIgnoreCase("TIMESTAMP")) {
           return DataType.TIMESTAMPTZ;
@@ -485,6 +485,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String adjustJdbcUrl(String jdbcUrl) {
+    // MariaDB Connector/J checks for "permitMysqlScheme" in the JDBC URL during URL parsing before
+    // any connection properties are applied. If the URL starts with "jdbc:mysql:" and doesn't
+    // contain "permitMysqlScheme", the driver rejects the URL entirely. That's why we need to embed
+    // it directly in the JDBC URL rather than using getConnectionProperties().
     if (jdbcUrl.contains("permitMysqlScheme")) {
       return jdbcUrl;
     }
