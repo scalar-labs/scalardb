@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -215,5 +217,22 @@ public class DynamoTest {
     verify(selectStatementHandler).handle(captor.capture());
     Scan actualScan = captor.getValue();
     assertThat(actualScan.getProjections()).containsExactlyInAnyOrder("col1", "col2");
+  }
+
+  @Test
+  public void scan_WithScanAllWithOrdering_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .ordering(Scan.Ordering.asc("col1"))
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ORDERING_ENABLED, "true")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> dynamo.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 }
