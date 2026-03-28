@@ -49,16 +49,19 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "100");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    Driver driver = new com.mysql.cj.jdbc.Driver();
+    Driver driver = new org.mariadb.jdbc.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:mysql://localhost:3306/"))
+        .thenReturn("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine);
 
     // Assert
     assertThat(dataSource.getDriver()).isEqualTo(driver);
-    assertThat(dataSource.getUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
+    assertThat(dataSource.getUrl())
+        .isEqualTo("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
     assertThat(dataSource.getUsername()).isEqualTo("root");
     assertThat(dataSource.getPassword()).isEqualTo("mysql");
 
@@ -96,6 +99,8 @@ public class JdbcUtilsTest {
     Driver driver = new org.postgresql.Driver();
     when(rdbEngine.getDriver()).thenReturn(driver);
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:postgresql://localhost:5432/"))
+        .thenReturn("jdbc:postgresql://localhost:5432/");
 
     // Act
     BasicDataSource dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
@@ -137,6 +142,9 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriver()).thenReturn(driver);
     when(rdbEngine.getConnectionProperties(config))
         .thenReturn(ImmutableMap.of("prop1", "prop1Value", "prop2", "prop2Value"));
+    when(rdbEngine.adjustJdbcUrl(
+            "jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value"))
+        .thenReturn("jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value");
 
     try (MockedStatic<JdbcUtils> jdbcUtils =
         Mockito.mockStatic(
@@ -171,6 +179,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new oracle.jdbc.driver.OracleDriver();
     when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.adjustJdbcUrl("jdbc:oracle:thin:@localhost:1521/XEPDB1"))
+        .thenReturn("jdbc:oracle:thin:@localhost:1521/XEPDB1");
 
     // Act
     BasicDataSource tableMetadataDataSource =
@@ -210,6 +220,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     Driver driver = new com.microsoft.sqlserver.jdbc.SQLServerDriver();
     when(rdbEngine.getDriver()).thenReturn(driver);
+    when(rdbEngine.adjustJdbcUrl("jdbc:sqlserver://localhost:1433"))
+        .thenReturn("jdbc:sqlserver://localhost:1433");
 
     // Act
     BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
