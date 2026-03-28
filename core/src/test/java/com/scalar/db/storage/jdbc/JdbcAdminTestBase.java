@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -40,6 +39,7 @@ import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLNonTransientConnectionException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -1058,7 +1058,7 @@ public abstract class JdbcAdminTestBase {
       createMetadataTableIfNotExists_WithInternalDbError_forMysql_shouldThrowInternalDbError()
           throws SQLException {
     createMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
-        RdbEngine.MYSQL, new CommunicationsException("", null));
+        RdbEngine.MYSQL, new SQLNonTransientConnectionException(""));
   }
 
   @Test
