@@ -45,8 +45,10 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "60000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    when(rdbEngine.getDriverClassName()).thenReturn("com.mysql.cj.jdbc.Driver");
+    when(rdbEngine.getDriverClassName()).thenReturn("org.mariadb.jdbc.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:mysql://localhost:3306/"))
+        .thenReturn("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -68,8 +70,9 @@ public class JdbcUtilsTest {
     // Assert
     HikariConfig hikariConfig = capturedConfig.get();
     assertThat(hikariConfig).isNotNull();
-    assertThat(hikariConfig.getDriverClassName()).isEqualTo("com.mysql.cj.jdbc.Driver");
-    assertThat(hikariConfig.getJdbcUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.mariadb.jdbc.Driver");
+    assertThat(hikariConfig.getJdbcUrl())
+        .isEqualTo("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
     assertThat(hikariConfig.getUsername()).isEqualTo("root");
     assertThat(hikariConfig.getPassword()).isEqualTo("mysql");
 
@@ -101,6 +104,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:postgresql://localhost:5432/"))
+        .thenReturn("jdbc:postgresql://localhost:5432/");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -151,6 +156,9 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     when(rdbEngine.getConnectionProperties(config))
         .thenReturn(ImmutableMap.of("prop1", "prop1Value", "prop2", "prop2Value"));
+    when(rdbEngine.adjustJdbcUrl(
+            "jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value"))
+        .thenReturn("jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -199,6 +207,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("oracle.jdbc.driver.OracleDriver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:oracle:thin:@localhost:1521/XEPDB1"))
+        .thenReturn("jdbc:oracle:thin:@localhost:1521/XEPDB1");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -255,6 +265,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:sqlserver://localhost:1433"))
+        .thenReturn("jdbc:sqlserver://localhost:1433");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
