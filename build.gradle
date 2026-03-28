@@ -32,7 +32,6 @@ subprojects {
         jooqVersion = '3.14.16'
         awssdkVersion = '2.39.2'
         commonsDbcp2Version = '2.13.0'
-        mysqlDriverVersion = '8.4.0'
         postgresqlDriverVersion = '42.7.8'
         oracleDriverVersion = '23.26.0.0.0'
         sqlserverDriverVersion = '12.8.2.jre8'
