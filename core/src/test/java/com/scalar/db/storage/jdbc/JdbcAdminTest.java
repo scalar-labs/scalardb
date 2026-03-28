@@ -31,7 +31,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
@@ -48,6 +47,7 @@ import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLNonTransientConnectionException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -314,7 +314,7 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
-    if (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQLITE) {
+    if (rdbEngine == RdbEngine.SQLITE) {
       verify(connection, never()).setReadOnly(anyBoolean());
     } else {
       verify(connection).setReadOnly(true);
@@ -1731,7 +1731,7 @@ public class JdbcAdminTest {
       createMetadataTableIfNotExists_WithInternalDbError_forMysql_shouldThrowInternalDbError()
           throws SQLException {
     createTableMetadataTableIfNotExists_WithInternalDbError_forX_shouldThrowInternalDbError(
-        RdbEngine.MYSQL, new CommunicationsException("", null));
+        RdbEngine.MYSQL, new SQLNonTransientConnectionException(""));
   }
 
   @Test
@@ -2455,7 +2455,7 @@ public class JdbcAdminTest {
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
 
     // Assert
-    if (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQLITE) {
+    if (rdbEngine == RdbEngine.SQLITE) {
       verify(connection, never()).setReadOnly(anyBoolean());
     } else {
       verify(connection).setReadOnly(true);
@@ -2657,7 +2657,7 @@ public class JdbcAdminTest {
     // Assert
     assertThat(admin.namespaceExists(namespace)).isTrue();
 
-    if (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQLITE) {
+    if (rdbEngine == RdbEngine.SQLITE) {
       verify(connection, never()).setReadOnly(anyBoolean());
     } else {
       verify(connection).setReadOnly(true);
@@ -4507,7 +4507,7 @@ public class JdbcAdminTest {
     Set<String> actual = admin.getNamespaceNames();
 
     // Assert
-    if (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQLITE) {
+    if (rdbEngine == RdbEngine.SQLITE) {
       verify(connection, never()).setReadOnly(anyBoolean());
     } else {
       verify(connection).setReadOnly(true);
@@ -4661,11 +4661,7 @@ public class JdbcAdminTest {
         .execute(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
-    if (rdbEngine == RdbEngine.MYSQL) {
-      verify(connection, never()).setReadOnly(anyBoolean());
-    } else {
-      verify(connection).setReadOnly(true);
-    }
+    verify(connection).setReadOnly(true);
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),
