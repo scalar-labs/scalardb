@@ -11,7 +11,6 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
@@ -21,8 +20,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -246,6 +243,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String columnDescription,
       @Nullable DataType overrideDataType) {
     switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
       case BIT:
         if (columnSize != 1) {
           throw new IllegalArgumentException(
@@ -325,8 +324,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
         return DataType.DATE;
       case TIME:
         return DataType.TIME;
-        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
       case TIMESTAMP:
+        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
         if (overrideDataType == DataType.TIMESTAMPTZ || typeName.equalsIgnoreCase("TIMESTAMP")) {
           return DataType.TIMESTAMPTZ;
         }
@@ -380,11 +379,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public Driver getDriver() {
-    try {
-      return new com.mysql.cj.jdbc.Driver();
-    } catch (SQLException e) {
-      throw new RuntimeException(e);
-    }
+    return new org.mariadb.jdbc.Driver();
   }
 
   @Override
@@ -441,20 +436,15 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties(JdbcConfig config) {
-    if (config.getDatabaseConfig().getScanFetchSize() == Integer.MIN_VALUE) {
-      // If the scan fetch size is set to Integer.MIN_VALUE, use the streaming mode.
-      return Collections.emptyMap();
+  public String adjustJdbcUrl(String jdbcUrl) {
+    // MariaDB Connector/J checks for "permitMysqlScheme" in the JDBC URL during URL parsing before
+    // any connection properties are applied. If the URL starts with "jdbc:mysql:" and doesn't
+    // contain "permitMysqlScheme", the driver rejects the URL entirely. That's why we need to embed
+    // it directly in the JDBC URL rather than using getConnectionProperties().
+    if (jdbcUrl.contains("permitMysqlScheme")) {
+      return jdbcUrl;
     }
-
-    // Otherwise, use the cursor fetch mode.
-    return Collections.singletonMap("useCursorFetch", "true");
-  }
-
-  @Override
-  public void setConnectionToReadOnly(Connection connection, boolean readOnly) throws SQLException {
-    // Observed performance degradation when using read-only connections in MySQL. So we do not
-    // set the read-only mode for MySQL connections.
+    return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + "permitMysqlScheme=true";
   }
 
   @Override
