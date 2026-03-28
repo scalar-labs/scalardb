@@ -131,7 +131,7 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/ -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: oracle_%VERSION%
     display_name: Oracle %VERSION%

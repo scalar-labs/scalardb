@@ -29,7 +29,7 @@ public final class JdbcUtils {
      */
     dataSource.setDriver(rdbEngine.getDriver());
 
-    dataSource.setUrl(config.getJdbcUrl());
+    dataSource.setUrl(rdbEngine.adjustJdbcUrl(config.getJdbcUrl()));
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
 
@@ -86,7 +86,7 @@ public final class JdbcUtils {
      */
     dataSource.setDriver(rdbEngine.getDriver());
 
-    dataSource.setUrl(config.getJdbcUrl());
+    dataSource.setUrl(rdbEngine.adjustJdbcUrl(config.getJdbcUrl()));
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
     dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
@@ -106,7 +106,7 @@ public final class JdbcUtils {
      */
     dataSource.setDriver(rdbEngine.getDriver());
 
-    dataSource.setUrl(config.getJdbcUrl());
+    dataSource.setUrl(rdbEngine.adjustJdbcUrl(config.getJdbcUrl()));
     config.getUsername().ifPresent(dataSource::setUsername);
     config.getPassword().ifPresent(dataSource::setPassword);
     dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());

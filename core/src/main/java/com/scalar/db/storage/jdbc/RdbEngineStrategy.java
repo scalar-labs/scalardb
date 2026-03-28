@@ -210,6 +210,16 @@ public interface RdbEngineStrategy {
     return Collections.emptyMap();
   }
 
+  /**
+   * Adjust the JDBC URL for the underlying database if needed.
+   *
+   * @param jdbcUrl the original JDBC URL
+   * @return the adjusted JDBC URL
+   */
+  default String adjustJdbcUrl(String jdbcUrl) {
+    return jdbcUrl;
+  }
+
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
 
   String getTableNamesInNamespaceSql();
