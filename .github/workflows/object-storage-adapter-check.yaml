@@ -144,7 +144,7 @@ jobs:
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
         run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=s3 -Dscalardb.object_storage.endpoint=${{ env.S3_REGION }}/${{ env.S3_BUCKET_BASE_NAME }}-${{ matrix.test_group.bucket_suffix }} -Dscalardb.object_storage.username='${{ env.AWS_ACCESS_KEY_ID }}' -Dscalardb.object_storage.password='${{ env.AWS_SECRET_ACCESS_KEY }}' ${{ matrix.test_group.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }} ${{ matrix.test_group.tests_filter }}
@@ -251,7 +251,7 @@ jobs:
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Execute Gradle 'integrationTestObjectStorage' task
         run: ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.storage=cloud-storage -Dscalardb.object_storage.endpoint=${{ env.CLOUD_STORAGE_BUCKET_BASE_NAME }}-${{ matrix.test_group.bucket_suffix }} -Dscalardb.object_storage.username='${{ env.CLOUD_STORAGE_PROJECT_ID }}' -Dscalardb.object_storage.password='${{ env.CLOUD_STORAGE_SERVICE_ACCOUNT_KEY }}' ${{ matrix.test_group.group_commit_enabled && env.INT_TEST_GRADLE_OPTIONS_FOR_GROUP_COMMIT || '' }} ${{ matrix.test_group.tests_filter }}
