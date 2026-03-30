@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -325,9 +326,10 @@ public class JdbcTransactionAdminIntegrationTest
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c11", Instant.now())
-              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC))
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampTZValue("c11", Instant.now().truncatedTo(ChronoUnit.MILLIS))
+              .timestampValue(
+                  "c12", LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS))
               .build();
       transactionalInsert(insert);
 
@@ -396,9 +398,10 @@ public class JdbcTransactionAdminIntegrationTest
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c11", Instant.now())
-              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampTZValue("c11", Instant.now().truncatedTo(ChronoUnit.MILLIS))
+              .timestampValue(
+                  "c12", LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS));
       transactionalInsert(insert.build());
 
       // Act Assert
@@ -485,9 +488,10 @@ public class JdbcTransactionAdminIntegrationTest
               .textValue("c7", "5")
               .blobValue("c8", "6".getBytes(StandardCharsets.UTF_8))
               .dateValue("c9", LocalDate.now(ZoneId.of("UTC")))
-              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue("c11", Instant.now())
-              .timestampValue("c12", LocalDateTime.now(ZoneOffset.UTC));
+              .timeValue("c10", LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampTZValue("c11", Instant.now().truncatedTo(ChronoUnit.MILLIS))
+              .timestampValue(
+                  "c12", LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS));
       transactionalInsert(insert.build());
 
       // Act Assert

@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -1167,10 +1168,12 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue(getColumnName11(), Instant.now());
+              .timeValue(
+                  getColumnName10(), LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampTZValue(getColumnName11(), Instant.now().truncatedTo(ChronoUnit.MILLIS));
       if (isTimestampTypeSupported()) {
-        put.timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC));
+        put.timestampValue(
+            getColumnName12(), LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS));
       }
       storage.put(put.build());
 

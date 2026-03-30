@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -276,9 +277,12 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue(getColumnName11(), Instant.now())
-              .timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC));
+              .timeValue(
+                  getColumnName10(), LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampTZValue(getColumnName11(), Instant.now().truncatedTo(ChronoUnit.MILLIS))
+              .timestampValue(
+                  getColumnName12(),
+                  LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS));
       storage.put(put.build());
       storage.close();
 
@@ -377,9 +381,12 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
-              .timestampTZValue(getColumnName11(), Instant.now())
-              .timestampValue(getColumnName12(), LocalDateTime.now(ZoneOffset.UTC))
+              .timeValue(
+                  getColumnName10(), LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampTZValue(getColumnName11(), Instant.now().truncatedTo(ChronoUnit.MILLIS))
+              .timestampValue(
+                  getColumnName12(),
+                  LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS))
               .build();
       storage.put(put);
       storage.close();
@@ -500,9 +507,12 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
               .textValue(getColumnName7(), "5")
               .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
               .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
-              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
-              .timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC))
-              .timestampTZValue(getColumnName12(), Instant.now());
+              .timeValue(
+                  getColumnName10(), LocalTime.now(ZoneId.of("UTC")).truncatedTo(ChronoUnit.MICROS))
+              .timestampValue(
+                  getColumnName11(),
+                  LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS))
+              .timestampTZValue(getColumnName12(), Instant.now().truncatedTo(ChronoUnit.MILLIS));
 
       storage.put(put.build());
       storage.close();
