@@ -150,6 +150,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean requiresExplicitIndexDropBeforeDropColumn() {
+    return true;
+  }
+
+  @Override
   public String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName) {
     return new String[] {

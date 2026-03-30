@@ -1392,6 +1392,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+
+      // Verify the column and index are fully removed by re-creating them with the same name
+      admin.addNewColumnToTable(namespace1, getTable4(), getColumnName2(), DataType.INT);
+      admin.createIndex(namespace1, getTable4(), getColumnName2());
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isTrue();
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
     }
