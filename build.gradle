@@ -43,6 +43,7 @@ subprojects {
         junitVersion = '5.11.4'
         commonsLangVersion = '3.17.0'
         jacksonVersion = '2.21.1'
+        nettyVersion = '4.1.132.Final'
         assertjVersion = '3.27.3'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
@@ -64,6 +65,8 @@ subprojects {
     configurations.all {
         resolutionStrategy {
             force "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+            force "io.netty:netty-codec-http:${nettyVersion}"
+            force "io.netty:netty-codec-http2:${nettyVersion}"
         }
     }
 
