@@ -206,10 +206,24 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   @Override
-  public void commit_NoReadsInSnapshot_ShouldNotValidateRecords(boolean withBeforePreparationHook)
+  public void commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(
+      boolean withBeforePreparationHook)
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException, ValidationConflictException {
-    super.commit_NoReadsInSnapshot_ShouldNotValidateRecords(withBeforePreparationHook);
+    super.commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(withBeforePreparationHook);
+
+    // Assert
+    verify(groupCommitter, never()).remove(anyId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @Override
+  public void commit_SerializableIsolationWithReads_ShouldValidateRecords(
+      boolean withBeforePreparationHook)
+      throws CommitException, UnknownTransactionStatusException, ExecutionException,
+          CoordinatorException, ValidationConflictException {
+    super.commit_SerializableIsolationWithReads_ShouldValidateRecords(withBeforePreparationHook);
 
     // Assert
     verify(groupCommitter, never()).remove(anyId());
@@ -269,13 +283,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
   @Test
   @Override
-  public void canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse() throws Exception {
-    super.canOnePhaseCommit_WhenValidationRequired_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
   public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() throws Exception {
     super.canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse();
     groupCommitter.remove(anyId());
@@ -300,6 +307,21 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Override
   public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() throws Exception {
     super.canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse()
+      throws Exception {
+    super.canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue() throws Exception {
+    super.canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue();
     groupCommitter.remove(anyId());
   }
 
