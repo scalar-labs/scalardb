@@ -46,7 +46,7 @@ public abstract class DistributedStorageIntegrationTestBase {
 
   private static final String TEST_NAME = "storage";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private static final String TABLE = "test_table";
+  private static final String TABLE = "tbl";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";

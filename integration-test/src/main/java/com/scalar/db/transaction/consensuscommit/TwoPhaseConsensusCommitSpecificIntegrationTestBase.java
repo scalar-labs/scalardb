@@ -44,8 +44,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private static final String TEST_NAME = "2pcc";
   private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_1 = "tx_test_table1";
-  private static final String TABLE_2 = "tx_test_table2";
+  private static final String TABLE_1 = "tx_tbl1";
+  private static final String TABLE_2 = "tx_tbl2";
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";

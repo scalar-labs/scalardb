@@ -84,6 +84,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
@@ -96,6 +97,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             virtualTableInfoManager,
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
   }
 
   protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -119,6 +122,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
@@ -131,6 +135,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             virtualTableInfoManager,
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")

@@ -37,7 +37,7 @@ public abstract class TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrati
 
   protected static final String TEST_NAME = "2pcc_inc_meta";
   protected static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
