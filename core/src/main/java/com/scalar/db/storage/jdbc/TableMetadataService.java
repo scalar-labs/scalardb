@@ -50,17 +50,38 @@ public class TableMetadataService {
     if (createMetadataTable) {
       createTableMetadataTableIfNotExists(connection);
     }
-    if (overwriteMetadata) {
-      // Delete the metadata for the table before we add them
-      execute(
-          connection, getDeleteTableMetadataStatement(namespace, table), requiresExplicitCommit);
-    }
-    LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
-    orderedColumns.addAll(metadata.getClusteringKeyNames());
-    orderedColumns.addAll(metadata.getColumnNames());
-    int ordinalPosition = 1;
-    for (String column : orderedColumns) {
-      insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+
+    boolean originalAutoCommit = connection.getAutoCommit();
+    try {
+      if (originalAutoCommit) {
+        connection.setAutoCommit(false);
+      }
+
+      if (overwriteMetadata) {
+        // Delete the metadata for the table before we add them
+        execute(connection, getDeleteTableMetadataStatement(namespace, table), false);
+      }
+
+      LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
+      orderedColumns.addAll(metadata.getClusteringKeyNames());
+      orderedColumns.addAll(metadata.getColumnNames());
+      int ordinalPosition = 1;
+      for (String column : orderedColumns) {
+        insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+      }
+
+      connection.commit();
+    } catch (SQLException e) {
+      try {
+        connection.rollback();
+      } catch (SQLException rollbackEx) {
+        e.addSuppressed(rollbackEx);
+      }
+      throw e;
+    } finally {
+      if (originalAutoCommit) {
+        connection.setAutoCommit(true);
+      }
     }
   }
 
@@ -131,7 +152,7 @@ public class TableMetadataService {
             metadata.getClusteringOrder(column),
             metadata.getSecondaryIndexNames().contains(column),
             ordinalPosition);
-    execute(connection, insertStatement, requiresExplicitCommit);
+    execute(connection, insertStatement, false);
   }
 
   private String getInsertStatement(

@@ -1046,6 +1046,7 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).commit();
   }
 
   @Test
@@ -1234,6 +1235,7 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).commit();
   }
 
   @Test
@@ -1531,6 +1533,7 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).commit();
   }
 
   @ParameterizedTest
