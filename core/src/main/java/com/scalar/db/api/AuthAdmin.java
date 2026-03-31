@@ -408,6 +408,22 @@ public interface AuthAdmin {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
+  /**
+   * Returns whether the given user has the given privilege on the given table.
+   *
+   * @param username the username
+   * @param namespaceName the namespace name of the table
+   * @param tableName the table name
+   * @param privilege the privilege to check
+   * @return {@code true} if the user has the privilege, {@code false} otherwise
+   * @throws ExecutionException if the operation fails
+   */
+  default boolean hasPrivilege(
+      String username, String namespaceName, String tableName, Privilege privilege)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
   /** Represents a user. */
   interface User {
     /**
