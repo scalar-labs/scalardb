@@ -279,8 +279,7 @@ public class CrudHandler {
           exception = e;
         }
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-                exception.getMessage()),
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
             exception,
             context.transactionId);
       } catch (IOException e) {
@@ -710,8 +709,7 @@ public class CrudHandler {
       }
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-              e.getMessage()),
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
           e,
           context.transactionId);
     } catch (IOException e) {
