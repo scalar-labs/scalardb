@@ -6,14 +6,17 @@ import com.google.common.collect.Sets;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TestUtils;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -157,7 +160,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
             Scan.newBuilder()
                 .namespace(namespace)
                 .table(getTableName(secondaryIndexType))
-                .partitionKey(Key.newBuilder().add(secondaryIndexValue).build())
+                .indexKey(Key.newBuilder().add(secondaryIndexValue).build())
                 .build();
 
         // Act
@@ -172,7 +175,6 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   @Test
   public void scan_WithMaxSecondaryIndexValue_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       truncateTable(secondaryIndexType);
 
@@ -183,7 +185,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
           Scan.newBuilder()
               .namespace(namespace)
               .table(getTableName(secondaryIndexType))
-              .partitionKey(Key.newBuilder().add(secondaryIndexValue).build())
+              .indexKey(Key.newBuilder().add(secondaryIndexValue).build())
               .build();
 
       // Act
@@ -197,7 +199,6 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   @Test
   public void scan_WithMinSecondaryIndexValue_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-
     for (DataType secondaryIndexType : secondaryIndexTypes) {
       truncateTable(secondaryIndexType);
 
@@ -208,7 +209,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
           Scan.newBuilder()
               .namespace(namespace)
               .table(getTableName(secondaryIndexType))
-              .partitionKey(Key.newBuilder().add(secondaryIndexValue).build())
+              .indexKey(Key.newBuilder().add(secondaryIndexValue).build())
               .build();
 
       // Act
@@ -222,6 +223,8 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
   @Test
   public void scan_WithSecondaryIndexValueAndConjunctions_ShouldReturnProperResult()
       throws ExecutionException, IOException {
+    random.setSeed(seed);
+
     DataType secondaryIndexType = DataType.INT;
     truncateTable(secondaryIndexType);
 
@@ -251,6 +254,219 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     assertThat(results.get(1).getInt(PARTITION_KEY)).isEqualTo(2);
     assertThat(results.get(1).contains(INDEX_COL_NAME)).isTrue();
     assertThat(results.get(1).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getIntValue());
+  }
+
+  @Test
+  public void put_WithNullSecondaryIndexValue_ShouldPutCorrectly() throws ExecutionException {
+    for (DataType secondaryIndexType : secondaryIndexTypes) {
+      truncateTable(secondaryIndexType);
+
+      // Arrange
+      Put put =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .value(ScalarDbUtils.createNullColumn(INDEX_COL_NAME, secondaryIndexType))
+              .intValue(COL_NAME, 1)
+              .build();
+
+      // Act Assert
+      storage.put(put);
+    }
+  }
+
+  @Test
+  public void get_AfterPutWithNullSecondaryIndexValue_ShouldReturnNullValue()
+      throws ExecutionException {
+    for (DataType secondaryIndexType : secondaryIndexTypes) {
+      truncateTable(secondaryIndexType);
+
+      // Arrange
+      Put put =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .value(ScalarDbUtils.createNullColumn(INDEX_COL_NAME, secondaryIndexType))
+              .intValue(COL_NAME, 1)
+              .build();
+      storage.put(put);
+
+      Get get =
+          Get.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .build();
+
+      // Act
+      Optional<Result> result = storage.get(get);
+
+      // Assert
+      assertThat(result).isPresent();
+      assertThat(result.get().isNull(INDEX_COL_NAME)).isTrue();
+      assertThat(result.get().getInt(COL_NAME)).isEqualTo(1);
+    }
+  }
+
+  @Test
+  public void put_UpdateNullSecondaryIndexValueToNonNull_ShouldUpdateCorrectly()
+      throws ExecutionException, IOException {
+    for (DataType secondaryIndexType : secondaryIndexTypes) {
+      random.setSeed(seed);
+
+      truncateTable(secondaryIndexType);
+
+      // Arrange - Put with null secondary index value
+      Put putWithNull =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .value(ScalarDbUtils.createNullColumn(INDEX_COL_NAME, secondaryIndexType))
+              .intValue(COL_NAME, 1)
+              .build();
+      storage.put(putWithNull);
+
+      // Act - Update with non-null secondary index value
+      Column<?> nonNullValue = getColumnWithRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
+      Put putWithNonNull =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .value(nonNullValue)
+              .intValue(COL_NAME, 2)
+              .build();
+      storage.put(putWithNonNull);
+
+      // Assert - Get should return non-null value
+      Get get =
+          Get.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .build();
+      Optional<Result> result = storage.get(get);
+
+      assertThat(result).isPresent();
+      assertThat(result.get().isNull(INDEX_COL_NAME)).isFalse();
+      assertThat(result.get().getColumns().get(INDEX_COL_NAME)).isEqualTo(nonNullValue);
+      assertThat(result.get().getInt(COL_NAME)).isEqualTo(2);
+
+      // Assert - Scan with secondary index should return the record
+      Scan scan =
+          Scan.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .indexKey(Key.newBuilder().add(nonNullValue).build())
+              .build();
+      List<Result> scanResults = scanAll(scan);
+
+      assertThat(scanResults.size()).isEqualTo(1);
+      assertThat(scanResults.get(0).getInt(PARTITION_KEY)).isEqualTo(0);
+    }
+  }
+
+  @Test
+  public void put_UpdateNonNullSecondaryIndexValueToNull_ShouldUpdateCorrectly()
+      throws ExecutionException, IOException {
+    for (DataType secondaryIndexType : secondaryIndexTypes) {
+      random.setSeed(seed);
+
+      truncateTable(secondaryIndexType);
+
+      // Arrange - Put with non-null secondary index value
+      Column<?> nonNullValue = getColumnWithRandomValue(random, INDEX_COL_NAME, secondaryIndexType);
+      Put putWithNonNull =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .value(nonNullValue)
+              .intValue(COL_NAME, 1)
+              .build();
+      storage.put(putWithNonNull);
+
+      // Act - Update with null secondary index value
+      Put putWithNull =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .value(ScalarDbUtils.createNullColumn(INDEX_COL_NAME, secondaryIndexType))
+              .intValue(COL_NAME, 2)
+              .build();
+      storage.put(putWithNull);
+
+      // Assert - Get should return null value
+      Get get =
+          Get.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+              .build();
+      Optional<Result> result = storage.get(get);
+
+      assertThat(result).isPresent();
+      assertThat(result.get().isNull(INDEX_COL_NAME)).isTrue();
+      assertThat(result.get().getInt(COL_NAME)).isEqualTo(2);
+
+      // Assert - Scan with secondary index should not return the record
+      Scan scan =
+          Scan.newBuilder()
+              .namespace(namespace)
+              .table(getTableName(secondaryIndexType))
+              .indexKey(Key.newBuilder().add(nonNullValue).build())
+              .build();
+      List<Result> scanResults = scanAll(scan);
+
+      assertThat(scanResults).isEmpty();
+    }
+  }
+
+  @Test
+  public void scan_AfterPutWithNullSecondaryIndexValue_ShouldReturnEmpty()
+      throws ExecutionException, IOException {
+    DataType secondaryIndexType = DataType.INT;
+    truncateTable(secondaryIndexType);
+
+    // Arrange - Put records: one with null, others with non-null secondary index value
+    int nonNullIndexValue = 100;
+    Put putWithNull =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(getTableName(secondaryIndexType))
+            .partitionKey(Key.ofInt(PARTITION_KEY, 0))
+            .value(IntColumn.ofNull(INDEX_COL_NAME))
+            .intValue(COL_NAME, 1)
+            .build();
+    storage.put(putWithNull);
+
+    Put putWithNonNull =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(getTableName(secondaryIndexType))
+            .partitionKey(Key.ofInt(PARTITION_KEY, 1))
+            .intValue(INDEX_COL_NAME, nonNullIndexValue)
+            .intValue(COL_NAME, 2)
+            .build();
+    storage.put(putWithNonNull);
+
+    // Act - Scan with secondary index for non-null value
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(getTableName(secondaryIndexType))
+            .indexKey(Key.ofInt(INDEX_COL_NAME, nonNullIndexValue))
+            .build();
+    List<Result> results = scanAll(scan);
+
+    // Assert - Only the record with non-null index value should be returned
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0).getInt(PARTITION_KEY)).isEqualTo(1);
+    assertThat(results.get(0).getInt(INDEX_COL_NAME)).isEqualTo(nonNullIndexValue);
   }
 
   private void prepareRecords(DataType secondaryIndexType, Column<?> secondaryIndexValue)

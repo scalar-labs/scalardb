@@ -3,6 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Put;
@@ -166,6 +167,33 @@ public class DynamoMutationTest {
   }
 
   @Test
+  public void getUpdateExpression_PutWithNullValueGiven_ShouldReturnExpressionWithRemove() {
+    // Arrange
+    Put put =
+        Put.newBuilder(preparePut())
+            .intValue(ANY_NAME_3, null)
+            .condition(ConditionBuilder.putIfExists())
+            .build();
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
+
+    // Act
+    String actual = dynamoMutation.getUpdateExpression();
+
+    // Assert
+    // ANY_NAME_3 (index 0) has null value, so it should be in REMOVE clause
+    // ANY_NAME_4 (index 1) has non-null value, so it should be in SET clause
+    assertThat(actual)
+        .isEqualTo(
+            "SET "
+                + DynamoOperation.COLUMN_NAME_ALIAS
+                + "1 = "
+                + DynamoOperation.VALUE_ALIAS
+                + "1 REMOVE "
+                + DynamoOperation.COLUMN_NAME_ALIAS
+                + "0");
+  }
+
+  @Test
   public void getConditionBindMap_PutWithPutIfGiven_ShouldReturnBindMap() {
     // Arrange
     PutIf conditions =
@@ -212,11 +240,12 @@ public class DynamoMutationTest {
   }
 
   @Test
-  public void getValueBindMap_PutWithNullValueGiven_ShouldReturnBindMap() {
+  public void getValueBindMap_PutWithNullValueGiven_ShouldReturnBindMapWithoutNullValue() {
     // Arrange
     Put put = preparePut().withIntValue(ANY_NAME_3, null);
     Map<String, AttributeValue> expected = new HashMap<>();
-    expected.put(DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().nul(true).build());
+    // Note: null values are not included in the bind map. The index 0 is skipped because
+    // ANY_NAME_3 has null value, so only ANY_NAME_4 (index 1) is included.
     expected.put(
         DynamoOperation.VALUE_ALIAS + "1",
         AttributeValue.builder().n(String.valueOf(ANY_INT_2)).build());
