@@ -103,7 +103,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Execute Gradle 'check' task
         id: run-gradle-check
@@ -164,7 +164,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         run: ./gradlew schema-loader:dockerfileLint
@@ -350,7 +350,7 @@ jobs:
           echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Wait for the database to be ready
         if: ${{ env.DB_HEALTHCHECK_CMD != '' }}
@@ -415,7 +415,7 @@ jobs:
       - integration-test
     steps:
       - name: Delete test configuration
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         if: needs.integration-test.result == 'success'
         with:
           name: ci_internal_tests_config-${{ env.ARTIFACT_SUFFIX }}
