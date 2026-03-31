@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 public abstract class DistributedStoragePermissionIntegrationTestBase {
   protected static final String TEST_NAME = "storage";
   protected static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
 
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStoragePermissionIntegrationTestBase.class);

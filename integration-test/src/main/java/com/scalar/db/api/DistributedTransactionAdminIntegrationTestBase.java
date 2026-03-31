@@ -41,10 +41,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       LoggerFactory.getLogger(DistributedTransactionAdminIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE1 = "test_table1";
-  protected static final String TABLE2 = "test_table2";
-  protected static final String TABLE3 = "test_table3";
-  protected static final String TABLE4 = "test_table4";
+  protected static final String TABLE1 = "tbl1";
+  protected static final String TABLE2 = "tbl2";
+  protected static final String TABLE3 = "tbl3";
+  protected static final String TABLE4 = "tbl4";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
   protected static final String COL_NAME3 = "c3";
@@ -56,10 +56,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   protected static final String COL_NAME9 = "c9";
   protected static final String COL_NAME10 = "c10";
   protected static final String COL_NAME11 = "c11";
-  private static final String COL_NAME12 = "c12";
-  private static final String COL_NAME13 = "c13";
-  private static final String COL_NAME14 = "c14";
-  private static final String COL_NAME15 = "c15";
+  protected static final String COL_NAME12 = "c12";
+  protected static final String COL_NAME13 = "c13";
+  protected static final String COL_NAME14 = "c14";
+  protected static final String COL_NAME15 = "c15";
 
   protected static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
@@ -519,9 +519,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly()
       throws Exception {
-    // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
-    // executing DMLs
-    String table = "table_for_create_index";
+    String table = "tbl_for_create_idx";
 
     try {
       // Arrange
@@ -714,9 +712,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   @Test
   public void dropIndex_ForAllDataTypesWithExistingData_ShouldDropIndexCorrectly()
       throws Exception {
-    // Use a separate table name to avoid hitting the stale cache, which can cause test failure when
-    // executing DMLs
-    String table = "table_for_drop_index";
+    String table = "tbl_for_drop_idx";
 
     try {
       // Arrange

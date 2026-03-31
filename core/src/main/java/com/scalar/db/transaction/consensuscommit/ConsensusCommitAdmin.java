@@ -40,6 +40,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   private final DistributedStorageAdmin admin;
   private final String coordinatorNamespace;
   private final boolean isIncludeMetadataEnabled;
+  private final boolean isIndexEventuallyConsistentReadEnabled;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -48,6 +49,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     config = new ConsensusCommitConfig(databaseConfig);
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
 
   public ConsensusCommitAdmin(DatabaseConfig databaseConfig) {
@@ -57,6 +59,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     config = new ConsensusCommitConfig(databaseConfig);
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
 
   @VisibleForTesting
@@ -68,6 +71,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     this.admin = admin;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
 
   @Override
@@ -148,7 +152,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       admin.createTable(
           namespace,
           txMetadataTableName,
-          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(metadata),
+          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(
+              metadata, isIndexEventuallyConsistentReadEnabled),
           options);
 
       // Create a virtual table based on the data table and the transaction metadata table
@@ -164,7 +169,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       return;
     }
 
-    admin.createTable(namespace, table, buildTransactionTableMetadata(metadata), options);
+    admin.createTable(
+        namespace,
+        table,
+        buildTransactionTableMetadata(metadata, isIndexEventuallyConsistentReadEnabled),
+        options);
   }
 
   @Override
@@ -224,6 +233,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     checkNamespace(namespace);
 
     admin.createIndex(namespace, table, columnName, options);
+
+    if (!isIndexEventuallyConsistentReadEnabled) {
+      // Also create an index on the before image column if it exists
+      TableMetadata rawMetadata = admin.getTableMetadata(namespace, table);
+      if (rawMetadata != null) {
+        String beforeColumnName = Attribute.BEFORE_PREFIX + columnName;
+        if (rawMetadata.getColumnNames().contains(beforeColumnName)) {
+          admin.createIndex(namespace, table, beforeColumnName, options);
+        }
+      }
+    }
   }
 
   @Override
@@ -232,6 +252,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     checkNamespace(namespace);
 
     admin.dropIndex(namespace, table, columnName);
+
+    if (!isIndexEventuallyConsistentReadEnabled) {
+      // Also drop the index on the before image column if it exists
+      TableMetadata rawMetadata = admin.getTableMetadata(namespace, table);
+      if (rawMetadata != null) {
+        String beforeColumnName = Attribute.BEFORE_PREFIX + columnName;
+        if (rawMetadata.getColumnNames().contains(beforeColumnName)) {
+          admin.dropIndex(namespace, table, beforeColumnName, true);
+        }
+      }
+    }
   }
 
   @Override
@@ -286,7 +317,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     checkNamespace(namespace);
     throwIfTransactionMetadataDecouplingApplied(namespace, table, "repairTable()");
 
-    admin.repairTable(namespace, table, buildTransactionTableMetadata(metadata), options);
+    admin.repairTable(
+        namespace,
+        table,
+        buildTransactionTableMetadata(metadata, isIndexEventuallyConsistentReadEnabled),
+        options);
   }
 
   @Override
@@ -424,7 +459,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       admin.createTable(
           namespace,
           txMetadataTableName,
-          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(dataTableMetadata),
+          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(
+              dataTableMetadata, isIndexEventuallyConsistentReadEnabled),
           options);
 
       // create a virtual table based on the data table and the transaction metadata table

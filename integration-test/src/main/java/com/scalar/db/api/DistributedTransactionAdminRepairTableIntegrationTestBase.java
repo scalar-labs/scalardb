@@ -23,7 +23,7 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   protected static final String TEST_NAME = "tx_admin_repair_table";
   protected static final String NAMESPACE = "int_test_" + TEST_NAME;
 
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
   protected static final String COL_NAME3 = "c3";

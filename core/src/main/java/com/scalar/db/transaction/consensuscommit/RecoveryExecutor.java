@@ -73,6 +73,7 @@ public class RecoveryExecutor implements AutoCloseable {
 
     Optional<TransactionResult> recoveredResult;
     Future<Void> future;
+    boolean rolledBack;
 
     switch (recoveryType) {
       case RETURN_LATEST_RESULT_AND_RECOVER:
@@ -80,6 +81,8 @@ public class RecoveryExecutor implements AutoCloseable {
 
         throwUncommittedRecordExceptionIfTransactionNotExpired(
             state, selection, result, transactionId);
+
+        rolledBack = !state.isPresent() || state.get().getState() == TransactionState.ABORTED;
 
         // Return the latest result
         recoveredResult = createRecoveredResult(state, selection, result, transactionId);
@@ -96,6 +99,10 @@ public class RecoveryExecutor implements AutoCloseable {
       case RETURN_COMMITTED_RESULT_AND_RECOVER:
         // Return the committed result
         recoveredResult = createRecordFromBeforeImage(selection, result, transactionId);
+
+        // The rollback/rollforward decision is deferred to the recovery thread, but since we
+        // return the committed (before-image) result, we treat this as rolled back
+        rolledBack = true;
 
         // Recover the record
         future =
@@ -115,6 +122,9 @@ public class RecoveryExecutor implements AutoCloseable {
         // Return the committed result
         recoveredResult = createRecordFromBeforeImage(selection, result, transactionId);
 
+        // No recovery is performed, but the committed (before-image) result is returned
+        rolledBack = true;
+
         // No need to recover the record
         future = Futures.immediateFuture(null);
 
@@ -123,7 +133,7 @@ public class RecoveryExecutor implements AutoCloseable {
         throw new AssertionError("Unknown recovery type: " + recoveryType);
     }
 
-    return new Result(key, recoveredResult, future);
+    return new Result(key, recoveredResult, future, rolledBack);
   }
 
   private Optional<Coordinator.State> getCoordinatorState(String transactionId)
@@ -320,13 +330,18 @@ public class RecoveryExecutor implements AutoCloseable {
     // The future that completes when the recovery is done
     public final Future<Void> recoveryFuture;
 
+    // Whether the record was rolled back (true) or rolled forward (false)
+    public final boolean rolledBack;
+
     public Result(
         Snapshot.Key key,
         Optional<TransactionResult> recoveredResult,
-        Future<Void> recoveryFuture) {
+        Future<Void> recoveryFuture,
+        boolean rolledBack) {
       this.key = key;
       this.recoveredResult = recoveredResult;
       this.recoveryFuture = recoveryFuture;
+      this.rolledBack = rolledBack;
     }
   }
 
