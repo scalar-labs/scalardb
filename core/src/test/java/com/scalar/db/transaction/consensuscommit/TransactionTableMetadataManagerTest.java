@@ -215,6 +215,77 @@ public class TransactionTableMetadataManagerTest {
     verify(admin).getTableMetadata("ns", "tbl");
   }
 
+  @Test
+  public void hasBeforeImageSecondaryIndex_ColumnWithBeforeImageSecondaryIndex_ShouldReturnTrue()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadataWithBeforeIndex =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(BRANCH, DataType.TEXT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREFIX + BRANCH, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BRANCH)
+            .addSecondaryIndex(Attribute.BEFORE_PREFIX + BRANCH)
+            .build();
+    when(admin.getTableMetadata(anyString(), anyString())).thenReturn(tableMetadataWithBeforeIndex);
+
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+
+    // Act
+    TransactionTableMetadata actual =
+        tableMetadataManager.getTransactionTableMetadata(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("c1", "aaa"))
+                .build());
+
+    // Assert
+    assertThat(actual).isNotNull();
+    assertThat(actual.hasBeforeImageSecondaryIndex(BRANCH)).isTrue();
+    assertThat(actual.hasBeforeImageSecondaryIndex(BALANCE)).isFalse();
+  }
+
+  @Test
+  public void
+      hasBeforeImageSecondaryIndex_ColumnWithoutBeforeImageSecondaryIndex_ShouldReturnFalse()
+          throws ExecutionException {
+    // Arrange
+    TransactionTableMetadataManager tableMetadataManager =
+        new TransactionTableMetadataManager(admin, -1);
+
+    // Act
+    TransactionTableMetadata actual =
+        tableMetadataManager.getTransactionTableMetadata(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofText("c1", "aaa"))
+                .build());
+
+    // Assert
+    // BRANCH has a secondary index, but before_branch does not have a secondary index
+    assertThat(actual).isNotNull();
+    assertThat(actual.hasBeforeImageSecondaryIndex(BRANCH)).isFalse();
+    assertThat(actual.hasBeforeImageSecondaryIndex(BALANCE)).isFalse();
+  }
+
   private void assertTransactionMetadata(TransactionTableMetadata actual) {
     assertThat(actual).isNotNull();
     assertThat(actual.getTableMetadata()).isEqualTo(tableMetadata);

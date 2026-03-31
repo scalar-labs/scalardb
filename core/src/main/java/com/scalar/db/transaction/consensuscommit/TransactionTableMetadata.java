@@ -20,6 +20,7 @@ public class TransactionTableMetadata {
   private final ImmutableLinkedHashSet<String> transactionMetaColumnNames;
   private final ImmutableLinkedHashSet<String> beforeImageColumnNames;
   private final ImmutableLinkedHashSet<String> afterImageColumnNames;
+  private final ImmutableLinkedHashSet<String> columnsWithBeforeImageSecondaryIndex;
 
   public TransactionTableMetadata(TableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
@@ -44,6 +45,15 @@ public class TransactionTableMetadata {
             tableMetadata.getColumnNames().stream()
                 .filter(c -> ConsensusCommitUtils.isAfterImageColumn(c, tableMetadata))
                 .collect(Collectors.toList()));
+
+    // Compute which user-visible indexed columns have a corresponding before_* secondary index
+    Set<String> secondaryIndexNames = tableMetadata.getSecondaryIndexNames();
+    columnsWithBeforeImageSecondaryIndex =
+        new ImmutableLinkedHashSet<>(
+            secondaryIndexNames.stream()
+                .filter(
+                    indexName -> secondaryIndexNames.contains(Attribute.BEFORE_PREFIX + indexName))
+                .collect(Collectors.toCollection(LinkedHashSet::new)));
   }
 
   public TableMetadata getTableMetadata() {
@@ -92,5 +102,15 @@ public class TransactionTableMetadata {
 
   public LinkedHashSet<String> getAfterImageColumnNames() {
     return afterImageColumnNames;
+  }
+
+  /**
+   * Returns whether the specified column has a corresponding before-image secondary index.
+   *
+   * @param columnName a column name
+   * @return whether the column has a before-image secondary index
+   */
+  public boolean hasBeforeImageSecondaryIndex(String columnName) {
+    return columnsWithBeforeImageSecondaryIndex.contains(columnName);
   }
 }

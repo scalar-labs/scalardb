@@ -38,9 +38,9 @@ public class MultiStorageIntegrationTest {
   private static final String TEST_NAME = "mstorage";
   private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE1 = "test_table1";
-  private static final String TABLE2 = "test_table2";
-  private static final String TABLE3 = "test_table3";
+  private static final String TABLE1 = "tbl1";
+  private static final String TABLE2 = "tbl2";
+  private static final String TABLE3 = "tbl3";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
