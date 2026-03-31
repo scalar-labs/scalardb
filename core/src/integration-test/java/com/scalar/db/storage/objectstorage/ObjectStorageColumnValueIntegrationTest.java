@@ -12,11 +12,4 @@ public class ObjectStorageColumnValueIntegrationTest
     return ObjectStorageEnv.getProperties(testName);
   }
 
-//  @Override
-//  // TODO Investigate failure
-//  @Disabled("Fails because of java.lang.OutOfMemoryError exception")
-//  public void put_largeBlobData_ShouldWorkCorrectly(int blobSize, String humanReadableBlobSize)
-//      throws ExecutionException {
-//    super.put_largeBlobData_ShouldWorkCorrectly(blobSize, humanReadableBlobSize);
-//  }
 }

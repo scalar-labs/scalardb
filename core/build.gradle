@@ -285,6 +285,7 @@ task integrationTestObjectStorage(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    maxHeapSize = "2g"
 }
 
 task integrationTestMultiStorage(type: Test) {
