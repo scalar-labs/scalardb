@@ -6,6 +6,7 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Insert;
@@ -29,14 +30,22 @@ import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
+import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ConsensusCommitUtils {
+
+  private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitUtils.class);
 
   private static final ImmutableMap<String, DataType> BEFORE_IMAGE_META_COLUMNS =
       ImmutableMap.<String, DataType>builder()
@@ -71,6 +80,19 @@ public final class ConsensusCommitUtils {
    * @return a transaction table metadata based on the table metadata
    */
   public static TableMetadata buildTransactionTableMetadata(TableMetadata tableMetadata) {
+    return buildTransactionTableMetadata(tableMetadata, false);
+  }
+
+  /**
+   * Builds a transaction table metadata based on the specified table metadata.
+   *
+   * @param tableMetadata the base table metadata to build a transaction table metadata
+   * @param isIndexEventuallyConsistentReadEnabled if true, secondary indexes on before-image
+   *     columns are not added
+   * @return a transaction table metadata based on the table metadata
+   */
+  public static TableMetadata buildTransactionTableMetadata(
+      TableMetadata tableMetadata, boolean isIndexEventuallyConsistentReadEnabled) {
     checkIsNotTransactionMetaColumn(tableMetadata.getColumnNames());
     Set<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
     checkBeforeColumnsDoNotAlreadyExist(nonPrimaryKeyColumns, tableMetadata);
@@ -80,6 +102,14 @@ public final class ConsensusCommitUtils {
     TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
     nonPrimaryKeyColumns.forEach(
         c -> builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
+
+    if (!isIndexEventuallyConsistentReadEnabled) {
+      // Add secondary indexes on before image columns for columns that have secondary indexes
+      tableMetadata.getSecondaryIndexNames().stream()
+          .filter(nonPrimaryKeyColumns::contains)
+          .forEach(indexCol -> builder.addSecondaryIndex(Attribute.BEFORE_PREFIX + indexCol));
+    }
+
     return builder.build();
   }
 
@@ -202,7 +232,9 @@ public final class ConsensusCommitUtils {
     tableMetadata.getColumnNames().stream()
         .filter(c -> !transactionMetaColumns.contains(c))
         .forEach(c -> builder.addColumn(c, tableMetadata.getColumnDataType(c)));
-    tableMetadata.getSecondaryIndexNames().forEach(builder::addSecondaryIndex);
+    tableMetadata.getSecondaryIndexNames().stream()
+        .filter(c -> !transactionMetaColumns.contains(c))
+        .forEach(builder::addSecondaryIndex);
     return builder.build();
   }
 
@@ -482,44 +514,183 @@ public final class ConsensusCommitUtils {
 
     // Add conditions on the before image
     for (Selection.Conjunction conjunction : conjunctions) {
-      Set<ConditionalExpression> conditions = new HashSet<>(conjunction.getConditions().size());
-      for (ConditionalExpression condition : conjunction.getConditions()) {
-        String columnName = condition.getColumn().getName();
-
-        if (metadata.getPartitionKeyNames().contains(columnName)
-            || metadata.getClusteringKeyNames().contains(columnName)) {
-          // If the condition is on the primary key, we don't need to convert it
-          conditions.add(condition);
-          continue;
-        }
-
-        if (!convertIndexedColumns && metadata.getSecondaryIndexNames().contains(columnName)) {
-          conditions.add(condition);
-          continue;
-        }
-
-        // Convert the condition to use the before image column
-        ConditionalExpression convertedCondition;
-        if (condition instanceof LikeExpression) {
-          LikeExpression likeExpression = (LikeExpression) condition;
-          convertedCondition =
-              ConditionBuilder.buildLikeExpression(
-                  likeExpression.getColumn().copyWith(Attribute.BEFORE_PREFIX + columnName),
-                  likeExpression.getOperator(),
-                  likeExpression.getEscape());
-        } else {
-          convertedCondition =
-              ConditionBuilder.buildConditionalExpression(
-                  condition.getColumn().copyWith(Attribute.BEFORE_PREFIX + columnName),
-                  condition.getOperator());
-        }
-
-        conditions.add(convertedCondition);
-      }
-
-      converted.add(ConditionSetBuilder.andConditionSet(conditions).build());
+      converted.add(convertConjunctionToBeforeImage(conjunction, metadata, convertIndexedColumns));
     }
 
     return converted;
+  }
+
+  /**
+   * Converts a single conjunction to its before-image equivalent. Primary key conditions are kept
+   * as-is, while non-primary-key conditions are converted to use before image columns.
+   *
+   * @param conjunction the conjunction to convert
+   * @param metadata the table metadata of the target table
+   * @param convertIndexedColumns whether to convert conditions on indexed columns
+   * @return the converted conjunction as an {@link AndConditionSet}
+   */
+  private static AndConditionSet convertConjunctionToBeforeImage(
+      Selection.Conjunction conjunction, TableMetadata metadata, boolean convertIndexedColumns) {
+    Set<ConditionalExpression> conditions = new HashSet<>(conjunction.getConditions().size());
+    for (ConditionalExpression condition : conjunction.getConditions()) {
+      String columnName = condition.getColumn().getName();
+
+      if (metadata.getPartitionKeyNames().contains(columnName)
+          || metadata.getClusteringKeyNames().contains(columnName)) {
+        // If the condition is on the primary key, we don't need to convert it
+        conditions.add(condition);
+        continue;
+      }
+
+      if (!convertIndexedColumns && metadata.getSecondaryIndexNames().contains(columnName)) {
+        conditions.add(condition);
+        continue;
+      }
+
+      // Convert the condition to use the before image column
+      ConditionalExpression convertedCondition;
+      if (condition instanceof LikeExpression) {
+        LikeExpression likeExpression = (LikeExpression) condition;
+        convertedCondition =
+            ConditionBuilder.buildLikeExpression(
+                likeExpression.getColumn().copyWith(Attribute.BEFORE_PREFIX + columnName),
+                likeExpression.getOperator(),
+                likeExpression.getEscape());
+      } else {
+        convertedCondition =
+            ConditionBuilder.buildConditionalExpression(
+                condition.getColumn().copyWith(Attribute.BEFORE_PREFIX + columnName),
+                condition.getOperator());
+      }
+
+      conditions.add(convertedCondition);
+    }
+
+    return ConditionSetBuilder.andConditionSet(conditions).build();
+  }
+
+  /**
+   * Creates a ScanWithIndex that scans using the before-image index column corresponding to the
+   * original selection's index key. This is used to find PREPARED/DELETED records whose committed
+   * (before-image) values match the original query.
+   *
+   * <p>The caller must ensure that the index column is not a primary key column, since primary key
+   * columns do not have before-image columns.
+   *
+   * @param original the original index-based selection (Get or Scan with index)
+   * @return a Scan using the before-image index column
+   */
+  static Scan createBeforeIndexScan(Selection original) {
+    assert original.forNamespace().isPresent() && original.forTable().isPresent();
+
+    Column<?> originalColumn = original.getPartitionKey().getColumns().get(0);
+    String indexColumnName = originalColumn.getName();
+    Key beforeIndexKey =
+        Key.newBuilder()
+            .add(originalColumn.copyWith(Attribute.BEFORE_PREFIX + indexColumnName))
+            .build();
+
+    return Scan.newBuilder()
+        .namespace(original.forNamespace().get())
+        .table(original.forTable().get())
+        .indexKey(beforeIndexKey)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
+  }
+
+  /**
+   * Creates a ScanAll that scans using before-image column conditions corresponding to the original
+   * ScanAll's indexed column conditions. This is used to find PREPARED/DELETED records whose
+   * committed (before-image) values match the original query's indexed column conditions.
+   *
+   * <p>The caller must ensure that at least one non-primary-key indexed column condition with a
+   * corresponding before-image secondary index exists in the conjunctions.
+   *
+   * @param original the original ScanAll with indexed column conditions
+   * @param metadata the table metadata (transaction table metadata)
+   * @return a ScanAll using before-image column conditions
+   */
+  static Scan createBeforeIndexScanAll(ScanAll original, TableMetadata metadata) {
+    assert original.forNamespace().isPresent() && original.forTable().isPresent();
+
+    // Convert conjunctions to before-image equivalents.
+    // convertIndexedColumns=true because we want to convert indexed column conditions to
+    // before_* equivalents for cross-partition scans
+    Set<AndConditionSet> converted = new HashSet<>(original.getConjunctions().size());
+    for (Selection.Conjunction conjunction : original.getConjunctions()) {
+      converted.add(convertConjunctionToBeforeImage(conjunction, metadata, true));
+    }
+
+    return Scan.newBuilder()
+        .namespace(original.forNamespace().get())
+        .table(original.forTable().get())
+        .all()
+        .whereOr(converted)
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
+  }
+
+  /**
+   * Checks all tables for missing before-image secondary indexes and logs warnings at startup.
+   * Tables that have secondary indexes but lack corresponding before-image indexes should be
+   * repaired using {@code repairTable()}.
+   *
+   * <p>This check is skipped in the following cases:
+   *
+   * <ul>
+   *   <li>SERIALIZABLE isolation: Operations that require before-image index checks will fail with
+   *       an error prompting the user to run {@code repairTable()}, so a startup warning is
+   *       unnecessary.
+   *   <li>Index eventually consistent read is enabled: Before-image indexes are not used, so the
+   *       check is not relevant.
+   * </ul>
+   *
+   * <p>In other isolation levels (SNAPSHOT, READ_COMMITTED), index-based operations can silently
+   * miss PREPARED/DELETED records without before-image index checks, so the warning is important.
+   *
+   * @param admin a distributed storage admin
+   * @param config a consensus commit config
+   */
+  static void warnIfBeforeImageIndexesAreMissing(
+      DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+    if (config.getIsolation() == Isolation.SERIALIZABLE
+        || config.isIndexEventuallyConsistentReadEnabled()) {
+      return;
+    }
+
+    try {
+      List<String> tablesWithMissingIndexes = new ArrayList<>();
+
+      for (String namespace : admin.getNamespaceNames()) {
+        for (String table : admin.getNamespaceTableNames(namespace)) {
+          TableMetadata metadata = admin.getTableMetadata(namespace, table);
+          if (metadata == null || !isTransactionTableMetadata(metadata)) {
+            continue;
+          }
+
+          Set<String> secondaryIndexNames = metadata.getSecondaryIndexNames();
+          Set<String> partitionKeyNames = metadata.getPartitionKeyNames();
+          Set<String> clusteringKeyNames = metadata.getClusteringKeyNames();
+          for (String indexName : secondaryIndexNames) {
+            if (!indexName.startsWith(Attribute.BEFORE_PREFIX)
+                && !partitionKeyNames.contains(indexName)
+                && !clusteringKeyNames.contains(indexName)
+                && !secondaryIndexNames.contains(Attribute.BEFORE_PREFIX + indexName)) {
+              tablesWithMissingIndexes.add(ScalarDbUtils.getFullTableName(namespace, table));
+              break;
+            }
+          }
+        }
+      }
+
+      if (!tablesWithMissingIndexes.isEmpty()) {
+        logger.warn(
+            "The following tables have secondary indexes but lack before-image indexes: {}. "
+                + "Run repairTable() for these tables to create before-image indexes",
+            tablesWithMissingIndexes);
+      }
+    } catch (ExecutionException e) {
+      logger.warn("Failed to check for missing before-image indexes", e);
+    }
   }
 }

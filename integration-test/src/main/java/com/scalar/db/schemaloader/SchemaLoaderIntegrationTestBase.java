@@ -44,9 +44,9 @@ public abstract class SchemaLoaderIntegrationTestBase {
       Paths.get("altered_schema.json").toAbsolutePath();
 
   private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
-  private static final String TABLE_1 = "test_table1";
   private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_2 = "test_table2";
+  private static final String TABLE_1 = "tbl1";
+  private static final String TABLE_2 = "tbl2";
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;

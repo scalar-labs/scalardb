@@ -714,6 +714,12 @@ public enum CoreError implements ScalarDbError {
       "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
       "",
       ""),
+  TABLE_METADATA_BUILD_ERROR_SECONDARY_INDEX_COLUMN_DEFINITION_NOT_SPECIFIED(
+      Category.USER_ERROR,
+      "0281",
+      "The column definition must be specified since %s is specified as a secondary index",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -821,6 +827,18 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS(
       Category.CONCURRENCY_ERROR, "0026", "A conflict occurred when committing records", "", ""),
+  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
+      Category.CONCURRENCY_ERROR,
+      "0028",
+      "Before-image index recovery retry limit exceeded. Transaction ID: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
+      Category.CONCURRENCY_ERROR,
+      "0029",
+      "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category

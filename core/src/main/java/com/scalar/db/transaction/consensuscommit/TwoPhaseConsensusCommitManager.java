@@ -82,6 +82,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     commit =
         new CommitHandler(
@@ -95,6 +96,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager, config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -116,6 +119,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     commit =
         new CommitHandler(
@@ -129,6 +133,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager, config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")

@@ -33,6 +33,7 @@ import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.Column;
@@ -91,6 +92,9 @@ public class CrudHandlerTest {
               .addSecondaryIndex(ANY_NAME_3)
               .build());
 
+  private static final TransactionTableMetadata TRANSACTION_TABLE_METADATA =
+      new TransactionTableMetadata(TABLE_METADATA);
+
   private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private RecoveryExecutor recoveryExecutor;
@@ -111,14 +115,19 @@ public class CrudHandlerTest {
             recoveryExecutor,
             tableMetadataManager,
             false,
+            false,
             mutationConditionsValidator,
             parallelExecutor);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
-        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+        .thenReturn(TRANSACTION_TABLE_METADATA);
     when(tableMetadataManager.getTransactionTableMetadata(any(), any()))
-        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+        .thenReturn(TRANSACTION_TABLE_METADATA);
+
+    // Default mock for before-index scan to return an empty scanner
+    when(storage.scan(any(Scan.class))).thenReturn(scanner);
+    when(scanner.iterator()).thenReturn(Collections.emptyIterator());
   }
 
   private Get prepareGet() {
@@ -127,6 +136,14 @@ public class CrudHandlerTest {
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
+  }
+
+  private Get prepareGetWithIndex() {
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_3))
+        .build();
   }
 
   private Get toGetForStorageFrom(Get get) {
@@ -144,6 +161,23 @@ public class CrudHandlerTest {
         .table(ANY_TABLE_NAME)
         .all()
         .where(column(ANY_NAME_4).isEqualToInt(ANY_INT_1))
+        .build();
+  }
+
+  private Scan prepareScanWithIndex() {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_3))
+        .build();
+  }
+
+  private Scan prepareExpectedBeforeIndexScan() {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .indexKey(Key.ofText(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_TEXT_3))
+        .consistency(Consistency.LINEARIZABLE)
         .build();
   }
 
@@ -448,7 +482,8 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -502,7 +537,8 @@ public class CrudHandlerTest {
             transactionResult,
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     when(snapshot.mergeResult(key, Optional.of(recoveredResult), get.getConjunctions()))
         .thenReturn(Optional.of(expected));
@@ -559,7 +595,8 @@ public class CrudHandlerTest {
             transactionResult,
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     when(snapshot.mergeResult(key, Optional.of(recoveredResult), get.getConjunctions()))
         .thenReturn(Optional.of(expected));
@@ -976,7 +1013,8 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -1030,7 +1068,8 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.READ_COMMITTED, false, false);
@@ -1083,7 +1122,8 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.READ_COMMITTED, true, false);
@@ -1404,7 +1444,8 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -1466,7 +1507,8 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -1629,7 +1671,7 @@ public class CrudHandlerTest {
             new TransactionResult(uncommittedResult1),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key1, Optional.empty(), recoveryFuture));
+        .thenReturn(new RecoveryExecutor.Result(key1, Optional.empty(), recoveryFuture, false));
     when(recoveryExecutor.execute(
             key2,
             scanWithLimit,
@@ -1637,7 +1679,8 @@ public class CrudHandlerTest {
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(
-            new RecoveryExecutor.Result(key2, Optional.of(recoveredResult1), recoveryFuture));
+            new RecoveryExecutor.Result(
+                key2, Optional.of(recoveredResult1), recoveryFuture, false));
     when(recoveryExecutor.execute(
             key3,
             scanWithLimit,
@@ -1645,7 +1688,8 @@ public class CrudHandlerTest {
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
         .thenReturn(
-            new RecoveryExecutor.Result(key3, Optional.of(recoveredResult2), recoveryFuture));
+            new RecoveryExecutor.Result(
+                key3, Optional.of(recoveredResult2), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -1938,7 +1982,7 @@ public class CrudHandlerTest {
     spied.put(put, context);
 
     // Assert
-    verify(spied).read(key, getForKey, context, TABLE_METADATA);
+    verify(spied).read(key, getForKey, context, TRANSACTION_TABLE_METADATA);
     verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(put, result, ANY_ID_1);
     verify(snapshot).putIntoWriteSet(key, put);
@@ -2089,7 +2133,7 @@ public class CrudHandlerTest {
     spied.delete(delete, context);
 
     // Assert
-    verify(spied).read(key, getForKey, context, TABLE_METADATA);
+    verify(spied).read(key, getForKey, context, TRANSACTION_TABLE_METADATA);
     verify(snapshot).getResult(key);
     verify(mutationConditionsValidator).checkIfConditionIsSatisfied(delete, null, ANY_ID_1);
     verify(snapshot).putIntoDeleteSet(key, delete);
@@ -2116,7 +2160,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getForKey, context, TABLE_METADATA);
+    handler.readUnread(key, getForKey, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage, never()).get(getForStorage);
@@ -2146,7 +2190,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getForKey, context, TABLE_METADATA);
+    handler.readUnread(key, getForKey, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2182,7 +2226,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getForKey, context, TABLE_METADATA);
+    handler.readUnread(key, getForKey, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2214,7 +2258,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getForKey, context, TABLE_METADATA);
+    handler.readUnread(key, getForKey, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2252,13 +2296,14 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getForKey, context, TABLE_METADATA);
+    handler.readUnread(key, getForKey, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2304,13 +2349,13 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, recoveredRecord, recoveryFuture));
+        .thenReturn(new RecoveryExecutor.Result(key, recoveredRecord, recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getForKey, context, TABLE_METADATA);
+    handler.readUnread(key, getForKey, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2368,13 +2413,14 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getWithConjunction, context, TABLE_METADATA);
+    handler.readUnread(key, getWithConjunction, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2431,13 +2477,14 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getWithConjunction, context, TABLE_METADATA);
+    handler.readUnread(key, getWithConjunction, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2470,7 +2517,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(null, getWithIndex, context, TABLE_METADATA);
+    handler.readUnread(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2503,7 +2550,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(null, getWithIndex, context, TABLE_METADATA);
+    handler.readUnread(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2547,13 +2594,14 @@ public class CrudHandlerTest {
             new TransactionResult(result),
             ANY_ID_1,
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
-        .thenReturn(new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture));
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
-    handler.readUnread(key, getWithIndex, context, TABLE_METADATA);
+    handler.readUnread(key, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
     verify(storage).get(getForStorage);
@@ -2718,6 +2766,759 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoGetSet(get4, Optional.of(new TransactionResult(result4)));
 
     assertThat(transactionIdCaptor.getValue()).isEqualTo(ANY_ID_1);
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_GetWithSecondaryIndex_ShouldReturnTrue() {
+    // Arrange
+    Get get = prepareGetWithIndex();
+
+    // Act Assert
+    assertThat(handler.requiresBeforeIndexCheck(get, TRANSACTION_TABLE_METADATA)).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_GetWithPrimaryKey_ShouldReturnFalse() {
+    // Arrange
+    Get get = prepareGet();
+
+    // Act Assert
+    assertThat(handler.requiresBeforeIndexCheck(get, TRANSACTION_TABLE_METADATA)).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanWithPartitionKey_ShouldReturnFalse() {
+    // Arrange
+    Scan scan = prepareScan();
+
+    // Act Assert
+    assertThat(handler.requiresBeforeIndexCheck(scan, TRANSACTION_TABLE_METADATA)).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanWithSecondaryIndex_ShouldReturnTrue() {
+    // Arrange
+    Scan scan = prepareScanWithIndex();
+
+    // Act Assert
+    assertThat(handler.requiresBeforeIndexCheck(scan, TRANSACTION_TABLE_METADATA)).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanAllWithIndexedColumnCondition_ShouldReturnTrue() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build();
+
+    // Act Assert
+    assertThat(handler.requiresBeforeIndexCheck(scan, TRANSACTION_TABLE_METADATA)).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexCheck_ScanAllWithNonIndexedColumnCondition_ShouldReturnFalse() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_4).isEqualToInt(ANY_INT_1))
+            .build();
+
+    // Act Assert
+    assertThat(handler.requiresBeforeIndexCheck(scan, TRANSACTION_TABLE_METADATA)).isFalse();
+  }
+
+  @Test
+  public void
+      requiresBeforeIndexCheck_IndexEventuallyConsistentReadEnabled_ShouldAlwaysReturnFalse() {
+    // Arrange
+    CrudHandler handlerWithEventuallyConsistentRead =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            true,
+            mutationConditionsValidator,
+            parallelExecutor);
+    Get getWithIndex = prepareGetWithIndex();
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanAll =
+        ScanAll.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
+            .build();
+
+    // Act Assert
+    assertThat(
+            handlerWithEventuallyConsistentRead.requiresBeforeIndexCheck(
+                getWithIndex, TRANSACTION_TABLE_METADATA))
+        .isFalse();
+    assertThat(
+            handlerWithEventuallyConsistentRead.requiresBeforeIndexCheck(
+                scanWithIndex, TRANSACTION_TABLE_METADATA))
+        .isFalse();
+    assertThat(
+            handlerWithEventuallyConsistentRead.requiresBeforeIndexCheck(
+                scanAll, TRANSACTION_TABLE_METADATA))
+        .isFalse();
+  }
+
+  @Test
+  public void
+      checkAndRecoverBeforeIndexRecords_RolledBackRecordFound_ShouldRecoverSynchronouslyAndReturnTrue()
+          throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryResult);
+
+    // Act
+    boolean result =
+        handler.checkAndRecoverBeforeIndexRecords(
+            scanWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+    verify(storage).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor)
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture).get();
+    assertThat(context.recoveryResults).isEmpty();
+  }
+
+  @Test
+  public void
+      checkAndRecoverBeforeIndexRecords_RolledForwardRecordFound_ShouldTrackAsyncAndReturnFalse()
+          throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            false);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryResult);
+
+    // Act
+    boolean result =
+        handler.checkAndRecoverBeforeIndexRecords(
+            scanWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isFalse();
+    verify(storage).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor)
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture, never()).get();
+    assertThat(context.recoveryResults).hasSize(1);
+    assertThat(context.recoveryResults.get(0)).isSameAs(recoveryResult);
+  }
+
+  @Test
+  public void read_GetWithIndexAndBeforeIndexScanFindsRolledBackRecord_ShouldRetry()
+      throws Exception {
+    // Arrange
+    Get getWithIndex = prepareGetWithIndex();
+    Get getForStorage =
+        Get.newBuilder(getWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // First get returns a committed result
+    TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(committedResult));
+
+    // Before-index scan: first call finds a rolled-back record, second call finds nothing
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner1 = mock(Scanner.class);
+    when(beforeIndexScanner1.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner2 = mock(Scanner.class);
+    when(beforeIndexScanner2.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(expectedBeforeIndexScan))
+        .thenReturn(beforeIndexScanner1)
+        .thenReturn(beforeIndexScanner2);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act
+    handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    verify(storage, times(2)).get(getForStorage);
+    verify(storage, times(2)).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor)
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture).get();
+  }
+
+  @Test
+  public void read_GetWithIndexAndBeforeIndexScanFindsRolledForwardRecord_ShouldNotRetry()
+      throws Exception {
+    // Arrange
+    Get getWithIndex = prepareGetWithIndex();
+    Get getForStorage =
+        Get.newBuilder(getWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Get returns a committed result
+    TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(committedResult));
+
+    // Before-index scan finds a rolled-forward record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            false);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act
+    handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    verify(storage, times(1)).get(getForStorage);
+    verify(storage, times(1)).scan(expectedBeforeIndexScan);
+    verify(recoveryFuture, never()).get();
+  }
+
+  @Test
+  public void read_GetWithIndexAndRetryLimitExceeded_ShouldThrowCrudConflictException()
+      throws Exception {
+    // Arrange
+    Get getWithIndex = prepareGetWithIndex();
+    Get getForStorage =
+        Get.newBuilder(getWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(committedResult));
+
+    // Before-index scan always finds a rolled-back record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner1 = mock(Scanner.class);
+    when(beforeIndexScanner1.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner2 = mock(Scanner.class);
+    when(beforeIndexScanner2.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner3 = mock(Scanner.class);
+    when(beforeIndexScanner3.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storage.scan(expectedBeforeIndexScan))
+        .thenReturn(beforeIndexScanner1)
+        .thenReturn(beforeIndexScanner2)
+        .thenReturn(beforeIndexScanner3);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isInstanceOf(CrudConflictException.class);
+
+    verify(storage, times(3)).get(getForStorage);
+    verify(storage, times(3)).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor, times(3))
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture, times(3)).get();
+  }
+
+  @Test
+  public void
+      read_GetWithIndexAndBeforeIndexRollbackCausesDifferentResult_ShouldUseKeyFromSecondResult()
+          throws Exception {
+    // Arrange
+    Get getWithIndex = prepareGetWithIndex();
+    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // First get returns a committed result with partition key "text1"
+    TransactionResult committedResult1 =
+        prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
+    // Second get returns a different committed result with partition key "text4"
+    TransactionResult committedResult2 =
+        prepareResult(ANY_TEXT_4, ANY_TEXT_5, TransactionState.COMMITTED);
+    when(storage.get(getForStorage))
+        .thenReturn(Optional.of(committedResult1))
+        .thenReturn(Optional.of(committedResult2));
+
+    // Before-index scan: first call finds a rolled-back record, second call finds nothing
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner1 = mock(Scanner.class);
+    when(beforeIndexScanner1.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner2 = mock(Scanner.class);
+    when(beforeIndexScanner2.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(expectedBeforeIndexScan))
+        .thenReturn(beforeIndexScanner1)
+        .thenReturn(beforeIndexScanner2);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act
+    handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    // Verify key is created from the second result, not reusing the stale key from the first
+    Snapshot.Key expectedKey = new Snapshot.Key(getWithIndex, committedResult2, TABLE_METADATA);
+    verify(snapshot).putIntoReadSet(expectedKey, Optional.of(committedResult2));
+  }
+
+  @Test
+  public void scan_ScanWithIndexAndBeforeIndexScanFindsRolledBackRecord_ShouldRetry()
+      throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Scan from storage returns empty results
+    Scanner storageScanner1 = mock(Scanner.class);
+    when(storageScanner1.iterator()).thenReturn(Collections.emptyIterator());
+    Scanner storageScanner2 = mock(Scanner.class);
+    when(storageScanner2.iterator()).thenReturn(Collections.emptyIterator());
+
+    // Before-index scan: first call finds a rolled-back record, second finds nothing
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner1 = mock(Scanner.class);
+    when(beforeIndexScanner1.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner2 = mock(Scanner.class);
+    when(beforeIndexScanner2.iterator()).thenReturn(Collections.emptyIterator());
+
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner1).thenReturn(storageScanner2);
+    when(storage.scan(expectedBeforeIndexScan))
+        .thenReturn(beforeIndexScanner1)
+        .thenReturn(beforeIndexScanner2);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act
+    handler.scan(scanWithIndex, context);
+
+    // Assert
+    verify(storage, times(2)).scan(scanForStorage);
+    verify(storage, times(2)).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor)
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture).get();
+  }
+
+  @Test
+  public void scan_ScanWithIndexAndBeforeIndexScanFindsRolledForwardRecord_ShouldNotRetry()
+      throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Scan from storage returns empty results
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.iterator()).thenReturn(Collections.emptyIterator());
+
+    // Before-index scan finds a rolled-forward record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            false);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act
+    handler.scan(scanWithIndex, context);
+
+    // Assert
+    verify(storage, times(1)).scan(scanForStorage);
+    verify(storage, times(1)).scan(expectedBeforeIndexScan);
+    verify(recoveryFuture, never()).get();
+  }
+
+  @Test
+  public void scan_ScanWithIndexAndRetryLimitExceeded_ShouldThrowCrudConflictException()
+      throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Scan from storage returns empty results (3 times)
+    Scanner storageScanner1 = mock(Scanner.class);
+    when(storageScanner1.iterator()).thenReturn(Collections.emptyIterator());
+    Scanner storageScanner2 = mock(Scanner.class);
+    when(storageScanner2.iterator()).thenReturn(Collections.emptyIterator());
+    Scanner storageScanner3 = mock(Scanner.class);
+    when(storageScanner3.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(scanForStorage))
+        .thenReturn(storageScanner1)
+        .thenReturn(storageScanner2)
+        .thenReturn(storageScanner3);
+
+    // Before-index scan always finds a rolled-back record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner1 = mock(Scanner.class);
+    when(beforeIndexScanner1.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner2 = mock(Scanner.class);
+    when(beforeIndexScanner2.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    Scanner beforeIndexScanner3 = mock(Scanner.class);
+    when(beforeIndexScanner3.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storage.scan(expectedBeforeIndexScan))
+        .thenReturn(beforeIndexScanner1)
+        .thenReturn(beforeIndexScanner2)
+        .thenReturn(beforeIndexScanner3);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scanWithIndex, context))
+        .isInstanceOf(CrudConflictException.class);
+
+    verify(storage, times(3)).scan(scanForStorage);
+    verify(storage, times(3)).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor, times(3))
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture, times(3)).get();
+  }
+
+  @Test
+  public void
+      getScanner_CloseWithBeforeIndexScanFindsRolledBackRecord_ShouldThrowCrudConflictException()
+          throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage scan returns empty results
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.one()).thenReturn(Optional.empty());
+
+    // Before-index scan finds a rolled-back record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            true);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner txScanner = handler.getScanner(scanWithIndex, context);
+    assertThat(txScanner.one()).isEmpty(); // drain the scanner
+    assertThatThrownBy(txScanner::close).isInstanceOf(CrudConflictException.class);
+
+    verify(storage).scan(scanForStorage);
+    verify(storage).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor)
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture).get();
+  }
+
+  @Test
+  public void getScanner_CloseWithBeforeIndexScanFindsRolledForwardRecord_ShouldCloseNormally()
+      throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage scan returns empty results
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.one()).thenReturn(Optional.empty());
+
+    // Before-index scan finds a rolled-forward record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RecoveryExecutor.Result recoveryExecResult =
+        new RecoveryExecutor.Result(
+            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            Optional.of(preparedResult),
+            recoveryFuture,
+            false);
+    when(recoveryExecutor.execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(recoveryExecResult);
+
+    // Act - should close normally without throwing
+    TransactionCrudOperable.Scanner txScanner = handler.getScanner(scanWithIndex, context);
+    assertThat(txScanner.one()).isEmpty(); // drain the scanner
+    txScanner.close(); // should not throw
+
+    // Assert
+    verify(storage).scan(scanForStorage);
+    verify(storage).scan(expectedBeforeIndexScan);
+    verify(recoveryExecutor)
+        .execute(
+            any(Snapshot.Key.class),
+            eq(expectedBeforeIndexScan),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
+    verify(recoveryFuture, never()).get();
   }
 
   private List<Result> scanOrGetScanner(Scan scan, ScanType scanType, TransactionContext context)

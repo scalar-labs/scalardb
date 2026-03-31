@@ -49,11 +49,11 @@ import org.junit.jupiter.api.TestInstance;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
-  private static final String TEST_NAME = "cc_null_metadata";
+  private static final String TEST_NAME = "cc_null";
   private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_1 = "test_table1";
-  private static final String TABLE_2 = "test_table2";
+  private static final String TABLE_1 = "tbl1";
+  private static final String TABLE_2 = "tbl2";
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
@@ -147,6 +147,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             recoveryExecutor,
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
+            consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =

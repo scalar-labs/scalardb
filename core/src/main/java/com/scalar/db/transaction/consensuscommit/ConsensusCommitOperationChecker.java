@@ -160,7 +160,7 @@ public class ConsensusCommitOperationChecker {
           for (ConditionalExpression condition : conjunction.getConditions()) {
             String column = condition.getColumn().getName();
             // If the column is an indexed column but is part of the primary key, it's allowed
-            if (metadata.getSecondaryIndexNames().contains(column)
+            if (tableMetadata.getSecondaryIndexNames().contains(column)
                 && !tableMetadata.getPartitionKeyNames().contains(column)
                 && !tableMetadata.getClusteringKeyNames().contains(column)) {
               throw new IllegalArgumentException(

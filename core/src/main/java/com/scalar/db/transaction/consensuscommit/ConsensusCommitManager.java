@@ -81,12 +81,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     commit = createCommitHandler(config);
     isolation = config.getIsolation();
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager, config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
   }
 
   protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -110,12 +113,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     commit = createCommitHandler(config);
     isolation = config.getIsolation();
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager, config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")

@@ -7,10 +7,10 @@ public abstract class DistributedStorageAdminCaseSensitivityIntegrationTestBase
   private static final String NAMESPACE1 = "Int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "Int_test_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "Int_test_" + TEST_NAME + "3";
-  private static final String TABLE1 = "Test_table1";
-  private static final String TABLE2 = "Test_table2";
-  private static final String TABLE3 = "Test_table3";
-  private static final String TABLE4 = "Test_table4";
+  private static final String TABLE1 = "Tbl1";
+  private static final String TABLE2 = "Tbl2";
+  private static final String TABLE3 = "Tbl3";
+  private static final String TABLE4 = "Tbl4";
   private static final String COL_NAME1 = "Column1";
   private static final String COL_NAME2 = "Column2";
   private static final String COL_NAME3 = "Column3";
