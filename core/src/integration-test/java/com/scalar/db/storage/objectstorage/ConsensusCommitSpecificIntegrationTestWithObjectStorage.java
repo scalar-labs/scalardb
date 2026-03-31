@@ -96,4 +96,182 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
   @Override
   @Disabled("Object Storage does not support index-related operations")
   public void scanAndUpdate_ScanWithIndexGiven_ShouldUpdate(Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnResult(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void get_GetWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
+      Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnResult(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      get_GetWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnEmpty(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void get_GetWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
+      Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation) {}
 }

@@ -12,7 +12,7 @@ public abstract class SchemaLoaderWithMetadataDecouplingIntegrationTestBase
 
   @Override
   protected String getTestName() {
-    return "schema_loader_decoupling";
+    return "sl_dcpl";
   }
 
   @Override
