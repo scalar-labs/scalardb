@@ -30,11 +30,13 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public final class ValueBinder implements ColumnVisitor {
   private final Map<String, AttributeValue> values;
   private final String alias;
+  private final boolean bindNullValues;
   private int i;
 
-  public ValueBinder(String alias) {
+  public ValueBinder(String alias, boolean bindNullValues) {
     this.values = new HashMap<>();
     this.alias = alias;
+    this.bindNullValues = bindNullValues;
     this.i = 0;
   }
 
@@ -46,130 +48,134 @@ public final class ValueBinder implements ColumnVisitor {
 
   @Override
   public void visit(BooleanColumn column) {
-    values.put(
-        alias + i,
-        column.hasNullValue()
-            ? AttributeValue.builder().nul(true).build()
-            : AttributeValue.builder().bool(column.getBooleanValue()).build());
+    if (!column.hasNullValue()) {
+      values.put(alias + i, AttributeValue.builder().bool(column.getBooleanValue()).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    }
     i++;
   }
 
   @Override
   public void visit(IntColumn column) {
-    values.put(
-        alias + i,
-        column.hasNullValue()
-            ? AttributeValue.builder().nul(true).build()
-            : AttributeValue.builder().n(String.valueOf(column.getIntValue())).build());
+    if (!column.hasNullValue()) {
+      values.put(
+          alias + i, AttributeValue.builder().n(String.valueOf(column.getIntValue())).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    }
     i++;
   }
 
   @Override
   public void visit(BigIntColumn column) {
-    values.put(
-        alias + i,
-        column.hasNullValue()
-            ? AttributeValue.builder().nul(true).build()
-            : AttributeValue.builder().n(String.valueOf(column.getBigIntValue())).build());
+    if (!column.hasNullValue()) {
+      values.put(
+          alias + i, AttributeValue.builder().n(String.valueOf(column.getBigIntValue())).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    }
     i++;
   }
 
   @Override
   public void visit(FloatColumn column) {
-    values.put(
-        alias + i,
-        column.hasNullValue()
-            ? AttributeValue.builder().nul(true).build()
-            : AttributeValue.builder().n(String.valueOf(column.getFloatValue())).build());
+    if (!column.hasNullValue()) {
+      values.put(
+          alias + i, AttributeValue.builder().n(String.valueOf(column.getFloatValue())).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    }
     i++;
   }
 
   @Override
   public void visit(DoubleColumn column) {
-    values.put(
-        alias + i,
-        column.hasNullValue()
-            ? AttributeValue.builder().nul(true).build()
-            : AttributeValue.builder().n(String.valueOf(column.getDoubleValue())).build());
+    if (!column.hasNullValue()) {
+      values.put(
+          alias + i, AttributeValue.builder().n(String.valueOf(column.getDoubleValue())).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
+    }
     i++;
   }
 
   @Override
   public void visit(TextColumn column) {
-    if (column.hasNullValue()) {
-      values.put(alias + i, AttributeValue.builder().nul(true).build());
-    } else {
+    if (!column.hasNullValue()) {
       assert column.getTextValue() != null;
       values.put(alias + i, AttributeValue.builder().s(column.getTextValue()).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     }
     i++;
   }
 
   @Override
   public void visit(BlobColumn column) {
-    if (column.hasNullValue()) {
-      values.put(alias + i, AttributeValue.builder().nul(true).build());
-    } else {
+    if (!column.hasNullValue()) {
       assert column.getBlobValue() != null;
       values.put(
           alias + i,
           AttributeValue.builder().b(SdkBytes.fromByteBuffer(column.getBlobValue())).build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     }
     i++;
   }
 
   @Override
   public void visit(DateColumn column) {
-    if (column.hasNullValue()) {
-      values.put(alias + i, AttributeValue.builder().nul(true).build());
-    } else {
+    if (!column.hasNullValue()) {
       values.put(
           alias + i,
           AttributeValue.builder()
               .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
               .build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     }
     i++;
   }
 
   @Override
   public void visit(TimeColumn column) {
-    if (column.hasNullValue()) {
-      values.put(alias + i, AttributeValue.builder().nul(true).build());
-    } else {
+    if (!column.hasNullValue()) {
       values.put(
           alias + i,
           AttributeValue.builder()
               .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
               .build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     }
     i++;
   }
 
   @Override
   public void visit(TimestampColumn column) {
-    if (column.hasNullValue()) {
-      values.put(alias + i, AttributeValue.builder().nul(true).build());
-    } else {
+    if (!column.hasNullValue()) {
       values.put(
           alias + i,
           AttributeValue.builder()
               .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
               .build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     }
     i++;
   }
 
   @Override
   public void visit(TimestampTZColumn column) {
-    if (column.hasNullValue()) {
-      values.put(alias + i, AttributeValue.builder().nul(true).build());
-    } else {
+    if (!column.hasNullValue()) {
       values.put(
           alias + i,
           AttributeValue.builder()
               .n(String.valueOf(TimeRelatedColumnEncodingUtils.encode(column)))
               .build());
+    } else if (bindNullValues) {
+      values.put(alias + i, AttributeValue.builder().nul(true).build());
     }
     i++;
   }

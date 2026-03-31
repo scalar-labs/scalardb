@@ -70,7 +70,7 @@ public class DynamoOperationCheckerTest {
   }
 
   @Test
-  public void check_ForPutWithNullIndex_ShouldThrowIllegalArgumentException() {
+  public void check_ForPutWithNullIndex_ShouldDoNothing() {
     // Arrange
     Put put =
         Put.newBuilder()
@@ -81,8 +81,7 @@ public class DynamoOperationCheckerTest {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
   }
 
   @Test
@@ -149,7 +148,7 @@ public class DynamoOperationCheckerTest {
   }
 
   @Test
-  public void check_ForMutationsWithPutWithNullIndex_ShouldThrowIllegalArgumentException() {
+  public void check_ForMutationsWithPutWithNullIndex_ShouldDoNothing() {
     // Arrange
     Put putWithNullIndex =
         Put.newBuilder()
@@ -169,8 +168,8 @@ public class DynamoOperationCheckerTest {
             .build();
 
     // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(putWithNullIndex, put)))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatCode(() -> operationChecker.check(Arrays.asList(putWithNullIndex, put)))
+        .doesNotThrowAnyException();
   }
 
   @Test
