@@ -959,6 +959,39 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void addTableMetadata_WhenInsertFails_ShouldRollback() throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .build();
+
+    Statement deleteStatement = mock(Statement.class);
+    Statement insertStatement1 = mock(Statement.class);
+    Statement insertStatement2 = mock(Statement.class);
+    when(connection.createStatement())
+        .thenReturn(deleteStatement, insertStatement1, insertStatement2);
+    when(insertStatement2.execute(anyString())).thenThrow(new SQLException("insert failed"));
+    when(connection.getAutoCommit()).thenReturn(true);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act & Assert
+    assertThatThrownBy(
+            () -> admin.addTableMetadata(connection, namespace, table, metadata, false, true))
+        .isInstanceOf(SQLException.class)
+        .hasMessage("insert failed");
+    verify(connection).rollback();
+    verify(connection, never()).commit();
+    verify(connection).setAutoCommit(true);
+  }
+
+  @Test
   public void addTableMetadata_OverwriteMetadataForMysql_ShouldWorkProperly() throws Exception {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.MYSQL,

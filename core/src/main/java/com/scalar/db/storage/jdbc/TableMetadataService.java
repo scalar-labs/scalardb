@@ -39,6 +39,9 @@ public class TableMetadataService {
     this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
+  // This method manages its own transaction (commit/rollback) to ensure the DELETE and all INSERTs
+  // are applied atomically, unlike other methods that rely on per-statement commits via
+  // requiresExplicitCommit.
   void addTableMetadata(
       Connection connection,
       String namespace,
