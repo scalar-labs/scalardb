@@ -43,7 +43,9 @@ public interface DistributedTransactionProvider {
    * @return an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager. If
    *     the transaction manager does not support the two-phase commit interface, returns {@code
    *     null}.
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   @Nullable
   TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(DatabaseConfig config);
 

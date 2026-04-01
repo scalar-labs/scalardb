@@ -29,6 +29,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 @ThreadSafe
 public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {
@@ -96,7 +98,10 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
    * The methods of this class are synchronized to be thread-safe because the rollback() method may
    * be called from the expiration handler in a different thread while other methods are being
    * executed.
+   *
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   @VisibleForTesting
   class ActiveTransaction extends DecoratedTwoPhaseCommitTransaction {
 
@@ -138,16 +143,12 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
           registry, getId(), new SynchronizedScanner(this, super.getScanner(scan)));
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-    @Deprecated
     @Override
     public synchronized void put(Put put) throws CrudException {
       registry.touch(getId());
       super.put(put);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-    @Deprecated
     @Override
     public synchronized void put(List<Put> puts) throws CrudException {
       registry.touch(getId());
@@ -160,8 +161,6 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
       super.delete(delete);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-    @Deprecated
     @Override
     public synchronized void delete(List<Delete> deletes) throws CrudException {
       registry.touch(getId());

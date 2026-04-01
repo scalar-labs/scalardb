@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
 
-/** @deprecated As of release 3.5.0. Will be removed in release 4.0.0 */
+/** @deprecated As of release 3.5.0. Will be removed in release 3.20.0 */
 @Deprecated
 @Immutable
 public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransactionManager {
@@ -35,36 +35,26 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
     this.manager = manager;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     manager.with(namespace, tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public void withNamespace(String namespace) {
     manager.withNamespace(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return manager.getNamespace();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public void withTable(String tableName) {
     manager.withTable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public Optional<String> getTable() {
     return manager.getTable();
@@ -130,15 +120,11 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
     return manager.getScanner(scan);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     manager.put(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
     manager.put(puts);
@@ -164,8 +150,6 @@ public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransacti
     manager.delete(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
     manager.delete(deletes);

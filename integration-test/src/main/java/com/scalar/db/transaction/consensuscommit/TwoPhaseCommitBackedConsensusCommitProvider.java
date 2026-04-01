@@ -57,6 +57,9 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
     return new ConsensusCommitAdmin(toConsensusCommitConfig(config));
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Nullable
   @Override
   public TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
