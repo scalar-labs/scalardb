@@ -52,6 +52,7 @@ public class TableMetadataService {
     }
 
     boolean originalAutoCommit = connection.getAutoCommit();
+    SQLException primaryException = null;
     try {
       if (originalAutoCommit) {
         connection.setAutoCommit(false);
@@ -72,6 +73,7 @@ public class TableMetadataService {
 
       connection.commit();
     } catch (SQLException e) {
+      primaryException = e;
       try {
         connection.rollback();
       } catch (SQLException rollbackEx) {
@@ -80,7 +82,15 @@ public class TableMetadataService {
       throw e;
     } finally {
       if (originalAutoCommit) {
-        connection.setAutoCommit(true);
+        try {
+          connection.setAutoCommit(true);
+        } catch (SQLException e) {
+          if (primaryException != null) {
+            primaryException.addSuppressed(e);
+          } else {
+            throw e;
+          }
+        }
       }
     }
   }
