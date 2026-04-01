@@ -691,6 +691,18 @@ public class CrudHandler {
           }
         }
       }
+    } catch (RuntimeException e) {
+      Exception exception;
+      if (e.getCause() instanceof ExecutionException) {
+        exception = (ExecutionException) e.getCause();
+      } else {
+        exception = e;
+      }
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+              exception.getMessage()),
+          exception,
+          context.transactionId);
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(

@@ -868,6 +868,11 @@ public class Snapshot {
           throwExceptionDueToAntiDependency();
         }
       }
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        throw (ExecutionException) e.getCause();
+      }
+      throw e;
     } catch (IOException e) {
       logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
     }
