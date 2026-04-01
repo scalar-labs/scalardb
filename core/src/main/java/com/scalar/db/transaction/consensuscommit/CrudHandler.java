@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -13,6 +14,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -43,10 +45,12 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class CrudHandler {
   private static final Logger logger = LoggerFactory.getLogger(CrudHandler.class);
+  private static final int MAX_BEFORE_INDEX_CHECK_RETRIES = 3;
   private final DistributedStorage storage;
   private final RecoveryExecutor recoveryExecutor;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final boolean isIncludeMetadataEnabled;
+  private final boolean isIndexEventuallyConsistentReadEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
 
@@ -56,11 +60,13 @@ public class CrudHandler {
       RecoveryExecutor recoveryExecutor,
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
+      boolean isIndexEventuallyConsistentReadEnabled,
       ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = new MutationConditionsValidator();
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
@@ -71,18 +77,21 @@ public class CrudHandler {
       RecoveryExecutor recoveryExecutor,
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
+      boolean isIndexEventuallyConsistentReadEnabled,
       MutationConditionsValidator mutationConditionsValidator,
       ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = checkNotNull(mutationConditionsValidator);
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
   public Optional<Result> get(Get get, TransactionContext context) throws CrudException {
-    TableMetadata metadata = getTableMetadata(get, context.transactionId);
+    TransactionTableMetadata txMetadata = getTransactionTableMetadata(get, context.transactionId);
+    TableMetadata metadata = txMetadata.getTableMetadata();
 
     Snapshot.Key key;
     if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
@@ -93,14 +102,14 @@ public class CrudHandler {
     }
 
     if (isSnapshotReadRequired(context)) {
-      readUnread(key, get, context, metadata);
+      readUnread(key, get, context, txMetadata);
       return context
           .snapshot
           .getResult(key, get)
           .map(
               r -> new FilteredResult(r, get.getProjections(), metadata, isIncludeMetadataEnabled));
     } else {
-      Optional<TransactionResult> result = read(key, get, context, metadata);
+      Optional<TransactionResult> result = read(key, get, context, txMetadata);
       return context
           .snapshot
           .mergeResult(key, result, get.getConjunctions())
@@ -112,65 +121,93 @@ public class CrudHandler {
   // Only for a Get with index, the argument `key` is null
   @VisibleForTesting
   void readUnread(
-      @Nullable Snapshot.Key key, Get get, TransactionContext context, TableMetadata metadata)
+      @Nullable Snapshot.Key key,
+      Get get,
+      TransactionContext context,
+      TransactionTableMetadata txMetadata)
       throws CrudException {
     if (!context.snapshot.containsKeyInGetSet(get)) {
-      read(key, get, context, metadata);
+      read(key, get, context, txMetadata);
     }
   }
 
-  // Although this class is not thread-safe, this method is actually thread-safe, so we call it
-  // concurrently in the implicit pre-read
   @VisibleForTesting
   Optional<TransactionResult> read(
-      @Nullable Snapshot.Key key, Get get, TransactionContext context, TableMetadata metadata)
+      @Nullable Snapshot.Key originalKey,
+      Get get,
+      TransactionContext context,
+      TransactionTableMetadata txMetadata)
       throws CrudException {
-    Optional<TransactionResult> result = getFromStorage(get, metadata, context.transactionId);
-    if (result.isPresent() && !result.get().isCommitted()) {
-      // Lazy recovery
+    TableMetadata metadata = txMetadata.getTableMetadata();
+    boolean beforeIndexCheckRequired = requiresBeforeIndexCheck(get, txMetadata);
 
-      if (key == null) {
-        // Only for a Get with index, the argument `key` is null. In that case, create a key from
-        // the result
-        key = new Snapshot.Key(get, result.get(), metadata);
+    for (int i = 0; ; i++) {
+      @Nullable Snapshot.Key key = originalKey;
+
+      Optional<TransactionResult> result = getFromStorage(get, metadata, context.transactionId);
+      if (result.isPresent() && !result.get().isCommitted()) {
+        // Lazy recovery
+
+        if (key == null) {
+          // Only for a Get with index, the argument `key` is null. In that case, create a key from
+          // the result
+          key = new Snapshot.Key(get, result.get(), metadata);
+        }
+
+        RecoveryExecutor.Result recoveryResult = executeRecovery(key, get, result.get(), context);
+        context.recoveryResults.add(recoveryResult);
+        result = recoveryResult.recoveredResult;
       }
 
-      result = executeRecovery(key, get, result.get(), context);
-    }
+      if (!get.getConjunctions().isEmpty()) {
+        // Because we also get records whose before images match the conjunctions, we need to check
+        // if the current status of the records actually match the conjunctions.
+        result =
+            result.filter(
+                r ->
+                    ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                        r.getColumns(), get.getConjunctions()));
+      }
 
-    if (!get.getConjunctions().isEmpty()) {
-      // Because we also get records whose before images match the conjunctions, we need to check if
-      // the current status of the records actually match the conjunctions.
-      result =
-          result.filter(
-              r ->
-                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), get.getConjunctions()));
-    }
+      // Check if there are PREPARED/DELETED records whose committed (before-image) values match
+      // the query. If any were rolled back, the storage read result may be stale, so retry from
+      // the beginning before caching into the snapshot.
+      if (beforeIndexCheckRequired && checkAndRecoverBeforeIndexRecords(get, context, txMetadata)) {
+        if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
+          throw new CrudConflictException(
+              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
+                  .buildMessage(context.transactionId),
+              context.transactionId);
+        }
+        continue;
+      }
 
-    if (result.isPresent() || get.getConjunctions().isEmpty()) {
-      // We put the result into the read set only if a get operation has no conjunction or the
-      // result exists. This is because we don’t know whether the record actually exists or not
-      // due to the conjunction.
+      // Put the result in the snapshot
+      if (result.isPresent() || get.getConjunctions().isEmpty()) {
+        // We put the result into the read set only if a get operation has no conjunction or the
+        // result exists. This is because we don’t know whether the record actually exists or not
+        // due to the conjunction.
 
-      if (key != null) {
-        putIntoReadSetInSnapshot(key, result, context);
-      } else {
-        // Only for a Get with index, the argument `key` is null
-
-        if (result.isPresent()) {
-          // Only when we can get the record with the Get with index, we can put it into the read
-          // set
-          key = new Snapshot.Key(get, result.get(), metadata);
+        if (key != null) {
           putIntoReadSetInSnapshot(key, result, context);
+        } else {
+          // Only for a Get with index, the argument `key` is null
+
+          if (result.isPresent()) {
+            // Only when we can get the record with the Get with index, we can put it into the read
+            // set
+            key = new Snapshot.Key(get, result.get(), metadata);
+            putIntoReadSetInSnapshot(key, result, context);
+          }
         }
       }
+      putIntoGetSetInSnapshot(get, result, context);
+
+      return result;
     }
-    putIntoGetSetInSnapshot(get, result, context);
-    return result;
   }
 
-  private Optional<TransactionResult> executeRecovery(
+  private RecoveryExecutor.Result executeRecovery(
       Snapshot.Key key, Selection selection, TransactionResult result, TransactionContext context)
       throws CrudException {
     RecoveryExecutor.RecoveryType recoveryType;
@@ -179,9 +216,10 @@ public class CrudHandler {
 
       if (context.readOnly) {
         // In read-only mode, we don't recover the record, but return the committed result
+        // (before-image)
         recoveryType = RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER;
       } else {
-        // In read-write mode, we recover the record and return the committed result
+        // In read-write mode, we recover the record and return the committed result (before-image)
         recoveryType = RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER;
       }
     } else {
@@ -190,16 +228,14 @@ public class CrudHandler {
       recoveryType = RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER;
     }
 
-    RecoveryExecutor.Result recoveryResult =
-        recoveryExecutor.execute(key, selection, result, context.transactionId, recoveryType);
-
-    context.recoveryResults.add(recoveryResult);
-    return recoveryResult.recoveredResult;
+    return recoveryExecutor.execute(key, selection, result, context.transactionId, recoveryType);
   }
 
   public List<Result> scan(Scan scan, TransactionContext context) throws CrudException {
-    TableMetadata metadata = getTableMetadata(scan, context.transactionId);
-    LinkedHashMap<Snapshot.Key, TransactionResult> results = scanInternal(scan, context, metadata);
+    TransactionTableMetadata txMetadata = getTransactionTableMetadata(scan, context.transactionId);
+    TableMetadata metadata = txMetadata.getTableMetadata();
+    LinkedHashMap<Snapshot.Key, TransactionResult> results =
+        scanInternal(scan, context, txMetadata);
     verifyNoOverlap(scan, results, context);
     return results.values().stream()
         .map(r -> new FilteredResult(r, scan.getProjections(), metadata, isIncludeMetadataEnabled))
@@ -207,46 +243,68 @@ public class CrudHandler {
   }
 
   private LinkedHashMap<Snapshot.Key, TransactionResult> scanInternal(
-      Scan scan, TransactionContext context, TableMetadata metadata) throws CrudException {
+      Scan scan, TransactionContext context, TransactionTableMetadata txMetadata)
+      throws CrudException {
+    TableMetadata metadata = txMetadata.getTableMetadata();
+
     Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsInSnapshot =
         context.snapshot.getResults(scan);
     if (resultsInSnapshot.isPresent()) {
       return resultsInSnapshot.get();
     }
 
-    LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+    boolean beforeIndexCheckRequired = requiresBeforeIndexCheck(scan, txMetadata);
 
-    try (Scanner scanner = scanFromStorage(scan, metadata, context.transactionId)) {
-      for (Result r : scanner) {
-        TransactionResult result = new TransactionResult(r);
-        Snapshot.Key key = new Snapshot.Key(scan, r, metadata);
-        Optional<TransactionResult> processedScanResult =
-            processScanResult(key, scan, result, context);
-        processedScanResult.ifPresent(res -> results.put(key, res));
+    for (int i = 0; ; i++) {
+      LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
 
-        if (scan.getLimit() > 0 && results.size() >= scan.getLimit()) {
-          // If the scan has a limit, we stop scanning when we reach the limit.
-          break;
+      try (Scanner scanner = scanFromStorage(scan, metadata, context.transactionId)) {
+        for (Result r : scanner) {
+          TransactionResult result = new TransactionResult(r);
+          Snapshot.Key key = new Snapshot.Key(scan, r, metadata);
+          Optional<TransactionResult> processedScanResult =
+              processScanResult(key, scan, result, context);
+          processedScanResult.ifPresent(res -> results.put(key, res));
+
+          if (scan.getLimit() > 0 && results.size() >= scan.getLimit()) {
+            // If the scan has a limit, we stop scanning when we reach the limit.
+            break;
+          }
         }
+      } catch (RuntimeException e) {
+        Exception exception;
+        if (e.getCause() instanceof ExecutionException) {
+          exception = (ExecutionException) e.getCause();
+        } else {
+          exception = e;
+        }
+        throw new CrudException(
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+            exception,
+            context.transactionId);
+      } catch (IOException e) {
+        logger.warn("Failed to close the scanner. Transaction ID: {}", context.transactionId, e);
       }
-    } catch (RuntimeException e) {
-      Exception exception;
-      if (e.getCause() instanceof ExecutionException) {
-        exception = (ExecutionException) e.getCause();
-      } else {
-        exception = e;
+
+      // Check if there are PREPARED/DELETED records whose committed (before-image) values match
+      // the query. If any were rolled back, the scan result may be stale, so retry from the
+      // beginning before caching into the snapshot.
+      if (beforeIndexCheckRequired
+          && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
+        if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
+          throw new CrudConflictException(
+              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
+                  .buildMessage(context.transactionId),
+              context.transactionId);
+        }
+        continue;
       }
-      throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
-          exception,
-          context.transactionId);
-    } catch (IOException e) {
-      logger.warn("Failed to close the scanner. Transaction ID: {}", context.transactionId, e);
+
+      // Put the results in the snapshot
+      putIntoScanSetInSnapshot(scan, results, context);
+
+      return results;
     }
-
-    putIntoScanSetInSnapshot(scan, results, context);
-
-    return results;
   }
 
   private Optional<TransactionResult> processScanResult(
@@ -255,7 +313,9 @@ public class CrudHandler {
     Optional<TransactionResult> ret;
     if (!result.isCommitted()) {
       // Lazy recovery
-      ret = executeRecovery(key, scan, result, context);
+      RecoveryExecutor.Result recoveryResult = executeRecovery(key, scan, result, context);
+      context.recoveryResults.add(recoveryResult);
+      ret = recoveryResult.recoveredResult;
     } else {
       ret = Optional.of(result);
     }
@@ -279,7 +339,8 @@ public class CrudHandler {
 
   public TransactionCrudOperable.Scanner getScanner(Scan scan, TransactionContext context)
       throws CrudException {
-    TableMetadata metadata = getTableMetadata(scan, context.transactionId);
+    TransactionTableMetadata txMetadata = getTransactionTableMetadata(scan, context.transactionId);
+    TableMetadata metadata = txMetadata.getTableMetadata();
     ConsensusCommitScanner scanner;
     Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> resultsInSnapshot =
         context.snapshot.getResults(scan);
@@ -287,7 +348,7 @@ public class CrudHandler {
       scanner =
           new ConsensusCommitSnapshotScanner(scan, context, metadata, resultsInSnapshot.get());
     } else {
-      scanner = new ConsensusCommitStorageScanner(scan, context, metadata);
+      scanner = new ConsensusCommitStorageScanner(scan, context, txMetadata);
     }
 
     context.scanners.add(scanner);
@@ -354,7 +415,7 @@ public class CrudHandler {
   }
 
   public void put(Put put, TransactionContext context) throws CrudException {
-    TableMetadata metadata = getTableMetadata(put, context.transactionId);
+    TransactionTableMetadata txMetadata = getTransactionTableMetadata(put, context.transactionId);
     Snapshot.Key key = new Snapshot.Key(put);
 
     if (put.getCondition().isPresent()
@@ -367,7 +428,7 @@ public class CrudHandler {
 
     if (put.getCondition().isPresent()) {
       if (isImplicitPreReadEnabled(put) && !context.snapshot.containsKeyInReadSet(key)) {
-        read(key, createGet(key), context, metadata);
+        read(key, createGet(key), context, txMetadata);
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           put, context.snapshot.getResult(key).orElse(null), context.transactionId);
@@ -377,12 +438,13 @@ public class CrudHandler {
   }
 
   public void delete(Delete delete, TransactionContext context) throws CrudException {
-    TableMetadata metadata = getTableMetadata(delete, context.transactionId);
+    TransactionTableMetadata txMetadata =
+        getTransactionTableMetadata(delete, context.transactionId);
     Snapshot.Key key = new Snapshot.Key(delete);
 
     if (delete.getCondition().isPresent()) {
       if (!context.snapshot.containsKeyInReadSet(key)) {
-        read(key, createGet(key), context, metadata);
+        read(key, createGet(key), context, txMetadata);
       }
       mutationConditionsValidator.checkIfConditionIsSatisfied(
           delete, context.snapshot.getResult(key).orElse(null), context.transactionId);
@@ -402,8 +464,9 @@ public class CrudHandler {
         Snapshot.Key key = entry.getKey();
         if (!context.snapshot.containsKeyInReadSet(key)) {
           Get get = createGet(key);
-          TableMetadata metadata = getTableMetadata(get, context.transactionId);
-          tasks.add(() -> read(key, get, context, metadata));
+          TransactionTableMetadata txMetadata =
+              getTransactionTableMetadata(get, context.transactionId);
+          tasks.add(() -> read(key, get, context, txMetadata));
         }
       }
     }
@@ -413,8 +476,9 @@ public class CrudHandler {
       Snapshot.Key key = entry.getKey();
       if (!context.snapshot.containsKeyInReadSet(key)) {
         Get get = createGet(key);
-        TableMetadata metadata = getTableMetadata(get, context.transactionId);
-        tasks.add(() -> read(key, get, context, metadata));
+        TransactionTableMetadata txMetadata =
+            getTransactionTableMetadata(get, context.transactionId);
+        tasks.add(() -> read(key, get, context, txMetadata));
       }
     }
 
@@ -466,27 +530,10 @@ public class CrudHandler {
   public void waitForRecoveryCompletionIfNecessary(TransactionContext context)
       throws CrudException {
     for (RecoveryExecutor.Result recoveryResult : context.recoveryResults) {
-      try {
-        if (context.snapshot.containsKeyInWriteSet(recoveryResult.key)
-            || context.snapshot.containsKeyInDeleteSet(recoveryResult.key)
-            || context.isValidationPossiblyRequired()) {
-          recoveryResult.recoveryFuture.get();
-        }
-      } catch (java.util.concurrent.ExecutionException e) {
-        Throwable cause = e.getCause();
-        if (cause instanceof CrudConflictException) {
-          throw new CrudConflictException(cause.getMessage(), cause, context.transactionId);
-        }
-
-        throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
-            cause,
-            context.transactionId);
-      } catch (Exception e) {
-        throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(e.getMessage()),
-            e,
-            context.transactionId);
+      if (context.snapshot.containsKeyInWriteSet(recoveryResult.key)
+          || context.snapshot.containsKeyInDeleteSet(recoveryResult.key)
+          || context.isValidationPossiblyRequired()) {
+        waitForRecoveryCompletion(recoveryResult, context.transactionId);
       }
     }
   }
@@ -494,29 +541,32 @@ public class CrudHandler {
   @VisibleForTesting
   void waitForRecoveryCompletion(TransactionContext context) throws CrudException {
     for (RecoveryExecutor.Result recoveryResult : context.recoveryResults) {
-      try {
-        recoveryResult.recoveryFuture.get();
-      } catch (java.util.concurrent.ExecutionException e) {
-        Throwable cause = e.getCause();
-        if (cause instanceof CrudConflictException) {
-          throw new CrudConflictException(cause.getMessage(), cause, context.transactionId);
-        }
-
-        throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
-            cause,
-            context.transactionId);
-      } catch (Exception e) {
-        throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(e.getMessage()),
-            e,
-            context.transactionId);
-      }
+      waitForRecoveryCompletion(recoveryResult, context.transactionId);
     }
   }
 
-  // Although this class is not thread-safe, this method is actually thread-safe because the storage
-  // is thread-safe
+  private void waitForRecoveryCompletion(
+      RecoveryExecutor.Result recoveryResult, String transactionId) throws CrudException {
+    try {
+      recoveryResult.recoveryFuture.get();
+    } catch (java.util.concurrent.ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof CrudException) {
+        throw (CrudException) cause;
+      }
+
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(cause.getMessage()),
+          cause,
+          transactionId);
+    } catch (Exception e) {
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(e.getMessage()),
+          e,
+          transactionId);
+    }
+  }
+
   @VisibleForTesting
   Optional<TransactionResult> getFromStorage(Get get, TableMetadata metadata, String transactionId)
       throws CrudException {
@@ -544,19 +594,134 @@ public class CrudHandler {
     }
   }
 
-  private TableMetadata getTableMetadata(Operation operation, String transactionId)
-      throws CrudException {
+  private TransactionTableMetadata getTransactionTableMetadata(
+      Operation operation, String transactionId) throws CrudException {
     assert operation.forFullTableName().isPresent();
 
     try {
-      return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation)
-          .getTableMetadata();
+      return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(operation.forFullTableName().get()),
           e,
           transactionId);
     }
+  }
+
+  /**
+   * Returns whether the given selection requires a before-image index check. This is true when the
+   * selection uses a secondary index that has a corresponding before-image secondary index.
+   *
+   * @param selection the selection operation
+   * @param metadata the transaction table metadata
+   * @return true if before-image index check is required
+   */
+  @VisibleForTesting
+  boolean requiresBeforeIndexCheck(Selection selection, TransactionTableMetadata metadata) {
+    if (isIndexEventuallyConsistentReadEnabled) {
+      return false;
+    }
+
+    if (selection instanceof ScanAll) {
+      // For ScanAll, check if any conjunction condition is on a column that has a before-image
+      // secondary index
+      for (Selection.Conjunction conjunction : selection.getConjunctions()) {
+        for (ConditionalExpression condition : conjunction.getConditions()) {
+          if (metadata.hasBeforeImageSecondaryIndex(condition.getColumn().getName())) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata.getTableMetadata())) {
+      String indexColumnName = selection.getPartitionKey().getColumns().get(0).getName();
+      return metadata.hasBeforeImageSecondaryIndex(indexColumnName);
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if there are PREPARED/DELETED records that match the before-image index conditions of
+   * the given selection, and if so, executes recovery on them.
+   *
+   * <p>This method scans using the before-image index to find uncommitted records whose committed
+   * values match the original query. If such records are found, recovery is executed.
+   *
+   * <p>A retry is only needed when a record is rolled back, because rolling back restores the
+   * before-image values, which means the record will now match the original query's index
+   * conditions and should be included in the results. In contrast, when a record is rolled forward,
+   * the current (after-image) values are committed as-is, so the original query's results are
+   * unaffected.
+   *
+   * <p>Note: This method calls {@code storage.scan()} directly instead of {@code scanFromStorage()}
+   * because the before-index scan is already prepared with the correct consistency and conditions.
+   * Passing it through {@code prepareScanForStorage()} would incorrectly double-convert the
+   * before-image column conditions.
+   *
+   * @param selection the original selection operation
+   * @param context the transaction context
+   * @param metadata the transaction table metadata
+   * @return true if any records were rolled back, indicating a retry is needed
+   * @throws CrudException if scanning or recovery fails
+   */
+  @VisibleForTesting
+  boolean checkAndRecoverBeforeIndexRecords(
+      Selection selection, TransactionContext context, TransactionTableMetadata metadata)
+      throws CrudException {
+    Scan beforeIndexScan;
+    if (selection instanceof ScanAll) {
+      beforeIndexScan =
+          ConsensusCommitUtils.createBeforeIndexScanAll(
+              (ScanAll) selection, metadata.getTableMetadata());
+    } else {
+      beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(selection);
+    }
+
+    boolean needsRetry = false;
+    List<RecoveryExecutor.Result> rolledBackRecoveryResults = new ArrayList<>();
+
+    try (Scanner scanner = storage.scan(beforeIndexScan)) {
+      for (Result r : scanner) {
+        TransactionResult result = new TransactionResult(r);
+        if (!result.isCommitted()) {
+          Snapshot.Key key = new Snapshot.Key(beforeIndexScan, r, metadata.getTableMetadata());
+          // Always use RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation level because
+          // recovery must actually execute; otherwise, the PREPARED/DELETED record remains in
+          // storage and retrying would be useless
+          RecoveryExecutor.Result recoveryResult =
+              recoveryExecutor.execute(
+                  key,
+                  beforeIndexScan,
+                  result,
+                  context.transactionId,
+                  RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+          if (recoveryResult.rolledBack) {
+            rolledBackRecoveryResults.add(recoveryResult);
+            needsRetry = true;
+          } else {
+            // For rolled-forward records, track the recovery asynchronously
+            context.recoveryResults.add(recoveryResult);
+          }
+        }
+      }
+    } catch (ExecutionException e) {
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+          e,
+          context.transactionId);
+    } catch (IOException e) {
+      logger.warn("Failed to close the scanner. Transaction ID: {}", context.transactionId, e);
+    }
+
+    // Wait for all rolled-back recoveries to complete before retrying
+    for (RecoveryExecutor.Result rolledBackResult : rolledBackRecoveryResults) {
+      waitForRecoveryCompletion(rolledBackResult, context.transactionId);
+    }
+
+    return needsRetry;
   }
 
   @NotThreadSafe
@@ -566,6 +731,7 @@ public class CrudHandler {
     private final Scan scan;
     private final TransactionContext context;
     private final TableMetadata metadata;
+    private final TransactionTableMetadata txMetadata;
     private final Scanner scanner;
 
     @Nullable private final LinkedHashMap<Snapshot.Key, TransactionResult> results;
@@ -574,10 +740,12 @@ public class CrudHandler {
     private final AtomicBoolean closed = new AtomicBoolean();
 
     public ConsensusCommitStorageScanner(
-        Scan scan, TransactionContext context, TableMetadata metadata) throws CrudException {
+        Scan scan, TransactionContext context, TransactionTableMetadata txMetadata)
+        throws CrudException {
       this.scan = scan;
       this.context = context;
-      this.metadata = metadata;
+      this.txMetadata = txMetadata;
+      this.metadata = txMetadata.getTableMetadata();
 
       scanner = scanFromStorage(scan, metadata, context.transactionId);
 
@@ -659,12 +827,24 @@ public class CrudHandler {
     }
 
     @Override
-    public void close() {
+    public void close() throws CrudException {
       if (closed.get()) {
         return;
       }
 
       closeScanner();
+
+      // Check if there are PREPARED/DELETED records whose committed (before-image) values match
+      // the query. If any were rolled back, the scan results may be incomplete. Unlike read() and
+      // scanInternal(), the scanner cannot retry internally, so throw CrudConflictException to
+      // prompt a transaction-level retry.
+      if (requiresBeforeIndexCheck(scan, txMetadata)
+          && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
+        throw new CrudConflictException(
+            CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
+                context.transactionId),
+            context.transactionId);
+      }
 
       if (fullyScanned.get()) {
         // If the scanner is fully scanned, we can treat it as a normal scan, and put the results

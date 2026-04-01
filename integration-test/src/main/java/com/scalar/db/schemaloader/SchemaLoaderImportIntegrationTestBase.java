@@ -33,15 +33,16 @@ import org.slf4j.LoggerFactory;
 public abstract class SchemaLoaderImportIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
-  private static final String TEST_NAME = "schema_loader_import";
+
+  private static final String TEST_NAME = "sl_import";
+  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
+  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
       Paths.get("import_schema.json").toAbsolutePath();
 
-  private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
-  private static final String TABLE_1 = "test_table1";
-  private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_2 = "test_table2";
+  private static final String TABLE_1 = "tbl1";
+  private static final String TABLE_2 = "tbl2";
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;

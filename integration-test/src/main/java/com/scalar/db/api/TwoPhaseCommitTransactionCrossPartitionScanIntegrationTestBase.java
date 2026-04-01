@@ -38,8 +38,8 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
       LoggerFactory.getLogger(TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_rscan_2pc_test_";
-  protected static final String TABLE_1 = "test_table1";
-  protected static final String TABLE_2 = "test_table2";
+  protected static final String TABLE_1 = "tbl1";
+  protected static final String TABLE_2 = "tbl2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String ACCOUNT_NAME = "account_name";
