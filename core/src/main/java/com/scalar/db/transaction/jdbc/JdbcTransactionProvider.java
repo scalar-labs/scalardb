@@ -26,6 +26,8 @@ public class JdbcTransactionProvider extends AbstractDistributedTransactionProvi
     return new JdbcTransactionAdmin(config);
   }
 
+  /** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+  @Deprecated
   @Nullable
   @Override
   public TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(

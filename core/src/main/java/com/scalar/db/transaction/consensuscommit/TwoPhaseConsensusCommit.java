@@ -33,6 +33,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+@Deprecated
 @NotThreadSafe
 public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private static final Logger logger = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);

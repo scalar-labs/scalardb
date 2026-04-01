@@ -116,7 +116,9 @@ final class ProviderManager {
    * @param config a database config
    * @return an instance of {@link TwoPhaseCommitTransactionManager}. If the transaction manager
    *     does not support the two-phase commit interface, returns {@code null}.
+   * @deprecated As of release 3.18.0. Will be removed in release 4.0.0
    */
+  @Deprecated
   @Nullable
   public static TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {

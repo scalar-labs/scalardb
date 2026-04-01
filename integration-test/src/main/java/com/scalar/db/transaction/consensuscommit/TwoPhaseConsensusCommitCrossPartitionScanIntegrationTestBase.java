@@ -14,6 +14,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
+/** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+@Deprecated
 public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBase
     extends TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase {
 

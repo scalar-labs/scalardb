@@ -29,6 +29,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+@Deprecated
 @ThreadSafe
 public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {

@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
+/** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+@Deprecated
 @ThreadSafe
 public class StateManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {

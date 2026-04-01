@@ -24,6 +24,8 @@ public class ConsensusCommitProvider extends AbstractDistributedTransactionProvi
     return new ConsensusCommitAdmin(config);
   }
 
+  /** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+  @Deprecated
   @Override
   public TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {

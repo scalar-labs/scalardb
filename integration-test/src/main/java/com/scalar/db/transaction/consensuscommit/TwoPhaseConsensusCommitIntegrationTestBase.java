@@ -3,6 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import com.scalar.db.api.TwoPhaseCommitTransactionIntegrationTestBase;
 import java.util.Properties;
 
+/** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+@Deprecated
 public abstract class TwoPhaseConsensusCommitIntegrationTestBase
     extends TwoPhaseCommitTransactionIntegrationTestBase {
 

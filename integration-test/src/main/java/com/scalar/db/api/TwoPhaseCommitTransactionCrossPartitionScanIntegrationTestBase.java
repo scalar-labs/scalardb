@@ -32,6 +32,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.18.0. Will be removed in release 4.0.0 */
+@Deprecated
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase {
   private static final Logger logger =
