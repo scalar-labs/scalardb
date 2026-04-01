@@ -24,6 +24,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -156,12 +157,19 @@ public class CrudHandler {
 
         RecoveryExecutor.Result recoveryResult = executeRecovery(key, get, result.get(), context);
         context.recoveryResults.add(recoveryResult);
-        result = recoveryResult.recoveredResult;
+
+        // After recovery (e.g., rollback), the index column value may have changed back to its
+        // original value, which might not match the queried index key. Filter out such results.
+        if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
+          result = recoveryResult.recoveredResult.filter(r -> resultMatchesIndexKey(get, r));
+        } else {
+          result = recoveryResult.recoveredResult;
+        }
       }
 
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
       if (!get.getConjunctions().isEmpty()) {
-        // Because we also get records whose before images match the conjunctions, we need to check
-        // if the current status of the records actually match the conjunctions.
         result =
             result.filter(
                 r ->
@@ -263,7 +271,7 @@ public class CrudHandler {
           TransactionResult result = new TransactionResult(r);
           Snapshot.Key key = new Snapshot.Key(scan, r, metadata);
           Optional<TransactionResult> processedScanResult =
-              processScanResult(key, scan, result, context);
+              processScanResult(key, scan, result, context, metadata);
           processedScanResult.ifPresent(res -> results.put(key, res));
 
           if (scan.getLimit() > 0 && results.size() >= scan.getLimit()) {
@@ -309,28 +317,38 @@ public class CrudHandler {
   }
 
   private Optional<TransactionResult> processScanResult(
-      Snapshot.Key key, Scan scan, TransactionResult result, TransactionContext context)
+      Snapshot.Key key,
+      Scan scan,
+      TransactionResult result,
+      TransactionContext context,
+      TableMetadata metadata)
       throws CrudException {
     Optional<TransactionResult> ret;
     if (!result.isCommitted()) {
       // Lazy recovery
       RecoveryExecutor.Result recoveryResult = executeRecovery(key, scan, result, context);
       context.recoveryResults.add(recoveryResult);
-      ret = recoveryResult.recoveredResult;
+
+      // After recovery (e.g., rollback), the index column value may have changed back to its
+      // original value, which might not match the queried index key. Filter out such results.
+      if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
+        ret = recoveryResult.recoveredResult.filter(r -> resultMatchesIndexKey(scan, r));
+      } else {
+        ret = recoveryResult.recoveredResult;
+      }
     } else {
       ret = Optional.of(result);
     }
 
+    // Because we also get records whose before images match the conjunctions, we need to check if
+    // the current status of the records actually match the conjunctions.
     if (!scan.getConjunctions().isEmpty()) {
-      // Because we also get records whose before images match the conjunctions, we need to check if
-      // the current status of the records actually match the conjunctions.
       ret =
           ret.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
                       r.getColumns(), scan.getConjunctions()));
     }
-
     if (ret.isPresent()) {
       putIntoReadSetInSnapshot(key, ret, context);
     }
@@ -659,6 +677,21 @@ public class CrudHandler {
   }
 
   /**
+   * Checks if the result's index column value matches the queried index key value. This is needed
+   * because after lazy recovery (e.g., rollback), the index column value may revert to its original
+   * value, which might not match the queried index key.
+   *
+   * @param selection the index-based selection operation
+   * @param result the result to check
+   * @return true if the result's index column matches the queried index key
+   */
+  private boolean resultMatchesIndexKey(Selection selection, TransactionResult result) {
+    Column<?> indexColumn = selection.getPartitionKey().getColumns().get(0);
+    Column<?> resultColumn = result.getColumns().get(indexColumn.getName());
+    return resultColumn != null && resultColumn.equals(indexColumn);
+  }
+
+  /**
    * Checks if there are PREPARED/DELETED records that match the before-image index conditions of
    * the given selection, and if so, executes recovery on them.
    *
@@ -805,7 +838,7 @@ public class CrudHandler {
           TransactionResult result = new TransactionResult(r.get());
 
           Optional<TransactionResult> processedScanResult =
-              processScanResult(key, scan, result, context);
+              processScanResult(key, scan, result, context, metadata);
           if (!processedScanResult.isPresent()) {
             continue;
           }

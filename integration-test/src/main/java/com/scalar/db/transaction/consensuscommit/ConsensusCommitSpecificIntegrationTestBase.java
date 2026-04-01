@@ -2411,6 +2411,162 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // The PREPARED record has BALANCE=NEW_BALANCE (after-image) and
+    // before_BALANCE=INITIAL_BALANCE. Query by BALANCE=NEW_BALANCE matches the normal index.
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        current,
+        TransactionState.ABORTED,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // After roll-back, BALANCE reverts to INITIAL_BALANCE, which does not match the queried
+    // index key BALANCE=NEW_BALANCE, so the result should be filtered out
+    assertThat(result).isNotPresent();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage(
+        isolation, false);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage(
+        isolation, true);
+  }
+
+  private void scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage(
+      Isolation isolation, boolean useScanner)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populateRecordsForAfterImageIndexTest(
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    List<Result> results;
+    if (!useScanner) {
+      results = transaction.scan(scan);
+    } else {
+      try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+        results = scanner.all();
+      }
+    }
+
+    transaction.commit();
+
+    // Assert
+    // After roll-back, the PREPARED record (0,1) has BALANCE reverted to INITIAL_BALANCE, which
+    // does not match the queried index key BALANCE=NEW_BALANCE. Only the 2 COMMITTED records
+    // (0,0) and (0,2) with BALANCE=NEW_BALANCE should remain.
+    assertThat(results).hasSize(2);
+    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  /**
+   * Populates records for testing index key filtering after rollback when the query matches the
+   * after-image index. Creates:
+   *
+   * <ul>
+   *   <li>(0,0): COMMITTED with BALANCE=NEW_BALANCE
+   *   <li>(0,2): COMMITTED with BALANCE=NEW_BALANCE
+   *   <li>(0,1): PREPARED/DELETED with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
+   * </ul>
+   *
+   * When querying BALANCE=NEW_BALANCE, all 3 records match the normal index. After rollback of
+   * (0,1), its BALANCE reverts to INITIAL_BALANCE, so it should be filtered out, leaving only the 2
+   * COMMITTED records.
+   */
+  private void populateRecordsForAfterImageIndexTest(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      TransactionState recordState,
+      long preparedAt,
+      TransactionState coordinatorState)
+      throws ExecutionException, CoordinatorException {
+    // (0,0): COMMITTED with BALANCE=NEW_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace, table, 0, 0, NEW_BALANCE);
+
+    // (0,2): COMMITTED with BALANCE=NEW_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace, table, 0, 2, NEW_BALANCE);
+
+    // (0,1): PREPARED/DELETED with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 1);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, recordState.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    coordinator.putState(new Coordinator.State(ANY_ID_2, coordinatorState));
+  }
+
   private void
       scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Scan scan, boolean useScanner, Isolation isolation)
@@ -6754,7 +6910,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -6817,7 +6975,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -6887,7 +7047,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -6960,7 +7122,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7040,7 +7204,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7138,7 +7304,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7214,7 +7382,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7297,7 +7467,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7398,7 +7570,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowShouldBehaveCorrectly(
           Isolation isolation)
-          throws UnknownTransactionStatusException, CrudException, RollbackException,
+          throws UnknownTransactionStatusException,
+              CrudException,
+              RollbackException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);

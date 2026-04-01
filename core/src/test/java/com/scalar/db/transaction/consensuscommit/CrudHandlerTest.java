@@ -3525,6 +3525,178 @@ public class CrudHandlerTest {
     verify(recoveryFuture, never()).get();
   }
 
+  @Test
+  void read_GetWithIndexAndRolledBackRecordWithNonMatchingIndexKey_ShouldFilterOutResult()
+      throws Exception {
+    // Arrange
+    // Query: col_idx = ANY_TEXT_3, but after rollback the record has col_idx = ANY_TEXT_4
+    Get getWithIndex = prepareGetWithIndex(); // indexKey = ANY_NAME_3:ANY_TEXT_3
+    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage returns an uncommitted (PREPARED) record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(preparedResult));
+
+    // After rollback, the recovered result has a different index column value
+    TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_4);
+    Snapshot.Key key = new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isEmpty();
+    verify(snapshot).putIntoReadSet(key, Optional.empty());
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
+  }
+
+  @Test
+  void read_GetWithIndexAndRolledBackRecordWithMatchingIndexKey_ShouldReturnResult()
+      throws Exception {
+    // Arrange
+    Get getWithIndex = prepareGetWithIndex(); // indexKey = ANY_NAME_3:ANY_TEXT_3
+    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage returns an uncommitted (PREPARED) record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(preparedResult));
+
+    // After rollback, the recovered result still has the matching index column value
+    TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_3);
+    Snapshot.Key key = new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(recoveredResult);
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scan_ScanWithIndexAndRolledBackRecordWithNonMatchingIndexKey_ShouldFilterOutResult(
+      ScanType scanType) throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex(); // indexKey = ANY_NAME_3:ANY_TEXT_3
+    Scan scanForStorage = toScanForStorageFrom(scanWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage scan returns an uncommitted (PREPARED) record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storageScanner.one()).thenReturn(Optional.of(preparedResult)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+
+    // After rollback, the recovered result has a different index column value
+    TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_4);
+    Snapshot.Key key = new Snapshot.Key(scanWithIndex, preparedResult, TABLE_METADATA);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(scanWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanWithIndex, scanType, context);
+
+    // Assert
+    assertThat(results).isEmpty();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScanType.class)
+  void scan_ScanWithIndexAndRolledBackRecordWithMatchingIndexKey_ShouldReturnResult(
+      ScanType scanType) throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex(); // indexKey = ANY_NAME_3:ANY_TEXT_3
+    Scan scanForStorage = toScanForStorageFrom(scanWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage scan returns an uncommitted (PREPARED) record
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(preparedResult).iterator());
+    when(storageScanner.one()).thenReturn(Optional.of(preparedResult)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+
+    // After rollback, the recovered result still has the matching index column value
+    TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_3);
+    Snapshot.Key key = new Snapshot.Key(scanWithIndex, preparedResult, TABLE_METADATA);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(scanWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    List<Result> results = scanOrGetScanner(scanWithIndex, scanType, context);
+
+    // Assert
+    assertThat(results).hasSize(1);
+  }
+
+  private TransactionResult prepareResultWithIndexColumnValue(String indexColumnValue) {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, indexColumnValue))
+            .put(ANY_NAME_4, IntColumn.of(ANY_NAME_4, ANY_INT_1))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 2))
+            .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
+            .put(
+                Attribute.BEFORE_STATE,
+                IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, 1))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
   private List<Result> scanOrGetScanner(Scan scan, ScanType scanType, TransactionContext context)
       throws CrudException {
     if (scanType == ScanType.SCAN) {
