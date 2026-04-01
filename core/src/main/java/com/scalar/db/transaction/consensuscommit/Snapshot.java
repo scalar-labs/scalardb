@@ -631,7 +631,7 @@ public class Snapshot {
    * @param results the results of the scan
    * @param notFullyScannedScanner if this is a validation for a scanner that has not been fully
    *     scanned
-   * @param metadata a
+   * @param metadata the table metadata for the scanned table
    * @throws ExecutionException if a storage operation fails
    * @throws ValidationConflictException if the scan results are changed by another transaction
    */

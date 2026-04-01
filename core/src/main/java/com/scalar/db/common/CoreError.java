@@ -914,14 +914,14 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0260",
-      "Get operations by using an index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+      "Get operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
           + "Run repairTable() to create before-image indexes for the table, which will enable index-based Get operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0261",
-      "Scan operations by using an index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+      "Scan operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
           + "Run repairTable() to create before-image indexes for the table, which will enable index-based Scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
