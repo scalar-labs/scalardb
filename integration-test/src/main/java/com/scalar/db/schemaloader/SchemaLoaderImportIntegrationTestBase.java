@@ -33,14 +33,14 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(SchemaLoaderImportIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "schema_loader_import";
+  private static final String TEST_NAME = "sl_import";
   private static final Path CONFIG_FILE_PATH = Paths.get("config.properties").toAbsolutePath();
   private static final Path IMPORT_SCHEMA_FILE_PATH =
       Paths.get("import_schema.json").toAbsolutePath();
 
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE_1 = "test_table1";
-  protected static final String TABLE_2 = "test_table2";
+  protected static final String TABLE_1 = "tbl1";
+  protected static final String TABLE_2 = "tbl2";
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;

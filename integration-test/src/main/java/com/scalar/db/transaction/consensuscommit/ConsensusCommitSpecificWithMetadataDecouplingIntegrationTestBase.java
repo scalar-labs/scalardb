@@ -8,7 +8,7 @@ public abstract class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTe
 
   @Override
   protected String getTestName() {
-    return "cc_decoupling";
+    return "cc_dcpl";
   }
 
   @Override

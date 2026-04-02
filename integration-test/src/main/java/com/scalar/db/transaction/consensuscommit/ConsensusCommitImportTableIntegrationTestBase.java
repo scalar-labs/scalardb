@@ -57,7 +57,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   private static final String TEST_NAME = "cc_import";
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String BALANCE = "balance";
   private static final int INITIAL_BALANCE = 1000;
@@ -138,6 +138,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             recoveryExecutor,
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
+            consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
@@ -260,8 +261,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             .value(BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
             .build();
 
-    // When using Oracle with the SERIALIZABLE isolation level, a RetriableExecutionException may
-    // occur even without any conflicts. So, we retry the put operation in such a case.
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
     while (true) {
       try {
         originalStorage.put(put);

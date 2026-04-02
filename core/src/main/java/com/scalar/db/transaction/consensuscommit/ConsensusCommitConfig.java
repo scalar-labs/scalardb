@@ -39,6 +39,8 @@ public class ConsensusCommitConfig {
   public static final String PARALLEL_IMPLICIT_PRE_READ =
       PREFIX + "parallel_implicit_pre_read.enabled";
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
+  public static final String INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED =
+      PREFIX + "index.eventually_consistent_read.enabled";
 
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
   public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
@@ -79,6 +81,7 @@ public class ConsensusCommitConfig {
   private final boolean onePhaseCommitEnabled;
   private final boolean parallelImplicitPreReadEnabled;
   private final boolean includeMetadataEnabled;
+  private final boolean indexEventuallyConsistentReadEnabled;
 
   private final boolean coordinatorGroupCommitEnabled;
   private final int coordinatorGroupCommitSlotCapacity;
@@ -152,6 +155,8 @@ public class ConsensusCommitConfig {
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
     includeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
+    indexEventuallyConsistentReadEnabled =
+        getBoolean(properties, INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED, false);
 
     coordinatorGroupCommitEnabled = getBoolean(properties, COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
@@ -233,6 +238,10 @@ public class ConsensusCommitConfig {
 
   public boolean isIncludeMetadataEnabled() {
     return includeMetadataEnabled;
+  }
+
+  public boolean isIndexEventuallyConsistentReadEnabled() {
+    return indexEventuallyConsistentReadEnabled;
   }
 
   public boolean isCoordinatorGroupCommitEnabled() {
