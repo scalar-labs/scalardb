@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.Put;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -71,6 +72,6 @@ public final class ConsensusCommitOperationAttributes {
     if (value == null) {
       return Optional.empty();
     }
-    return Optional.of(Isolation.valueOf(value.toUpperCase()));
+    return Optional.of(Isolation.valueOf(value.toUpperCase(Locale.ROOT)));
   }
 }

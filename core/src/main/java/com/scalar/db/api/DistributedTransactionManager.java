@@ -75,7 +75,7 @@ public interface DistributedTransactionManager
    * guarantee uniqueness of the ID, so it is not recommended to use this method unless you know
    * exactly what you are doing.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
@@ -109,7 +109,7 @@ public interface DistributedTransactionManager
    * responsibility to guarantee uniqueness of the ID, so it is not recommended to use this method
    * unless you know exactly what you are doing.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param attributes attributes to associate with the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
@@ -141,7 +141,7 @@ public interface DistributedTransactionManager
    * responsibility to guarantee uniqueness of the ID, so it is not recommended to use this method
    * unless you know exactly what you are doing.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
@@ -175,7 +175,7 @@ public interface DistributedTransactionManager
    * attributes. It is users' responsibility to guarantee uniqueness of the ID, so it is not
    * recommended to use this method unless you know exactly what you are doing.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param attributes attributes to associate with the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
@@ -205,7 +205,7 @@ public interface DistributedTransactionManager
    * Starts a new transaction with the specified transaction ID. This method is an alias of {@link
    * #begin(String)}.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
    *     You can retry the transaction
@@ -239,7 +239,7 @@ public interface DistributedTransactionManager
    * Starts a new transaction with the specified transaction ID and attributes. This method is an
    * alias of {@link #begin(String, Map)}.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param attributes attributes to associate with the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
@@ -273,7 +273,7 @@ public interface DistributedTransactionManager
    * Starts a new transaction with the specified transaction ID in read-only mode. This method is an
    * alias of {@link #beginReadOnly(String)}.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
    *     You can retry the transaction
@@ -307,7 +307,7 @@ public interface DistributedTransactionManager
    * Starts a new transaction with the specified transaction ID in read-only mode with the specified
    * attributes. This method is an alias of {@link #beginReadOnly(String, Map)}.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param attributes attributes to associate with the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
@@ -337,7 +337,7 @@ public interface DistributedTransactionManager
    * users' responsibility to guarantee uniqueness of the ID, so it is not recommended to use this
    * method unless you know exactly what you are doing.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction fails
@@ -379,7 +379,7 @@ public interface DistributedTransactionManager
    * of the ID, so it is not recommended to use this method unless you know exactly what you are
    * doing.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction fails
@@ -395,7 +395,7 @@ public interface DistributedTransactionManager
    * not recommended to use this method unless you know exactly what you are doing. If the isolation
    * is not SERIALIZABLE, the serializable strategy is ignored.
    *
-   * @param txId an user-provided unique transaction ID
+   * @param txId a user-provided unique transaction ID
    * @param isolation an isolation level
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
