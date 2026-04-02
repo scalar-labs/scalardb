@@ -150,7 +150,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean requiresExplicitIndexDropBeforeDropColumn() {
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
     return true;
   }
 

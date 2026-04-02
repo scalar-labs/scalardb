@@ -148,7 +148,7 @@ public interface RdbEngineStrategy {
    * column that has a secondary index. Some engines (e.g. SQL Server, SQLite) do not automatically
    * drop the index when the column is dropped.
    */
-  default boolean requiresExplicitIndexDropBeforeDropColumn() {
+  default boolean requiresExplicitDropIndexBeforeDropColumn() {
     return false;
   }
 

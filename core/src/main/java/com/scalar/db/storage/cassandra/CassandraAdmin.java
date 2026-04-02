@@ -411,7 +411,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     try {
       // Cassandra requires dropping the secondary index before dropping the column
       TableMetadata tableMetadata = getTableMetadata(namespace, table);
-      if (tableMetadata != null && tableMetadata.getSecondaryIndexNames().contains(columnName)) {
+      assert tableMetadata != null;
+      if (tableMetadata.getSecondaryIndexNames().contains(columnName)) {
         dropIndex(namespace, table, columnName);
       }
 

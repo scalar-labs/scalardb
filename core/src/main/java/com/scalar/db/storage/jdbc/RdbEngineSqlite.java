@@ -290,7 +290,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean requiresExplicitIndexDropBeforeDropColumn() {
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
     return true;
   }
 
