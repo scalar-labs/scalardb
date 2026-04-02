@@ -45,6 +45,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -67,28 +68,16 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
   }
 
   @Override
-  public DistributedTransaction begin() throws TransactionException {
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
             .buildMessage());
   }
 
   @Override
-  public DistributedTransaction begin(String txId) throws TransactionException {
-    throw new UnsupportedOperationException(
-        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-            .buildMessage());
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly() throws TransactionException {
-    throw new UnsupportedOperationException(
-        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-            .buildMessage());
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
             .buildMessage());

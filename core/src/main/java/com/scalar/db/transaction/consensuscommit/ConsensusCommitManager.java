@@ -39,6 +39,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -204,25 +205,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public DistributedTransaction begin() {
-    String txId = UUID.randomUUID().toString();
-    return begin(txId);
+  public DistributedTransaction begin(String txId, Map<String, String> attributes) {
+    return begin(
+        txId,
+        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+        false,
+        false);
   }
 
   @Override
-  public DistributedTransaction begin(String txId) {
-    return begin(txId, isolation, false, false);
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly() {
-    String txId = UUID.randomUUID().toString();
-    return beginReadOnly(txId);
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly(String txId) {
-    return begin(txId, isolation, true, false);
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes) {
+    return begin(
+        txId,
+        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+        true,
+        false);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */

@@ -2,7 +2,10 @@ package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface DistributedTransactionManager
     extends TransactionManagerCrudOperable, AutoCloseable {
@@ -63,7 +66,9 @@ public interface DistributedTransactionManager
    *     faults. You can try retrying the transaction, but you may not be able to begin the
    *     transaction due to nontransient faults
    */
-  DistributedTransaction begin() throws TransactionNotFoundException, TransactionException;
+  default DistributedTransaction begin() throws TransactionNotFoundException, TransactionException {
+    return begin(UUID.randomUUID().toString());
+  }
 
   /**
    * Begins a new transaction with the specified transaction ID. It is users' responsibility to
@@ -78,7 +83,42 @@ public interface DistributedTransactionManager
    *     faults. You can try retrying the transaction, but you may not be able to begin the
    *     transaction due to nontransient faults
    */
-  DistributedTransaction begin(String txId)
+  default DistributedTransaction begin(String txId)
+      throws TransactionNotFoundException, TransactionException {
+    return begin(txId, Collections.emptyMap());
+  }
+
+  /**
+   * Begins a new transaction with the specified attributes.
+   *
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to begin due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction begin(Map<String, String> attributes)
+      throws TransactionNotFoundException, TransactionException {
+    return begin(UUID.randomUUID().toString(), attributes);
+  }
+
+  /**
+   * Begins a new transaction with the specified transaction ID and attributes. It is users'
+   * responsibility to guarantee uniqueness of the ID, so it is not recommended to use this method
+   * unless you know exactly what you are doing.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to begin due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
+   *     transaction due to nontransient faults
+   */
+  DistributedTransaction begin(String txId, Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException;
 
   /**
@@ -91,7 +131,10 @@ public interface DistributedTransactionManager
    *     faults. You can try retrying the transaction, but you may not be able to begin the
    *     transaction due to nontransient faults
    */
-  DistributedTransaction beginReadOnly() throws TransactionNotFoundException, TransactionException;
+  default DistributedTransaction beginReadOnly()
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly(UUID.randomUUID().toString());
+  }
 
   /**
    * Begins a new transaction with the specified transaction ID in read-only mode. It is users'
@@ -106,7 +149,42 @@ public interface DistributedTransactionManager
    *     faults. You can try retrying the transaction, but you may not be able to begin the
    *     transaction due to nontransient faults
    */
-  DistributedTransaction beginReadOnly(String txId)
+  default DistributedTransaction beginReadOnly(String txId)
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly(txId, Collections.emptyMap());
+  }
+
+  /**
+   * Begins a new transaction in read-only mode with the specified attributes.
+   *
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to begin due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction beginReadOnly(Map<String, String> attributes)
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly(UUID.randomUUID().toString(), attributes);
+  }
+
+  /**
+   * Begins a new transaction with the specified transaction ID in read-only mode with the specified
+   * attributes. It is users' responsibility to guarantee uniqueness of the ID, so it is not
+   * recommended to use this method unless you know exactly what you are doing.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to begin due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to begin the
+   *     transaction due to nontransient faults
+   */
+  DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException;
 
   /**
@@ -141,6 +219,41 @@ public interface DistributedTransactionManager
   }
 
   /**
+   * Starts a new transaction with the specified attributes. This method is an alias of {@link
+   * #begin(Map)}.
+   *
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to start due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction start(Map<String, String> attributes)
+      throws TransactionNotFoundException, TransactionException {
+    return begin(attributes);
+  }
+
+  /**
+   * Starts a new transaction with the specified transaction ID and attributes. This method is an
+   * alias of {@link #begin(String, Map)}.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to start due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction start(String txId, Map<String, String> attributes)
+      throws TransactionNotFoundException, TransactionException {
+    return begin(txId, attributes);
+  }
+
+  /**
    * Starts a new transaction in read-only mode. This method is an alias of {@link
    * #beginReadOnly()}.
    *
@@ -171,6 +284,41 @@ public interface DistributedTransactionManager
   default DistributedTransaction startReadOnly(String txId)
       throws TransactionNotFoundException, TransactionException {
     return beginReadOnly(txId);
+  }
+
+  /**
+   * Starts a new transaction in read-only mode with the specified attributes. This method is an
+   * alias of {@link #beginReadOnly(Map)}.
+   *
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to start due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction startReadOnly(Map<String, String> attributes)
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly(attributes);
+  }
+
+  /**
+   * Starts a new transaction with the specified transaction ID in read-only mode with the specified
+   * attributes. This method is an alias of {@link #beginReadOnly(String, Map)}.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @param attributes attributes to associate with the transaction
+   * @return {@link DistributedTransaction}
+   * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
+   *     You can retry the transaction
+   * @throws TransactionException if the transaction fails to start due to transient or nontransient
+   *     faults. You can try retrying the transaction, but you may not be able to start the
+   *     transaction due to nontransient faults
+   */
+  default DistributedTransaction startReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionNotFoundException, TransactionException {
+    return beginReadOnly(txId, attributes);
   }
 
   /**

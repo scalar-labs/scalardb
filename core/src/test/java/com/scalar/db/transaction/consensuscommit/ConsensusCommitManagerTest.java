@@ -47,8 +47,10 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,7 +92,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation() {
+  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -105,7 +108,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -121,7 +125,8 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation() {
+      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation()
+          throws TransactionException {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
@@ -158,7 +163,8 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+          throws TransactionException {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
@@ -194,7 +200,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -223,7 +230,8 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      beginReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode() {
+      beginReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager spied = spy(manager);
 
@@ -237,7 +245,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void beginReadOnly_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolationInReadOnlyMode() {
+  public void beginReadOnly_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolationInReadOnlyMode()
+      throws TransactionException {
     // Arrange
     ConsensusCommitManager spied = spy(manager);
 
@@ -248,6 +257,74 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(eq(ANY_TX_ID), eq(Isolation.SNAPSHOT), eq(true), eq(false));
 
     assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+  }
+
+  @Test
+  public void
+      begin_TxIdAndAttributesWithIsolationGiven_ReturnWithSpecifiedTxIdAndSpecifiedIsolation() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+
+    // Act
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+  }
+
+  @Test
+  public void
+      begin_TxIdAndAttributesWithoutIsolationGiven_ReturnWithSpecifiedTxIdAndDefaultIsolation() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdAndAttributesWithIsolationGiven_ReturnWithSpecifiedTxIdAndSpecifiedIsolationInReadOnlyMode() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+
+    // Act
+    DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+    ConsensusCommit inner =
+        (ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
+    assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(inner.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(inner.getTransactionContext().readOnly).isTrue();
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdAndAttributesWithoutIsolationGiven_ReturnWithSpecifiedTxIdAndDefaultIsolationInReadOnlyMode() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+    ConsensusCommit inner =
+        (ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
+    assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(inner.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(inner.getTransactionContext().readOnly).isTrue();
   }
 
   @Test
