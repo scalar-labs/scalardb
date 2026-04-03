@@ -94,9 +94,7 @@ spotbugsTest.reports {
 spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
 
 // for publishing (not to publish the fat jar)
-if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
-        project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') } ||
-        project.gradle.startParameter.taskNames.any { it.endsWith('publishAllPublicationsToGitHubPackagesRepository') }) {
+if (project.gradle.startParameter.taskNames.any { it.tokenize(':').last().startsWith('publish') }) {
     shadowJar.enabled = false
 }
 
