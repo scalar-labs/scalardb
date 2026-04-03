@@ -440,6 +440,13 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public boolean hasPrivilege(
+      String username, String namespaceName, String tableName, Privilege privilege)
+      throws ExecutionException {
+    return distributedTransactionAdmin.hasPrivilege(username, namespaceName, tableName, privilege);
+  }
+
+  @Override
   public void revokeAdminOptionFromUser(String username, String roleName)
       throws ExecutionException {
     distributedTransactionAdmin.revokeAdminOptionFromUser(username, roleName);

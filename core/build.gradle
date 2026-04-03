@@ -179,7 +179,6 @@ dependencies {
     testImplementation 'software.amazon.awssdk:iam'
     testImplementation 'software.amazon.awssdk:iam-policy-builder'
     implementation "com.zaxxer:HikariCP:${hikariCpVersion}"
-    implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8:${oracleDriverVersion}"
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
@@ -285,6 +284,7 @@ task integrationTestObjectStorage(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    maxHeapSize = "2g"
 }
 
 task integrationTestMultiStorage(type: Test) {

@@ -6,6 +6,8 @@ import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.provider.Arguments;
 
 public class DynamoColumnValueIntegrationTest
     extends DistributedStorageColumnValueIntegrationTestBase {
@@ -42,5 +44,11 @@ public class DynamoColumnValueIntegrationTest
       return DynamoTestUtils.getMaxDynamoDoubleValue(columnName);
     }
     return super.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  @Override
+  protected Stream<Arguments> provideLargeBlobSizes() {
+    // DynamoDB has a maximum item size of 400KB
+    return Stream.of(Arguments.of(400_000, "400 KB"));
   }
 }

@@ -31,6 +31,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isOnePhaseCommitEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
+    assertThat(config.isIndexEventuallyConsistentReadEnabled()).isFalse();
   }
 
   @Test
@@ -207,5 +208,19 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isIncludeMetadataEnabled()).isTrue();
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithIndexEventuallyConsistentReadEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isIndexEventuallyConsistentReadEnabled()).isTrue();
   }
 }

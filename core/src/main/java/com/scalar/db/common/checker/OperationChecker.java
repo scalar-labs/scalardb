@@ -2,6 +2,7 @@ package com.scalar.db.common.checker;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
@@ -143,7 +144,8 @@ public class OperationChecker {
   }
 
   private void check(ScanAll scanAll) throws ExecutionException {
-    if (!config.isCrossPartitionScanEnabled()) {
+    if (!config.isCrossPartitionScanEnabled()
+        && !DatabaseOperationAttributes.isCrossPartitionScanEnabled(scanAll)) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN.buildMessage(scanAll));
     }
@@ -157,13 +159,17 @@ public class OperationChecker {
           CoreError.OPERATION_CHECK_ERROR_LIMIT.buildMessage(scanAll));
     }
 
-    if (!config.isCrossPartitionScanOrderingEnabled() && !scanAll.getOrderings().isEmpty()) {
+    if (!config.isCrossPartitionScanOrderingEnabled()
+        && !DatabaseOperationAttributes.isCrossPartitionScanOrderingEnabled(scanAll)
+        && !scanAll.getOrderings().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
     checkOrderingsForScanAll(scanAll, metadata);
 
-    if (!config.isCrossPartitionScanFilteringEnabled() && !scanAll.getConjunctions().isEmpty()) {
+    if (!config.isCrossPartitionScanFilteringEnabled()
+        && !DatabaseOperationAttributes.isCrossPartitionScanFilteringEnabled(scanAll)
+        && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_FILTERING.buildMessage(scanAll));
     }
