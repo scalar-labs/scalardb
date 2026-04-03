@@ -298,6 +298,11 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return true;
+  }
+
+  @Override
   public String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName) {
     // SQLite does not support renaming an index

@@ -907,8 +907,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             TableMetadata currentTableMetadata =
                 tableMetadataService.getTableMetadata(connection, namespace, table);
+
+            // Some RDB engines require dropping the index before dropping the column
+            if (rdbEngine.requiresExplicitDropIndexBeforeDropColumn()
+                && currentTableMetadata.getSecondaryIndexNames().contains(columnName)) {
+              dropIndex(connection, namespace, table, columnName);
+            }
+
             TableMetadata updatedTableMetadata =
-                TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+                TableMetadata.newBuilder(currentTableMetadata)
+                    .removeColumn(columnName)
+                    .removeSecondaryIndex(columnName)
+                    .build();
             String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
 
             execute(connection, dropColumnStatements, requiresExplicitCommit);

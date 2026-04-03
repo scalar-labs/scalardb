@@ -1054,6 +1054,11 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .build();
       assertThat(admin.getTableMetadata(namespace1, TABLE4)).isEqualTo(expectedTableMetadata);
       assertThat(admin.indexExists(namespace1, TABLE4, "c2")).isFalse();
+
+      // Verify the column and index are fully removed by re-creating them with the same name
+      admin.addNewColumnToTable(namespace1, TABLE4, "c2", DataType.INT);
+      admin.createIndex(namespace1, TABLE4, "c2");
+      assertThat(admin.indexExists(namespace1, TABLE4, "c2")).isTrue();
     } finally {
       admin.dropTable(namespace1, TABLE4, true);
     }
