@@ -86,7 +86,8 @@ task docker(type: Exec) {
 
 // for archiving and uploading to maven central
 if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
-        project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') }) {
+        project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') } ||
+        project.gradle.startParameter.taskNames.any { it.endsWith('publishAllPublicationsToGitHubPackagesRepository') }) {
     // not to publish the fat jar to maven central
     shadowJar.enabled = false
 }
