@@ -91,7 +91,7 @@ public interface DistributedTransactionManager
   /**
    * Begins a new transaction with the specified attributes.
    *
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
@@ -110,7 +110,7 @@ public interface DistributedTransactionManager
    * unless you know exactly what you are doing.
    *
    * @param txId a user-provided unique transaction ID
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
@@ -157,7 +157,7 @@ public interface DistributedTransactionManager
   /**
    * Begins a new transaction in read-only mode with the specified attributes.
    *
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
@@ -176,7 +176,7 @@ public interface DistributedTransactionManager
    * recommended to use this method unless you know exactly what you are doing.
    *
    * @param txId a user-provided unique transaction ID
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
    *     You can retry the transaction
@@ -222,7 +222,7 @@ public interface DistributedTransactionManager
    * Starts a new transaction with the specified attributes. This method is an alias of {@link
    * #begin(Map)}.
    *
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
    *     You can retry the transaction
@@ -240,7 +240,7 @@ public interface DistributedTransactionManager
    * alias of {@link #begin(String, Map)}.
    *
    * @param txId a user-provided unique transaction ID
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
    *     You can retry the transaction
@@ -290,7 +290,7 @@ public interface DistributedTransactionManager
    * Starts a new transaction in read-only mode with the specified attributes. This method is an
    * alias of {@link #beginReadOnly(Map)}.
    *
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
    *     You can retry the transaction
@@ -308,7 +308,7 @@ public interface DistributedTransactionManager
    * attributes. This method is an alias of {@link #beginReadOnly(String, Map)}.
    *
    * @param txId a user-provided unique transaction ID
-   * @param attributes attributes to associate with the transaction
+   * @param attributes attributes for the transaction
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction fails to start due to transient faults.
    *     You can retry the transaction

@@ -38,6 +38,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -299,24 +300,30 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return transaction;
   }
 
-  private DistributedTransaction beginOneOperation(boolean readOnly) {
+  private DistributedTransaction beginOneOperation(
+      boolean readOnly, Map<String, String> attributes) {
     String txId = UUID.randomUUID().toString();
-    return begin(txId, isolation, readOnly, true);
+    return begin(
+        txId,
+        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+        readOnly,
+        true);
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)), true);
+    return executeTransaction(t -> t.get(copyAndSetTargetToIfNot(get)), true, get.getAttributes());
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException, UnknownTransactionStatusException {
-    return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)), true);
+    return executeTransaction(
+        t -> t.scan(copyAndSetTargetToIfNot(scan)), true, scan.getAttributes());
   }
 
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
-    DistributedTransaction transaction = beginOneOperation(true);
+    DistributedTransaction transaction = beginOneOperation(true, scan.getAttributes());
 
     TransactionCrudOperable.Scanner scanner;
     try {
@@ -404,7 +411,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.put(copyAndSetTargetToIfNot(put));
           return null;
         },
-        false);
+        false,
+        put.getAttributes());
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -416,7 +424,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.put(copyAndSetTargetToIfNot(puts));
           return null;
         },
-        false);
+        false,
+        puts.isEmpty() ? Collections.emptyMap() : puts.get(0).getAttributes());
   }
 
   @Override
@@ -426,7 +435,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.insert(copyAndSetTargetToIfNot(insert));
           return null;
         },
-        false);
+        false,
+        insert.getAttributes());
   }
 
   @Override
@@ -436,7 +446,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.upsert(copyAndSetTargetToIfNot(upsert));
           return null;
         },
-        false);
+        false,
+        upsert.getAttributes());
   }
 
   @Override
@@ -446,7 +457,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.update(copyAndSetTargetToIfNot(update));
           return null;
         },
-        false);
+        false,
+        update.getAttributes());
   }
 
   @Override
@@ -456,7 +468,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.delete(copyAndSetTargetToIfNot(delete));
           return null;
         },
-        false);
+        false,
+        delete.getAttributes());
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
@@ -468,7 +481,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.delete(copyAndSetTargetToIfNot(deletes));
           return null;
         },
-        false);
+        false,
+        deletes.isEmpty() ? Collections.emptyMap() : deletes.get(0).getAttributes());
   }
 
   @Override
@@ -479,21 +493,26 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           t.mutate(copyAndSetTargetToIfNot(mutations));
           return null;
         },
-        false);
+        false,
+        mutations.isEmpty() ? Collections.emptyMap() : mutations.get(0).getAttributes());
   }
 
   @Override
   public List<BatchResult> batch(List<? extends Operation> operations)
       throws CrudException, UnknownTransactionStatusException {
     boolean readOnly = operations.stream().allMatch(o -> o instanceof Selection);
-    return executeTransaction(t -> t.batch(operations), readOnly);
+    return executeTransaction(
+        t -> t.batch(operations),
+        readOnly,
+        operations.isEmpty() ? Collections.emptyMap() : operations.get(0).getAttributes());
   }
 
   private <R> R executeTransaction(
       ThrowableFunction<DistributedTransaction, R, TransactionException> throwableFunction,
-      boolean readOnly)
+      boolean readOnly,
+      Map<String, String> attributes)
       throws CrudException, UnknownTransactionStatusException {
-    DistributedTransaction transaction = beginOneOperation(readOnly);
+    DistributedTransaction transaction = beginOneOperation(readOnly, attributes);
 
     try {
       R result = throwableFunction.apply(transaction);
