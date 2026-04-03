@@ -268,7 +268,8 @@ public class OperationBuilder {
     T dateValue(String columnName, @Nullable LocalDate value);
 
     /**
-     * Adds the specified TIME value as a LocalTime to the list of put values.
+     * Adds the specified TIME value as a LocalTime to the list of put values. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param columnName a column name of the value
      * @param value a TIME value to put as LocalTime type
@@ -277,7 +278,8 @@ public class OperationBuilder {
     T timeValue(String columnName, @Nullable LocalTime value);
 
     /**
-     * Adds the specified TIMESTAMP value as a LocalDateTime value to the list of put values.
+     * Adds the specified TIMESTAMP value as a LocalDateTime value to the list of put values. If the
+     * value has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param columnName a column name of the value
      * @param value a TIMESTAMP value to put as LocalDateTime type
@@ -286,7 +288,8 @@ public class OperationBuilder {
     T timestampValue(String columnName, @Nullable LocalDateTime value);
 
     /**
-     * Adds the specified TIMESTAMPTZ value as an Instant to the list of put values.
+     * Adds the specified TIMESTAMPTZ value as an Instant to the list of put values. If the value
+     * has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param columnName a column name of the value
      * @param value a TIMESTAMPTZ value to put as Instant type

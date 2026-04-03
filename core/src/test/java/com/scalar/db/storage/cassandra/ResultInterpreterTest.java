@@ -294,6 +294,28 @@ public class ResultInterpreterTest {
   }
 
   @Test
+  public void
+      interpret_TimeColumnWithSubMicrosecondPrecision_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TIME)
+            .addPartitionKey(ANY_NAME_1)
+            .build();
+
+    when(row.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+    long nanos = LocalTime.of(12, 30, 45, 123_456_789).toNanoOfDay();
+    when(row.getTime(ANY_COLUMN_NAME_1)).thenReturn(nanos);
+
+    ResultInterpreter interpreter = new ResultInterpreter(Collections.emptyList(), tableMetadata);
+
+    // Act Assert
+    assertThatThrownBy(() -> interpreter.interpret(row))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void interpret_TimestampType_ShouldThrowUnsupportedOperationException() {
     // Arrange
     TableMetadata tableMetadata =

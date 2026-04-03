@@ -381,7 +381,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     if (time == null) {
       return TimeColumn.ofNull(columnName);
     } else {
-      return TimeColumn.of(columnName, time.toLocalDateTime().toLocalTime());
+      return TimeColumn.ofStrict(columnName, time.toLocalDateTime().toLocalTime());
     }
   }
 
@@ -394,7 +394,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     } else {
       LocalDateTime timestamp =
           RdbEngineTimeTypeDb2.TIMESTAMP_FORMATTER.parse(timestampStr, LocalDateTime::from);
-      return TimestampColumn.of(columnName, timestamp);
+      return TimestampColumn.ofStrict(columnName, timestamp);
     }
   }
 
@@ -407,7 +407,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     } else {
       Instant timestampTZ =
           RdbEngineTimeTypeDb2.TIMESTAMP_FORMATTER.parse(timestampStr, Instant::from);
-      return TimestampTZColumn.of(columnName, timestampTZ);
+      return TimestampTZColumn.ofStrict(columnName, timestampTZ);
     }
   }
 
