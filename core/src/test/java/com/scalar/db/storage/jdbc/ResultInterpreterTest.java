@@ -26,7 +26,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -358,12 +357,10 @@ public class ResultInterpreterTest {
 
   // SQLite is excluded because it uses long encoding (decodeTimestamp/decodeTimestampTZ) that
   // can never produce sub-millisecond values.
-  // DB2 is excluded because it uses a string formatter that rejects excess fractional digits
-  // with DateTimeParseException (tested separately below).
   @ParameterizedTest
   @EnumSource(
       value = RdbEngine.class,
-      names = {"SQLITE", "DB2"},
+      names = {"SQLITE"},
       mode = EnumSource.Mode.EXCLUDE)
   public void
       interpret_TimestampColumnWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException(
@@ -395,12 +392,10 @@ public class ResultInterpreterTest {
 
   // SQLite is excluded because it uses long encoding (decodeTimestampTZ) that can never produce
   // sub-millisecond values.
-  // DB2 is excluded because it uses a string formatter that rejects excess fractional digits
-  // with DateTimeParseException (tested separately below).
   @ParameterizedTest
   @EnumSource(
       value = RdbEngine.class,
-      names = {"SQLITE", "DB2"},
+      names = {"SQLITE"},
       mode = EnumSource.Mode.EXCLUDE)
   public void
       interpret_TimestampTZColumnWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException(
@@ -436,63 +431,5 @@ public class ResultInterpreterTest {
     // Act Assert
     assertThatThrownBy(() -> interpreter.interpret(resultSet))
         .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      interpret_Db2TimestampColumnWithExcessFractionalDigits_ShouldThrowDateTimeParseException()
-          throws SQLException {
-    // Arrange
-    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(RdbEngine.DB2);
-
-    TableMetadata tableMetadata =
-        TableMetadata.newBuilder()
-            .addColumn(ANY_NAME_1, DataType.TEXT)
-            .addColumn(ANY_COLUMN_NAME_1, DataType.TIMESTAMP)
-            .addPartitionKey(ANY_NAME_1)
-            .build();
-
-    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
-    when(resultSet.wasNull()).thenReturn(false);
-
-    // DB2 TIMESTAMP_FORMATTER parses at most 3 fractional digits (milliseconds).
-    // A string with microsecond precision (6 digits) causes a DateTimeParseException.
-    when(resultSet.getString(ANY_COLUMN_NAME_1)).thenReturn("2024-01-15 12:30:45.123456");
-
-    ResultInterpreter interpreter =
-        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
-
-    // Act Assert
-    assertThatThrownBy(() -> interpreter.interpret(resultSet))
-        .isInstanceOf(DateTimeParseException.class);
-  }
-
-  @Test
-  public void
-      interpret_Db2TimestampTZColumnWithExcessFractionalDigits_ShouldThrowDateTimeParseException()
-          throws SQLException {
-    // Arrange
-    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(RdbEngine.DB2);
-
-    TableMetadata tableMetadata =
-        TableMetadata.newBuilder()
-            .addColumn(ANY_NAME_1, DataType.TEXT)
-            .addColumn(ANY_COLUMN_NAME_1, DataType.TIMESTAMPTZ)
-            .addPartitionKey(ANY_NAME_1)
-            .build();
-
-    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
-    when(resultSet.wasNull()).thenReturn(false);
-
-    // DB2 TIMESTAMP_FORMATTER parses at most 3 fractional digits (milliseconds).
-    // A string with microsecond precision (6 digits) causes a DateTimeParseException.
-    when(resultSet.getString(ANY_COLUMN_NAME_1)).thenReturn("2024-01-15 12:30:45.123456");
-
-    ResultInterpreter interpreter =
-        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
-
-    // Act Assert
-    assertThatThrownBy(() -> interpreter.interpret(resultSet))
-        .isInstanceOf(DateTimeParseException.class);
   }
 }
