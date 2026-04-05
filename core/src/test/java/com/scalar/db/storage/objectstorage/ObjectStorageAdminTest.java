@@ -32,7 +32,7 @@ public class ObjectStorageAdminTest {
 
   @Mock private ObjectStorageWrapper wrapper;
   @Mock private ObjectStorageConfig config;
-  @Captor private ArgumentCaptor<String> payloadCaptor;
+  @Captor private ArgumentCaptor<byte[]> payloadCaptor;
   private ObjectStorageAdmin admin;
 
   @BeforeEach
@@ -83,7 +83,7 @@ public class ObjectStorageAdminTest {
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     metadataTable.put(tableMetadataKey, objectStorageTableMetadata);
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
 
@@ -152,7 +152,7 @@ public class ObjectStorageAdminTest {
     Map<String, ObjectStorageNamespaceMetadata> namespaceMetadataTable = new HashMap<>();
     namespaceMetadataTable.put("ns1", new ObjectStorageNamespaceMetadata("ns1"));
     namespaceMetadataTable.put("ns2", new ObjectStorageNamespaceMetadata("ns2"));
-    String serializedMetadata = Serializer.serialize(namespaceMetadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(namespaceMetadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
 
@@ -190,7 +190,7 @@ public class ObjectStorageAdminTest {
     String namespace = "ns";
     Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
     metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
 
@@ -238,7 +238,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
     assertThat(insertedMetadata).containsKey(namespace);
@@ -272,7 +272,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageTableMetadata> insertedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
     String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
@@ -296,7 +296,7 @@ public class ObjectStorageAdminTest {
     String namespace = "ns";
     Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
     metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -321,7 +321,7 @@ public class ObjectStorageAdminTest {
     Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
     metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
     metadataTable.put(anotherNamespace, new ObjectStorageNamespaceMetadata(anotherNamespace));
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -336,7 +336,7 @@ public class ObjectStorageAdminTest {
     // Assert
     verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
     Map<String, ObjectStorageNamespaceMetadata> updatedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
     assertThat(updatedMetadata).doesNotContainKey(namespace);
@@ -352,7 +352,7 @@ public class ObjectStorageAdminTest {
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     metadataTable.put(tableMetadataKey, ObjectStorageTableMetadata.newBuilder().build());
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -382,7 +382,7 @@ public class ObjectStorageAdminTest {
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     metadataTable.put(tableMetadataKey, ObjectStorageTableMetadata.newBuilder().build());
     metadataTable.put(anotherTableMetadataKey, ObjectStorageTableMetadata.newBuilder().build());
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -397,7 +397,7 @@ public class ObjectStorageAdminTest {
     // Assert
     verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
     Map<String, ObjectStorageTableMetadata> updatedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
     assertThat(updatedMetadata).doesNotContainKey(tableMetadataKey);
@@ -451,13 +451,13 @@ public class ObjectStorageAdminTest {
     metadataTable.put(tableMetadataKey2, ObjectStorageTableMetadata.newBuilder().build());
     metadataTable.put(tableMetadataKey3, ObjectStorageTableMetadata.newBuilder().build());
 
-    String serializedTableMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedTableMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse tableMetadataResponse =
         new ObjectStorageWrapperResponse(serializedTableMetadata, "version1");
 
     Map<String, ObjectStorageNamespaceMetadata> namespaceMetadata = new HashMap<>();
     namespaceMetadata.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
-    String serializedNamespaceMetadata = Serializer.serialize(namespaceMetadata);
+    byte[] serializedNamespaceMetadata = JsonSerializer.serialize(namespaceMetadata);
     ObjectStorageWrapperResponse namespaceResponse =
         new ObjectStorageWrapperResponse(serializedNamespaceMetadata, "version1");
 
@@ -498,7 +498,7 @@ public class ObjectStorageAdminTest {
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     metadataTable.put(tableMetadataKey, existingTableMetadata);
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -514,7 +514,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
 
     Map<String, ObjectStorageTableMetadata> updatedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
 
@@ -530,7 +530,7 @@ public class ObjectStorageAdminTest {
     // Arrange
     String namespace = "ns";
     Map<String, ObjectStorageNamespaceMetadata> metadataTable = new HashMap<>();
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -546,7 +546,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
     assertThat(insertedMetadata).containsKey(namespace);
@@ -567,7 +567,7 @@ public class ObjectStorageAdminTest {
             .build();
 
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
-    String serializedMetadata = Serializer.serialize(metadataTable);
+    byte[] serializedMetadata = JsonSerializer.serialize(metadataTable);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedMetadata, "version1");
     String expectedObjectKey =
@@ -583,7 +583,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageTableMetadata> insertedMetadata =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             payloadCaptor.getValue(),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
 

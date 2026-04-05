@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -29,10 +30,23 @@ public class StreamingRecordIteratorTest {
   private static final String VERSION = "version1";
 
   @Mock private ObjectStorageWrapper wrapper;
+  private ObjectStorageTableMetadata osMetadata;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    Map<String, String> columns = new HashMap<>();
+    columns.put("pk", "text");
+    columns.put("ck", "text");
+    columns.put("col1", "int");
+    osMetadata =
+        ObjectStorageTableMetadata.newBuilder()
+            .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList("pk")))
+            .clusteringKeyNames(new LinkedHashSet<>(Collections.singletonList("ck")))
+            .clusteringOrders(Collections.singletonMap("ck", "ASC"))
+            .secondaryIndexNames(Collections.emptySet())
+            .columns(columns)
+            .build();
   }
 
   @Test
@@ -40,7 +54,7 @@ public class StreamingRecordIteratorTest {
     // Arrange
     List<String> partitionKeys = Collections.emptyList();
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     boolean hasNext = iterator.hasNext();
@@ -54,7 +68,7 @@ public class StreamingRecordIteratorTest {
     // Arrange
     List<String> partitionKeys = Collections.emptyList();
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act & Assert
     assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
@@ -68,7 +82,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     boolean hasNext = iterator.hasNext();
@@ -85,7 +99,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -112,7 +126,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_3, records3);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -137,7 +151,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_2, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -160,7 +174,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_2, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -182,7 +196,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     boolean hasNext1 = iterator.hasNext();
@@ -206,7 +220,7 @@ public class StreamingRecordIteratorTest {
     when(wrapper.get(anyString())).thenThrow(exception);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act & Assert
     assertThatThrownBy(iterator::hasNext).isInstanceOf(RuntimeException.class);
@@ -220,7 +234,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     iterator.next();
@@ -239,7 +253,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, osMetadata);
 
     // Act
     iterator.next();
@@ -272,7 +286,7 @@ public class StreamingRecordIteratorTest {
       String partitionKey, Map<String, ObjectStorageRecord> records)
       throws ObjectStorageWrapperException {
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = partition.serialize(osMetadata);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     String objectKey = ObjectStorageUtils.getObjectKey(NAMESPACE, TABLE, partitionKey);

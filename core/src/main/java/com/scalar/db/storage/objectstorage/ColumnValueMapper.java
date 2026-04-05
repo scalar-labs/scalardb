@@ -14,7 +14,7 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
-import java.util.Base64;
+import java.nio.ByteBuffer;
 import javax.annotation.Nullable;
 
 public class ColumnValueMapper {
@@ -45,9 +45,18 @@ public class ColumnValueMapper {
             ? TextColumn.ofNull(name)
             : TextColumn.of(name, (String) recordValue);
       case BLOB:
-        return recordValue == null
-            ? BlobColumn.ofNull(name)
-            : BlobColumn.of(name, Base64.getDecoder().decode((String) recordValue));
+        if (recordValue == null) {
+          return BlobColumn.ofNull(name);
+        } else if (recordValue instanceof byte[]) {
+          return BlobColumn.of(name, (byte[]) recordValue);
+        } else if (recordValue instanceof ByteBuffer) {
+          ByteBuffer buffer = ((ByteBuffer) recordValue).duplicate();
+          byte[] bytes = new byte[buffer.remaining()];
+          buffer.get(bytes);
+          return BlobColumn.of(name, bytes);
+        } else {
+          throw new AssertionError("Unexpected BLOB value type: " + recordValue.getClass());
+        }
       case DATE:
         return recordValue == null
             ? DateColumn.ofNull(name)

@@ -53,6 +53,7 @@ subprojects {
         spotbugsVersion = '4.8.6'
         errorproneVersion = '2.10.0'
         errorproneJavacVersion = '9+181-r4173-1'
+        avroVersion = '1.11.4'
         gsonVersion = '2.13.2'
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'

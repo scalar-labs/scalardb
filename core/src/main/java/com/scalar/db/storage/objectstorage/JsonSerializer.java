@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-public class Serializer {
+public class JsonSerializer {
   public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
   private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -21,7 +21,7 @@ public class Serializer {
     mapper.registerModule(new JavaTimeModule());
   }
 
-  public static <T> T deserialize(String json, TypeReference<T> typeReference) {
+  public static <T> T deserialize(byte[] json, TypeReference<T> typeReference) {
     try {
       return mapper.readValue(json, typeReference);
     } catch (Exception e) {
@@ -29,9 +29,9 @@ public class Serializer {
     }
   }
 
-  public static <T> String serialize(T object) {
+  public static <T> byte[] serialize(T object) {
     try {
-      return mapper.writeValueAsString(object);
+      return mapper.writeValueAsBytes(object);
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize the object.", e);
     }

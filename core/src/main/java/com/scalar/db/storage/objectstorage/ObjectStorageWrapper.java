@@ -29,22 +29,22 @@ public interface ObjectStorageWrapper {
    * Insert the object into the storage.
    *
    * @param key the key of the object
-   * @param object the object to insert
+   * @param object the object to insert as a byte array
    * @throws PreconditionFailedException if the object already exists
    * @throws ObjectStorageWrapperException if an error occurs
    */
-  void insert(String key, String object) throws ObjectStorageWrapperException;
+  void insert(String key, byte[] object) throws ObjectStorageWrapperException;
 
   /**
    * Update the object in the storage if the version matches.
    *
    * @param key the key of the object
-   * @param object the updated object
+   * @param object the updated object as a byte array
    * @param version the expected version of the object
    * @throws PreconditionFailedException if the version does not match or the object does not exist
    * @throws ObjectStorageWrapperException if an error occurs
    */
-  void update(String key, String object, String version) throws ObjectStorageWrapperException;
+  void update(String key, byte[] object, String version) throws ObjectStorageWrapperException;
 
   /**
    * Delete the object from the storage.

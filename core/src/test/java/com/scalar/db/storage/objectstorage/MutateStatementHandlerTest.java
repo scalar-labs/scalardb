@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
@@ -50,7 +49,7 @@ public class MutateStatementHandlerTest {
   @Mock private TableMetadata metadata;
 
   @Captor private ArgumentCaptor<String> objectKeyCaptor;
-  @Captor private ArgumentCaptor<String> payloadCaptor;
+  @Captor private ArgumentCaptor<byte[]> payloadCaptor;
   @Captor private ArgumentCaptor<String> versionCaptor;
 
   @BeforeEach
@@ -64,8 +63,17 @@ public class MutateStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    when(metadata.getColumnNames())
+        .thenReturn(
+            new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4)));
+    when(metadata.getColumnDataType(ANY_NAME_1)).thenReturn(DataType.TEXT);
+    when(metadata.getColumnDataType(ANY_NAME_2)).thenReturn(DataType.TEXT);
     when(metadata.getColumnDataType(ANY_NAME_3)).thenReturn(DataType.INT);
     when(metadata.getColumnDataType(ANY_NAME_4)).thenReturn(DataType.INT);
+    when(metadata.getClusteringOrder(ANY_NAME_2))
+        .thenReturn(com.scalar.db.api.Scan.Ordering.Order.ASC);
+    when(metadata.getSecondaryIndexNames()).thenReturn(Collections.emptySet());
+    when(metadata.getEncryptedColumnNames()).thenReturn(Collections.emptySet());
   }
 
   private Put preparePut() {
@@ -127,7 +135,7 @@ public class MutateStatementHandlerTest {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
     records.put(recordId, prepareExistingRecord());
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -141,7 +149,7 @@ public class MutateStatementHandlerTest {
       records.put(additionalRecordId, prepareExistingRecord());
     }
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -421,9 +429,7 @@ public class MutateStatementHandlerTest {
     verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    ObjectStoragePartition insertedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    ObjectStoragePartition insertedPartition = deserializePartition(payloadCaptor.getValue());
     Optional<ObjectStorageRecord> record = insertedPartition.getRecord(expectedConcatenatedKey);
     assertThat(record).isPresent();
     assertThat(record.get().getValues())
@@ -438,9 +444,7 @@ public class MutateStatementHandlerTest {
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    ObjectStoragePartition updatedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    ObjectStoragePartition updatedPartition = deserializePartition(payloadCaptor.getValue());
     Optional<ObjectStorageRecord> record = updatedPartition.getRecord(expectedConcatenatedKey);
     assertThat(record).isPresent();
     assertThat(record.get().getValues())
@@ -727,9 +731,7 @@ public class MutateStatementHandlerTest {
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    ObjectStoragePartition updatedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    ObjectStoragePartition updatedPartition = deserializePartition(payloadCaptor.getValue());
     assertThat(updatedPartition.getRecord(expectedConcatenatedKey)).isEmpty();
     assertThat(updatedPartition.getRecord(expectedExistingRecordKey)).isPresent();
   }
@@ -768,9 +770,7 @@ public class MutateStatementHandlerTest {
     verify(wrapper).insert(objectKeyCaptor.capture(), payloadCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
-    ObjectStoragePartition insertedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    ObjectStoragePartition insertedPartition = deserializePartition(payloadCaptor.getValue());
     Optional<ObjectStorageRecord> record1 = insertedPartition.getRecord(mutation1.getRecordId());
     assertThat(record1).isPresent();
     assertThat(record1.get().getValues())
@@ -821,9 +821,7 @@ public class MutateStatementHandlerTest {
     verify(wrapper)
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
-    ObjectStoragePartition updatedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+    ObjectStoragePartition updatedPartition = deserializePartition(payloadCaptor.getValue());
     Optional<ObjectStorageRecord> record1 = updatedPartition.getRecord(mutation1.getRecordId());
     assertThat(record1).isPresent();
     assertThat(record1.get().getValues())
@@ -845,5 +843,30 @@ public class MutateStatementHandlerTest {
         .containsEntry(ANY_NAME_3, ANY_INT_1)
         .containsEntry(ANY_NAME_4, ANY_INT_2);
     assertThat(versionCaptor.getValue()).isEqualTo(VERSION);
+  }
+
+  private ObjectStorageTableMetadata createObjectStorageTableMetadata() {
+    Map<String, String> columns = new HashMap<>();
+    columns.put(ANY_NAME_1, "text");
+    columns.put(ANY_NAME_2, "text");
+    columns.put(ANY_NAME_3, "int");
+    columns.put(ANY_NAME_4, "int");
+    return ObjectStorageTableMetadata.newBuilder()
+        .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)))
+        .clusteringKeyNames(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)))
+        .clusteringOrders(Collections.singletonMap(ANY_NAME_2, "ASC"))
+        .secondaryIndexNames(Collections.emptySet())
+        .columns(columns)
+        .build();
+  }
+
+  private byte[] serializePartition(ObjectStoragePartition partition) {
+    ObjectStorageTableMetadata osMetadata = createObjectStorageTableMetadata();
+    return partition.serialize(osMetadata);
+  }
+
+  private ObjectStoragePartition deserializePartition(byte[] data) {
+    ObjectStorageTableMetadata osMetadata = createObjectStorageTableMetadata();
+    return ObjectStoragePartition.deserialize(data, osMetadata);
   }
 }
