@@ -3,7 +3,11 @@ package com.scalar.db.storage.objectstorage;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,10 +19,11 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class ObjectStorageRecord implements Serializable {
   private static final long serialVersionUID = 1L;
-  private final String id;
-  private final Map<String, Object> partitionKey;
-  private final Map<String, Object> clusteringKey;
-  private final Map<String, Object> values;
+  // Non-final for custom deserialization (readObject)
+  private transient String id;
+  private transient Map<String, Object> partitionKey;
+  private transient Map<String, Object> clusteringKey;
+  private transient Map<String, Object> values;
 
   @JsonCreator
   public ObjectStorageRecord(
@@ -77,6 +82,37 @@ public class ObjectStorageRecord implements Serializable {
   @Override
   public int hashCode() {
     return Objects.hash(id, partitionKey, clusteringKey, values);
+  }
+
+  private void writeObject(ObjectOutputStream out) throws IOException {
+    out.writeObject(id);
+    out.writeObject(toSerializableMap(partitionKey));
+    out.writeObject(toSerializableMap(clusteringKey));
+    out.writeObject(toSerializableMap(values));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+    id = (String) in.readObject();
+    partitionKey = (Map<String, Object>) in.readObject();
+    clusteringKey = (Map<String, Object>) in.readObject();
+    values = (Map<String, Object>) in.readObject();
+  }
+
+  private static Map<String, Object> toSerializableMap(Map<String, Object> map) {
+    Map<String, Object> result = new HashMap<>(map.size());
+    for (Map.Entry<String, Object> entry : map.entrySet()) {
+      Object value = entry.getValue();
+      if (value instanceof ByteBuffer) {
+        ByteBuffer bb = (ByteBuffer) value;
+        byte[] bytes = new byte[bb.remaining()];
+        bb.duplicate().get(bytes);
+        result.put(entry.getKey(), bytes);
+      } else {
+        result.put(entry.getKey(), value);
+      }
+    }
+    return result;
   }
 
   public static Builder newBuilder() {

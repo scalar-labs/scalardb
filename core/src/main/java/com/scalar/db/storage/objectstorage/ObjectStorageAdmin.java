@@ -429,9 +429,10 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       if (readVersionMap != null) {
         readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+      return new HashMap<>(
+          Serializer.deserialize(
+              response.get().getPayload(),
+              new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {}));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
@@ -453,9 +454,10 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       if (readVersionMap != null) {
         readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+      return new HashMap<>(
+          Serializer.deserialize(
+              response.get().getPayload(),
+              new TypeReference<Map<String, ObjectStorageTableMetadata>>() {}));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
