@@ -2,12 +2,14 @@ package com.scalar.db.storage.objectstorage;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class ObjectStorageNamespaceMetadata {
+public class ObjectStorageNamespaceMetadata implements Serializable {
+  private static final long serialVersionUID = 1L;
   private final String name;
 
   @JsonCreator
