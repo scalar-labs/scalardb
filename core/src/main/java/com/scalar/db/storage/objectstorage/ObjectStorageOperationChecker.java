@@ -23,7 +23,6 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import java.nio.ByteBuffer;
 
 public class ObjectStorageOperationChecker extends OperationChecker {
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
@@ -51,19 +50,7 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         public void visit(TextColumn column) {}
 
         @Override
-        public void visit(BlobColumn column) {
-          ByteBuffer buffer = column.getBlobValue();
-          if (buffer == null) {
-            return;
-          }
-          // Calculate the maximum allowed blob length after Base64 encoding.
-          long allowedLength = (long) Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
-          if (buffer.remaining() > allowedLength) {
-            throw new IllegalArgumentException(
-                CoreError.OBJECT_STORAGE_BLOB_EXCEEDS_MAX_LENGTH_ALLOWED.buildMessage(
-                    allowedLength, column.getName(), buffer.remaining()));
-          }
-        }
+        public void visit(BlobColumn column) {}
 
         @Override
         public void visit(DateColumn column) {}

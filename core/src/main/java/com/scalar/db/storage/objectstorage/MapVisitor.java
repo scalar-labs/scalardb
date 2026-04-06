@@ -59,7 +59,7 @@ public class MapVisitor implements ColumnVisitor {
 
   @Override
   public void visit(BlobColumn column) {
-    values.put(column.getName(), column.hasNullValue() ? null : column.getBlobValue());
+    values.put(column.getName(), column.hasNullValue() ? null : column.getBlobValueAsBytes());
   }
 
   @Override

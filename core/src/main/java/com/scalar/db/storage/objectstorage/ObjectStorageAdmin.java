@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Splitter;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -429,9 +428,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       if (readVersionMap != null) {
         readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+      return new HashMap<>(Serializer.deserialize(response.get().getPayload()));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
@@ -453,9 +450,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       if (readVersionMap != null) {
         readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+      return new HashMap<>(Serializer.deserialize(response.get().getPayload()));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }

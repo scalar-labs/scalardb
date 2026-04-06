@@ -8,7 +8,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
@@ -238,9 +237,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
     assertThat(insertedMetadata).containsKey(namespace);
     assertThat(insertedMetadata.get(namespace).getName()).isEqualTo(namespace);
   }
@@ -272,9 +269,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageTableMetadata> insertedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
     String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
     assertThat(insertedMetadata).containsKey(tableMetadataKey);
     ObjectStorageTableMetadata tableMetadata = insertedMetadata.get(tableMetadataKey);
@@ -336,9 +331,7 @@ public class ObjectStorageAdminTest {
     // Assert
     verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
     Map<String, ObjectStorageNamespaceMetadata> updatedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
     assertThat(updatedMetadata).doesNotContainKey(namespace);
     assertThat(updatedMetadata).containsKey(anotherNamespace);
   }
@@ -397,9 +390,7 @@ public class ObjectStorageAdminTest {
     // Assert
     verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
     Map<String, ObjectStorageTableMetadata> updatedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
     assertThat(updatedMetadata).doesNotContainKey(tableMetadataKey);
     assertThat(updatedMetadata).containsKey(anotherTableMetadataKey);
   }
@@ -514,9 +505,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).update(eq(expectedObjectKey), payloadCaptor.capture(), eq("version1"));
 
     Map<String, ObjectStorageTableMetadata> updatedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
 
     ObjectStorageTableMetadata updatedTableMetadata = updatedMetadata.get(tableMetadataKey);
     assertThat(updatedTableMetadata.getPartitionKeyNames()).containsExactly(currentColumn);
@@ -546,9 +535,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageNamespaceMetadata> insertedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
     assertThat(insertedMetadata).containsKey(namespace);
     assertThat(insertedMetadata.get(namespace).getName()).isEqualTo(namespace);
   }
@@ -583,9 +570,7 @@ public class ObjectStorageAdminTest {
     verify(wrapper).insert(eq(expectedObjectKey), payloadCaptor.capture());
 
     Map<String, ObjectStorageTableMetadata> insertedMetadata =
-        Serializer.deserialize(
-            payloadCaptor.getValue(),
-            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+        Serializer.deserialize(payloadCaptor.getValue());
 
     String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
     assertThat(insertedMetadata).containsKey(tableMetadataKey);

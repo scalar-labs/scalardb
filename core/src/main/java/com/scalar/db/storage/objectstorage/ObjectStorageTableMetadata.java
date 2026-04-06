@@ -1,7 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
@@ -27,13 +25,12 @@ public class ObjectStorageTableMetadata {
   private final Set<String> secondaryIndexNames;
   private final Map<String, String> columns;
 
-  @JsonCreator
   public ObjectStorageTableMetadata(
-      @JsonProperty("partitionKeyNames") @Nullable LinkedHashSet<String> partitionKeyNames,
-      @JsonProperty("clusteringKeyNames") @Nullable LinkedHashSet<String> clusteringKeyNames,
-      @JsonProperty("clusteringOrders") @Nullable Map<String, String> clusteringOrders,
-      @JsonProperty("secondaryIndexNames") @Nullable Set<String> secondaryIndexNames,
-      @JsonProperty("columns") @Nullable Map<String, String> columns) {
+      @Nullable LinkedHashSet<String> partitionKeyNames,
+      @Nullable LinkedHashSet<String> clusteringKeyNames,
+      @Nullable Map<String, String> clusteringOrders,
+      @Nullable Set<String> secondaryIndexNames,
+      @Nullable Map<String, String> columns) {
     this.partitionKeyNames =
         partitionKeyNames != null ? new LinkedHashSet<>(partitionKeyNames) : new LinkedHashSet<>();
     this.clusteringKeyNames =
