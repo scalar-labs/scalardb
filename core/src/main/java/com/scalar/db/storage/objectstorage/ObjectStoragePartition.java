@@ -18,6 +18,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Column;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +27,8 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 @SuppressFBWarnings("EI_EXPOSE_REP2")
-public class ObjectStoragePartition {
+public class ObjectStoragePartition implements Serializable {
+  private static final long serialVersionUID = 1L;
   private final Map<String, ObjectStorageRecord> records;
 
   @JsonCreator

@@ -3,6 +3,7 @@ package com.scalar.db.storage.objectstorage;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +13,8 @@ import javax.annotation.concurrent.Immutable;
 
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @Immutable
-public class ObjectStorageRecord {
+public class ObjectStorageRecord implements Serializable {
+  private static final long serialVersionUID = 1L;
   private final String id;
   private final Map<String, Object> partitionKey;
   private final Map<String, Object> clusteringKey;

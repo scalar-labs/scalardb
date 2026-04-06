@@ -5,28 +5,25 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class Serializer {
   public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
   private static final ObjectMapper jsonMapper = new ObjectMapper();
-  private static final ObjectMapper cborMapper = new ObjectMapper(new CBORFactory());
 
   static {
-    configureMapper(jsonMapper);
-    configureMapper(cborMapper);
-  }
-
-  private static void configureMapper(ObjectMapper mapper) {
-    mapper
+    jsonMapper
         .getFactory()
         .setStreamReadConstraints(
             StreamReadConstraints.builder().maxStringLength(MAX_STRING_LENGTH_ALLOWED).build());
-    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
-    mapper.registerModule(new JavaTimeModule());
+    jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    jsonMapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
+    jsonMapper.registerModule(new JavaTimeModule());
   }
 
   public static <T> T deserialize(byte[] data, TypeReference<T> typeReference) {
@@ -35,8 +32,12 @@ public class Serializer {
         // JSON format (backward compatibility)
         return jsonMapper.readValue(new String(data, StandardCharsets.UTF_8), typeReference);
       }
-      // CBOR format
-      return cborMapper.readValue(data, typeReference);
+      // Java Serializable format
+      try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data))) {
+        @SuppressWarnings("unchecked")
+        T result = (T) ois.readObject();
+        return result;
+      }
     } catch (Exception e) {
       throw new RuntimeException("Failed to deserialize the object.", e);
     }
@@ -44,7 +45,11 @@ public class Serializer {
 
   public static <T> byte[] serialize(T object) {
     try {
-      return cborMapper.writeValueAsBytes(object);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+        oos.writeObject(object);
+      }
+      return baos.toByteArray();
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize the object.", e);
     }
