@@ -6,6 +6,7 @@ import com.scalar.db.common.CoreError;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
@@ -119,13 +120,32 @@ public class TimestampTZColumn implements Column<Instant> {
     return MoreObjects.toStringHelper(this).add("name", name).add("value", value).toString();
   }
   /**
-   * Returns a TimestampTZ column instance with the specified column name and value.
+   * Returns a TimestampTZ column instance with the specified column name and value. Sub-millisecond
+   * precision is silently truncated.
    *
    * @param columnName a column name
    * @param value a column value
    * @return a TimestampTZ column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000Z to
+   *     9999-12-31T23:59:59.999Z
    */
-  public static TimestampTZColumn of(String columnName, Instant value) {
+  public static TimestampTZColumn of(String columnName, @Nullable Instant value) {
+    return new TimestampTZColumn(
+        columnName, value == null ? null : value.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  /**
+   * Returns a TimestampTZ column instance with the specified column name and value. Unlike {@link
+   * #of}, this method does not truncate and throws if the value has sub-millisecond precision.
+   *
+   * @param columnName a column name
+   * @param value a column value
+   * @return a TimestampTZ column instance with the specified column name and value
+   * @throws IllegalArgumentException if the value has sub-millisecond precision
+   * @throws IllegalArgumentException if the value is out of the range 1000-01-01T00:00:00.000Z to
+   *     9999-12-31T23:59:59.999Z
+   */
+  public static TimestampTZColumn ofStrict(String columnName, @Nullable Instant value) {
     return new TimestampTZColumn(columnName, value);
   }
 
