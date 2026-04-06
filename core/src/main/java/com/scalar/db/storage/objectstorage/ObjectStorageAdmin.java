@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Splitter;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -102,12 +101,11 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Map<String, ObjectStorageNamespaceMetadata> metadataTable =
           getNamespaceMetadataTable(readVersionMap);
       assert !metadataTable.containsKey(namespace);
-      if (metadataTable.isEmpty()) {
-        Map<String, ObjectStorageNamespaceMetadata> newMetadataTable =
-            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace));
-        insertMetadataTable(NAMESPACE_METADATA_TABLE, newMetadataTable);
+      boolean wasEmpty = metadataTable.isEmpty();
+      metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
+      if (wasEmpty) {
+        insertMetadataTable(NAMESPACE_METADATA_TABLE, metadataTable);
       } else {
-        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
         updateMetadataTable(
             NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
       }
@@ -128,12 +126,11 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Map<String, String> readVersionMap = new HashMap<>();
       Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
       assert !metadataTable.containsKey(tableMetadataKey);
-      if (metadataTable.isEmpty()) {
-        Map<String, ObjectStorageTableMetadata> newMetadataTable =
-            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
-        insertMetadataTable(TABLE_METADATA_TABLE, newMetadataTable);
+      boolean wasEmpty = metadataTable.isEmpty();
+      metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
+      if (wasEmpty) {
+        insertMetadataTable(TABLE_METADATA_TABLE, metadataTable);
       } else {
-        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
         updateMetadataTable(
             TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
       }
@@ -273,12 +270,11 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Map<String, String> readVersionMap = new HashMap<>();
       Map<String, ObjectStorageNamespaceMetadata> metadataTable =
           getNamespaceMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            NAMESPACE_METADATA_TABLE,
-            Collections.singletonMap(namespace, new ObjectStorageNamespaceMetadata(namespace)));
+      boolean wasEmpty = metadataTable.isEmpty();
+      metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
+      if (wasEmpty) {
+        insertMetadataTable(NAMESPACE_METADATA_TABLE, metadataTable);
       } else {
-        metadataTable.put(namespace, new ObjectStorageNamespaceMetadata(namespace));
         updateMetadataTable(
             NAMESPACE_METADATA_TABLE, metadataTable, readVersionMap.get(NAMESPACE_METADATA_TABLE));
       }
@@ -309,12 +305,11 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String tableMetadataKey = getTableMetadataKey(namespace, table);
       Map<String, String> readVersionMap = new HashMap<>();
       Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty()) {
-        insertMetadataTable(
-            TABLE_METADATA_TABLE,
-            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata)));
+      boolean wasEmpty = metadataTable.isEmpty();
+      metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
+      if (wasEmpty) {
+        insertMetadataTable(TABLE_METADATA_TABLE, metadataTable);
       } else {
-        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
         updateMetadataTable(
             TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
       }
@@ -424,14 +419,12 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Optional<ObjectStorageWrapperResponse> response =
           wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, NAMESPACE_METADATA_TABLE));
       if (!response.isPresent()) {
-        return Collections.emptyMap();
+        return new HashMap<>();
       }
       if (readVersionMap != null) {
         readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
+      return new HashMap<>(Serializer.deserialize(response.get().getPayload()));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }
@@ -448,14 +441,12 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       Optional<ObjectStorageWrapperResponse> response =
           wrapper.get(ObjectStorageUtils.getObjectKey(metadataNamespace, TABLE_METADATA_TABLE));
       if (!response.isPresent()) {
-        return Collections.emptyMap();
+        return new HashMap<>();
       }
       if (readVersionMap != null) {
         readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
-          response.get().getPayload(),
-          new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+      return new HashMap<>(Serializer.deserialize(response.get().getPayload()));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
     }

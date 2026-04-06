@@ -14,6 +14,7 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
+import java.nio.ByteBuffer;
 import java.util.Base64;
 import javax.annotation.Nullable;
 
@@ -49,6 +50,8 @@ public class ColumnValueMapper {
           return BlobColumn.ofNull(name);
         } else if (recordValue instanceof byte[]) {
           return BlobColumn.of(name, (byte[]) recordValue);
+        } else if (recordValue instanceof ByteBuffer) {
+          return BlobColumn.of(name, (ByteBuffer) recordValue);
         } else {
           return BlobColumn.of(name, Base64.getDecoder().decode((String) recordValue));
         }

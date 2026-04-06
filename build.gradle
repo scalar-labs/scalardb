@@ -59,6 +59,7 @@ subprojects {
         errorpronePluginVersion = '4.4.0'
         shadowPluginVersion = '8.1.1'
         // Make JDK11+ use the same version as JDK8 uses
+        kryoVersion = '5.6.2'
         googleJavaFormatVersion = '1.7'
     }
 

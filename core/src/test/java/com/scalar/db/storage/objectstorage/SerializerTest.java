@@ -2,8 +2,6 @@ package com.scalar.db.storage.objectstorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -27,43 +25,12 @@ public class SerializerTest {
 
     // Act
     byte[] serialized = Serializer.serialize(partition);
-    ObjectStoragePartition deserialized =
-        Serializer.deserialize(serialized, new TypeReference<ObjectStoragePartition>() {});
+    ObjectStoragePartition deserialized = Serializer.deserialize(serialized);
 
     // Assert
     assertThat(deserialized.getRecords()).containsKey("record1");
     assertThat(deserialized.getRecord("record1").get().getValues().get("col1")).isEqualTo("value1");
     assertThat(deserialized.getRecord("record1").get().getValues().get("col2")).isEqualTo(42);
-  }
-
-  @Test
-  public void deserializeBytes_JsonFormatGiven_ShouldDeserializeCorrectly() {
-    // Arrange - simulate legacy JSON-encoded partition
-    byte[] jsonBytes =
-        "{\"records\":{\"record1\":{\"id\":\"id1\",\"clusteringKey\":null,\"createdAt\":null,\"values\":{\"col1\":\"value1\",\"col2\":42}}}}"
-            .getBytes(StandardCharsets.UTF_8);
-
-    // Act - deserialize using byte[] overload (should auto-detect JSON)
-    ObjectStoragePartition deserialized =
-        Serializer.deserialize(jsonBytes, new TypeReference<ObjectStoragePartition>() {});
-
-    // Assert
-    assertThat(deserialized.getRecords()).containsKey("record1");
-    assertThat(deserialized.getRecord("record1").get().getValues().get("col1")).isEqualTo("value1");
-    assertThat(deserialized.getRecord("record1").get().getValues().get("col2")).isEqualTo(42);
-  }
-
-  @Test
-  public void serialize_ShouldNotStartWithOpenBrace() {
-    // Arrange
-    ObjectStoragePartition partition = new ObjectStoragePartition(null);
-
-    // Act
-    byte[] serialized = Serializer.serialize(partition);
-
-    // Assert - CBOR should not start with '{' (0x7B), which is used for JSON detection
-    assertThat(serialized.length).isGreaterThan(0);
-    assertThat(serialized[0]).isNotEqualTo((byte) '{');
   }
 
   @Test
@@ -109,31 +76,12 @@ public class SerializerTest {
 
     // Act
     byte[] serialized = Serializer.serialize(metadataTable);
-    Map<String, ObjectStorageTableMetadata> deserialized =
-        Serializer.deserialize(
-            serialized, new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+    Map<String, ObjectStorageTableMetadata> deserialized = Serializer.deserialize(serialized);
 
     // Assert
     assertThat(deserialized).containsKey("ns.table1");
     assertThat(deserialized.get("ns.table1").getPartitionKeyNames()).containsExactly("pk");
     assertThat(deserialized.get("ns.table1").getClusteringKeyNames()).containsExactly("ck");
     assertThat(deserialized.get("ns.table1").getColumns()).containsEntry("value", "BOOLEAN");
-  }
-
-  @Test
-  public void deserializeBytes_JsonMetadataTable_ShouldDeserializeCorrectly() {
-    // Arrange - simulate legacy JSON-encoded metadata
-    byte[] jsonBytes =
-        "{\"ns.table1\":{\"partitionKeyNames\":[\"pk\"],\"clusteringKeyNames\":[],\"columns\":{},\"secondaryIndexNames\":[],\"clusteringOrders\":{}}}"
-            .getBytes(StandardCharsets.UTF_8);
-
-    // Act - deserialize using byte[] overload
-    Map<String, ObjectStorageTableMetadata> deserialized =
-        Serializer.deserialize(
-            jsonBytes, new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
-
-    // Assert
-    assertThat(deserialized).containsKey("ns.table1");
-    assertThat(deserialized.get("ns.table1").getPartitionKeyNames()).containsExactly("pk");
   }
 }
