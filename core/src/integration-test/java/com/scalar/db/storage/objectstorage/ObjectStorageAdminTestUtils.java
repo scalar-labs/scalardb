@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -62,9 +63,10 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
       throw new IllegalArgumentException("The specified table metadata does not exist");
     }
     Map<String, ObjectStorageTableMetadata> metadataTable =
-        Serializer.deserialize(
-            response.get().getPayload(),
-            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+        new HashMap<>(
+            Serializer.deserialize(
+                response.get().getPayload(),
+                new TypeReference<Map<String, ObjectStorageTableMetadata>>() {}));
 
     String tableMetadataKey =
         String.join(
@@ -87,9 +89,10 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
       throw new IllegalArgumentException("The specified table metadata does not exist");
     }
     Map<String, ObjectStorageTableMetadata> metadataTable =
-        Serializer.deserialize(
-            response.get().getPayload(),
-            new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
+        new HashMap<>(
+            Serializer.deserialize(
+                response.get().getPayload(),
+                new TypeReference<Map<String, ObjectStorageTableMetadata>>() {}));
 
     String tableMetadataKey =
         String.join(
