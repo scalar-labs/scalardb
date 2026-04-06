@@ -84,10 +84,8 @@ task docker(type: Exec) {
     commandLine 'docker', 'build', "--tag=ghcr.io/scalar-labs/scalardb-data-loader-cli:${project.version}", "."
 }
 
-// for archiving and uploading to maven central
-if (project.gradle.startParameter.taskNames.any { it.endsWith('publish') } ||
-        project.gradle.startParameter.taskNames.any { it.endsWith('publishToMavenLocal') }) {
-    // not to publish the fat jar to maven central
+// for publishing (not to publish the fat jar)
+if (project.gradle.startParameter.taskNames.any { it.tokenize(':').last().startsWith('publish') }) {
     shadowJar.enabled = false
 }
 
