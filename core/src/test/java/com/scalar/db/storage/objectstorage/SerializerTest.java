@@ -17,7 +17,7 @@ public class SerializerTest {
   }
 
   @Test
-  public void serializeAsBytes_andDeserializeBytes_ShouldRoundTrip() {
+  public void serialize_andDeserializeBytes_ShouldRoundTrip() {
     // Arrange
     Map<String, Object> values = new HashMap<>();
     values.put("col1", "value1");
@@ -26,7 +26,7 @@ public class SerializerTest {
     partition.putRecord("record1", createRecord(values));
 
     // Act
-    byte[] serialized = Serializer.serializeAsBytes(partition);
+    byte[] serialized = Serializer.serialize(partition);
     ObjectStoragePartition deserialized =
         Serializer.deserialize(serialized, new TypeReference<ObjectStoragePartition>() {});
 
@@ -38,15 +38,10 @@ public class SerializerTest {
 
   @Test
   public void deserializeBytes_JsonFormatGiven_ShouldDeserializeCorrectly() {
-    // Arrange - serialize with legacy JSON method, then convert to bytes
-    Map<String, Object> values = new HashMap<>();
-    values.put("col1", "value1");
-    values.put("col2", 42);
-    ObjectStoragePartition partition = new ObjectStoragePartition(null);
-    partition.putRecord("record1", createRecord(values));
-
-    String jsonString = Serializer.serialize(partition);
-    byte[] jsonBytes = jsonString.getBytes(StandardCharsets.UTF_8);
+    // Arrange - simulate legacy JSON-encoded partition
+    byte[] jsonBytes =
+        "{\"records\":{\"record1\":{\"id\":\"id1\",\"clusteringKey\":null,\"createdAt\":null,\"values\":{\"col1\":\"value1\",\"col2\":42}}}}"
+            .getBytes(StandardCharsets.UTF_8);
 
     // Act - deserialize using byte[] overload (should auto-detect JSON)
     ObjectStoragePartition deserialized =
@@ -59,12 +54,12 @@ public class SerializerTest {
   }
 
   @Test
-  public void serializeAsBytes_ShouldNotStartWithOpenBrace() {
+  public void serialize_ShouldNotStartWithOpenBrace() {
     // Arrange
     ObjectStoragePartition partition = new ObjectStoragePartition(null);
 
     // Act
-    byte[] serialized = Serializer.serializeAsBytes(partition);
+    byte[] serialized = Serializer.serialize(partition);
 
     // Assert - CBOR should not start with '{' (0x7B), which is used for JSON detection
     assertThat(serialized.length).isGreaterThan(0);
@@ -72,7 +67,7 @@ public class SerializerTest {
   }
 
   @Test
-  public void serializeAsBytes_andDeserializeBytes_ObjectStoragePartition_ShouldRoundTrip() {
+  public void serialize_andDeserializeBytes_ObjectStoragePartition_ShouldRoundTrip() {
     // Arrange
     Map<String, Object> values1 = new HashMap<>();
     values1.put("pk", "pk_value");
@@ -97,7 +92,7 @@ public class SerializerTest {
   }
 
   @Test
-  public void serializeAsBytes_andDeserializeBytes_MetadataTable_ShouldRoundTrip() {
+  public void serialize_andDeserializeBytes_MetadataTable_ShouldRoundTrip() {
     // Arrange
     Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
     Map<String, String> columns = new HashMap<>();
@@ -113,7 +108,7 @@ public class SerializerTest {
             .build());
 
     // Act
-    byte[] serialized = Serializer.serializeAsBytes(metadataTable);
+    byte[] serialized = Serializer.serialize(metadataTable);
     Map<String, ObjectStorageTableMetadata> deserialized =
         Serializer.deserialize(
             serialized, new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
@@ -128,15 +123,9 @@ public class SerializerTest {
   @Test
   public void deserializeBytes_JsonMetadataTable_ShouldDeserializeCorrectly() {
     // Arrange - simulate legacy JSON-encoded metadata
-    Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
-    metadataTable.put(
-        "ns.table1",
-        ObjectStorageTableMetadata.newBuilder()
-            .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList("pk")))
-            .build());
-
-    String jsonString = Serializer.serialize(metadataTable);
-    byte[] jsonBytes = jsonString.getBytes(StandardCharsets.UTF_8);
+    byte[] jsonBytes =
+        "{\"ns.table1\":{\"partitionKeyNames\":[\"pk\"],\"clusteringKeyNames\":[],\"columns\":{},\"secondaryIndexNames\":[],\"clusteringOrders\":{}}}"
+            .getBytes(StandardCharsets.UTF_8);
 
     // Act - deserialize using byte[] overload
     Map<String, ObjectStorageTableMetadata> deserialized =

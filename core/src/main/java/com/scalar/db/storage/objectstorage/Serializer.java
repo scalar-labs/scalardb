@@ -29,14 +29,6 @@ public class Serializer {
     mapper.registerModule(new JavaTimeModule());
   }
 
-  public static <T> T deserialize(String json, TypeReference<T> typeReference) {
-    try {
-      return jsonMapper.readValue(json, typeReference);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to deserialize the object.", e);
-    }
-  }
-
   public static <T> T deserialize(byte[] data, TypeReference<T> typeReference) {
     try {
       if (data.length > 0 && data[0] == '{') {
@@ -50,15 +42,7 @@ public class Serializer {
     }
   }
 
-  public static <T> String serialize(T object) {
-    try {
-      return jsonMapper.writeValueAsString(object);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to serialize the object.", e);
-    }
-  }
-
-  public static <T> byte[] serializeAsBytes(T object) {
+  public static <T> byte[] serialize(T object) {
     try {
       return cborMapper.writeValueAsBytes(object);
     } catch (Exception e) {

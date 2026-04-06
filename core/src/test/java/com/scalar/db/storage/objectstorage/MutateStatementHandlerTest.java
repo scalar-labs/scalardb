@@ -127,7 +127,7 @@ public class MutateStatementHandlerTest {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
     records.put(recordId, prepareExistingRecord());
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    byte[] serializedPartition = Serializer.serializeAsBytes(partition);
+    byte[] serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -141,7 +141,7 @@ public class MutateStatementHandlerTest {
       records.put(additionalRecordId, prepareExistingRecord());
     }
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    byte[] serializedPartition = Serializer.serializeAsBytes(partition);
+    byte[] serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));

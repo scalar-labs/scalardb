@@ -44,7 +44,7 @@ public class ObjectStoragePartition {
   }
 
   public byte[] serialize() {
-    return Serializer.serializeAsBytes(this);
+    return Serializer.serialize(this);
   }
 
   public Map<String, ObjectStorageRecord> getRecords() {

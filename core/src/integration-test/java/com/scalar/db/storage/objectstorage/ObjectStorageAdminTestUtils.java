@@ -75,8 +75,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
             .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList("corrupted")))
             .build());
 
-    wrapper.update(
-        objectKey, Serializer.serializeAsBytes(metadataTable), response.get().getVersion());
+    wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
   }
 
   @Override
@@ -100,8 +99,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     if (metadataTable.isEmpty()) {
       wrapper.delete(objectKey);
     } else {
-      wrapper.update(
-          objectKey, Serializer.serializeAsBytes(metadataTable), response.get().getVersion());
+      wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
     }
   }
 
