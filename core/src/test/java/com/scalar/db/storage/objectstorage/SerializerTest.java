@@ -3,10 +3,13 @@ package com.scalar.db.storage.objectstorage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.Test;
 
 public class SerializerTest {
@@ -36,22 +39,30 @@ public class SerializerTest {
   }
 
   @Test
-  public void serialize_ShouldProduceValidBsonStructure() {
+  public void serialize_ShouldProduceValidBsonStructure() throws Exception {
     // Arrange
     ObjectStoragePartition partition = new ObjectStoragePartition(null);
 
     // Act
     byte[] serialized = Serializer.serialize(partition);
 
-    // Assert - BSON starts with 4-byte LE size matching data.length and ends with 0x00
-    assertThat(serialized.length).isGreaterThanOrEqualTo(5);
+    // Assert - serialized data is GZIP-compressed, so decompress first
+    assertThat(serialized.length).isGreaterThanOrEqualTo(2);
+    assertThat(serialized[0]).isEqualTo((byte) 0x1f); // GZIP magic number
+    assertThat(serialized[1]).isEqualTo((byte) 0x8b);
+
+    // Decompress to get the raw BSON
+    byte[] bson = decompress(serialized);
+
+    // BSON starts with 4-byte LE size matching data.length and ends with 0x00
+    assertThat(bson.length).isGreaterThanOrEqualTo(5);
     int size =
-        (serialized[0] & 0xFF)
-            | ((serialized[1] & 0xFF) << 8)
-            | ((serialized[2] & 0xFF) << 16)
-            | ((serialized[3] & 0xFF) << 24);
-    assertThat(size).isEqualTo(serialized.length);
-    assertThat(serialized[serialized.length - 1]).isEqualTo((byte) 0x00);
+        (bson[0] & 0xFF)
+            | ((bson[1] & 0xFF) << 8)
+            | ((bson[2] & 0xFF) << 16)
+            | ((bson[3] & 0xFF) << 24);
+    assertThat(size).isEqualTo(bson.length);
+    assertThat(bson[bson.length - 1]).isEqualTo((byte) 0x00);
   }
 
   @Test
@@ -106,5 +117,18 @@ public class SerializerTest {
     assertThat(deserialized.get("ns.table1").getPartitionKeyNames()).containsExactly("pk");
     assertThat(deserialized.get("ns.table1").getClusteringKeyNames()).containsExactly("ck");
     assertThat(deserialized.get("ns.table1").getColumns()).containsEntry("value", "BOOLEAN");
+  }
+
+  private static byte[] decompress(byte[] data) throws Exception {
+    try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
+        GZIPInputStream gzis = new GZIPInputStream(bais);
+        ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+      byte[] buf = new byte[4096];
+      int n;
+      while ((n = gzis.read(buf)) != -1) {
+        out.write(buf, 0, n);
+      }
+      return out.toByteArray();
+    }
   }
 }
