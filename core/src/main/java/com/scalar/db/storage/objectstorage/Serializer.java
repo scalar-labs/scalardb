@@ -9,6 +9,8 @@ public class Serializer {
       Fory.builder()
           .withLanguage(Language.JAVA)
           .requireClassRegistration(false)
+          .withNumberCompressed(true)
+          .withStringCompressed(true)
           .buildThreadSafeFory();
 
   @SuppressWarnings("unchecked")
