@@ -29,4 +29,18 @@ public interface ObjectStorageConfig {
    * @return the metadata namespace
    */
   String getMetadataNamespace();
+
+  /**
+   * Returns the object storage format for partition data serialization.
+   *
+   * @return the format (default: JSON)
+   */
+  ObjectStorageFormat getFormat();
+
+  /**
+   * Returns whether GZIP compression is enabled for partition data.
+   *
+   * @return true if compression is enabled (default: false)
+   */
+  boolean isCompressionEnabled();
 }

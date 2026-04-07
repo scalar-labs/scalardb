@@ -18,17 +18,20 @@ public class StreamingRecordIterator implements Iterator<ObjectStorageRecord> {
   private final String namespaceName;
   private final String tableName;
   private final Iterator<String> partitionKeyIterator;
+  private final ObjectStorageDataSerializer dataSerializer;
   private Iterator<ObjectStorageRecord> partitionRecordIterator;
 
   public StreamingRecordIterator(
       ObjectStorageWrapper wrapper,
       String namespaceName,
       String tableName,
-      List<String> partitionKeys) {
+      List<String> partitionKeys,
+      ObjectStorageDataSerializer dataSerializer) {
     this.wrapper = wrapper;
     this.namespaceName = namespaceName;
     this.tableName = tableName;
     this.partitionKeyIterator = partitionKeys.iterator();
+    this.dataSerializer = dataSerializer;
     this.partitionRecordIterator = Collections.emptyIterator();
   }
 
@@ -66,7 +69,7 @@ public class StreamingRecordIterator implements Iterator<ObjectStorageRecord> {
       if (!response.isPresent()) {
         return new ObjectStoragePartition(Collections.emptyMap());
       }
-      return ObjectStoragePartition.deserialize(response.get().getPayload());
+      return dataSerializer.deserialize(response.get().getPayload());
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);

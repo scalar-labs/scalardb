@@ -1,12 +1,15 @@
 package com.scalar.db.storage.objectstorage.s3;
 
+import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
+import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.google.common.base.Splitter;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
+import com.scalar.db.storage.objectstorage.ObjectStorageFormat;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -23,6 +26,8 @@ public class S3Config implements ObjectStorageConfig {
   public static final String MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES =
       PREFIX + "multipart_upload_threshold_size_bytes";
   public static final String REQUEST_TIMEOUT_SECS = PREFIX + "request_timeout_secs";
+  public static final String OBJECT_FORMAT = PREFIX + "object_format";
+  public static final String COMPRESSION_ENABLED = PREFIX + "compression_enabled";
 
   private static final Logger logger = LoggerFactory.getLogger(S3Config.class);
   private final String username;
@@ -35,6 +40,8 @@ public class S3Config implements ObjectStorageConfig {
   private final Integer multipartUploadMaxConcurrency;
   private final Long multipartUploadThresholdSizeBytes;
   private final Integer requestTimeoutSecs;
+  private final ObjectStorageFormat format;
+  private final boolean compressionEnabled;
 
   public S3Config(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -74,6 +81,10 @@ public class S3Config implements ObjectStorageConfig {
     multipartUploadThresholdSizeBytes =
         getLong(databaseConfig.getProperties(), MULTIPART_UPLOAD_THRESHOLD_SIZE_BYTES, null);
     requestTimeoutSecs = getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_SECS, null);
+    String formatStr =
+        getString(databaseConfig.getProperties(), OBJECT_FORMAT, ObjectStorageFormat.CBOR.name());
+    format = ObjectStorageFormat.valueOf(formatStr.toUpperCase());
+    compressionEnabled = getBoolean(databaseConfig.getProperties(), COMPRESSION_ENABLED, false);
   }
 
   @Override
@@ -118,5 +129,15 @@ public class S3Config implements ObjectStorageConfig {
 
   public Optional<Integer> getRequestTimeoutSecs() {
     return Optional.ofNullable(requestTimeoutSecs);
+  }
+
+  @Override
+  public ObjectStorageFormat getFormat() {
+    return format;
+  }
+
+  @Override
+  public boolean isCompressionEnabled() {
+    return compressionEnabled;
   }
 }

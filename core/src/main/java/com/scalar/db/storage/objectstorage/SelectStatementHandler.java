@@ -27,8 +27,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
   public SelectStatementHandler(
-      ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
-    super(wrapper, metadataManager);
+      ObjectStorageWrapper wrapper,
+      TableMetadataManager metadataManager,
+      ObjectStorageDataSerializer dataSerializer) {
+    super(wrapper, metadataManager, dataSerializer);
   }
 
   @Nonnull
@@ -114,7 +116,8 @@ public class SelectStatementHandler extends StatementHandler {
     try {
       List<String> partitionKeys = getPartitionKeysInTable(getNamespace(scan), getTable(scan));
       StreamingRecordIterator iterator =
-          new StreamingRecordIterator(wrapper, getNamespace(scan), getTable(scan), partitionKeys);
+          new StreamingRecordIterator(
+              wrapper, getNamespace(scan), getTable(scan), partitionKeys, dataSerializer);
       return new ScannerImpl(
           iterator, new ResultInterpreter(scan.getProjections(), metadata), scan.getLimit());
     } catch (Exception e) {
@@ -131,7 +134,7 @@ public class SelectStatementHandler extends StatementHandler {
       if (!response.isPresent()) {
         return new ObjectStoragePartition(Collections.emptyMap());
       }
-      return ObjectStoragePartition.deserialize(response.get().getPayload());
+      return dataSerializer.deserialize(response.get().getPayload());
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);

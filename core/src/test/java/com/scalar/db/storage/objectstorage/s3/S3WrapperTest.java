@@ -49,7 +49,8 @@ public class S3WrapperTest {
   private static final String BUCKET = "bucket";
   private static final String ANY_OBJECT_KEY = "any_object_key";
   private static final String ANY_PREFIX = "any_prefix/";
-  private static final String ANY_DATA = "any_data";
+  private static final byte[] ANY_DATA =
+      "any_data".getBytes(java.nio.charset.StandardCharsets.UTF_8);
   private static final String ANY_ETAG = "any_etag";
 
   @Mock private S3Config config;
@@ -78,7 +79,7 @@ public class S3WrapperTest {
 
     when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
         .thenReturn(CompletableFuture.completedFuture(responseBytes));
-    when(responseBytes.asUtf8String()).thenReturn(ANY_DATA);
+    when(responseBytes.asByteArray()).thenReturn(ANY_DATA);
     when(responseBytes.response()).thenReturn(getObjectResponse);
     when(getObjectResponse.eTag()).thenReturn(ANY_ETAG);
 

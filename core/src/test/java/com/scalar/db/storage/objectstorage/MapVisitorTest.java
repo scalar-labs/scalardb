@@ -14,7 +14,6 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -177,11 +176,7 @@ public class MapVisitorTest {
     ANY_BLOB_COLUMN.accept(visitor);
 
     // Assert
-    ByteBuffer expected =
-        (ByteBuffer)
-            ByteBuffer.allocate(ANY_TEXT.length())
-                .put(ANY_TEXT.getBytes(StandardCharsets.UTF_8))
-                .flip();
+    byte[] expected = ANY_TEXT.getBytes(StandardCharsets.UTF_8);
     assertThat(visitor.get().get(ANY_BLOB_COLUMN.getName())).isEqualTo(expected);
   }
 

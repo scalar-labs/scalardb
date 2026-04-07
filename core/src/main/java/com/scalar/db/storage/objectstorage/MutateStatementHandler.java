@@ -15,8 +15,10 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MutateStatementHandler extends StatementHandler {
   public MutateStatementHandler(
-      ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
-    super(wrapper, metadataManager);
+      ObjectStorageWrapper wrapper,
+      TableMetadataManager metadataManager,
+      ObjectStorageDataSerializer dataSerializer) {
+    super(wrapper, metadataManager, dataSerializer);
   }
 
   public void handle(Mutation mutation) throws ExecutionException {
@@ -70,14 +72,15 @@ public class MutateStatementHandler extends StatementHandler {
         if (!snapshot.getPartition().isEmpty()) {
           wrapper.update(
               snapshot.getObjectKey(),
-              snapshot.getPartition().serialize(),
+              dataSerializer.serialize(snapshot.getPartition()),
               snapshot.getReadVersion().get());
         } else {
           wrapper.delete(snapshot.getObjectKey(), snapshot.getReadVersion().get());
         }
       } else {
         if (!snapshot.getPartition().isEmpty()) {
-          wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize());
+          wrapper.insert(
+              snapshot.getObjectKey(), dataSerializer.serialize(snapshot.getPartition()));
         }
       }
     } catch (PreconditionFailedException | ConflictOccurredException e) {
@@ -103,7 +106,9 @@ public class MutateStatementHandler extends StatementHandler {
           .map(
               response ->
                   new ObjectStoragePartitionSnapshot(
-                      objectKey, response.getPayload(), response.getVersion()))
+                      objectKey,
+                      dataSerializer.deserialize(response.getPayload()),
+                      response.getVersion()))
           .orElseGet(
               () ->
                   new ObjectStoragePartitionSnapshot(

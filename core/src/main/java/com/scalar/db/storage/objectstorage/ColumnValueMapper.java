@@ -45,9 +45,13 @@ public class ColumnValueMapper {
             ? TextColumn.ofNull(name)
             : TextColumn.of(name, (String) recordValue);
       case BLOB:
-        return recordValue == null
-            ? BlobColumn.ofNull(name)
-            : BlobColumn.of(name, Base64.getDecoder().decode((String) recordValue));
+        if (recordValue == null) {
+          return BlobColumn.ofNull(name);
+        }
+        if (recordValue instanceof byte[]) {
+          return BlobColumn.of(name, (byte[]) recordValue);
+        }
+        return BlobColumn.of(name, Base64.getDecoder().decode((String) recordValue));
       case DATE:
         return recordValue == null
             ? DateColumn.ofNull(name)

@@ -1,16 +1,18 @@
 package com.scalar.db.storage.objectstorage;
 
+import java.util.Arrays;
+
 public class ObjectStorageWrapperResponse {
-  private final String payload;
+  private final byte[] payload;
   private final String version;
 
-  public ObjectStorageWrapperResponse(String payload, String version) {
-    this.payload = payload;
+  public ObjectStorageWrapperResponse(byte[] payload, String version) {
+    this.payload = Arrays.copyOf(payload, payload.length);
     this.version = version;
   }
 
-  public String getPayload() {
-    return payload;
+  public byte[] getPayload() {
+    return Arrays.copyOf(payload, payload.length);
   }
 
   public String getVersion() {

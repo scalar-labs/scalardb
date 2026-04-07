@@ -10,11 +10,16 @@ import javax.annotation.Nonnull;
 public class StatementHandler {
   protected final ObjectStorageWrapper wrapper;
   protected final TableMetadataManager metadataManager;
+  protected final ObjectStorageDataSerializer dataSerializer;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public StatementHandler(ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
+  public StatementHandler(
+      ObjectStorageWrapper wrapper,
+      TableMetadataManager metadataManager,
+      ObjectStorageDataSerializer dataSerializer) {
     this.wrapper = checkNotNull(wrapper);
     this.metadataManager = checkNotNull(metadataManager);
+    this.dataSerializer = checkNotNull(dataSerializer);
   }
 
   @Nonnull

@@ -7,33 +7,36 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-public class Serializer {
-  public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
+public class JsonDataSerializer implements ObjectStorageDataSerializer {
   private static final ObjectMapper mapper = new ObjectMapper();
 
   static {
     mapper
         .getFactory()
         .setStreamReadConstraints(
-            StreamReadConstraints.builder().maxStringLength(MAX_STRING_LENGTH_ALLOWED).build());
+            StreamReadConstraints.builder()
+                .maxStringLength(Serializer.MAX_STRING_LENGTH_ALLOWED)
+                .build());
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
     mapper.registerModule(new JavaTimeModule());
   }
 
-  public static <T> T deserialize(byte[] data, TypeReference<T> typeReference) {
+  @Override
+  public byte[] serialize(ObjectStoragePartition partition) {
     try {
-      return mapper.readValue(data, typeReference);
+      return mapper.writeValueAsBytes(partition);
     } catch (Exception e) {
-      throw new RuntimeException("Failed to deserialize the object.", e);
+      throw new RuntimeException("Failed to serialize the partition to JSON.", e);
     }
   }
 
-  public static <T> byte[] serialize(T object) {
+  @Override
+  public ObjectStoragePartition deserialize(byte[] data) {
     try {
-      return mapper.writeValueAsBytes(object);
+      return mapper.readValue(data, new TypeReference<ObjectStoragePartition>() {});
     } catch (Exception e) {
-      throw new RuntimeException("Failed to serialize the object.", e);
+      throw new RuntimeException("Failed to deserialize the partition from JSON.", e);
     }
   }
 }

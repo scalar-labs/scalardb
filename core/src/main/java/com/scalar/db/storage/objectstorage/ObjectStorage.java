@@ -48,8 +48,14 @@ public class ObjectStorage extends AbstractDistributedStorage {
     operationChecker =
         new ObjectStorageOperationChecker(
             databaseConfig, metadataManager, new StorageInfoProvider(admin));
-    selectStatementHandler = new SelectStatementHandler(wrapper, metadataManager);
-    mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
+    ObjectStorageDataSerializer dataSerializer =
+        ObjectStorageDataSerializerFactory.create(
+            objectStorageConfig.getFormat(),
+            objectStorageConfig.isCompressionEnabled()
+                ? ObjectStorageCompression.GZIP
+                : ObjectStorageCompression.NONE);
+    selectStatementHandler = new SelectStatementHandler(wrapper, metadataManager, dataSerializer);
+    mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager, dataSerializer);
     logger.info("ObjectStorage object is created properly");
   }
 

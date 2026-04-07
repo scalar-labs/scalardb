@@ -1,12 +1,15 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
+import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
+import com.scalar.db.storage.objectstorage.ObjectStorageFormat;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +23,8 @@ public class CloudStorageConfig implements ObjectStorageConfig {
   public static final String PREFIX = DatabaseConfig.PREFIX + STORAGE_NAME_IN_PREFIX + ".";
 
   public static final String UPLOAD_CHUNK_SIZE_BYTES = PREFIX + "upload_chunk_size_bytes";
+  public static final String OBJECT_FORMAT = PREFIX + "object_format";
+  public static final String COMPRESSION_ENABLED = PREFIX + "compression_enabled";
 
   private static final Logger logger = LoggerFactory.getLogger(CloudStorageConfig.class);
   private final String password;
@@ -27,6 +32,8 @@ public class CloudStorageConfig implements ObjectStorageConfig {
   private final String metadataNamespace;
   private final String projectId;
   private final Integer uploadChunkSizeBytes;
+  private final ObjectStorageFormat format;
+  private final boolean compressionEnabled;
 
   public CloudStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -50,6 +57,10 @@ public class CloudStorageConfig implements ObjectStorageConfig {
     }
 
     uploadChunkSizeBytes = getInt(databaseConfig.getProperties(), UPLOAD_CHUNK_SIZE_BYTES, null);
+    String formatStr =
+        getString(databaseConfig.getProperties(), OBJECT_FORMAT, ObjectStorageFormat.CBOR.name());
+    format = ObjectStorageFormat.valueOf(formatStr.toUpperCase());
+    compressionEnabled = getBoolean(databaseConfig.getProperties(), COMPRESSION_ENABLED, false);
   }
 
   @Override
@@ -93,5 +104,15 @@ public class CloudStorageConfig implements ObjectStorageConfig {
 
   public Optional<Integer> getUploadChunkSizeBytes() {
     return Optional.ofNullable(uploadChunkSizeBytes);
+  }
+
+  @Override
+  public ObjectStorageFormat getFormat() {
+    return format;
+  }
+
+  @Override
+  public boolean isCompressionEnabled() {
+    return compressionEnabled;
   }
 }

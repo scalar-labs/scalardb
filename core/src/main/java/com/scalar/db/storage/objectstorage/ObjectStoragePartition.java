@@ -35,7 +35,7 @@ public class ObjectStoragePartition {
     this.records = records != null ? records : new HashMap<>();
   }
 
-  public static ObjectStoragePartition deserialize(String serializedObject) {
+  public static ObjectStoragePartition deserialize(byte[] serializedObject) {
     return Serializer.deserialize(serializedObject, new TypeReference<ObjectStoragePartition>() {});
   }
 
@@ -43,7 +43,7 @@ public class ObjectStoragePartition {
     return ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey);
   }
 
-  public String serialize() {
+  public byte[] serialize() {
     return Serializer.serialize(this);
   }
 

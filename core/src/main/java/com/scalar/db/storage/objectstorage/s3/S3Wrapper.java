@@ -90,7 +90,7 @@ public class S3Wrapper implements ObjectStorageWrapper {
                   GetObjectRequest.builder().bucket(bucket).key(key).build(),
                   AsyncResponseTransformer.toBytes())
               .join();
-      String data = response.asUtf8String();
+      byte[] data = response.asByteArray();
       String eTag = response.response().eTag();
       return Optional.of(new ObjectStorageWrapperResponse(data, eTag));
     } catch (Exception e) {
@@ -124,12 +124,12 @@ public class S3Wrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void insert(String key, String object) throws ObjectStorageWrapperException {
+  public void insert(String key, byte[] object) throws ObjectStorageWrapperException {
     try {
       client
           .putObject(
               PutObjectRequest.builder().bucket(bucket).key(key).ifNoneMatch("*").build(),
-              AsyncRequestBody.fromString(object))
+              AsyncRequestBody.fromBytes(object))
           .join();
     } catch (Exception e) {
       Throwable cause = e.getCause();
@@ -155,13 +155,13 @@ public class S3Wrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void update(String key, String object, String version)
+  public void update(String key, byte[] object, String version)
       throws ObjectStorageWrapperException {
     try {
       client
           .putObject(
               PutObjectRequest.builder().bucket(bucket).key(key).ifMatch(version).build(),
-              AsyncRequestBody.fromString(object))
+              AsyncRequestBody.fromBytes(object))
           .join();
     } catch (Exception e) {
       Throwable cause = e.getCause();

@@ -1,11 +1,14 @@
 package com.scalar.db.storage.objectstorage.blobstorage;
 
+import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
+import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.objectstorage.ObjectStorageConfig;
+import com.scalar.db.storage.objectstorage.ObjectStorageFormat;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +25,8 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   public static final String PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES =
       PREFIX + "parallel_upload_threshold_size_bytes";
   public static final String REQUEST_TIMEOUT_SECS = PREFIX + "request_timeout_secs";
+  public static final String OBJECT_FORMAT = PREFIX + "object_format";
+  public static final String COMPRESSION_ENABLED = PREFIX + "compression_enabled";
 
   private static final Logger logger = LoggerFactory.getLogger(BlobStorageConfig.class);
   private final String endpoint;
@@ -34,6 +39,8 @@ public class BlobStorageConfig implements ObjectStorageConfig {
   private final Integer parallelUploadMaxConcurrency;
   private final Long parallelUploadThresholdSizeBytes;
   private final Integer requestTimeoutSecs;
+  private final ObjectStorageFormat format;
+  private final boolean compressionEnabled;
 
   public BlobStorageConfig(DatabaseConfig databaseConfig) {
     String storage = databaseConfig.getStorage();
@@ -71,6 +78,10 @@ public class BlobStorageConfig implements ObjectStorageConfig {
     parallelUploadThresholdSizeBytes =
         getLong(databaseConfig.getProperties(), PARALLEL_UPLOAD_THRESHOLD_SIZE_BYTES, null);
     requestTimeoutSecs = getInt(databaseConfig.getProperties(), REQUEST_TIMEOUT_SECS, null);
+    String formatStr =
+        getString(databaseConfig.getProperties(), OBJECT_FORMAT, ObjectStorageFormat.CBOR.name());
+    format = ObjectStorageFormat.valueOf(formatStr.toUpperCase());
+    compressionEnabled = getBoolean(databaseConfig.getProperties(), COMPRESSION_ENABLED, false);
   }
 
   @Override
@@ -115,5 +126,15 @@ public class BlobStorageConfig implements ObjectStorageConfig {
 
   public Optional<Integer> getRequestTimeoutSecs() {
     return Optional.ofNullable(requestTimeoutSecs);
+  }
+
+  @Override
+  public ObjectStorageFormat getFormat() {
+    return format;
+  }
+
+  @Override
+  public boolean isCompressionEnabled() {
+    return compressionEnabled;
   }
 }
