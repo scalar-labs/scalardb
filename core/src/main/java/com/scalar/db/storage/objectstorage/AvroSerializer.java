@@ -17,6 +17,7 @@ import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.util.Utf8;
+import org.xerial.snappy.Snappy;
 
 @ThreadSafe
 public class AvroSerializer {
@@ -40,7 +41,7 @@ public class AvroSerializer {
       GenericDatumWriter<GenericRecord> writer = new GenericDatumWriter<>(partitionSchema);
       writer.write(partitionRecord, encoder);
       encoder.flush();
-      return out.toByteArray();
+      return Snappy.compress(out.toByteArray());
     } catch (IOException e) {
       throw new RuntimeException("Failed to serialize partition to Avro", e);
     }
@@ -49,9 +50,10 @@ public class AvroSerializer {
   public static ObjectStoragePartition deserialize(
       byte[] data, ObjectStorageTableMetadata metadata) {
     try {
+      byte[] decompressed = Snappy.uncompress(data);
       Schema partitionSchema = schemaGenerator.getPartitionSchema(metadata);
       GenericDatumReader<GenericRecord> reader = new GenericDatumReader<>(partitionSchema);
-      BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(data, null);
+      BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(decompressed, null);
       GenericRecord partitionRecord = reader.read(null, decoder);
 
       @SuppressWarnings("unchecked")
