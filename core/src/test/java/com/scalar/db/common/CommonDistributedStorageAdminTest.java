@@ -2,7 +2,9 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -517,5 +519,32 @@ public class CommonDistributedStorageAdminTest {
     assertThatThrownBy(() -> commonDistributedStorageAdmin.getVirtualTableInfo(namespace, table))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("does not exist");
+  }
+
+  @Test
+  public void dropColumnFromTable_WhenAdminThrowsUnsupportedOperationException_ShouldNotDropIndex()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    String columnName = "col1";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.INT)
+            .addColumn(columnName, DataType.TEXT)
+            .addSecondaryIndex(columnName)
+            .build();
+    when(admin.getTableMetadata(namespace, table)).thenReturn(tableMetadata);
+    doThrow(new UnsupportedOperationException())
+        .when(admin)
+        .dropColumnFromTable(namespace, table, columnName);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> commonDistributedStorageAdmin.dropColumnFromTable(namespace, table, columnName))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(admin, never()).dropIndex(namespace, table, columnName);
   }
 }
