@@ -6,7 +6,10 @@ import com.esotericsoftware.kryo.kryo5.io.Output;
 import com.esotericsoftware.kryo.kryo5.objenesis.strategy.StdInstantiatorStrategy;
 import com.esotericsoftware.kryo.kryo5.util.DefaultInstantiatorStrategy;
 import com.esotericsoftware.kryo.kryo5.util.Pool;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
 public class Serializer {
   public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
@@ -26,7 +29,8 @@ public class Serializer {
   @SuppressWarnings("unchecked")
   public static <T> T deserialize(byte[] data) {
     Kryo kryo = kryoPool.obtain();
-    try (Input input = new Input(data)) {
+    try (InflaterInputStream iis = new InflaterInputStream(new ByteArrayInputStream(data));
+        Input input = new Input(iis)) {
       return (T) kryo.readClassAndObject(input);
     } catch (Exception e) {
       throw new RuntimeException("Failed to deserialize the object.", e);
@@ -39,7 +43,8 @@ public class Serializer {
     Kryo kryo = kryoPool.obtain();
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      try (Output output = new Output(baos)) {
+      try (DeflaterOutputStream dos = new DeflaterOutputStream(baos);
+          Output output = new Output(dos)) {
         kryo.writeClassAndObject(output, object);
       }
       return baos.toByteArray();
