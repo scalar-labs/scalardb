@@ -626,37 +626,6 @@ public final class ConsensusCommitUtils {
   }
 
   /**
-   * Checks if the given selection requires a before-image index check based on the table metadata.
-   *
-   * <p>For ScanAll, this checks if any conjunction condition is on a column that has a before-image
-   * secondary index. For index-based selections (Get with index, Scan with index), this checks if
-   * the index column has a before-image secondary index.
-   *
-   * @param selection the selection operation to check
-   * @param metadata the transaction table metadata
-   * @return true if the selection requires a before-image index check
-   */
-  static boolean requiresBeforeIndexCheck(Selection selection, TransactionTableMetadata metadata) {
-    if (selection instanceof ScanAll) {
-      for (Selection.Conjunction conjunction : selection.getConjunctions()) {
-        for (ConditionalExpression condition : conjunction.getConditions()) {
-          if (metadata.hasBeforeImageSecondaryIndex(condition.getColumn().getName())) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-
-    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata.getTableMetadata())) {
-      String indexColumnName = selection.getPartitionKey().getColumns().get(0).getName();
-      return metadata.hasBeforeImageSecondaryIndex(indexColumnName);
-    }
-
-    return false;
-  }
-
-  /**
    * Creates a ScanWithIndex that scans using the before-image index column corresponding to the
    * original selection's index key. This is used to find PREPARED/DELETED records whose committed
    * (before-image) values match the original query.

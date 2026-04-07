@@ -8,6 +8,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
 import com.scalar.db.api.ConditionSetBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -835,6 +836,13 @@ public class Snapshot {
    * committed with index_col=10 but updated to 20 by another PREPARED transaction would be
    * invisible to both the original scan and the validation re-scan.
    *
+   * <p>This method is only called in the SERIALIZABLE extra-read validation phase. In SERIALIZABLE,
+   * {@link ConsensusCommitOperationChecker} rejects index-based operations on tables without
+   * before-image indexes, so the existence of before-image indexes is guaranteed when this method
+   * is called. Therefore, this method only needs to check whether the selection is an index-based
+   * operation (Get with index, Scan with index, or ScanAll with indexed column conditions), without
+   * checking for the existence of before-image indexes.
+   *
    * @param storage a distributed storage
    * @param selection the original selection operation (Get with index, ScanWithIndex, or ScanAll)
    * @throws ExecutionException if a storage operation fails
@@ -843,7 +851,7 @@ public class Snapshot {
   private void validateBeforeIndex(
       DistributedStorage storage, Selection selection, TransactionTableMetadata txMetadata)
       throws ExecutionException, ValidationConflictException {
-    if (!ConsensusCommitUtils.requiresBeforeIndexCheck(selection, txMetadata)) {
+    if (!isIndexBasedOperation(selection, txMetadata.getTableMetadata())) {
       return;
     }
 
@@ -876,6 +884,31 @@ public class Snapshot {
     } catch (IOException e) {
       logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
     }
+  }
+
+  /**
+   * Checks if the given selection is an index-based operation that requires before-image index
+   * validation. This includes Get with index, Scan with index, and ScanAll with conditions on
+   * indexed columns.
+   *
+   * @param selection the selection operation to check
+   * @param metadata the table metadata
+   * @return true if the selection is an index-based operation
+   */
+  private boolean isIndexBasedOperation(Selection selection, TableMetadata metadata) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata)) {
+      return true;
+    }
+    if (selection instanceof ScanAll) {
+      for (Selection.Conjunction conjunction : selection.getConjunctions()) {
+        for (ConditionalExpression condition : conjunction.getConditions()) {
+          if (metadata.getSecondaryIndexNames().contains(condition.getColumn().getName())) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
