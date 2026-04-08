@@ -29,6 +29,28 @@ public interface AuthAdmin {
   }
 
   /**
+   * Creates a user with the given username, password, authentication methods and user options. If
+   * the password is null, the user is created without a password. If the authentication methods are
+   * null, the default authentication methods are used.
+   *
+   * @param username the username
+   * @param password the password. If null, the user is created without a password
+   * @param authenticationMethods the authentication methods. If null, the default authentication
+   *     methods are used
+   * @param userOptions the user options
+   * @throws IllegalArgumentException if the user already exists
+   * @throws ExecutionException if the operation fails
+   */
+  default void createUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
    * Alters a user with the given username, password and user options. If the password is null, the
    * password is not changed. If empty, the password is deleted.
    *
@@ -40,6 +62,29 @@ public interface AuthAdmin {
    * @throws ExecutionException if the operation fails
    */
   default void alterUser(String username, @Nullable String password, UserOption... userOptions)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Alters a user with the given username, password, authentication methods and user options. If
+   * the password is null, the password is not changed. If empty, the password is deleted. If the
+   * authentication methods are null, the authentication methods are not changed.
+   *
+   * @param username the username
+   * @param password the password. If null, the password is not changed. If empty, the password is
+   *     deleted
+   * @param authenticationMethods the authentication methods. If null, the authentication methods
+   *     are not changed
+   * @param userOptions the user options
+   * @throws IllegalArgumentException if the user does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void alterUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
@@ -439,6 +484,13 @@ public interface AuthAdmin {
      * @return whether the user is a superuser
      */
     boolean isSuperuser();
+
+    /**
+     * Returns the authentication methods associated with the user.
+     *
+     * @return the authentication methods
+     */
+    Set<AuthenticationMethod> getAuthenticationMethods();
   }
 
   /** Represents a role, including its granted roles. */
@@ -504,6 +556,15 @@ public interface AuthAdmin {
      * @return whether admin option is granted for this role grant
      */
     boolean hasAdminOption();
+  }
+
+  /** The authentication methods. */
+  enum AuthenticationMethod {
+    /** Password-based authentication. */
+    PASSWORD,
+
+    /** OpenID Connect (OIDC) authentication. */
+    OIDC,
   }
 
   /** The user options. */
