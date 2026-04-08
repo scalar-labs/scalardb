@@ -891,6 +891,10 @@ public class Snapshot {
    * validation. This includes Get with index, Scan with index, and ScanAll with conditions on
    * indexed columns.
    *
+   * <p>For ScanAll, whether the underlying storage actually uses the index depends on the storage
+   * implementation. However, this method considers ScanAll with conditions on indexed columns as an
+   * index-based operation regardless.
+   *
    * @param selection the selection operation to check
    * @param metadata the table metadata
    * @return true if the selection is an index-based operation
