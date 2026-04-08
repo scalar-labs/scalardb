@@ -240,6 +240,12 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // ORA-01418: specified index does not exist
+    return e.getErrorCode() == 1418;
+  }
+
+  @Override
   public boolean isDuplicateIndexError(SQLException e) {
     // https://docs.oracle.com/en/error-help/db/ora-00955/
     // code : 955

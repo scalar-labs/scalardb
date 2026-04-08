@@ -320,6 +320,12 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // SQL error code -204: name IS AN UNDEFINED NAME
+    return e.getErrorCode() == -204;
+  }
+
+  @Override
   public boolean isDuplicateIndexError(SQLException e) {
     // Even though the "create index if exists ..." syntax does not exist,
     // only a warning is raised when the index already exists but no error is thrown

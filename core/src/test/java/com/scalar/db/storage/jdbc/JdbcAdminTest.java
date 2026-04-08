@@ -3540,6 +3540,47 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void dropIndex_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                longColumn, DataType.BOOLEAN.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The first execute (with shortened index name) throws undefined index error,
+    // the second execute (with original long name) and the metadata update succeed
+    String shortenedIndexName = JdbcAdmin.getIndexName(namespace, table, longColumn);
+    String shortenedDropSql = "DROP INDEX \"" + namespace + "\".\"" + shortenedIndexName + "\"";
+    String originalName = String.join("_", "index", namespace, table, longColumn);
+    String fallbackDropSql = "DROP INDEX \"" + namespace + "\".\"" + originalName + "\"";
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_OBJECT);
+    when(statement.execute(shortenedDropSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackDropSql)).thenReturn(false);
+
+    // Act
+    admin.dropIndex(namespace, table, longColumn);
+
+    // Assert
+    verify(statement).execute(shortenedDropSql);
+    verify(statement).execute(fallbackDropSql);
+  }
+
+  @Test
   public void dropIndex_VirtualTableWithColumnInLeftSourceTable_ShouldDropIndexOnLeftSourceTable()
       throws Exception {
     // Arrange
@@ -4234,6 +4275,64 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void renameColumn_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String oldColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    String newColumn = "new_col";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Mock table metadata with a secondary index on the long column
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                oldColumn, DataType.BOOLEAN.toString(), null, null, true));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The rename index with shortened name throws undefined index error
+    String shortenedOldIndexName = JdbcAdmin.getIndexName(namespace, table, oldColumn);
+    String shortenedNewIndexName = JdbcAdmin.getIndexName(namespace, table, newColumn);
+    String shortenedRenameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + shortenedOldIndexName
+            + "\" RENAME TO \""
+            + shortenedNewIndexName
+            + "\"";
+    String originalOldIndexName = String.join("_", "index", namespace, table, oldColumn);
+    String fallbackRenameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + originalOldIndexName
+            + "\" RENAME TO \""
+            + shortenedNewIndexName
+            + "\"";
+
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_TABLE);
+    when(statement.execute(shortenedRenameSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackRenameSql)).thenReturn(false);
+
+    // Act
+    admin.renameColumn(namespace, table, oldColumn, newColumn);
+
+    // Assert
+    verify(statement).execute(shortenedRenameSql);
+    verify(statement).execute(fallbackRenameSql);
+  }
+
+  @Test
   public void alterColumnType_ForMysql_ShouldWorkProperly()
       throws SQLException, ExecutionException {
     alterColumnType_ForX_ShouldWorkProperly(
@@ -4558,6 +4657,64 @@ public class JdbcAdminTest {
         verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
       }
     }
+  }
+
+  @Test
+  public void renameTable_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String oldTable = "my_tbl";
+    String newTable = "my_new_tbl";
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Mock table metadata with a secondary index on the long column
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                longColumn, DataType.BOOLEAN.toString(), null, null, true));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The rename index with shortened name throws undefined index error
+    String shortenedOldIndexName = JdbcAdmin.getIndexName(namespace, oldTable, longColumn);
+    String shortenedNewIndexName = JdbcAdmin.getIndexName(namespace, newTable, longColumn);
+    String shortenedRenameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + shortenedOldIndexName
+            + "\" RENAME TO \""
+            + shortenedNewIndexName
+            + "\"";
+    String originalOldIndexName = String.join("_", "index", namespace, oldTable, longColumn);
+    String fallbackRenameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + originalOldIndexName
+            + "\" RENAME TO \""
+            + shortenedNewIndexName
+            + "\"";
+
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_TABLE);
+    when(statement.execute(shortenedRenameSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackRenameSql)).thenReturn(false);
+
+    // Act
+    admin.renameTable(namespace, oldTable, newTable);
+
+    // Assert
+    verify(statement).execute(shortenedRenameSql);
+    verify(statement).execute(fallbackRenameSql);
   }
 
   @Test
@@ -6291,6 +6448,78 @@ public class JdbcAdminTest {
         .isInstanceOf(ExecutionException.class)
         .hasMessageContaining("Getting the transaction isolation level failed")
         .hasCauseInstanceOf(SQLException.class);
+  }
+
+  @Test
+  public void getIndexName_WithShortName_ShouldReturnOriginalName() {
+    // Arrange
+
+    // Act
+    String indexName = JdbcAdmin.getIndexName("ns", "tbl", "col");
+
+    // Assert
+    assertThat(indexName).isEqualTo("index_ns_tbl_col");
+  }
+
+  @Test
+  public void getIndexName_WithNameExceedingMaxLength_ShouldReturnShortenedName() {
+    // Arrange
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+
+    // Act
+    String indexName = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn);
+
+    // Assert
+    assertThat(indexName).startsWith("index_");
+    assertThat(indexName.length()).isLessThanOrEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH);
+  }
+
+  @Test
+  public void getIndexName_WithNameExceedingMaxLength_ShouldReturnConsistentName() {
+    // Arrange
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+
+    // Act
+    String indexName1 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn);
+    String indexName2 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn);
+
+    // Assert
+    assertThat(indexName1).isEqualTo(indexName2);
+  }
+
+  @Test
+  public void getIndexName_WithNameExactlyAtMaxLength_ShouldReturnOriginalName() {
+    // Arrange
+
+    // "index_" is 6 chars, so we need column name that makes total exactly 63
+    // index_{schema}_{table}_{column} = index_ + schema + _ + table + _ + column
+    String schema = "ns";
+    String table = "tbl";
+
+    // "index_ns_tbl_" = 13 chars, so column needs to be 50 chars to make total 63
+    String column = String.join("", Collections.nCopies(50, "c"));
+    String expectedName = String.join("_", "index", schema, table, column);
+    assertThat(expectedName.length()).isEqualTo(63); // sanity check
+
+    // Act
+    String indexName = JdbcAdmin.getIndexName(schema, table, column);
+
+    // Assert
+    assertThat(indexName).isEqualTo(expectedName);
+  }
+
+  @Test
+  public void getIndexName_WithDifferentInputs_ShouldReturnDifferentShortenedNames() {
+    // Arrange
+    String longColumn1 = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length_1";
+    String longColumn2 = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length_2";
+
+    // Act
+    String indexName1 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn1);
+    String indexName2 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn2);
+
+    // Assert
+    assertThat(indexName1).isNotEqualTo(indexName2);
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

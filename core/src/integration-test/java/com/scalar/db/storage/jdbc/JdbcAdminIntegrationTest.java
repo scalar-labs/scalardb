@@ -619,4 +619,132 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   protected boolean isIndexOnBlobColumnSupported() {
     return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
   }
+
+  @Test
+  @DisabledIf("isDb2")
+  public void dropIndex_WithLongIndexNameCreatedByOldNaming_ShouldDropIndexByFallback()
+      throws Exception {
+    // Use a long column name that causes the index name to exceed the max length
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(64);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - dropIndex should succeed via fallback
+      assertThatCode(() -> admin.dropIndex(getNamespace1(), getTable4(), longColumn))
+          .doesNotThrowAnyException();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), longColumn)).isFalse();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      testUtils.close();
+    }
+  }
+
+  @Test
+  @DisabledIf("isDb2")
+  public void renameTable_WithLongIndexNameCreatedByOldNaming_ShouldRenameIndexByFallback()
+      throws Exception {
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    String newTableName = "new" + getTable4();
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(64);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - renameTable should succeed via fallback
+      assertThatCode(() -> admin.renameTable(getNamespace1(), getTable4(), newTableName))
+          .doesNotThrowAnyException();
+      assertThat(admin.tableExists(getNamespace1(), newTableName)).isTrue();
+      assertThat(admin.indexExists(getNamespace1(), newTableName, longColumn)).isTrue();
+
+      // Verify the renamed index can be dropped
+      assertThatCode(() -> admin.dropIndex(getNamespace1(), newTableName, longColumn))
+          .doesNotThrowAnyException();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      admin.dropTable(getNamespace1(), newTableName, true);
+      testUtils.close();
+    }
+  }
+
+  @Test
+  @DisabledIf("isDb2")
+  public void renameColumn_WithLongIndexNameCreatedByOldNaming_ShouldRenameIndexByFallback()
+      throws Exception {
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    String newColumnName = "new_col";
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(64);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - renameColumn should succeed via fallback
+      assertThatCode(
+              () -> admin.renameColumn(getNamespace1(), getTable4(), longColumn, newColumnName))
+          .doesNotThrowAnyException();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), newColumnName)).isTrue();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), longColumn)).isFalse();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      testUtils.close();
+    }
+  }
 }

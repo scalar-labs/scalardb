@@ -193,6 +193,16 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
+    // 42704: undefined_object (DROP INDEX returns this)
+    // 42P01: undefined_table (ALTER INDEX RENAME returns this, as indexes are relations)
+    return e.getSQLState().equals("42704") || e.getSQLState().equals("42P01");
+  }
+
+  @Override
   public boolean isDuplicateIndexError(SQLException e) {
     // Since the "IF NOT EXISTS" syntax is used to create an index, we always return false
     return false;
