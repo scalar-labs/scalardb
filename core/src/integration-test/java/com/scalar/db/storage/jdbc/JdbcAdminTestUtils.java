@@ -82,8 +82,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   /**
-   * Creates an index with the specified index name. This is used to create an index with the old
-   * (non-shortened) naming convention for testing the fallback behavior.
+   * Creates an index with the specified index name.
    *
    * @param namespace the namespace of the table
    * @param table the table name
@@ -98,8 +97,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   /**
-   * Drops an index with the specified index name. This is used to drop an index created with the
-   * shortened naming convention for testing the fallback behavior.
+   * Drops an index with the specified index name.
    *
    * @param namespace the namespace of the table
    * @param table the table name

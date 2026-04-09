@@ -3554,7 +3554,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
             new SelectAllFromMetadataTableResultSetMocker.Row(
-                longColumn, DataType.BOOLEAN.toString(), null, null, false));
+                longColumn, DataType.BOOLEAN.toString(), null, null, true));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(any())).thenReturn(selectStatement);
 
