@@ -727,8 +727,7 @@ public class CrudHandler {
         exception = e;
       }
       throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-              exception.getMessage()),
+          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
           exception,
           context.transactionId);
     } catch (ExecutionException e) {
