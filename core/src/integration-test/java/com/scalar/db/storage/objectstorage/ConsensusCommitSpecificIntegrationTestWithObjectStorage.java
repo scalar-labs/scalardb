@@ -83,11 +83,11 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
-  public void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException() {}
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldScan() {}
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
-  public void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException() {}
+  public void get_GetWithIndexGiven_WithSerializable_ShouldGet() {}
 
   @Override
   @Disabled("Object Storage does not support index-related operations")
@@ -274,4 +274,29 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
   public void
       getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      commit_GetWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException() {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      commit_ScanWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException() {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      commit_ScanAllWithIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException() {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      commit_GetScannerWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException() {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      commit_GetScannerWithScanAllIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException() {}
 }
