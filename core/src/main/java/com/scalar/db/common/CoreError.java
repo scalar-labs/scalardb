@@ -699,19 +699,22 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0260",
-      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "Get operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable index-based Get operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0261",
-      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "Scan operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable index-based Scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0262",
-      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
+      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable conditions on indexed columns in cross-partition scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
   TABLE_METADATA_BUILD_ERROR_SECONDARY_INDEX_COLUMN_DEFINITION_NOT_SPECIFIED(
