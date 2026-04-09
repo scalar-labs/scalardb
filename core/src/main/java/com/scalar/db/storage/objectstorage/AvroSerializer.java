@@ -8,16 +8,15 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.avro.Schema;
+import org.apache.avro.file.CodecFactory;
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.BinaryDecoder;
-import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.util.Utf8;
-import org.xerial.snappy.Snappy;
 
 @ThreadSafe
 public class AvroSerializer {
@@ -26,22 +25,17 @@ public class AvroSerializer {
   public static byte[] serialize(
       ObjectStoragePartition partition, ObjectStorageTableMetadata metadata) {
     try {
-      Schema partitionSchema = schemaGenerator.getPartitionSchema(metadata);
-      Schema recordSchema = partitionSchema.getField("records").schema().getValueType();
-      GenericRecord partitionRecord = new GenericData.Record(partitionSchema);
-
-      Map<String, GenericRecord> avroRecords = new HashMap<>();
-      for (Map.Entry<String, ObjectStorageRecord> entry : partition.getRecords().entrySet()) {
-        avroRecords.put(entry.getKey(), toAvroRecord(entry.getValue(), recordSchema, metadata));
-      }
-      partitionRecord.put("records", avroRecords);
-
+      Schema recordSchema = schemaGenerator.getRecordSchema(metadata);
       ByteArrayOutputStream out = new ByteArrayOutputStream();
-      BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
-      GenericDatumWriter<GenericRecord> writer = new GenericDatumWriter<>(partitionSchema);
-      writer.write(partitionRecord, encoder);
-      encoder.flush();
-      return Snappy.compress(out.toByteArray());
+      GenericDatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(recordSchema);
+      try (DataFileWriter<GenericRecord> fileWriter = new DataFileWriter<>(datumWriter)) {
+        fileWriter.setCodec(CodecFactory.snappyCodec());
+        fileWriter.create(recordSchema, out);
+        for (ObjectStorageRecord record : partition.getRecords().values()) {
+          fileWriter.append(toAvroRecord(record, recordSchema, metadata));
+        }
+      }
+      return out.toByteArray();
     } catch (IOException e) {
       throw new RuntimeException("Failed to serialize partition to Avro", e);
     }
@@ -50,22 +44,18 @@ public class AvroSerializer {
   public static ObjectStoragePartition deserialize(
       byte[] data, ObjectStorageTableMetadata metadata) {
     try {
-      byte[] decompressed = Snappy.uncompress(data);
-      Schema partitionSchema = schemaGenerator.getPartitionSchema(metadata);
-      GenericDatumReader<GenericRecord> reader = new GenericDatumReader<>(partitionSchema);
-      BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(decompressed, null);
-      GenericRecord partitionRecord = reader.read(null, decoder);
-
-      @SuppressWarnings("unchecked")
-      Map<CharSequence, GenericRecord> avroRecords =
-          (Map<CharSequence, GenericRecord>) partitionRecord.get("records");
-
-      Map<String, ObjectStorageRecord> records = new HashMap<>();
-      for (Map.Entry<CharSequence, GenericRecord> entry : avroRecords.entrySet()) {
-        String key = entry.getKey().toString();
-        records.put(key, fromAvroRecord(entry.getValue(), metadata));
+      Schema recordSchema = schemaGenerator.getRecordSchema(metadata);
+      GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(recordSchema);
+      try (DataFileReader<GenericRecord> fileReader =
+          new DataFileReader<>(new SeekableByteArrayInput(data), datumReader)) {
+        Map<String, ObjectStorageRecord> records = new HashMap<>();
+        while (fileReader.hasNext()) {
+          GenericRecord avroRecord = fileReader.next();
+          ObjectStorageRecord record = fromAvroRecord(avroRecord, metadata);
+          records.put(record.getId(), record);
+        }
+        return new ObjectStoragePartition(records);
       }
-      return new ObjectStoragePartition(records);
     } catch (IOException e) {
       throw new RuntimeException("Failed to deserialize partition from Avro", e);
     }

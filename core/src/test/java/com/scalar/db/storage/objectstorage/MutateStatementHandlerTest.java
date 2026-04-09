@@ -120,11 +120,11 @@ public class MutateStatementHandlerTest {
         .build();
   }
 
-  private ObjectStorageRecord prepareExistingRecord() {
+  private ObjectStorageRecord prepareExistingRecord(String recordId) {
     Map<String, Object> values = new HashMap<>();
     values.put(ANY_NAME_3, ANY_INT_1);
     values.put(ANY_NAME_4, ANY_INT_2);
-    return ObjectStorageRecord.newBuilder().id("concat_key").values(values).build();
+    return ObjectStorageRecord.newBuilder().id(recordId).values(values).build();
   }
 
   private void setupNonExistentPartition() throws ObjectStorageWrapperException {
@@ -133,7 +133,7 @@ public class MutateStatementHandlerTest {
 
   private void setupPartitionWithRecord(String recordId) throws ObjectStorageWrapperException {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
-    records.put(recordId, prepareExistingRecord());
+    records.put(recordId, prepareExistingRecord(recordId));
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
     byte[] serializedPartition = serializePartition(partition);
     ObjectStorageWrapperResponse response =
@@ -144,9 +144,9 @@ public class MutateStatementHandlerTest {
   private void setupPartitionWithRecords(String recordId, String... additionalRecordIds)
       throws ObjectStorageWrapperException {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
-    records.put(recordId, prepareExistingRecord());
+    records.put(recordId, prepareExistingRecord(recordId));
     for (String additionalRecordId : additionalRecordIds) {
-      records.put(additionalRecordId, prepareExistingRecord());
+      records.put(additionalRecordId, prepareExistingRecord(additionalRecordId));
     }
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
     byte[] serializedPartition = serializePartition(partition);

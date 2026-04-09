@@ -8,18 +8,7 @@ import org.apache.avro.SchemaBuilder;
 @ThreadSafe
 class AvroSchemaGenerator {
 
-  Schema getPartitionSchema(ObjectStorageTableMetadata metadata) {
-    Schema recordSchema = generateRecordSchema(metadata);
-    return SchemaBuilder.record("ObjectStoragePartition")
-        .namespace("com.scalar.db.objectstorage")
-        .fields()
-        .name("records")
-        .type(Schema.createMap(recordSchema))
-        .noDefault()
-        .endRecord();
-  }
-
-  private Schema generateRecordSchema(ObjectStorageTableMetadata metadata) {
+  Schema getRecordSchema(ObjectStorageTableMetadata metadata) {
     SchemaBuilder.FieldAssembler<Schema> fields =
         SchemaBuilder.record("ObjectStorageRecord")
             .namespace("com.scalar.db.objectstorage")
