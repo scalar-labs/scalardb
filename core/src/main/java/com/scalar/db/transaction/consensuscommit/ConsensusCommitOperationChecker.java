@@ -83,7 +83,8 @@ public class ConsensusCommitOperationChecker {
         // If the index column is part of the primary key, it's allowed
         String indexKeyColumnName = get.getPartitionKey().getColumns().get(0).getName();
         if (!tableMetadata.getPartitionKeyNames().contains(indexKeyColumnName)
-            && !tableMetadata.getClusteringKeyNames().contains(indexKeyColumnName)) {
+            && !tableMetadata.getClusteringKeyNames().contains(indexKeyColumnName)
+            && !metadata.hasBeforeImageSecondaryIndex(indexKeyColumnName)) {
           throw new IllegalArgumentException(
               CoreError.CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE.buildMessage());
         }
@@ -148,7 +149,8 @@ public class ConsensusCommitOperationChecker {
         // If the index column is part of the primary key, it's allowed
         String indexKeyColumnName = scan.getPartitionKey().getColumns().get(0).getName();
         if (!tableMetadata.getPartitionKeyNames().contains(indexKeyColumnName)
-            && !tableMetadata.getClusteringKeyNames().contains(indexKeyColumnName)) {
+            && !tableMetadata.getClusteringKeyNames().contains(indexKeyColumnName)
+            && !metadata.hasBeforeImageSecondaryIndex(indexKeyColumnName)) {
           throw new IllegalArgumentException(
               CoreError.CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE.buildMessage());
         }
@@ -162,7 +164,8 @@ public class ConsensusCommitOperationChecker {
             // If the column is an indexed column but is part of the primary key, it's allowed
             if (tableMetadata.getSecondaryIndexNames().contains(column)
                 && !tableMetadata.getPartitionKeyNames().contains(column)
-                && !tableMetadata.getClusteringKeyNames().contains(column)) {
+                && !tableMetadata.getClusteringKeyNames().contains(column)
+                && !metadata.hasBeforeImageSecondaryIndex(column)) {
               throw new IllegalArgumentException(
                   CoreError
                       .CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE
