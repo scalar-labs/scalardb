@@ -1147,6 +1147,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       // logic was introduced. Some databases (e.g., PostgreSQL) silently truncate long index names,
       // so retrying with the original long name allows the database to match the truncated name.
       String originalName = String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
+      if (originalName.equals(indexName)) {
+        throw e;
+      }
       String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalName);
       execute(connection, fallbackSql, requiresExplicitCommit);
     }
