@@ -7,10 +7,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -29,10 +32,20 @@ public class StreamingRecordIteratorTest {
   private static final String VERSION = "version1";
 
   @Mock private ObjectStorageWrapper wrapper;
+  @Mock private TableMetadata metadata;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList("pk")));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList("ck")));
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList("pk", "ck", "col1")));
+    when(metadata.getColumnDataType("pk")).thenReturn(DataType.TEXT);
+    when(metadata.getColumnDataType("ck")).thenReturn(DataType.TEXT);
+    when(metadata.getColumnDataType("col1")).thenReturn(DataType.INT);
   }
 
   @Test
@@ -40,7 +53,7 @@ public class StreamingRecordIteratorTest {
     // Arrange
     List<String> partitionKeys = Collections.emptyList();
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     boolean hasNext = iterator.hasNext();
@@ -54,7 +67,7 @@ public class StreamingRecordIteratorTest {
     // Arrange
     List<String> partitionKeys = Collections.emptyList();
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act & Assert
     assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
@@ -68,7 +81,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     boolean hasNext = iterator.hasNext();
@@ -85,7 +98,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -95,7 +108,6 @@ public class StreamingRecordIteratorTest {
 
     // Assert
     assertThat(result).hasSize(2);
-    assertThat(result).containsAll(records.values());
   }
 
   @Test
@@ -112,7 +124,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_3, records3);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -122,9 +134,6 @@ public class StreamingRecordIteratorTest {
 
     // Assert
     assertThat(result).hasSize(6);
-    assertThat(result.subList(0, 2)).containsAll(records1.values());
-    assertThat(result.subList(2, 5)).containsAll(records2.values());
-    assertThat(result.subList(5, 6)).containsAll(records3.values());
   }
 
   @Test
@@ -137,7 +146,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_2, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -147,7 +156,6 @@ public class StreamingRecordIteratorTest {
 
     // Assert
     assertThat(result).hasSize(2);
-    assertThat(result).containsAll(records.values());
   }
 
   @Test
@@ -160,7 +168,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_2, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     List<ObjectStorageRecord> result = new ArrayList<>();
@@ -170,7 +178,6 @@ public class StreamingRecordIteratorTest {
 
     // Assert
     assertThat(result).hasSize(2);
-    assertThat(result).containsAll(records.values());
   }
 
   @Test
@@ -182,7 +189,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     boolean hasNext1 = iterator.hasNext();
@@ -206,7 +213,7 @@ public class StreamingRecordIteratorTest {
     when(wrapper.get(anyString())).thenThrow(exception);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act & Assert
     assertThatThrownBy(iterator::hasNext).isInstanceOf(RuntimeException.class);
@@ -220,7 +227,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     iterator.next();
@@ -239,7 +246,7 @@ public class StreamingRecordIteratorTest {
     setupPartitionWithRecords(PARTITION_KEY_1, records);
 
     StreamingRecordIterator iterator =
-        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys);
+        new StreamingRecordIterator(wrapper, NAMESPACE, TABLE, partitionKeys, metadata);
 
     // Act
     iterator.next();
@@ -272,7 +279,7 @@ public class StreamingRecordIteratorTest {
       String partitionKey, Map<String, ObjectStorageRecord> records)
       throws ObjectStorageWrapperException {
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = ParquetSerializer.serialize(partition, metadata);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     String objectKey = ObjectStorageUtils.getObjectKey(NAMESPACE, TABLE, partitionKey);

@@ -28,7 +28,7 @@ public class MutateStatementHandler extends StatementHandler {
             getNamespace(mutation),
             getTable(mutation),
             objectStorageMutation.getConcatenatedPartitionKey());
-    mutate(objectKey, Collections.singletonList(mutation));
+    mutate(objectKey, Collections.singletonList(mutation), tableMetadata);
   }
 
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
@@ -40,44 +40,40 @@ public class MutateStatementHandler extends StatementHandler {
     String objectKey =
         ObjectStoragePartition.getObjectKey(
             getNamespace(mutations.get(0)), getTable(mutations.get(0)), partitionKey);
-    mutate(objectKey, mutations);
+    mutate(objectKey, mutations, tableMetadata);
   }
 
-  private void mutate(String objectKey, List<? extends Mutation> mutations)
+  private void mutate(
+      String objectKey, List<? extends Mutation> mutations, TableMetadata tableMetadata)
       throws ExecutionException {
-    ObjectStoragePartitionSnapshot snapshot = getPartition(objectKey);
+    ObjectStoragePartitionSnapshot snapshot = getPartition(objectKey, tableMetadata);
     for (Mutation mutation : mutations) {
-      TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
+      TableMetadata mutationMetadata = metadataManager.getTableMetadata(mutation);
       if (mutation instanceof Put) {
-        snapshot.applyPut((Put) mutation, tableMetadata);
+        snapshot.applyPut((Put) mutation, mutationMetadata);
       } else {
         assert mutation instanceof Delete;
-        snapshot.applyDelete((Delete) mutation, tableMetadata);
+        snapshot.applyDelete((Delete) mutation, mutationMetadata);
       }
     }
-    writePartition(snapshot);
+    writePartition(snapshot, tableMetadata);
   }
 
-  /**
-   * Writes a partition to the object storage.
-   *
-   * @param snapshot the partition snapshot
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private void writePartition(ObjectStoragePartitionSnapshot snapshot) throws ExecutionException {
+  private void writePartition(ObjectStoragePartitionSnapshot snapshot, TableMetadata tableMetadata)
+      throws ExecutionException {
     try {
       if (snapshot.getReadVersion().isPresent()) {
         if (!snapshot.getPartition().isEmpty()) {
           wrapper.update(
               snapshot.getObjectKey(),
-              snapshot.getPartition().serialize(),
+              snapshot.getPartition().serialize(tableMetadata),
               snapshot.getReadVersion().get());
         } else {
           wrapper.delete(snapshot.getObjectKey(), snapshot.getReadVersion().get());
         }
       } else {
         if (!snapshot.getPartition().isEmpty()) {
-          wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize());
+          wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize(tableMetadata));
         }
       }
     } catch (PreconditionFailedException | ConflictOccurredException e) {
@@ -89,21 +85,15 @@ public class MutateStatementHandler extends StatementHandler {
     }
   }
 
-  /**
-   * Gets a partition and its version as a snapshot from the object storage.
-   *
-   * @param objectKey the object key
-   * @return the partition
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private ObjectStoragePartitionSnapshot getPartition(String objectKey) throws ExecutionException {
+  private ObjectStoragePartitionSnapshot getPartition(String objectKey, TableMetadata tableMetadata)
+      throws ExecutionException {
     try {
       return wrapper
           .get(objectKey)
           .map(
               response ->
                   new ObjectStoragePartitionSnapshot(
-                      objectKey, response.getPayload(), response.getVersion()))
+                      objectKey, response.getPayload(), tableMetadata, response.getVersion()))
           .orElseGet(
               () ->
                   new ObjectStoragePartitionSnapshot(

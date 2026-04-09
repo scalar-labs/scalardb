@@ -195,6 +195,10 @@ dependencies {
     implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation "org.apache.parquet:parquet-column:${parquetVersion}"
+    implementation "org.apache.parquet:parquet-hadoop:${parquetVersion}"
+    implementation "org.apache.hadoop:hadoop-common:${hadoopVersion}"
+    implementation "org.apache.hadoop:hadoop-mapreduce-client-core:${hadoopVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")

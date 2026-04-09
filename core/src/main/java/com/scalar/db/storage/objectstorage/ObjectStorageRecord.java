@@ -1,7 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,12 +16,11 @@ public class ObjectStorageRecord {
   private final Map<String, Object> clusteringKey;
   private final Map<String, Object> values;
 
-  @JsonCreator
   public ObjectStorageRecord(
-      @JsonProperty("id") @Nullable String id,
-      @JsonProperty("partitionKey") @Nullable Map<String, Object> partitionKey,
-      @JsonProperty("clusteringKey") @Nullable Map<String, Object> clusteringKey,
-      @JsonProperty("values") @Nullable Map<String, Object> values) {
+      @Nullable String id,
+      @Nullable Map<String, Object> partitionKey,
+      @Nullable Map<String, Object> clusteringKey,
+      @Nullable Map<String, Object> values) {
     this.id = id != null ? id : "";
     this.partitionKey = partitionKey != null ? new HashMap<>(partitionKey) : Collections.emptyMap();
     this.clusteringKey =

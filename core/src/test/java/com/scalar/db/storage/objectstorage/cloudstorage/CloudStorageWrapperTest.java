@@ -24,7 +24,6 @@ import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
@@ -40,7 +39,7 @@ public class CloudStorageWrapperTest {
   private static final String BUCKET = "bucket";
   private static final String ANY_OBJECT_KEY = "any_object_key";
   private static final String ANY_PREFIX = "any_prefix/";
-  private static final String ANY_DATA = "any_data";
+  private static final byte[] ANY_DATA = "any_data".getBytes();
   private static final long ANY_GENERATION = 12345L;
 
   @Mock private CloudStorageConfig config;
@@ -64,7 +63,7 @@ public class CloudStorageWrapperTest {
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
     Blob blob = mock(Blob.class);
     when(storage.get(blobId)).thenReturn(blob);
-    when(blob.getContent()).thenReturn(ANY_DATA.getBytes(StandardCharsets.UTF_8));
+    when(blob.getContent()).thenReturn(ANY_DATA);
     when(blob.getGeneration()).thenReturn(ANY_GENERATION);
 
     // Act

@@ -14,6 +14,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ScalarDbUtils;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -430,7 +431,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
         readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
       }
       return Serializer.deserialize(
-          response.get().getPayload(),
+          new String(response.get().getPayload(), StandardCharsets.UTF_8),
           new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
@@ -454,7 +455,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
         readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
       }
       return Serializer.deserialize(
-          response.get().getPayload(),
+          new String(response.get().getPayload(), StandardCharsets.UTF_8),
           new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to get the metadata table.", e);
@@ -466,7 +467,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     try {
       wrapper.insert(
           ObjectStorageUtils.getObjectKey(metadataNamespace, table),
-          Serializer.serialize(metadataTable));
+          Serializer.serialize(metadataTable).getBytes(StandardCharsets.UTF_8));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to insert the metadata table.", e);
     }
@@ -477,7 +478,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     try {
       wrapper.update(
           ObjectStorageUtils.getObjectKey(metadataNamespace, table),
-          Serializer.serialize(metadataTable),
+          Serializer.serialize(metadataTable).getBytes(StandardCharsets.UTF_8),
           readVersion);
     } catch (Exception e) {
       throw new ExecutionException("Failed to update the metadata table.", e);

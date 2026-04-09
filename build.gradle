@@ -60,6 +60,8 @@ subprojects {
         shadowPluginVersion = '8.1.1'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
+        parquetVersion = '1.15.1'
+        hadoopVersion = '3.3.6'
     }
 
     repositories {

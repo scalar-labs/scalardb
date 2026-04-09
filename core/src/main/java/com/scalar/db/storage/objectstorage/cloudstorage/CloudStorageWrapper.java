@@ -16,7 +16,6 @@ import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -60,7 +59,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
       if (blob == null) {
         return Optional.empty();
       }
-      String payload = new String(blob.getContent(), StandardCharsets.UTF_8);
+      byte[] payload = blob.getContent();
       String generation = String.valueOf(blob.getGeneration());
       return Optional.of(new ObjectStorageWrapperResponse(payload, generation));
     } catch (Exception e) {
@@ -84,7 +83,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void insert(String key, String object) throws ObjectStorageWrapperException {
+  public void insert(String key, byte[] object) throws ObjectStorageWrapperException {
     try {
       Storage.BlobWriteOption precondition = Storage.BlobWriteOption.doesNotExist();
       writeData(key, object, precondition);
@@ -104,7 +103,7 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   }
 
   @Override
-  public void update(String key, String object, String version)
+  public void update(String key, byte[] object, String version)
       throws ObjectStorageWrapperException {
     try {
       Storage.BlobWriteOption precondition =
@@ -203,9 +202,9 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
     }
   }
 
-  private void writeData(String key, String object, Storage.BlobWriteOption precondition)
+  private void writeData(String key, byte[] object, Storage.BlobWriteOption precondition)
       throws IOException {
-    byte[] data = object.getBytes(StandardCharsets.UTF_8);
+    byte[] data = object;
     BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
 
     try (WriteChannel writer = storage.writer(blobInfo, precondition)) {

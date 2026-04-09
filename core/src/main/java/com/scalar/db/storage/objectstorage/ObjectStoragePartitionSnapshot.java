@@ -17,7 +17,10 @@ public class ObjectStoragePartitionSnapshot {
   private final String readVersion;
 
   public ObjectStoragePartitionSnapshot(
-      String objectKey, String serializedPartition, @Nullable String readVersion) {
+      String objectKey,
+      byte[] serializedPartition,
+      TableMetadata metadata,
+      @Nullable String readVersion) {
     String[] parts = ObjectStorageUtils.parseObjectKey(objectKey);
     String namespaceName = parts[0];
     String tableName = parts[1];
@@ -25,7 +28,7 @@ public class ObjectStoragePartitionSnapshot {
     this.namespaceName = namespaceName;
     this.tableName = tableName;
     this.partitionKey = partitionKey;
-    this.partition = ObjectStoragePartition.deserialize(serializedPartition);
+    this.partition = ObjectStoragePartition.deserialize(serializedPartition, metadata);
     this.readVersion = readVersion;
   }
 
