@@ -4299,16 +4299,16 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
 
-    // The rename index with shortened name throws undefined index error
-    String shortenedOldIndexName = JdbcAdmin.getIndexName(namespace, table, oldColumn);
-    String shortenedNewIndexName = JdbcAdmin.getIndexName(namespace, table, newColumn);
-    String shortenedRenameSql =
+    // The rename index with the current name throws undefined index error
+    String oldIndexName = JdbcAdmin.getIndexName(namespace, table, oldColumn);
+    String newIndexName = JdbcAdmin.getIndexName(namespace, table, newColumn);
+    String renameSql =
         "ALTER INDEX \""
             + namespace
             + "\".\""
-            + shortenedOldIndexName
+            + oldIndexName
             + "\" RENAME TO \""
-            + shortenedNewIndexName
+            + newIndexName
             + "\"";
     String originalOldIndexName = String.join("_", "index", namespace, table, oldColumn);
     String fallbackRenameSql =
@@ -4317,18 +4317,18 @@ public class JdbcAdminTest {
             + "\".\""
             + originalOldIndexName
             + "\" RENAME TO \""
-            + shortenedNewIndexName
+            + newIndexName
             + "\"";
 
     PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_TABLE);
-    when(statement.execute(shortenedRenameSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(renameSql)).thenThrow(undefinedIndexError);
     when(statement.execute(fallbackRenameSql)).thenReturn(false);
 
     // Act
     admin.renameColumn(namespace, table, oldColumn, newColumn);
 
     // Assert
-    verify(statement).execute(shortenedRenameSql);
+    verify(statement).execute(renameSql);
     verify(statement).execute(fallbackRenameSql);
   }
 
@@ -4684,16 +4684,16 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
 
-    // The rename index with shortened name throws undefined index error
-    String shortenedOldIndexName = JdbcAdmin.getIndexName(namespace, oldTable, longColumn);
-    String shortenedNewIndexName = JdbcAdmin.getIndexName(namespace, newTable, longColumn);
-    String shortenedRenameSql =
+    // The rename index with the current name throws undefined index error
+    String oldIndexName = JdbcAdmin.getIndexName(namespace, oldTable, longColumn);
+    String newIndexName = JdbcAdmin.getIndexName(namespace, newTable, longColumn);
+    String renameSql =
         "ALTER INDEX \""
             + namespace
             + "\".\""
-            + shortenedOldIndexName
+            + oldIndexName
             + "\" RENAME TO \""
-            + shortenedNewIndexName
+            + newIndexName
             + "\"";
     String originalOldIndexName = String.join("_", "index", namespace, oldTable, longColumn);
     String fallbackRenameSql =
@@ -4702,18 +4702,18 @@ public class JdbcAdminTest {
             + "\".\""
             + originalOldIndexName
             + "\" RENAME TO \""
-            + shortenedNewIndexName
+            + newIndexName
             + "\"";
 
     PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_TABLE);
-    when(statement.execute(shortenedRenameSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(renameSql)).thenThrow(undefinedIndexError);
     when(statement.execute(fallbackRenameSql)).thenReturn(false);
 
     // Act
     admin.renameTable(namespace, oldTable, newTable);
 
     // Assert
-    verify(statement).execute(shortenedRenameSql);
+    verify(statement).execute(renameSql);
     verify(statement).execute(fallbackRenameSql);
   }
 
@@ -6490,16 +6490,15 @@ public class JdbcAdminTest {
   @Test
   public void getIndexName_WithNameExactlyAtMaxLength_ShouldReturnOriginalName() {
     // Arrange
-
-    // "index_" is 6 chars, so we need column name that makes total exactly 63
-    // index_{schema}_{table}_{column} = index_ + schema + _ + table + _ + column
     String schema = "ns";
     String table = "tbl";
 
-    // "index_ns_tbl_" = 13 chars, so column needs to be 50 chars to make total 63
-    String column = String.join("", Collections.nCopies(50, "c"));
+    // Compute the column length so that the total index name is exactly MAX_INDEX_NAME_LENGTH
+    String namePrefix = String.join("_", "index", schema, table, "");
+    int columnLength = JdbcAdmin.MAX_INDEX_NAME_LENGTH - namePrefix.length();
+    String column = String.join("", Collections.nCopies(columnLength, "c"));
     String expectedName = String.join("_", "index", schema, table, column);
-    assertThat(expectedName.length()).isEqualTo(63); // sanity check
+    assertThat(expectedName.length()).isEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH); // sanity check
 
     // Act
     String indexName = JdbcAdmin.getIndexName(schema, table, column);
