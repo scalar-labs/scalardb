@@ -2620,33 +2620,33 @@ public class SnapshotTest {
   }
 
   @Test
-  public void isIndexBasedOperation_GetWithSecondaryIndex_ShouldReturnTrue() {
+  public void requiresBeforeIndexValidation_GetWithSecondaryIndex_ShouldReturnTrue() {
     // Arrange
     snapshot = prepareSnapshot();
     Get get = prepareGetWithIndex();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(get, TABLE_METADATA);
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA);
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void isIndexBasedOperation_ScanWithSecondaryIndex_ShouldReturnTrue() {
+  public void requiresBeforeIndexValidation_ScanWithSecondaryIndex_ShouldReturnTrue() {
     // Arrange
     snapshot = prepareSnapshot();
     Scan scan = prepareScanWithIndex();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(scan, TABLE_METADATA);
+    boolean result = snapshot.requiresBeforeIndexValidation(scan, TABLE_METADATA);
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void isIndexBasedOperation_GetWithPartitionKeyIndex_ShouldReturnFalse() {
+  public void requiresBeforeIndexValidation_GetWithPartitionKeyIndex_ShouldReturnFalse() {
     // Arrange
     snapshot = prepareSnapshot();
     Get get =
@@ -2657,27 +2657,28 @@ public class SnapshotTest {
             .build();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(get, TABLE_METADATA_WITH_PK_INDEX);
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA_WITH_PK_INDEX);
 
     // Assert
     assertThat(result).isFalse();
   }
 
   @Test
-  public void isIndexBasedOperation_GetWithPartitionKey_ShouldReturnFalse() {
+  public void requiresBeforeIndexValidation_GetWithPartitionKey_ShouldReturnFalse() {
     // Arrange
     snapshot = prepareSnapshot();
     Get get = prepareGet();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(get, TABLE_METADATA);
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA);
 
     // Assert
     assertThat(result).isFalse();
   }
 
   @Test
-  public void isIndexBasedOperation_ScanAllWithSecondaryIndexCondition_ShouldReturnTrue() {
+  public void
+      requiresBeforeIndexValidation_ScanAllWithSecondaryIndexCondition_ShouldReturnTrue() {
     // Arrange
     snapshot = prepareSnapshot();
     Scan scanAll =
@@ -2689,14 +2690,15 @@ public class SnapshotTest {
             .build();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(scanAll, TABLE_METADATA);
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA);
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void isIndexBasedOperation_ScanAllWithPartitionKeyIndexCondition_ShouldReturnFalse() {
+  public void
+      requiresBeforeIndexValidation_ScanAllWithPartitionKeyIndexCondition_ShouldReturnFalse() {
     // Arrange
     snapshot = prepareSnapshot();
     Scan scanAll =
@@ -2708,14 +2710,16 @@ public class SnapshotTest {
             .build();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(scanAll, TABLE_METADATA_WITH_PK_INDEX);
+    boolean result =
+        snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA_WITH_PK_INDEX);
 
     // Assert
     assertThat(result).isFalse();
   }
 
   @Test
-  public void isIndexBasedOperation_ScanAllWithNonIndexedColumnCondition_ShouldReturnFalse() {
+  public void
+      requiresBeforeIndexValidation_ScanAllWithNonIndexedColumnCondition_ShouldReturnFalse() {
     // Arrange
     snapshot = prepareSnapshot();
     Scan scanAll =
@@ -2727,7 +2731,7 @@ public class SnapshotTest {
             .build();
 
     // Act
-    boolean result = snapshot.isIndexBasedOperation(scanAll, TABLE_METADATA);
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA);
 
     // Assert
     assertThat(result).isFalse();

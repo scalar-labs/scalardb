@@ -175,7 +175,7 @@ public class CrudHandler {
       if (beforeIndexCheckRequired && checkAndRecoverBeforeIndexRecords(get, context, txMetadata)) {
         if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
           throw new CrudConflictException(
-              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
+              CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
                   .buildMessage(context.transactionId),
               context.transactionId);
         }
@@ -292,7 +292,7 @@ public class CrudHandler {
           && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
         if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
           throw new CrudConflictException(
-              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
+              CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
                   .buildMessage(context.transactionId),
               context.transactionId);
         }
@@ -621,7 +621,7 @@ public class CrudHandler {
    * index check feature was introduced), the check is skipped. In SNAPSHOT and READ_COMMITTED
    * isolation, this means index-based reads may return eventually consistent results, which is a
    * known limitation (a warning is logged at startup via {@code
-   * warnIfBeforeImageIndexesAreMissing}). In SERIALIZABLE isolation, this case does not occur
+   * warnIfBeforeIndexesAreMissing}). In SERIALIZABLE isolation, this case does not occur
    * because {@link ConsensusCommitOperationChecker} rejects index-based operations on tables
    * without before-image indexes.
    *
@@ -866,7 +866,7 @@ public class CrudHandler {
       if (requiresBeforeIndexCheck(scan, txMetadata)
           && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
         throw new CrudConflictException(
-            CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
+            CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
                 context.transactionId),
             context.transactionId);
       }
