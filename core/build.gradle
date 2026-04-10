@@ -222,6 +222,25 @@ dependencies {
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
+test {
+    useJUnitPlatform {
+        excludeTags 'benchmark'
+    }
+}
+
+task benchmarkTest(type: Test) {
+    description = 'Runs serialization benchmark tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'benchmark'
+    }
+    outputs.upToDateWhen { false }
+    maxHeapSize = '12g'
+    jvmArgs '-XX:MaxDirectMemorySize=2g', '-XX:+UseG1GC'
+}
+
 javadoc {
     title = "ScalarDB"
 }

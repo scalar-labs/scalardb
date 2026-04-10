@@ -3,6 +3,7 @@ package com.scalar.db.storage.objectstorage;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -15,11 +16,13 @@ import org.apache.parquet.schema.MessageType;
 public class ObjectStorageRecordWriteSupport extends WriteSupport<ObjectStorageRecord> {
   private final MessageType schema;
   private final TableMetadata tableMetadata;
+  private final Map<String, DataType> valueColumns;
   private RecordConsumer recordConsumer;
 
   public ObjectStorageRecordWriteSupport(MessageType schema, TableMetadata tableMetadata) {
     this.schema = schema;
     this.tableMetadata = tableMetadata;
+    this.valueColumns = getValueColumns(tableMetadata);
   }
 
   @Override
@@ -62,7 +65,7 @@ public class ObjectStorageRecordWriteSupport extends WriteSupport<ObjectStorageR
 
     // Write value columns (non-key columns)
     Map<String, Object> values = record.getValues();
-    for (Map.Entry<String, DataType> entry : getValueColumns(tableMetadata).entrySet()) {
+    for (Map.Entry<String, DataType> entry : valueColumns.entrySet()) {
       String columnName = entry.getKey();
       DataType dataType = entry.getValue();
       Object value = values.get(columnName);
@@ -102,7 +105,16 @@ public class ObjectStorageRecordWriteSupport extends WriteSupport<ObjectStorageR
         recordConsumer.addBinary(Binary.fromString((String) value));
         break;
       case BLOB:
-        recordConsumer.addBinary(Binary.fromConstantByteArray((byte[]) value));
+        if (value instanceof byte[]) {
+          recordConsumer.addBinary(Binary.fromConstantByteArray((byte[]) value));
+        } else if (value instanceof ByteBuffer) {
+          ByteBuffer buffer = ((ByteBuffer) value).duplicate();
+          byte[] bytes = new byte[buffer.remaining()];
+          buffer.get(bytes);
+          recordConsumer.addBinary(Binary.fromConstantByteArray(bytes));
+        } else {
+          throw new AssertionError("Unsupported BLOB value type: " + value.getClass());
+        }
         break;
       default:
         throw new AssertionError("Unsupported data type: " + dataType);

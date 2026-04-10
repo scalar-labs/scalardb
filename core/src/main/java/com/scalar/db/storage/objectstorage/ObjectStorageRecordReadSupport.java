@@ -61,18 +61,32 @@ public class ObjectStorageRecordReadSupport extends ReadSupport<ObjectStorageRec
     }
   }
 
+  private static final int FIELD_CATEGORY_ID = 0;
+  private static final int FIELD_CATEGORY_PARTITION_KEY = 1;
+  private static final int FIELD_CATEGORY_CLUSTERING_KEY = 2;
+  private static final int FIELD_CATEGORY_VALUE = 3;
+
   private static class ObjectStorageRecordGroupConverter extends GroupConverter {
     private final Converter[] converters;
     private final String[] fieldNames;
     private final Object[] fieldValues;
-    private final TableMetadata tableMetadata;
+    private final int[] fieldCategories;
+    private final int partitionKeyCount;
+    private final int clusteringKeyCount;
+    private final int valueCount;
 
     ObjectStorageRecordGroupConverter(MessageType schema, TableMetadata tableMetadata) {
-      this.tableMetadata = tableMetadata;
       int fieldCount = schema.getFieldCount();
       this.converters = new Converter[fieldCount];
       this.fieldNames = new String[fieldCount];
       this.fieldValues = new Object[fieldCount];
+      this.fieldCategories = new int[fieldCount];
+
+      Set<String> partitionKeyNames = tableMetadata.getPartitionKeyNames();
+      Set<String> clusteringKeyNames = tableMetadata.getClusteringKeyNames();
+      int pkCount = 0;
+      int ckCount = 0;
+      int valCount = 0;
 
       for (int i = 0; i < fieldCount; i++) {
         fieldNames[i] = schema.getFieldName(i);
@@ -81,11 +95,25 @@ public class ObjectStorageRecordReadSupport extends ReadSupport<ObjectStorageRec
 
         if (columnName.equals("id")) {
           converters[i] = new StringConverter(index);
+          fieldCategories[i] = FIELD_CATEGORY_ID;
         } else {
           DataType dataType = tableMetadata.getColumnDataType(columnName);
           converters[i] = createConverter(index, dataType);
+          if (partitionKeyNames.contains(columnName)) {
+            fieldCategories[i] = FIELD_CATEGORY_PARTITION_KEY;
+            pkCount++;
+          } else if (clusteringKeyNames.contains(columnName)) {
+            fieldCategories[i] = FIELD_CATEGORY_CLUSTERING_KEY;
+            ckCount++;
+          } else {
+            fieldCategories[i] = FIELD_CATEGORY_VALUE;
+            valCount++;
+          }
         }
       }
+      this.partitionKeyCount = pkCount;
+      this.clusteringKeyCount = ckCount;
+      this.valueCount = valCount;
     }
 
     private Converter createConverter(int index, DataType dataType) {
@@ -128,25 +156,27 @@ public class ObjectStorageRecordReadSupport extends ReadSupport<ObjectStorageRec
 
     ObjectStorageRecord buildRecord() {
       String id = "";
-      Map<String, Object> partitionKey = new LinkedHashMap<>();
-      Map<String, Object> clusteringKey = new LinkedHashMap<>();
-      Map<String, Object> values = new HashMap<>();
-
-      Set<String> partitionKeyNames = tableMetadata.getPartitionKeyNames();
-      Set<String> clusteringKeyNames = tableMetadata.getClusteringKeyNames();
+      Map<String, Object> partitionKey = new LinkedHashMap<>(partitionKeyCount * 2);
+      Map<String, Object> clusteringKey = new LinkedHashMap<>(clusteringKeyCount * 2);
+      Map<String, Object> values = new HashMap<>(valueCount * 2);
 
       for (int i = 0; i < fieldNames.length; i++) {
         String name = fieldNames[i];
         Object value = fieldValues[i];
 
-        if (name.equals("id")) {
-          id = value != null ? (String) value : "";
-        } else if (partitionKeyNames.contains(name)) {
-          partitionKey.put(name, value);
-        } else if (clusteringKeyNames.contains(name)) {
-          clusteringKey.put(name, value);
-        } else {
-          values.put(name, value);
+        switch (fieldCategories[i]) {
+          case FIELD_CATEGORY_ID:
+            id = value != null ? (String) value : "";
+            break;
+          case FIELD_CATEGORY_PARTITION_KEY:
+            partitionKey.put(name, value);
+            break;
+          case FIELD_CATEGORY_CLUSTERING_KEY:
+            clusteringKey.put(name, value);
+            break;
+          default:
+            values.put(name, value);
+            break;
         }
       }
 
