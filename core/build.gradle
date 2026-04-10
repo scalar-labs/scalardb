@@ -196,7 +196,7 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
     implementation "org.apache.avro:avro:${avroVersion}"
-    implementation "org.xerial.snappy:snappy-java:1.1.10.7"
+    implementation "com.github.luben:zstd-jni:1.5.6-4"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
@@ -218,6 +218,25 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+test {
+    useJUnitPlatform {
+        excludeTags 'benchmark'
+    }
+}
+
+task benchmarkTest(type: Test) {
+    description = 'Runs serialization benchmark tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'benchmark'
+    }
+    outputs.upToDateWhen { false }
+    maxHeapSize = '12g'
+    jvmArgs '-XX:MaxDirectMemorySize=2g', '-XX:+UseG1GC'
 }
 
 javadoc {
