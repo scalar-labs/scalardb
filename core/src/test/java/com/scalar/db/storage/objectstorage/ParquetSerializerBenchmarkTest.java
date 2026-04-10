@@ -20,7 +20,7 @@ import org.mockito.Mockito;
 @Tag("benchmark")
 public class ParquetSerializerBenchmarkTest {
 
-  private static final int RECORD_COUNT = 100_000;
+  private static final int RECORD_COUNT = 500_000;
 
   private static ObjectStoragePartition partition;
   private static TableMetadata metadata;
