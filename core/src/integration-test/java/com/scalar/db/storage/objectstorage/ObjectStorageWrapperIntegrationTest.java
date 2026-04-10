@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -24,9 +25,9 @@ public class ObjectStorageWrapperIntegrationTest {
   private static final String TEST_KEY2 = "test-key2";
   private static final String TEST_KEY3 = "test-key3";
   private static final String TEST_KEY_PREFIX = "test-key";
-  private static final String TEST_OBJECT1 = "test-object1";
-  private static final String TEST_OBJECT2 = "test-object2";
-  private static final String TEST_OBJECT3 = "test-object3";
+  private static final byte[] TEST_OBJECT1 = "test-object1".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] TEST_OBJECT2 = "test-object2".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] TEST_OBJECT3 = "test-object3".getBytes(StandardCharsets.UTF_8);
   private static final int BLOB_STORAGE_LIST_MAX_KEYS = 5000;
   private static final int CLOUD_STORAGE_LIST_MAX_KEYS = 1000;
   private static final int S3_LIST_MAX_KEYS = 1000;
@@ -113,7 +114,7 @@ public class ObjectStorageWrapperIntegrationTest {
   public void insert_NewObjectKeyGiven_ShouldInsertObjectSuccessfully() throws Exception {
     // Arrange
     String objectKey = "new-object-key";
-    String object = "new-object";
+    byte[] object = "new-object".getBytes(StandardCharsets.UTF_8);
 
     try {
       // Act
@@ -133,14 +134,15 @@ public class ObjectStorageWrapperIntegrationTest {
     // Arrange
 
     // Act Assert
-    assertThatCode(() -> wrapper.insert(TEST_KEY2, "another-object"))
+    assertThatCode(
+            () -> wrapper.insert(TEST_KEY2, "another-object".getBytes(StandardCharsets.UTF_8)))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
   @Test
   public void update_ExistingObjectKeyGiven_ShouldUpdateObjectSuccessfully() throws Exception {
     // Arrange
-    String updatedObject = "updated-object2";
+    byte[] updatedObject = "updated-object2".getBytes(StandardCharsets.UTF_8);
     Optional<ObjectStorageWrapperResponse> response1 = wrapper.get(TEST_KEY2);
     assertThat(response1.isPresent()).isTrue();
     String version = response1.get().getVersion();
@@ -165,7 +167,10 @@ public class ObjectStorageWrapperIntegrationTest {
     String objectKey = "non-existing-key";
 
     // Act Assert
-    assertThatCode(() -> wrapper.update(objectKey, "some-object", "123456789"))
+    assertThatCode(
+            () ->
+                wrapper.update(
+                    objectKey, "some-object".getBytes(StandardCharsets.UTF_8), "123456789"))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
@@ -175,7 +180,10 @@ public class ObjectStorageWrapperIntegrationTest {
     String wrongVersion = "123456789";
 
     // Act Assert
-    assertThatCode(() -> wrapper.update(TEST_KEY2, "another-object", wrongVersion))
+    assertThatCode(
+            () ->
+                wrapper.update(
+                    TEST_KEY2, "another-object".getBytes(StandardCharsets.UTF_8), wrongVersion))
         .isInstanceOf(PreconditionFailedException.class);
   }
 
@@ -270,7 +278,7 @@ public class ObjectStorageWrapperIntegrationTest {
     try {
       // Arrange
       for (int i = 0; i < numberOfObjects; i++) {
-        wrapper.insert(prefix + i, "object-" + i);
+        wrapper.insert(prefix + i, ("object-" + i).getBytes(StandardCharsets.UTF_8));
       }
 
       // Act
@@ -330,7 +338,7 @@ public class ObjectStorageWrapperIntegrationTest {
     try {
       // Arrange
       for (int i = 0; i < numberOfObjects; i++) {
-        wrapper.insert(prefix + i, "object-" + i);
+        wrapper.insert(prefix + i, ("object-" + i).getBytes(StandardCharsets.UTF_8));
       }
 
       // Act

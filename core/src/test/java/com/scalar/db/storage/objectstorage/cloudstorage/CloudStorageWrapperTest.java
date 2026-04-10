@@ -39,7 +39,8 @@ public class CloudStorageWrapperTest {
   private static final String BUCKET = "bucket";
   private static final String ANY_OBJECT_KEY = "any_object_key";
   private static final String ANY_PREFIX = "any_prefix/";
-  private static final byte[] ANY_DATA = "any_data".getBytes();
+  private static final byte[] ANY_DATA =
+      "any_data".getBytes(java.nio.charset.StandardCharsets.UTF_8);
   private static final long ANY_GENERATION = 12345L;
 
   @Mock private CloudStorageConfig config;

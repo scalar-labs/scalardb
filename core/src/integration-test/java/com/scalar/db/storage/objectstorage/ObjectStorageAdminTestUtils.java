@@ -3,6 +3,7 @@ package com.scalar.db.storage.objectstorage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.util.AdminTestUtils;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -63,7 +64,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     }
     Map<String, ObjectStorageTableMetadata> metadataTable =
         Serializer.deserialize(
-            response.get().getPayload(),
+            new String(response.get().getPayload(), StandardCharsets.UTF_8),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
 
     String tableMetadataKey =
@@ -75,7 +76,10 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
             .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList("corrupted")))
             .build());
 
-    wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
+    wrapper.update(
+        objectKey,
+        Serializer.serialize(metadataTable).getBytes(StandardCharsets.UTF_8),
+        response.get().getVersion());
   }
 
   @Override
@@ -88,7 +92,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     }
     Map<String, ObjectStorageTableMetadata> metadataTable =
         Serializer.deserialize(
-            response.get().getPayload(),
+            new String(response.get().getPayload(), StandardCharsets.UTF_8),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
 
     String tableMetadataKey =
@@ -99,7 +103,10 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     if (metadataTable.isEmpty()) {
       wrapper.delete(objectKey);
     } else {
-      wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
+      wrapper.update(
+          objectKey,
+          Serializer.serialize(metadataTable).getBytes(StandardCharsets.UTF_8),
+          response.get().getVersion());
     }
   }
 

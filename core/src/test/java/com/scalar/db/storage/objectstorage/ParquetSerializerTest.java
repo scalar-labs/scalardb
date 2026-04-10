@@ -183,8 +183,8 @@ public class ParquetSerializerTest {
     values.put("bool_col", true);
     values.put("int_col", 42);
     values.put("bigint_col", 123456789L);
-    values.put("float_col", 3.14f);
-    values.put("double_col", 2.718281828);
+    values.put("float_col", 1.23f);
+    values.put("double_col", 4.56789);
     values.put("text_col", "hello world");
     values.put("blob_col", new byte[] {1, 2, 3, 4, 5});
     values.put("date_col", 19000); // encoded date
@@ -214,8 +214,8 @@ public class ParquetSerializerTest {
     assertThat(resultValues.get("bool_col")).isEqualTo(true);
     assertThat(resultValues.get("int_col")).isEqualTo(42);
     assertThat(resultValues.get("bigint_col")).isEqualTo(123456789L);
-    assertThat(((Number) resultValues.get("float_col")).floatValue()).isEqualTo(3.14f);
-    assertThat(resultValues.get("double_col")).isEqualTo(2.718281828);
+    assertThat(((Number) resultValues.get("float_col")).floatValue()).isEqualTo(1.23f);
+    assertThat(resultValues.get("double_col")).isEqualTo(4.56789);
     assertThat(resultValues.get("text_col")).isEqualTo("hello world");
     assertThat((byte[]) resultValues.get("blob_col")).isEqualTo(new byte[] {1, 2, 3, 4, 5});
     assertThat(resultValues.get("date_col")).isEqualTo(19000);
