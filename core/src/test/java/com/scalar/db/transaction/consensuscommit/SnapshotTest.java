@@ -2677,8 +2677,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void
-      requiresBeforeIndexValidation_ScanAllWithSecondaryIndexCondition_ShouldReturnTrue() {
+  public void requiresBeforeIndexValidation_ScanAllWithSecondaryIndexCondition_ShouldReturnTrue() {
     // Arrange
     snapshot = prepareSnapshot();
     Scan scanAll =
@@ -2710,8 +2709,7 @@ public class SnapshotTest {
             .build();
 
     // Act
-    boolean result =
-        snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA_WITH_PK_INDEX);
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA_WITH_PK_INDEX);
 
     // Assert
     assertThat(result).isFalse();
