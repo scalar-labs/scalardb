@@ -891,6 +891,10 @@ public class Snapshot {
    * validation. This includes Get with index, Scan with index, and ScanAll with conditions on
    * indexed columns.
    *
+   * <p>Primary key columns (partition keys and clustering keys) are excluded because they are
+   * immutable and do not have corresponding before-image columns, so before-image index validation
+   * is not needed for them.
+   *
    * <p>For ScanAll, whether the underlying storage actually uses the index depends on the storage
    * implementation. However, this method considers ScanAll with conditions on indexed columns as an
    * index-based operation regardless.
@@ -899,14 +903,20 @@ public class Snapshot {
    * @param metadata the table metadata
    * @return true if the selection is an index-based operation
    */
-  private boolean isIndexBasedOperation(Selection selection, TableMetadata metadata) {
+  @VisibleForTesting
+  boolean isIndexBasedOperation(Selection selection, TableMetadata metadata) {
     if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata)) {
-      return true;
+      String indexColumnName = selection.getPartitionKey().getColumns().get(0).getName();
+      return !metadata.getPartitionKeyNames().contains(indexColumnName)
+          && !metadata.getClusteringKeyNames().contains(indexColumnName);
     }
     if (selection instanceof ScanAll) {
       for (Selection.Conjunction conjunction : selection.getConjunctions()) {
         for (ConditionalExpression condition : conjunction.getConditions()) {
-          if (metadata.getSecondaryIndexNames().contains(condition.getColumn().getName())) {
+          String columnName = condition.getColumn().getName();
+          if (metadata.getSecondaryIndexNames().contains(columnName)
+              && !metadata.getPartitionKeyNames().contains(columnName)
+              && !metadata.getClusteringKeyNames().contains(columnName)) {
             return true;
           }
         }
