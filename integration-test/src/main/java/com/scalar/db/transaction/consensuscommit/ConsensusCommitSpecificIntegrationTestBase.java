@@ -6910,9 +6910,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -6975,9 +6973,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7047,9 +7043,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7122,9 +7116,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7204,9 +7196,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7304,9 +7294,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7382,9 +7370,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7467,9 +7453,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
           Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              ExecutionException,
+          throws UnknownTransactionStatusException, CrudException, ExecutionException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -7570,9 +7554,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void
       commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowShouldBehaveCorrectly(
           Isolation isolation)
-          throws UnknownTransactionStatusException,
-              CrudException,
-              RollbackException,
+          throws UnknownTransactionStatusException, CrudException, RollbackException,
               CommitException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
