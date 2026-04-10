@@ -44,10 +44,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
-  private static final String TABLE1 = "test_table1";
-  private static final String TABLE2 = "test_table2";
-  private static final String TABLE3 = "test_table3";
-  private static final String TABLE4 = "test_table4";
+  private static final String TABLE1 = "tbl1";
+  private static final String TABLE2 = "tbl2";
+  private static final String TABLE3 = "tbl3";
+  private static final String TABLE4 = "tbl4";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
@@ -1392,6 +1392,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+
+      // Verify the column and index are fully removed by re-creating them with the same name
+      admin.addNewColumnToTable(namespace1, getTable4(), getColumnName2(), DataType.INT);
+      admin.createIndex(namespace1, getTable4(), getColumnName2());
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isTrue();
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
     }

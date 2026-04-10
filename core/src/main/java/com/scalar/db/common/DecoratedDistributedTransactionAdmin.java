@@ -320,9 +320,29 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void createUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
+      throws ExecutionException {
+    distributedTransactionAdmin.createUser(username, password, authenticationMethods, userOptions);
+  }
+
+  @Override
   public void alterUser(String username, @Nullable String password, UserOption... userOptions)
       throws ExecutionException {
     distributedTransactionAdmin.alterUser(username, password, userOptions);
+  }
+
+  @Override
+  public void alterUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
+      throws ExecutionException {
+    distributedTransactionAdmin.alterUser(username, password, authenticationMethods, userOptions);
   }
 
   @Override
@@ -417,6 +437,13 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   @Override
   public void revokeRoleFromUser(String username, String roleName) throws ExecutionException {
     distributedTransactionAdmin.revokeRoleFromUser(username, roleName);
+  }
+
+  @Override
+  public boolean hasPrivilege(
+      String username, String namespaceName, String tableName, Privilege privilege)
+      throws ExecutionException {
+    return distributedTransactionAdmin.hasPrivilege(username, namespaceName, tableName, privilege);
   }
 
   @Override

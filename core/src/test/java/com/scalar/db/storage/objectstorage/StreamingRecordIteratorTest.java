@@ -22,7 +22,7 @@ import org.mockito.MockitoAnnotations;
 
 public class StreamingRecordIteratorTest {
   private static final String NAMESPACE = "test_namespace";
-  private static final String TABLE = "test_table";
+  private static final String TABLE = "tbl";
   private static final String PARTITION_KEY_1 = "partition1";
   private static final String PARTITION_KEY_2 = "partition2";
   private static final String PARTITION_KEY_3 = "partition3";

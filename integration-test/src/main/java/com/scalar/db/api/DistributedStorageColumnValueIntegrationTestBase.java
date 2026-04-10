@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterAll;
@@ -38,7 +39,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +52,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_col_val";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String PARTITION_KEY = "pkey";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
@@ -683,6 +686,74 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
       // Reset JVM default time zone to the original value
       TimeZone.setDefault(originalDefaultTimezone);
     }
+  }
+
+  @ParameterizedTest()
+  @MethodSource("provideLargeBlobSizes")
+  public void put_largeBlobData_ShouldWorkCorrectly(int blobSize, String humanReadableBlobSize)
+      throws ExecutionException {
+    // Arrange
+    IntColumn partitionKeyValue = IntColumn.of(PARTITION_KEY, 1);
+    BooleanColumn col1Value = BooleanColumn.ofNull(COL_NAME1);
+    IntColumn col2Value = IntColumn.ofNull(COL_NAME2);
+    BigIntColumn col3Value = BigIntColumn.ofNull(COL_NAME3);
+    FloatColumn col4Value = FloatColumn.ofNull(COL_NAME4);
+    DoubleColumn col5Value = DoubleColumn.ofNull(COL_NAME5);
+    TextColumn col6Value = TextColumn.ofNull(COL_NAME6);
+    BlobColumn col7Value = BlobColumn.of(COL_NAME7, createLargeBlob(blobSize));
+    DateColumn col8Value = DateColumn.ofNull(COL_NAME8);
+    TimeColumn col9Value = TimeColumn.ofNull(COL_NAME9);
+    TimestampTZColumn col10Value = TimestampTZColumn.ofNull(COL_NAME10);
+    TimestampColumn col11Value = null;
+    if (isTimestampTypeSupported()) {
+      col11Value = TimestampColumn.ofNull(COL_NAME11);
+    }
+
+    PutBuilder.Buildable put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.newBuilder().add(partitionKeyValue).build())
+            .value(col1Value)
+            .value(col2Value)
+            .value(col3Value)
+            .value(col4Value)
+            .value(col5Value)
+            .value(col6Value)
+            .value(col7Value)
+            .value(col8Value)
+            .value(col9Value)
+            .value(col10Value);
+    if (isTimestampTypeSupported()) {
+      put.value(col11Value);
+    }
+    // Act
+    storage.put(put.build());
+
+    // Assert
+    assertResult(
+        partitionKeyValue,
+        col1Value,
+        col2Value,
+        col3Value,
+        col4Value,
+        col5Value,
+        col6Value,
+        col7Value,
+        col8Value,
+        col9Value,
+        col10Value,
+        col11Value);
+  }
+
+  protected byte[] createLargeBlob(int size) {
+    byte[] blob = new byte[size];
+    random.nextBytes(blob);
+    return blob;
+  }
+
+  protected Stream<Arguments> provideLargeBlobSizes() {
+    return Stream.of(Arguments.of(100_000_000, "100 MB"));
   }
 
   protected void assertResult(

@@ -395,6 +395,28 @@ public class ConsensusCommitOperationCheckerTest {
   }
 
   @Test
+  public void
+      checkForGet_WithSecondaryIndexInSerializableAndBeforeImageIndexExists_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("idx", DataType.INT)
+            .addPartitionKey("pk")
+            .addSecondaryIndex("idx")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+    when(tableMetadata.hasBeforeImageSecondaryIndex("idx")).thenReturn(true);
+
+    Get get = Get.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("idx", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(get, context)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void checkForGet_ValidGet_ShouldNotThrowException() {
     // Arrange
     Get get =
@@ -561,16 +583,39 @@ public class ConsensusCommitOperationCheckerTest {
 
   @Test
   public void
+      checkForScan_WithSecondaryIndexInSerializableAndBeforeImageIndexExists_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("idx", DataType.INT)
+            .addPartitionKey("pk")
+            .addSecondaryIndex("idx")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+    when(tableMetadata.hasBeforeImageSecondaryIndex("idx")).thenReturn(true);
+
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("idx", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
       checkForScan_ScanAllWithConditionOnIndexedColumnInSerializable_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -591,14 +636,14 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnNonIndexedColumnInSerializable_ShouldNotThrowException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -618,16 +663,15 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnIndexedPartitionKeyColumnInSerializable_ShouldNotThrowException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata - indexed column is also a partition key
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
-    LinkedHashSet<String> partitionKeys = new LinkedHashSet<>();
-    partitionKeys.add("idx_col");
+    LinkedHashSet<String> partitionKeys = new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(partitionKeys);
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -647,16 +691,16 @@ public class ConsensusCommitOperationCheckerTest {
   public void
       checkForScan_ScanAllWithConditionOnIndexedClusteringKeyColumnInSerializable_ShouldNotThrowException() {
     // Arrange
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     // Mock the underlying TableMetadata - indexed column is also a clustering key
     TableMetadata mockTableMetadata = mock(TableMetadata.class);
     when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
     when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
-    LinkedHashSet<String> clusteringKeys = new LinkedHashSet<>();
-    clusteringKeys.add("idx_col");
+    LinkedHashSet<String> clusteringKeys =
+        new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(mockTableMetadata.getClusteringKeyNames()).thenReturn(clusteringKeys);
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         ScanAll.newBuilder()
@@ -683,15 +727,41 @@ public class ConsensusCommitOperationCheckerTest {
             .addPartitionKey("pk")
             .addSecondaryIndex("idx_col")
             .build();
-    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
     when(tableMetadata.getTableMetadata()).thenReturn(metadata);
-    when(tableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
 
     Scan scan =
         Scan.newBuilder()
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 1))
+            .where(ConditionBuilder.column("idx_col").isEqualToInt(100))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForScan_ScanAllWithConditionOnIndexedColumnInSerializableAndBeforeImageIndexExists_ShouldNotThrowException() {
+    // Arrange
+
+    // Mock the underlying TableMetadata
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
+    when(tableMetadata.hasBeforeImageSecondaryIndex("idx_col")).thenReturn(true);
+
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
             .where(ConditionBuilder.column("idx_col").isEqualToInt(100))
             .build();
     TransactionContext context =

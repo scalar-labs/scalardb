@@ -143,6 +143,15 @@ public interface RdbEngineStrategy {
 
   String dropIndexSql(String schema, String table, String indexName);
 
+  /**
+   * Returns {@code true} if this RDB engine requires an explicit index drop before dropping a
+   * column that has a secondary index. Some engines (e.g. SQL Server, SQLite) do not automatically
+   * drop the index when the column is dropped.
+   */
+  default boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return false;
+  }
+
   String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName);
 
