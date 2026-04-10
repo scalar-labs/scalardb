@@ -27,14 +27,27 @@ public class ParquetSerializer {
 
   private ParquetSerializer() {}
 
+  private static final CompressionCodecName DEFAULT_COMPRESSION = CompressionCodecName.ZSTD;
+
   public static byte[] serialize(ObjectStoragePartition partition, TableMetadata metadata) {
+    return serialize(partition, metadata, DEFAULT_COMPRESSION);
+  }
+
+  static byte[] serialize(
+      ObjectStoragePartition partition,
+      TableMetadata metadata,
+      CompressionCodecName compressionCodec) {
     MessageType schema = buildSchema(metadata);
     InMemoryOutputFile outputFile = new InMemoryOutputFile();
 
     try (ParquetWriter<ObjectStorageRecord> writer =
         new ObjectStorageParquetWriterBuilder(
                 outputFile, new ObjectStorageRecordWriteSupport(schema, metadata))
-            .withCompressionCodec(CompressionCodecName.SNAPPY)
+            .withCompressionCodec(compressionCodec)
+            .withDictionaryEncoding(false)
+            .withRowGroupSize(4 * 1024 * 1024L) // 4MB
+            .withPageSize(256 * 1024) // 256KB
+            .withValidation(false)
             .build()) {
       for (ObjectStorageRecord record : partition.getRecords().values()) {
         writer.write(record);

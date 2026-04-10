@@ -4,7 +4,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.hadoop.api.WriteSupport;
@@ -14,15 +17,48 @@ import org.apache.parquet.schema.MessageType;
 
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 public class ObjectStorageRecordWriteSupport extends WriteSupport<ObjectStorageRecord> {
+  private static final int SOURCE_PARTITION_KEY = 0;
+  private static final int SOURCE_CLUSTERING_KEY = 1;
+  private static final int SOURCE_VALUES = 2;
+
   private final MessageType schema;
-  private final TableMetadata tableMetadata;
-  private final Map<String, DataType> valueColumns;
+  // Pre-computed field descriptors (excluding the id field at index 0)
+  private final String[] fieldNames;
+  private final DataType[] fieldDataTypes;
+  private final int[] fieldSources; // SOURCE_PARTITION_KEY, SOURCE_CLUSTERING_KEY, or SOURCE_VALUES
+  private final int fieldCount;
   private RecordConsumer recordConsumer;
 
   public ObjectStorageRecordWriteSupport(MessageType schema, TableMetadata tableMetadata) {
     this.schema = schema;
-    this.tableMetadata = tableMetadata;
-    this.valueColumns = getValueColumns(tableMetadata);
+
+    List<String> names = new ArrayList<>();
+    List<DataType> types = new ArrayList<>();
+    List<Integer> sources = new ArrayList<>();
+
+    for (String columnName : tableMetadata.getPartitionKeyNames()) {
+      names.add(columnName);
+      types.add(tableMetadata.getColumnDataType(columnName));
+      sources.add(SOURCE_PARTITION_KEY);
+    }
+    for (String columnName : tableMetadata.getClusteringKeyNames()) {
+      names.add(columnName);
+      types.add(tableMetadata.getColumnDataType(columnName));
+      sources.add(SOURCE_CLUSTERING_KEY);
+    }
+    for (Map.Entry<String, DataType> entry : getValueColumns(tableMetadata).entrySet()) {
+      names.add(entry.getKey());
+      types.add(entry.getValue());
+      sources.add(SOURCE_VALUES);
+    }
+
+    this.fieldCount = names.size();
+    this.fieldNames = names.toArray(new String[0]);
+    this.fieldDataTypes = types.toArray(new DataType[0]);
+    this.fieldSources = new int[fieldCount];
+    for (int i = 0; i < fieldCount; i++) {
+      this.fieldSources[i] = sources.get(i);
+    }
   }
 
   @Override
@@ -39,47 +75,39 @@ public class ObjectStorageRecordWriteSupport extends WriteSupport<ObjectStorageR
   public void write(ObjectStorageRecord record) {
     recordConsumer.startMessage();
 
-    int fieldIndex = 0;
-
-    // Write id field (required binary id (UTF8))
-    recordConsumer.startField("id", fieldIndex);
+    // Write id field (required binary id (UTF8)) at index 0
+    recordConsumer.startField("id", 0);
     recordConsumer.addBinary(Binary.fromString(record.getId()));
-    recordConsumer.endField("id", fieldIndex);
-    fieldIndex++;
+    recordConsumer.endField("id", 0);
 
-    // Write partition key columns
-    for (String columnName : tableMetadata.getPartitionKeyNames()) {
-      DataType dataType = tableMetadata.getColumnDataType(columnName);
-      Object value = record.getPartitionKey().get(columnName);
-      writeField(columnName, fieldIndex, dataType, value);
-      fieldIndex++;
-    }
-
-    // Write clustering key columns
-    for (String columnName : tableMetadata.getClusteringKeyNames()) {
-      DataType dataType = tableMetadata.getColumnDataType(columnName);
-      Object value = record.getClusteringKey().get(columnName);
-      writeField(columnName, fieldIndex, dataType, value);
-      fieldIndex++;
-    }
-
-    // Write value columns (non-key columns)
+    Map<String, Object> partitionKey = record.getPartitionKey();
+    Map<String, Object> clusteringKey = record.getClusteringKey();
     Map<String, Object> values = record.getValues();
-    for (Map.Entry<String, DataType> entry : valueColumns.entrySet()) {
-      String columnName = entry.getKey();
-      DataType dataType = entry.getValue();
-      Object value = values.get(columnName);
-      writeField(columnName, fieldIndex, dataType, value);
-      fieldIndex++;
+
+    for (int i = 0; i < fieldCount; i++) {
+      int fieldIndex = i + 1; // offset by 1 for the id field
+      Object value;
+      switch (fieldSources[i]) {
+        case SOURCE_PARTITION_KEY:
+          value = partitionKey.get(fieldNames[i]);
+          break;
+        case SOURCE_CLUSTERING_KEY:
+          value = clusteringKey.get(fieldNames[i]);
+          break;
+        default:
+          value = values.get(fieldNames[i]);
+          break;
+      }
+      if (value == null) {
+        continue;
+      }
+      writeField(fieldNames[i], fieldIndex, fieldDataTypes[i], value);
     }
 
     recordConsumer.endMessage();
   }
 
   private void writeField(String name, int fieldIndex, DataType dataType, Object value) {
-    if (value == null) {
-      return; // optional field, skip null
-    }
     recordConsumer.startField(name, fieldIndex);
     switch (dataType) {
       case BOOLEAN:
@@ -123,7 +151,7 @@ public class ObjectStorageRecordWriteSupport extends WriteSupport<ObjectStorageR
   }
 
   static Map<String, DataType> getValueColumns(TableMetadata tableMetadata) {
-    Map<String, DataType> valueColumns = new java.util.LinkedHashMap<>();
+    Map<String, DataType> valueColumns = new LinkedHashMap<>();
     for (String columnName : tableMetadata.getColumnNames()) {
       if (!tableMetadata.getPartitionKeyNames().contains(columnName)
           && !tableMetadata.getClusteringKeyNames().contains(columnName)) {

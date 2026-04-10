@@ -12,9 +12,13 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
+import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 @Tag("benchmark")
@@ -143,18 +147,26 @@ public class ParquetSerializerBenchmarkTest {
     System.out.println();
   }
 
-  @Test
-  void benchmark() {
-    // Warmup
+  static Stream<Arguments> compressionProvider() {
+    return Stream.of(
+        Arguments.of("Parquet", CompressionCodecName.UNCOMPRESSED),
+        Arguments.of("Parquet+GZIP", CompressionCodecName.GZIP),
+        Arguments.of("Parquet+ZSTD", CompressionCodecName.ZSTD));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("compressionProvider")
+  void benchmark(String name, CompressionCodecName codec) {
+    // Warmup with a small partition to trigger class loading and JIT
     System.gc();
-    warmup();
+    warmup(codec);
 
     // Measure serialize memory
     System.gc();
     long serializeBaseline = usedMemory();
 
     long serializeStart = System.nanoTime();
-    byte[] serialized = ParquetSerializer.serialize(partition, metadata);
+    byte[] serialized = ParquetSerializer.serialize(partition, metadata, codec);
     long serializeEnd = System.nanoTime();
 
     long serializePeak = usedMemory();
@@ -162,6 +174,7 @@ public class ParquetSerializerBenchmarkTest {
     long serializedSize = serialized.length;
     long serializeMemory = serializePeak - serializeBaseline;
 
+    // GC between phases to avoid serialize garbage inflating deserialize measurement
     System.gc();
 
     // Measure deserialize memory
@@ -175,18 +188,21 @@ public class ParquetSerializerBenchmarkTest {
     long deserializeMs = (deserializeEnd - deserializeStart) / 1_000_000;
     long totalMs = serializeMs + deserializeMs;
 
+    // Release serialized bytes for GC
     serialized = null;
 
     // Correctness check
     assertThat(deserialized.getRecords()).hasSize(RECORD_COUNT);
 
+    // Release deserialized partition for GC
     deserialized = null;
 
+    // Estimate in-memory size for compression ratio
     long estimatedInMemoryBytes = (long) RECORD_COUNT * 1024L;
     double compressionRatio = (double) estimatedInMemoryBytes / serializedSize;
 
     // Print results
-    System.out.printf("--- Benchmark Result: Parquet+Snappy (row-per-record) ---%n");
+    System.out.printf("--- Benchmark Result: %s ---%n", name);
     System.out.printf("  Serialize time:     %,d ms%n", serializeMs);
     System.out.printf("  Deserialize time:   %,d ms%n", deserializeMs);
     System.out.printf("  Total round-trip:   %,d ms%n", totalMs);
@@ -208,7 +224,7 @@ public class ParquetSerializerBenchmarkTest {
     return rt.totalMemory() - rt.freeMemory();
   }
 
-  private void warmup() {
+  private void warmup(CompressionCodecName codec) {
     Map<String, ObjectStorageRecord> smallRecords = new HashMap<>(1);
     ObjectStorageRecord record =
         ObjectStorageRecord.newBuilder()
@@ -220,7 +236,7 @@ public class ParquetSerializerBenchmarkTest {
     smallRecords.put("warmup", record);
     ObjectStoragePartition smallPartition = new ObjectStoragePartition(smallRecords);
 
-    byte[] data = ParquetSerializer.serialize(smallPartition, metadata);
+    byte[] data = ParquetSerializer.serialize(smallPartition, metadata, codec);
     ParquetSerializer.deserialize(data, metadata);
   }
 }
