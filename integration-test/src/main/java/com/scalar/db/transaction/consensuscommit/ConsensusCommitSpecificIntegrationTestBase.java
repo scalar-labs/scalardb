@@ -2520,12 +2520,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
    * <ul>
    *   <li>(0,0): COMMITTED with BALANCE=NEW_BALANCE
    *   <li>(0,2): COMMITTED with BALANCE=NEW_BALANCE
-   *   <li>(0,1): PREPARED/DELETED with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
+   *   <li>(0,1): {@code recordState} with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
    * </ul>
    *
-   * When querying BALANCE=NEW_BALANCE, all 3 records match the normal index. After rollback of
-   * (0,1), its BALANCE reverts to INITIAL_BALANCE, so it should be filtered out, leaving only the 2
+   * When querying BALANCE=NEW_BALANCE, all 3 records match the normal index. If (0,1) is rolled
+   * back, its BALANCE reverts to INITIAL_BALANCE, so it should be filtered out, leaving only the 2
    * COMMITTED records.
+   *
+   * @param storage the storage instance to use for populating records
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @param recordState the transaction state of the (0,1) record (e.g., PREPARED or DELETED)
+   * @param preparedAt the prepared-at timestamp for the (0,1) record
+   * @param coordinatorState the coordinator state for the transaction that wrote the (0,1) record
    */
   private void populateRecordsForAfterImageIndexTest(
       DistributedStorage storage,
