@@ -2498,12 +2498,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // does not match the queried index key BALANCE=NEW_BALANCE. Only the 2 COMMITTED records
     // (0,0) and (0,2) with BALANCE=NEW_BALANCE should remain.
     assertThat(results).hasSize(2);
-    assertThat(results.get(0).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
-    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(NEW_BALANCE);
-    assertThat(results.get(1).getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(2);
-    assertThat(results.get(1).getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Set<Integer> accountTypes = new HashSet<>();
+    for (Result result : results) {
+      assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+      accountTypes.add(result.getInt(ACCOUNT_TYPE));
+    }
+    assertThat(accountTypes).containsExactlyInAnyOrder(0, 2);
 
     waitForRecoveryCompletion(transaction);
 
