@@ -3559,7 +3559,9 @@ public class CrudHandlerTest {
 
     // Assert
     assertThat(result).isEmpty();
-    verify(snapshot).putIntoReadSet(key, Optional.empty());
+    // The read set should NOT contain this key because the record still exists with a different
+    // index value. Caching Optional.empty() would incorrectly mark it as absent.
+    verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
   }
 

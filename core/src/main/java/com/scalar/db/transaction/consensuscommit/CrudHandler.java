@@ -144,6 +144,7 @@ public class CrudHandler {
 
     for (int i = 0; ; i++) {
       @Nullable Snapshot.Key key = originalKey;
+      boolean indexKeyFilteredOut = false;
 
       Optional<TransactionResult> result = getFromStorage(get, metadata, context.transactionId);
       if (result.isPresent() && !result.get().isCommitted()) {
@@ -161,7 +162,11 @@ public class CrudHandler {
         // After recovery (e.g., rollback), the index column value may have changed back to its
         // original value, which might not match the queried index key. Filter out such results.
         if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
-          result = recoveryResult.recoveredResult.filter(r -> resultMatchesIndexKey(get, r));
+          Optional<TransactionResult> unfiltered = recoveryResult.recoveredResult;
+          result = unfiltered.filter(r -> resultMatchesIndexKey(get, r));
+          if (unfiltered.isPresent() && !result.isPresent()) {
+            indexKeyFilteredOut = true;
+          }
         } else {
           result = recoveryResult.recoveredResult;
         }
@@ -191,10 +196,12 @@ public class CrudHandler {
       }
 
       // Put the result in the snapshot
-      if (result.isPresent() || get.getConjunctions().isEmpty()) {
+      if (result.isPresent() || (get.getConjunctions().isEmpty() && !indexKeyFilteredOut)) {
         // We put the result into the read set only if a get operation has no conjunction or the
         // result exists. This is because we don’t know whether the record actually exists or not
-        // due to the conjunction.
+        // due to the conjunction. Additionally, when a result was filtered out because the index
+        // key no longer matches after rollback, we must not cache Optional.empty() in the read
+        // set because the record still exists with a different index value.
 
         if (key != null) {
           putIntoReadSetInSnapshot(key, result, context);
@@ -686,6 +693,7 @@ public class CrudHandler {
    * @return true if the result's index column matches the queried index key
    */
   private boolean resultMatchesIndexKey(Selection selection, TransactionResult result) {
+    assert selection.getPartitionKey().getColumns().size() == 1;
     Column<?> indexColumn = selection.getPartitionKey().getColumns().get(0);
     Column<?> resultColumn = result.getColumns().get(indexColumn.getName());
     return resultColumn != null && resultColumn.equals(indexColumn);
