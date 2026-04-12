@@ -272,7 +272,7 @@ public class StreamingRecordIteratorTest {
       String partitionKey, Map<String, ObjectStorageRecord> records)
       throws ObjectStorageWrapperException {
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    String serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     String objectKey = ObjectStorageUtils.getObjectKey(NAMESPACE, TABLE, partitionKey);

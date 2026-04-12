@@ -21,17 +21,17 @@ public class Serializer {
     mapper.registerModule(new JavaTimeModule());
   }
 
-  public static <T> T deserialize(String json, TypeReference<T> typeReference) {
+  public static <T> T deserialize(byte[] bytes, TypeReference<T> typeReference) {
     try {
-      return mapper.readValue(json, typeReference);
+      return mapper.readValue(bytes, typeReference);
     } catch (Exception e) {
       throw new RuntimeException("Failed to deserialize the object.", e);
     }
   }
 
-  public static <T> String serialize(T object) {
+  public static <T> byte[] serialize(T object) {
     try {
-      return mapper.writeValueAsString(object);
+      return mapper.writeValueAsBytes(object);
     } catch (Exception e) {
       throw new RuntimeException("Failed to serialize the object.", e);
     }

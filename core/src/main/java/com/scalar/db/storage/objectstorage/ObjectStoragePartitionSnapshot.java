@@ -17,7 +17,7 @@ public class ObjectStoragePartitionSnapshot {
   private final String readVersion;
 
   public ObjectStoragePartitionSnapshot(
-      String objectKey, String serializedPartition, @Nullable String readVersion) {
+      String objectKey, byte[] serializedPartition, @Nullable String readVersion) {
     String[] parts = ObjectStorageUtils.parseObjectKey(objectKey);
     String namespaceName = parts[0];
     String tableName = parts[1];
