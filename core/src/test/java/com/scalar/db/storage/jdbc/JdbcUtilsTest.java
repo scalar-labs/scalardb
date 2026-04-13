@@ -242,4 +242,85 @@ public class JdbcUtilsTest {
 
     adminDataSource.close();
   }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithShortName_ShouldReturnOriginalName() {
+    // Arrange
+    String name = "index_ns_tbl_col";
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+
+    // Assert
+    assertThat(result).isEqualTo(name);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithNameExactlyAtMaxLength_ShouldReturnOriginalName() {
+    // Arrange
+    String prefix = "index_";
+    int paddingLength = JdbcUtils.MAX_INDEX_NAME_LENGTH - prefix.length();
+    String padding = String.join("", Collections.nCopies(paddingLength, "c"));
+    String name = prefix + padding;
+    assertThat(name.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH); // sanity check
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, prefix);
+
+    // Assert
+    assertThat(result).isEqualTo(name);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithNameExceedingMaxLength_ShouldReturnShortenedName() {
+    // Arrange
+    String name = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit";
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+
+    // Assert
+    assertThat(result).startsWith("index_");
+    assertThat(result.length()).isLessThanOrEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithNameExceedingMaxLength_ShouldPreservePrefix() {
+    // Arrange
+    String name = "index_clustering_order_my_long_namespace_my_long_table_name_exceeding_limit";
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, "index_clustering_order_");
+
+    // Assert
+    assertThat(result).startsWith("index_clustering_order_");
+    assertThat(result.length()).isLessThanOrEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithSameInput_ShouldReturnConsistentResult() {
+    // Arrange
+    String name = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit";
+
+    // Act
+    String result1 = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+    String result2 = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+
+    // Assert
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithDifferentInputs_ShouldReturnDifferentResults() {
+    // Arrange
+    String name1 = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit_1";
+    String name2 = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit_2";
+
+    // Act
+    String result1 = JdbcUtils.shortenIndexNameIfNeeded(name1, "index_");
+    String result2 = JdbcUtils.shortenIndexNameIfNeeded(name2, "index_");
+
+    // Assert
+    assertThat(result1).isNotEqualTo(result2);
+  }
 }

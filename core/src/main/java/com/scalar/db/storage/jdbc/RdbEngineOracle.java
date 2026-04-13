@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
+  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
 
@@ -95,7 +96,10 @@ class RdbEngineOracle extends AbstractRdbEngine {
       // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -238,6 +242,12 @@ class RdbEngineOracle extends AbstractRdbEngine {
     // ORA-00060: deadlock detected while waiting for resource
     // ORA-08176: consistent read failure; rollback data not available
     return e.getErrorCode() == 8177 || e.getErrorCode() == 60 || e.getErrorCode() == 8176;
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // ORA-01418: specified index does not exist
+    return e.getErrorCode() == 1418;
   }
 
   @Override
