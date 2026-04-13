@@ -77,7 +77,11 @@ subprojects {
     tasks.withType(Test) {
         useJUnitPlatform()
         testLogging.showStandardStreams = true
-        maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+        def maxParallelForksEnv = System.getProperty('scalardb.max_parallel_fork')
+        if (maxParallelForksEnv == null) {
+            throw new GradleException('scalardb.max_parallel_fork system property is not set')
+        }
+        maxParallelForks = maxParallelForksEnv.toInteger()
     }
 
     group = projectGroup
