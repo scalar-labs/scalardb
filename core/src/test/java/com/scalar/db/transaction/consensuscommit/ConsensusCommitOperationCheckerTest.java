@@ -395,6 +395,28 @@ public class ConsensusCommitOperationCheckerTest {
   }
 
   @Test
+  public void
+      checkForGet_WithSecondaryIndexInSerializableAndBeforeIndexExists_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("idx", DataType.INT)
+            .addPartitionKey("pk")
+            .addSecondaryIndex("idx")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+    when(tableMetadata.hasBeforeImageSecondaryIndex("idx")).thenReturn(true);
+
+    Get get = Get.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("idx", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(get, context)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void checkForGet_ValidGet_ShouldNotThrowException() {
     // Arrange
     Get get =
@@ -561,6 +583,29 @@ public class ConsensusCommitOperationCheckerTest {
 
   @Test
   public void
+      checkForScan_WithSecondaryIndexInSerializableAndBeforeIndexExists_ShouldNotThrowException() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("idx", DataType.INT)
+            .addPartitionKey("pk")
+            .addSecondaryIndex("idx")
+            .build();
+    when(tableMetadata.getTableMetadata()).thenReturn(metadata);
+    when(tableMetadata.hasBeforeImageSecondaryIndex("idx")).thenReturn(true);
+
+    Scan scan =
+        Scan.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("idx", 100)).build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
       checkForScan_ScanAllWithConditionOnIndexedColumnInSerializable_ShouldThrowIllegalArgumentException() {
     // Arrange
 
@@ -689,6 +734,34 @@ public class ConsensusCommitOperationCheckerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 1))
+            .where(ConditionBuilder.column("idx_col").isEqualToInt(100))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SERIALIZABLE, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      checkForScan_ScanAllWithConditionOnIndexedColumnInSerializableAndBeforeIndexExists_ShouldNotThrowException() {
+    // Arrange
+
+    // Mock the underlying TableMetadata
+    TableMetadata mockTableMetadata = mock(TableMetadata.class);
+    when(tableMetadata.getTableMetadata()).thenReturn(mockTableMetadata);
+    when(mockTableMetadata.getPartitionKeyNames()).thenReturn(new LinkedHashSet<>());
+    when(mockTableMetadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
+    Set<String> secondaryIndexNames = new LinkedHashSet<>(Collections.singletonList("idx_col"));
+    when(mockTableMetadata.getSecondaryIndexNames()).thenReturn(secondaryIndexNames);
+    when(tableMetadata.hasBeforeImageSecondaryIndex("idx_col")).thenReturn(true);
+
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
             .where(ConditionBuilder.column("idx_col").isEqualToInt(100))
             .build();
     TransactionContext context =

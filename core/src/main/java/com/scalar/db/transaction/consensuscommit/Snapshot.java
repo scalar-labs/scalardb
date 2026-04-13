@@ -2,13 +2,13 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
 import com.scalar.db.api.ConditionSetBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -20,6 +20,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -560,22 +561,43 @@ public class Snapshot {
 
     // Scan set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>> entry : scanSet.entrySet()) {
-      tasks.add(() -> validateScanResults(storage, entry.getKey(), entry.getValue(), false));
+      tasks.add(
+          () -> {
+            TransactionTableMetadata txMetadata = getTransactionTableMetadata(entry.getKey());
+            validateScanResults(
+                storage, entry.getKey(), entry.getValue(), false, txMetadata.getTableMetadata());
+            validateBeforeIndex(storage, entry.getKey(), txMetadata);
+          });
     }
 
     // Scanner set is re-validated to check if there is no anti-dependency
     for (ScannerInfo scannerInfo : scannerSet) {
-      tasks.add(() -> validateScanResults(storage, scannerInfo.scan, scannerInfo.results, true));
+      tasks.add(
+          () -> {
+            TransactionTableMetadata txMetadata = getTransactionTableMetadata(scannerInfo.scan);
+            validateScanResults(
+                storage,
+                scannerInfo.scan,
+                scannerInfo.results,
+                true,
+                txMetadata.getTableMetadata());
+            validateBeforeIndex(storage, scannerInfo.scan, txMetadata);
+          });
     }
 
     // Get set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
-      TableMetadata metadata = getTableMetadata(get);
+      TransactionTableMetadata txMetadata = getTransactionTableMetadata(get);
+      TableMetadata metadata = txMetadata.getTableMetadata();
 
       if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
         // For Get with index
-        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue(), metadata));
+        tasks.add(
+            () -> {
+              validateGetWithIndexResult(storage, get, entry.getValue(), metadata);
+              validateBeforeIndex(storage, get, txMetadata);
+            });
       } else {
         // For other Get
 
@@ -610,6 +632,7 @@ public class Snapshot {
    * @param results the results of the scan
    * @param notFullyScannedScanner if this is a validation for a scanner that has not been fully
    *     scanned
+   * @param metadata the table metadata for the scanned table
    * @throws ExecutionException if a storage operation fails
    * @throws ValidationConflictException if the scan results are changed by another transaction
    */
@@ -617,13 +640,11 @@ public class Snapshot {
       DistributedStorage storage,
       Scan scan,
       LinkedHashMap<Key, TransactionResult> results,
-      boolean notFullyScannedScanner)
+      boolean notFullyScannedScanner,
+      TableMetadata metadata)
       throws ExecutionException, ValidationConflictException {
-    Scanner scanner = null;
-    try {
-      TableMetadata metadata = getTableMetadata(scan);
-
-      scanner = storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata));
+    try (Scanner scanner =
+        storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata))) {
 
       // Initialize the iterator for the latest scan results
       Optional<Result> latestResult = getNextResult(scanner, scan);
@@ -722,14 +743,8 @@ public class Snapshot {
           throwExceptionDueToAntiDependency();
         }
       }
-    } finally {
-      if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException e) {
-          logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
-        }
-      }
+    } catch (IOException e) {
+      logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
     }
   }
 
@@ -780,7 +795,7 @@ public class Snapshot {
     originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
 
     // Validate the result to check if there is no anti-dependency
-    validateScanResults(storage, scanWithIndex, results, false);
+    validateScanResults(storage, scanWithIndex, results, false, metadata);
   }
 
   private void validateGetResult(
@@ -810,10 +825,109 @@ public class Snapshot {
     }
   }
 
-  private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata transactionTableMetadata =
-        getTransactionTableMetadata(tableMetadataManager, operation);
-    return transactionTableMetadata.getTableMetadata();
+  /**
+   * Validates that there are no uncommitted records on the before-image index that could cause
+   * phantom reads.
+   *
+   * <p>This is needed because when another transaction updates a record's indexed column (e.g.,
+   * from 10 to 20) and is in PREPARED/DELETED state, the regular index scan (e.g., index_col=10)
+   * won't find that record since its current value is 20. However, the record's committed
+   * (before-image) value is still 10. Without this check, a phantom could go undetected: a record
+   * committed with index_col=10 but updated to 20 by another PREPARED transaction would be
+   * invisible to both the original scan and the validation re-scan.
+   *
+   * <p>This method is only called in the SERIALIZABLE extra-read validation phase. In SERIALIZABLE,
+   * {@link ConsensusCommitOperationChecker} rejects index-based operations on tables without
+   * before-image indexes, so the existence of before-image indexes is guaranteed when this method
+   * is called. Therefore, this method only needs to check whether the selection is an index-based
+   * operation (Get with index, Scan with index, or ScanAll with indexed column conditions), without
+   * checking for the existence of before-image indexes.
+   *
+   * @param storage a distributed storage
+   * @param selection the original selection operation (Get with index, ScanWithIndex, or ScanAll)
+   * @throws ExecutionException if a storage operation fails
+   * @throws ValidationConflictException if uncommitted records are found on the before-image index
+   */
+  private void validateBeforeIndex(
+      DistributedStorage storage, Selection selection, TransactionTableMetadata txMetadata)
+      throws ExecutionException, ValidationConflictException {
+    if (!requiresBeforeIndexValidation(selection, txMetadata.getTableMetadata())) {
+      return;
+    }
+
+    Scan beforeIndexScan;
+    if (selection instanceof ScanAll) {
+      beforeIndexScan =
+          ConsensusCommitUtils.createBeforeIndexScanAll(
+              (ScanAll) selection, txMetadata.getTableMetadata());
+    } else {
+      beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(selection);
+    }
+
+    try (Scanner scanner = storage.scan(beforeIndexScan)) {
+      for (Result result : scanner) {
+        TransactionResult txResult = new TransactionResult(result);
+        // Conservatively fail if any uncommitted record from another transaction is found on the
+        // before-image index. This may cause false positives (e.g., when the record will be
+        // rolled forward and its committed index value won't actually match the scan condition),
+        // but it guarantees correctness. On retry, the record should be committed, so the retry
+        // will succeed.
+        if (!txResult.isCommitted() && !id.equals(txResult.getId())) {
+          throwExceptionDueToAntiDependency();
+        }
+      }
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        throw (ExecutionException) e.getCause();
+      }
+      throw e;
+    } catch (IOException e) {
+      logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
+    }
+  }
+
+  /**
+   * Checks if the given selection requires before-image index validation. This is true when the
+   * selection is an index-based operation (Get with index, Scan with index, or ScanAll with
+   * conditions on indexed columns) and the index column is a non-primary-key column.
+   *
+   * <p>Primary key columns (partition keys and clustering keys) are excluded because they are
+   * immutable and do not have corresponding before-image columns, so before-image index validation
+   * is not needed for them.
+   *
+   * <p>For ScanAll, whether the underlying storage actually uses the index depends on the storage
+   * implementation. However, this method considers ScanAll with conditions on indexed columns as
+   * requiring before-image index validation regardless.
+   *
+   * @param selection the selection operation to check
+   * @param metadata the table metadata
+   * @return true if the selection requires before-image index validation
+   */
+  @VisibleForTesting
+  boolean requiresBeforeIndexValidation(Selection selection, TableMetadata metadata) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata)) {
+      String indexColumnName = selection.getPartitionKey().getColumns().get(0).getName();
+      return !metadata.getPartitionKeyNames().contains(indexColumnName)
+          && !metadata.getClusteringKeyNames().contains(indexColumnName);
+    }
+    if (selection instanceof ScanAll) {
+      for (Selection.Conjunction conjunction : selection.getConjunctions()) {
+        for (ConditionalExpression condition : conjunction.getConditions()) {
+          String columnName = condition.getColumn().getName();
+          if (metadata.getSecondaryIndexNames().contains(columnName)
+              && !metadata.getPartitionKeyNames().contains(columnName)
+              && !metadata.getClusteringKeyNames().contains(columnName)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
+      throws ExecutionException {
+    return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
   }
 
   private boolean isChanged(

@@ -100,7 +100,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
 
-    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
+    ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
 
   protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -138,7 +138,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
 
-    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
+    ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")

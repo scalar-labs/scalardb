@@ -60,6 +60,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -2200,11 +2201,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnResult(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
@@ -2241,11 +2237,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(Isolation.class)
   public void get_GetWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
       Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
@@ -2285,11 +2276,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnResult(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
@@ -2329,11 +2315,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long prepared_at = System.currentTimeMillis();
@@ -2365,11 +2346,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       get_GetWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnEmpty(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
@@ -2404,11 +2380,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(Isolation.class)
   public void get_GetWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
       Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
@@ -2496,11 +2467,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, false, isolation);
@@ -2512,11 +2478,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, true, isolation);
@@ -2528,11 +2489,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, false, isolation);
@@ -2544,11 +2500,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, true, isolation);
@@ -2606,11 +2557,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, false, isolation);
@@ -2622,11 +2568,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, true, isolation);
@@ -2638,11 +2579,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, false, isolation);
@@ -2654,11 +2590,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, true, isolation);
@@ -2716,11 +2647,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
         scan, false, isolation);
@@ -2732,11 +2658,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
         scan, true, isolation);
@@ -2748,11 +2669,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
         scan, false, isolation);
@@ -2764,11 +2680,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
         scan, true, isolation);
@@ -2814,11 +2725,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
         scan, false, isolation);
@@ -2830,11 +2736,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
         scan, true, isolation);
@@ -2846,11 +2747,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
         scan, false, isolation);
@@ -2862,11 +2758,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
         scan, true, isolation);
@@ -2927,11 +2818,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, false, isolation);
@@ -2943,11 +2829,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, true, isolation);
@@ -2959,11 +2840,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, false, isolation);
@@ -2975,11 +2851,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
         scan, true, isolation);
@@ -3036,11 +2907,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, false, isolation);
@@ -3052,11 +2918,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, true, isolation);
@@ -3068,11 +2929,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, false, isolation);
@@ -3084,11 +2940,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
-    if (isolation == Isolation.SERIALIZABLE) {
-      // skip for now
-      return;
-    }
-
     Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
     scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
         scan, true, isolation);
@@ -5209,17 +5060,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    List<Result> results = transaction.scan(scan);
+    transaction.commit();
 
     // Assert
-    if (isolation == Isolation.SERIALIZABLE) {
-      // Index scans are not allowed in SERIALIZABLE isolation
-      assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-      transaction.rollback();
-    } else {
-      assertThat(thrown).doesNotThrowAnyException();
-      transaction.commit();
-    }
+    // The put record has SOME_COLUMN="aaa", which does not satisfy SOME_COLUMN > "aaa"
+    assertThat(results).isEmpty();
   }
 
   @ParameterizedTest
@@ -6426,8 +6272,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldScan() throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
@@ -6468,23 +6313,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .intValue(BALANCE, INITIAL_BALANCE)
                 .build()));
 
-    // Act Assert
+    // Act
     DistributedTransaction transaction = manager.begin();
-    // Index scans are not allowed in SERIALIZABLE isolation
-    assertThatThrownBy(
-            () ->
-                transaction.scan(
-                    Scan.newBuilder()
-                        .namespace(namespace1)
-                        .table(TABLE_1)
-                        .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                        .build()))
-        .isInstanceOf(IllegalArgumentException.class);
+    List<Result> results =
+        transaction.scan(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+    transaction.commit();
+
+    // Assert
+    assertThat(results).hasSize(5);
+    Set<Integer> accountIds = new HashSet<>();
+    for (Result result : results) {
+      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      accountIds.add(result.getInt(ACCOUNT_ID));
+    }
+    assertThat(accountIds).containsExactlyInAnyOrder(0, 1, 2, 3, 4);
   }
 
   @Test
-  public void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
+  public void get_GetWithIndexGiven_WithSerializable_ShouldGet() throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.insert(
@@ -6496,19 +6348,22 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .intValue(BALANCE, INITIAL_BALANCE)
             .build());
 
-    // Act Assert
+    // Act
     DistributedTransaction transaction = manager.begin();
+    Optional<Result> result =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+    transaction.commit();
 
-    // Index gets are not allowed in SERIALIZABLE isolation
-    assertThatThrownBy(
-            () ->
-                transaction.get(
-                    Get.newBuilder()
-                        .namespace(namespace1)
-                        .table(TABLE_1)
-                        .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                        .build()))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
   @Test
@@ -8950,6 +8805,220 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.ABORTED);
     assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  public void
+      commit_GetWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Start a SERIALIZABLE transaction and get with index
+    DistributedTransaction transaction = manager.begin();
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+    assertThat(result).isEmpty();
+
+    // After the read, insert a PREPARED record (0,0) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_ScanWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan with index
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results = transaction.scan(scan);
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    // This simulates another transaction that changed BALANCE from INITIAL_BALANCE to NEW_BALANCE
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    // toSerializable should detect the PREPARED record via before-image index and throw
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_ScanAllWithIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan all with balance condition
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results = transaction.scan(scan);
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_GetScannerWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan with index via getScanner
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results;
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      results = scanner.all();
+    }
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_GetScannerWithScanAllIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan all with balance condition via getScanner
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results;
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      results = scanner.all();
+    }
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
   private DistributedTransaction prepareTransfer(

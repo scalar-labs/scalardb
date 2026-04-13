@@ -914,19 +914,22 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0260",
-      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "Get operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable index-based Get operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0261",
-      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "Scan operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable index-based Scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0262",
-      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
+      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable conditions on indexed columns in cross-partition scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
   OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_NOT_FOUND(
@@ -1177,13 +1180,13 @@ public enum CoreError implements ScalarDbError {
       "A transaction conflict occurred in the mutation. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
       Category.CONCURRENCY_ERROR,
       "0028",
       "Before-image index recovery retry limit exceeded. Transaction ID: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
       Category.CONCURRENCY_ERROR,
       "0029",
       "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
