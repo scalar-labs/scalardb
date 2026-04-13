@@ -19,10 +19,8 @@ dynamo:
     # Permissions cannot be tested on DynamoDB local
     create_test_user: # Do nothing
     versions:
-      - 2
+      - 3
       - 4
-      - 6
-      - 8
     run: ./gradlew integrationTestDynamo -Dscalardb.max_parallel_fork=%VERSION%
 
 jdbc:
@@ -30,10 +28,8 @@ jdbc:
     display_name: PostgreSQL 17 with %VERSION% workers
     setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
     versions:
-      - 2
+      - 3
       - 4
-      - 6
-      - 8
     db_healthcheck: docker exec postgresql psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec postgresql psql -U postgres -c "
