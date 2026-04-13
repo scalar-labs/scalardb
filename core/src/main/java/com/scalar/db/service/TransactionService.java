@@ -22,6 +22,7 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -83,6 +84,17 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction begin(Map<String, String> attributes) throws TransactionException {
+    return manager.begin(attributes);
+  }
+
+  @Override
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.begin(txId, attributes);
+  }
+
+  @Override
   public DistributedTransaction beginReadOnly() throws TransactionException {
     return manager.beginReadOnly();
   }
@@ -90,6 +102,18 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
     return manager.beginReadOnly(txId);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return manager.beginReadOnly(attributes);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.beginReadOnly(txId, attributes);
   }
 
   @Override
@@ -103,6 +127,17 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction start(Map<String, String> attributes) throws TransactionException {
+    return manager.start(attributes);
+  }
+
+  @Override
+  public DistributedTransaction start(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.start(txId, attributes);
+  }
+
+  @Override
   public DistributedTransaction startReadOnly() throws TransactionException {
     return manager.startReadOnly();
   }
@@ -110,6 +145,18 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction startReadOnly(String txId) throws TransactionException {
     return manager.startReadOnly(txId);
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return manager.startReadOnly(attributes);
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.startReadOnly(txId, attributes);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
