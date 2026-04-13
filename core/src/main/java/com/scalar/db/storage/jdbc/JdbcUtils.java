@@ -1,12 +1,20 @@
 package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.hash.Hashing;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.JDBCType;
 import java.util.Map.Entry;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
+
+  // The maximum index name length is set to 63 to match the shortest limit among supported
+  // databases (PostgreSQL). Other databases have higher limits (e.g., MySQL: 64, Oracle: 128,
+  // SQL Server: 128).
+  @VisibleForTesting static final int MAX_INDEX_NAME_LENGTH = 63;
+
   private JdbcUtils() {}
 
   public static BasicDataSource initDataSource(JdbcConfig config, RdbEngineStrategy rdbEngine) {
@@ -142,5 +150,24 @@ public final class JdbcUtils {
         }
     }
     return type;
+  }
+
+  /**
+   * Shortens the given index name using a SHA-256 hash if it exceeds the maximum index name length.
+   * Returns the original name if it is within the limit. The shortened name is composed of the
+   * given prefix followed by a 32-character hex hash.
+   *
+   * @param name the full index name to check and potentially shorten
+   * @param prefix the prefix to preserve in the shortened name (e.g., "index_")
+   * @return the original name if within the limit, or a shortened name using a hash
+   */
+  public static String shortenIndexNameIfNeeded(String name, String prefix) {
+    if (name.length() <= MAX_INDEX_NAME_LENGTH) {
+      return name;
+    }
+    // Shorten using SHA-256 hash truncated to 32 hex characters (128 bits)
+    String hash =
+        Hashing.sha256().hashString(name, StandardCharsets.UTF_8).toString().substring(0, 32);
+    return prefix + hash;
   }
 }
