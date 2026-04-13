@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -951,6 +952,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               tableMetadataBuilder.renameSecondaryIndex(oldColumnName, newColumnName);
             }
             TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
+
             String renameColumnStatement =
                 rdbEngine.renameColumnSql(
                     namespace,
@@ -958,14 +960,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     oldColumnName,
                     newColumnName,
                     getVendorDbColumnType(updatedTableMetadata, newColumnName));
-
             execute(connection, renameColumnStatement, requiresExplicitCommit);
+
             if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
-              String oldIndexName = getIndexName(namespace, table, oldColumnName);
-              String newIndexName = getIndexName(namespace, table, newColumnName);
               renameIndexInternal(
-                  connection, namespace, table, newColumnName, oldIndexName, newIndexName);
+                  connection, namespace, table, oldColumnName, table, newColumnName);
             }
+
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -1030,22 +1031,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             TableMetadata tableMetadata =
                 tableMetadataService.getTableMetadata(connection, namespace, oldTableName);
             assert tableMetadata != null;
+
             String renameTableStatement =
                 rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
-
             execute(connection, renameTableStatement, requiresExplicitCommit);
+
             tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
+
             for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
-              String oldIndexName = getIndexName(namespace, oldTableName, indexedColumnName);
-              String newIndexName = getIndexName(namespace, newTableName, indexedColumnName);
               renameIndexInternal(
                   connection,
                   namespace,
-                  newTableName,
+                  oldTableName,
                   indexedColumnName,
-                  oldIndexName,
-                  newIndexName);
+                  newTableName,
+                  indexedColumnName);
             }
+
             addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
           });
     } catch (SQLException e) {
@@ -1060,13 +1062,32 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void renameIndexInternal(
       Connection connection,
       String schema,
-      String table,
-      String column,
-      String oldIndexName,
-      String newIndexName)
+      String oldTable,
+      String oldColumn,
+      String newTable,
+      String newColumn)
       throws SQLException {
-    String[] sqls = rdbEngine.renameIndexSqls(schema, table, column, oldIndexName, newIndexName);
-    execute(connection, sqls, requiresExplicitCommit);
+    String oldIndexName = getIndexName(schema, oldTable, oldColumn);
+    String newIndexName = getIndexName(schema, newTable, newColumn);
+    String[] sqls =
+        rdbEngine.renameIndexSqls(schema, newTable, newColumn, oldIndexName, newIndexName);
+    try {
+      execute(connection, sqls, requiresExplicitCommit);
+    } catch (SQLException e) {
+      if (!rdbEngine.isUndefinedIndexError(e)) {
+        throw e;
+      }
+      // Fallback: the index may have been created with the original long name before the shortening
+      // logic was introduced. Some databases (e.g., PostgreSQL) silently truncate long index names,
+      // so retrying with the original long name allows the database to match the truncated name.
+      String originalIndexName = getFullIndexName(schema, oldTable, oldColumn);
+      if (originalIndexName.equals(oldIndexName)) {
+        throw e;
+      }
+      String[] fallbackSqls =
+          rdbEngine.renameIndexSqls(schema, newTable, newColumn, originalIndexName, newIndexName);
+      execute(connection, fallbackSqls, requiresExplicitCommit);
+    }
   }
 
   @VisibleForTesting
@@ -1096,10 +1117,31 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
-    execute(connection, sql, requiresExplicitCommit);
+    try {
+      execute(connection, sql, requiresExplicitCommit);
+    } catch (SQLException e) {
+      if (!rdbEngine.isUndefinedIndexError(e)) {
+        throw e;
+      }
+      // Fallback: the index may have been created with the original long name before the shortening
+      // logic was introduced. Some databases (e.g., PostgreSQL) silently truncate long index names,
+      // so retrying with the original long name allows the database to match the truncated name.
+      String originalIndexName = getFullIndexName(schema, table, indexedColumn);
+      if (originalIndexName.equals(indexName)) {
+        throw e;
+      }
+      String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalIndexName);
+      execute(connection, fallbackSql, requiresExplicitCommit);
+    }
   }
 
-  private String getIndexName(String schema, String table, String indexedColumn) {
+  @VisibleForTesting
+  static String getIndexName(String schema, String table, String indexedColumn) {
+    return shortenIndexNameIfNeeded(
+        getFullIndexName(schema, table, indexedColumn), INDEX_NAME_PREFIX + "_");
+  }
+
+  private static String getFullIndexName(String schema, String table, String indexedColumn) {
     return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
   }
 

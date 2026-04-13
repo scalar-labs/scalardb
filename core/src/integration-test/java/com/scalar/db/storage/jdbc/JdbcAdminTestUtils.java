@@ -73,6 +73,34 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     execute(deleteMetadataStatement);
   }
 
+  /**
+   * Creates an index with the specified index name.
+   *
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @param column the column name to create the index on
+   * @param indexName the index name to use
+   * @throws SQLException if a database error occurs
+   */
+  public void createIndex(String namespace, String table, String column, String indexName)
+      throws SQLException {
+    String sql = rdbEngine.createIndexSql(namespace, table, indexName, column);
+    execute(sql);
+  }
+
+  /**
+   * Drops an index with the specified index name.
+   *
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @param indexName the index name to drop
+   * @throws SQLException if a database error occurs
+   */
+  public void dropIndex(String namespace, String table, String indexName) throws SQLException {
+    String sql = rdbEngine.dropIndexSql(namespace, table, indexName);
+    execute(sql);
+  }
+
   private void execute(String sql) throws SQLException {
     withConnection(
         dataSource,
