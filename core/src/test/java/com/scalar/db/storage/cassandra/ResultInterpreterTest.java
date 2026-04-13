@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -80,7 +79,7 @@ public class ResultInterpreterTest {
     when(row.getString(ANY_NAME_2)).thenReturn(ANY_TEXT_2);
     when(row.getBool(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(row.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
-    when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntColumn.MAX_VALUE);
+    when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(Long.MAX_VALUE);
     when(row.getFloat(ANY_COLUMN_NAME_4)).thenReturn(Float.MAX_VALUE);
     when(row.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(row.getString(ANY_COLUMN_NAME_6)).thenReturn("string");
@@ -115,7 +114,7 @@ public class ResultInterpreterTest {
     assertThat(result.getInt(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
     assertThat(result.getFloat(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
@@ -156,7 +155,7 @@ public class ResultInterpreterTest {
     assertThat(columns.get(ANY_COLUMN_NAME_2).getIntValue()).isEqualTo(Integer.MAX_VALUE);
     assertThat(columns.containsKey(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_3).hasNullValue()).isFalse();
-    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(Long.MAX_VALUE);
     assertThat(columns.containsKey(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_4).hasNullValue()).isFalse();
     assertThat(columns.get(ANY_COLUMN_NAME_4).getFloatValue()).isEqualTo(Float.MAX_VALUE);

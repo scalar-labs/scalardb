@@ -70,6 +70,15 @@ public class ObjectStorageOperationCheckerTest {
           .addClusteringKey(CKEY1)
           .build();
 
+  private static final TableMetadata TABLE_METADATA_BIGINT =
+      TableMetadata.newBuilder()
+          .addColumn(PKEY1, DataType.BIGINT)
+          .addColumn(CKEY1, DataType.BIGINT)
+          .addColumn(COL1, DataType.BIGINT)
+          .addPartitionKey(PKEY1)
+          .addClusteringKey(CKEY1)
+          .build();
+
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
   @Mock private StorageInfoProvider storageInfoProvider;
@@ -862,6 +871,175 @@ public class ObjectStorageOperationCheckerTest {
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void check_GetGiven_WhenBigIntValueOutOfRange_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA_BIGINT);
+
+    long positiveOutOfRangeValue = 9007199254740993L;
+    long negativeOutOfRangeValue = -9007199254740993L;
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Get.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, positiveOutOfRangeValue))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Get.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, negativeOutOfRangeValue))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatCode(
+            () ->
+                operationChecker.check(
+                    Get.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, 9007199254740992L))
+                        .clusteringKey(Key.ofBigInt(CKEY1, -9007199254740992L))
+                        .build()))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_ScanGiven_WhenBigIntValueOutOfRange_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA_BIGINT);
+
+    long positiveOutOfRangeValue = 9007199254740993L;
+    long negativeOutOfRangeValue = -9007199254740993L;
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Scan.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, positiveOutOfRangeValue))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Scan.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, negativeOutOfRangeValue))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Scan.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, 0))
+                        .start(Key.ofBigInt(CKEY1, positiveOutOfRangeValue))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Scan.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, 0))
+                        .end(Key.ofBigInt(CKEY1, negativeOutOfRangeValue))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void check_PutGiven_WhenBigIntValueOutOfRange_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA_BIGINT);
+
+    long positiveOutOfRangeValue = 9007199254740993L;
+    long negativeOutOfRangeValue = -9007199254740993L;
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Put.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, positiveOutOfRangeValue))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .bigIntValue(COL1, 0)
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Put.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, 0))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .bigIntValue(COL1, positiveOutOfRangeValue)
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Put.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, 0))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .bigIntValue(COL1, negativeOutOfRangeValue)
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void check_DeleteGiven_WhenBigIntValueOutOfRange_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA_BIGINT);
+
+    long positiveOutOfRangeValue = 9007199254740993L;
+    long negativeOutOfRangeValue = -9007199254740993L;
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Delete.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, positiveOutOfRangeValue))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                operationChecker.check(
+                    Delete.newBuilder()
+                        .namespace(NAMESPACE_NAME)
+                        .table(TABLE_NAME)
+                        .partitionKey(Key.ofBigInt(PKEY1, negativeOutOfRangeValue))
+                        .clusteringKey(Key.ofBigInt(CKEY1, 0))
+                        .build()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

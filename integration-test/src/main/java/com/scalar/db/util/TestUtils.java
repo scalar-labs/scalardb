@@ -37,6 +37,11 @@ import org.junit.jupiter.api.Assertions;
 
 public final class TestUtils {
 
+  // The max and min values for BigInt that can be safely used in integration tests. Cosmos DB and
+  // Object Storage store numbers as JSON, which only guarantees precision for integers up to 2^53.
+  public static final long BIGINT_MAX_VALUE = 9007199254740992L;
+  public static final long BIGINT_MIN_VALUE = -9007199254740992L;
+
   public static final int MAX_TEXT_COUNT = 20;
   public static final int MAX_BLOB_LENGTH = 20;
 
@@ -85,10 +90,7 @@ public final class TestUtils {
   }
 
   public static long nextBigInt(Random random) {
-    return random
-        .longs(1, BigIntColumn.MIN_VALUE, (BigIntColumn.MAX_VALUE + 1))
-        .findFirst()
-        .orElse(0);
+    return random.longs(1, BIGINT_MIN_VALUE, (BIGINT_MAX_VALUE + 1)).findFirst().orElse(0);
   }
 
   public static float nextFloat(Random random) {
@@ -166,7 +168,7 @@ public final class TestUtils {
       String columnName, DataType dataType, boolean allowEmpty) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BigIntColumn.MIN_VALUE);
+        return BigIntColumn.of(columnName, BIGINT_MIN_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
@@ -195,7 +197,7 @@ public final class TestUtils {
   public static Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BigIntColumn.MAX_VALUE);
+        return BigIntColumn.of(columnName, Long.MAX_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:
