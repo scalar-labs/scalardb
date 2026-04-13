@@ -174,7 +174,8 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    // 2714: There is already an object named '%.*ls' in the database.
+    // Error code: 2714
+    // Message: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
   }
 
@@ -183,21 +184,38 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     if (e.getSQLState() == null) {
       return false;
     }
-    // 23000: Integrity constraint violation
+
+    // SQL state: 23000
+    // Message: Integrity constraint violation
     return e.getSQLState().equals("23000");
   }
 
   @Override
   public boolean isUndefinedTableError(SQLException e) {
-    // 208: Invalid object name '%.*ls'.
+    // Error code: 208
+    // Message: Invalid object name '%.*ls'.
     return e.getErrorCode() == 208;
   }
 
   @Override
   public boolean isConflict(SQLException e) {
-    // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and
-    // has been chosen as the deadlock victim. Rerun the transaction.
+    // Error code: 1205
+    // Message: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process
+    // and has been chosen as the deadlock victim. Rerun the transaction.
     return e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // Error code: 3701
+    // Message: Cannot drop the index '%.*ls', because it does not exist or you do not have
+    // permission.
+
+    // Error code: 15248
+    // Message: Either the parameter @objname is ambiguous or the claimed @objtype (INDEX) is wrong.
+    // (Returned by sp_rename when the index does not exist)
+
+    return e.getErrorCode() == 3701 || e.getErrorCode() == 15248;
   }
 
   @Override
