@@ -42,6 +42,8 @@ public class ResultInterpreterTest {
   private static final String ANY_COLUMN_NAME_10 = "col10";
   private static final String ANY_COLUMN_NAME_11 = "col11";
   private static final String ANY_ID_1 = "id";
+  // The max value supported by Object Storage (2^53)
+  private static final long ANY_BIGINT = 9007199254740992L;
 
   private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
@@ -74,7 +76,7 @@ public class ResultInterpreterTest {
         ImmutableMap.<String, Object>builder()
             .put(ANY_COLUMN_NAME_1, true)
             .put(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)
-            .put(ANY_COLUMN_NAME_3, Long.MAX_VALUE)
+            .put(ANY_COLUMN_NAME_3, ANY_BIGINT)
             .put(ANY_COLUMN_NAME_4, Float.MAX_VALUE)
             .put(ANY_COLUMN_NAME_5, Double.MAX_VALUE)
             .put(ANY_COLUMN_NAME_6, "string")
@@ -123,7 +125,7 @@ public class ResultInterpreterTest {
     assertThat(result.getInt(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(ANY_BIGINT);
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
     assertThat(result.getFloat(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
@@ -167,7 +169,7 @@ public class ResultInterpreterTest {
     assertThat(columns.get(ANY_COLUMN_NAME_2).getIntValue()).isEqualTo(Integer.MAX_VALUE);
     assertThat(columns.containsKey(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_3).hasNullValue()).isFalse();
-    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(Long.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(ANY_BIGINT);
     assertThat(columns.containsKey(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_4).hasNullValue()).isFalse();
     assertThat(columns.get(ANY_COLUMN_NAME_4).getFloatValue()).isEqualTo(Float.MAX_VALUE);

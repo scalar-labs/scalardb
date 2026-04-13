@@ -29,7 +29,8 @@ public class MapVisitorTest {
       BooleanColumn.of("any_boolean", ANY_BOOLEAN);
   private static final int ANY_INT = Integer.MIN_VALUE;
   private static final IntColumn ANY_INT_COLUMN = IntColumn.of("any_int", ANY_INT);
-  private static final long ANY_BIGINT = Long.MAX_VALUE;
+  // The max value supported by Object Storage (2^53)
+  private static final long ANY_BIGINT = 9007199254740992L;
   private static final BigIntColumn ANY_BIGINT_COLUMN = BigIntColumn.of("any_bigint", ANY_BIGINT);
   private static final float ANY_FLOAT = Float.MIN_NORMAL;
   private static final FloatColumn ANY_FLOAT_COLUMN = FloatColumn.of("any_float", ANY_FLOAT);

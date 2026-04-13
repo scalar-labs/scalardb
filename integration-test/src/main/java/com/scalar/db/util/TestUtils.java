@@ -197,7 +197,7 @@ public final class TestUtils {
   public static Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, Long.MAX_VALUE);
+        return BigIntColumn.of(columnName, BIGINT_MAX_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:
