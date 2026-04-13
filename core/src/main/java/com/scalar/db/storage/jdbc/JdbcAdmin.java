@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -881,10 +882,31 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
-    execute(connection, sql);
+    try {
+      execute(connection, sql);
+    } catch (SQLException e) {
+      if (!rdbEngine.isUndefinedIndexError(e)) {
+        throw e;
+      }
+      // Fallback: the index may have been created with the original long name before the shortening
+      // logic was introduced. Some databases (e.g., PostgreSQL) silently truncate long index names,
+      // so retrying with the original long name allows the database to match the truncated name.
+      String originalIndexName = getFullIndexName(schema, table, indexedColumn);
+      if (originalIndexName.equals(indexName)) {
+        throw e;
+      }
+      String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalIndexName);
+      execute(connection, fallbackSql);
+    }
   }
 
-  private String getIndexName(String schema, String table, String indexedColumn) {
+  @VisibleForTesting
+  static String getIndexName(String schema, String table, String indexedColumn) {
+    return shortenIndexNameIfNeeded(
+        getFullIndexName(schema, table, indexedColumn), INDEX_NAME_PREFIX + "_");
+  }
+
+  private static String getFullIndexName(String schema, String table, String indexedColumn) {
     return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
   }
 

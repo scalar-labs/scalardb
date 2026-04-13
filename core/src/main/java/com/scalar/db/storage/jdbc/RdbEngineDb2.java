@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -38,7 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineDb2 extends AbstractRdbEngine {
-  private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineDb2.class);
+  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
   private final String keyColumnSize;
 
@@ -195,7 +196,10 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -274,6 +278,12 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(schema) + "." + enclose(indexName);
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // SQL error code -204: name IS AN UNDEFINED NAME
+    return e.getErrorCode() == -204;
   }
 
   @Override
