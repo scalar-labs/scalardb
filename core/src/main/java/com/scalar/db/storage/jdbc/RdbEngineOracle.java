@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
+  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
 
@@ -94,7 +95,10 @@ class RdbEngineOracle extends AbstractRdbEngine {
       // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("

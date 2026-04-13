@@ -684,7 +684,7 @@ public class JdbcAdminTest {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -704,7 +704,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -718,7 +718,7 @@ public class JdbcAdminTest {
         new RdbEngineOracle(config),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -738,7 +738,7 @@ public class JdbcAdminTest {
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineDb2(config),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -750,7 +750,7 @@ public class JdbcAdminTest {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.DB2,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -823,7 +823,7 @@ public class JdbcAdminTest {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
         "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -845,7 +845,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -866,7 +866,7 @@ public class JdbcAdminTest {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.DB2,
         "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -6448,77 +6448,6 @@ public class JdbcAdminTest {
         .isInstanceOf(ExecutionException.class)
         .hasMessageContaining("Getting the transaction isolation level failed")
         .hasCauseInstanceOf(SQLException.class);
-  }
-
-  @Test
-  public void getIndexName_WithShortName_ShouldReturnOriginalName() {
-    // Arrange
-
-    // Act
-    String indexName = JdbcAdmin.getIndexName("ns", "tbl", "col");
-
-    // Assert
-    assertThat(indexName).isEqualTo("index_ns_tbl_col");
-  }
-
-  @Test
-  public void getIndexName_WithNameExceedingMaxLength_ShouldReturnShortenedName() {
-    // Arrange
-    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
-
-    // Act
-    String indexName = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn);
-
-    // Assert
-    assertThat(indexName).startsWith("index_");
-    assertThat(indexName.length()).isLessThanOrEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH);
-  }
-
-  @Test
-  public void getIndexName_WithNameExceedingMaxLength_ShouldReturnConsistentName() {
-    // Arrange
-    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
-
-    // Act
-    String indexName1 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn);
-    String indexName2 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn);
-
-    // Assert
-    assertThat(indexName1).isEqualTo(indexName2);
-  }
-
-  @Test
-  public void getIndexName_WithNameExactlyAtMaxLength_ShouldReturnOriginalName() {
-    // Arrange
-    String schema = "ns";
-    String table = "tbl";
-
-    // Compute the column length so that the total index name is exactly MAX_INDEX_NAME_LENGTH
-    String namePrefix = String.join("_", "index", schema, table, "");
-    int columnLength = JdbcAdmin.MAX_INDEX_NAME_LENGTH - namePrefix.length();
-    String column = String.join("", Collections.nCopies(columnLength, "c"));
-    String expectedName = String.join("_", "index", schema, table, column);
-    assertThat(expectedName.length()).isEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH); // sanity check
-
-    // Act
-    String indexName = JdbcAdmin.getIndexName(schema, table, column);
-
-    // Assert
-    assertThat(indexName).isEqualTo(expectedName);
-  }
-
-  @Test
-  public void getIndexName_WithDifferentInputs_ShouldReturnDifferentShortenedNames() {
-    // Arrange
-    String longColumn1 = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length_1";
-    String longColumn2 = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length_2";
-
-    // Act
-    String indexName1 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn1);
-    String indexName2 = JdbcAdmin.getIndexName("my_namespace", "my_table", longColumn2);
-
-    // Assert
-    assertThat(indexName1).isNotEqualTo(indexName2);
   }
 
   // Utility class used to mock ResultSet for a "select * from" query on the metadata table

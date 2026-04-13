@@ -646,7 +646,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
       String originalIndexName =
           String.join("_", "index", getNamespace1(), getTable4(), longColumn);
-      assertThat(originalIndexName.length()).isEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH + 1);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
       testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
       testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
 
@@ -686,7 +686,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
       String originalIndexName =
           String.join("_", "index", getNamespace1(), getTable4(), longColumn);
-      assertThat(originalIndexName.length()).isEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH + 1);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
       testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
       testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
 
@@ -732,7 +732,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
       String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
       String originalIndexName =
           String.join("_", "index", getNamespace1(), getTable4(), longColumn);
-      assertThat(originalIndexName.length()).isEqualTo(JdbcAdmin.MAX_INDEX_NAME_LENGTH + 1);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
       testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
       testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
 

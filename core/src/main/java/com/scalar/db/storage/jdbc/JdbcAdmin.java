@@ -1,13 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -24,7 +24,6 @@ import com.scalar.db.util.ThrowableConsumer;
 import com.scalar.db.util.ThrowableFunction;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -54,11 +53,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
   private static final String INDEX_NAME_PREFIX = "index";
-
-  // The maximum index name length is set to 63 to match the shortest limit among supported
-  // databases (PostgreSQL). Other databases have higher limits (e.g., MySQL: 64, Oracle: 128,
-  // SQL Server: 128).
-  @VisibleForTesting static final int MAX_INDEX_NAME_LENGTH = 63;
 
   private final RdbEngineStrategy rdbEngine;
   private final HikariDataSource dataSource;
@@ -1158,13 +1152,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting
   static String getIndexName(String schema, String table, String indexedColumn) {
     String name = String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
-    if (name.length() <= MAX_INDEX_NAME_LENGTH) {
-      return name;
-    }
-    // Shorten using SHA-256 hash truncated to 32 hex characters (128 bits)
-    String hash =
-        Hashing.sha256().hashString(name, StandardCharsets.UTF_8).toString().substring(0, 32);
-    return INDEX_NAME_PREFIX + "_" + hash;
+    return shortenIndexNameIfNeeded(name, INDEX_NAME_PREFIX + "_");
   }
 
   @Override
