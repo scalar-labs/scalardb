@@ -63,6 +63,10 @@ on:
           - 'microsoft'
           - 'oracle'
           - 'temurin'
+      MAX_PARALLEL_FORK:
+        description: Maximum number of parallel test forks
+        type: string
+
 
   # When triggered by another action, all tests will run with the given integration test JDK runtime.
   workflow_call:
@@ -86,6 +90,7 @@ on:
 env:
   TERM: dumb
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
+  MAX_PARALLEL_FORK: ${{ inputs.MAX_PARALLEL_FORK }}
 jobs:
   check:
     name: Gradle check

@@ -12,31 +12,197 @@
 #     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
+blob-storage:
+  - label: blob-storage
+    display_name: Blob Storage
+    # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
+    setup: |
+      docker run -d --name azurite \
+        -e AZURITE_ACCOUNTS=test:test \
+        -p 10000:10000 \
+        mcr.microsoft.com/azure-storage/azurite \
+        azurite --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
+    # ScalarDB requires an access key, which has full access to Azure Blob Storage, for authentication.
+    create_test_user: # Do nothing
+    run: |
+      az storage container create \
+            --name test-container \
+            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
+      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+cassandra:
+  - label: cassandra_%VERSION%
+    display_name: Cassandra %VERSION%
+    setup: |
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
+      docker exec cassandra sed -i 's/^authenticator:.*/authenticator: org.apache.cassandra.auth.PasswordAuthenticator/' /etc/cassandra/cassandra.yaml
+      docker exec cassandra sed -i 's/^authorizer:.*/authorizer: org.apache.cassandra.auth.CassandraAuthorizer/' /etc/cassandra/cassandra.yaml
+      docker restart cassandra
+    versions:
+      - 3.0
+      - 3.11
+      - 4.1
+      - 5.0
+    db_healthcheck: docker exec cassandra cqlsh -u cassandra -p cassandra -e "SELECT now() FROM system.local;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec cassandra cqlsh -u cassandra -p cassandra -e "CREATE ROLE test WITH PASSWORD = 'test' AND LOGIN = true;
+        GRANT CREATE ON ALL KEYSPACES TO test;
+        GRANT DROP ON ALL KEYSPACES TO test;
+        GRANT ALTER ON ALL KEYSPACES TO test;
+        GRANT SELECT ON ALL KEYSPACES TO test;
+        GRANT MODIFY ON ALL KEYSPACES TO test;"
+    run: ./gradlew integrationTestCassandra -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
 dynamo:
-  - label: dynamo_nb_worker_%VERSION%
-    display_name: DynamoDB Local with %VERSION% workers
+  - label: dynamo
+    display_name: DynamoDB Local
     setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
     # Permissions cannot be tested on DynamoDB local
     create_test_user: # Do nothing
-    versions:
-      - 3
-      - 4
-    run: ./gradlew integrationTestDynamo -Dscalardb.max_parallel_fork=%VERSION%
+    run: ./gradlew integrationTestDynamo -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
 
 jdbc:
-  - label: postgresql_17_nb_worker_%VERSION%
-    display_name: PostgreSQL 17 with %VERSION% workers
-    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
+  - label: alloydb_%VERSION%
+    display_name: AlloyDB %VERSION%
+    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
     versions:
-      - 3
-      - 4
+      - 15
+      - 16
+    db_healthcheck: docker exec alloydb psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec alloydb psql -U postgres -c "
+        CREATE USER test WITH PASSWORD 'test';
+        GRANT CREATE ON DATABASE postgres TO test;"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+  - label: db2_%VERSION%
+    display_name: Db2 %VERSION%
+    setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
+    versions:
+      - 11.5.9.0
+      - 12.1.1.0
+    db_healthcheck: docker logs db2 2>&1 | grep -i -q "Setup has completed"
+    create_test_user: |
+      docker exec db2 bash -c "useradd -m -s /bin/bash test"
+      docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+      docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+  - label: mariadb_%VERSION%
+    display_name: MariaDB %VERSION%
+    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    versions:
+      - 10.11
+      - 11.4
+    db_healthcheck: docker exec mariadb mariadb -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec mariadb mariadb -uroot -pmysql -e "
+        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+        GRANT CREATE ON *.* TO 'test'@'%%';
+        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
+        GRANT DROP ON *.* TO 'test'@'%%';
+        GRANT INDEX ON *.* TO 'test'@'%%';
+        GRANT ALTER ON *.* TO 'test'@'%%';
+        GRANT SELECT ON *.* TO 'test'@'%%';
+        GRANT INSERT ON *.* TO 'test'@'%%';
+        GRANT UPDATE ON *.* TO 'test'@'%%';
+        GRANT DELETE ON *.* TO 'test'@'%%';"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+  - label: mysql_%VERSION%
+    display_name: MySQL %VERSION%
+    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    versions:
+      - 5.7
+      - 8.0
+      - 8.4
+    db_healthcheck: docker exec mysql mysql -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec mysql mysql -uroot -pmysql -e "
+        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+        GRANT CREATE ON *.* TO 'test'@'%%';
+        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
+        GRANT DROP ON *.* TO 'test'@'%%';
+        GRANT INDEX ON *.* TO 'test'@'%%';
+        GRANT ALTER ON *.* TO 'test'@'%%';
+        GRANT SELECT ON *.* TO 'test'@'%%';
+        GRANT INSERT ON *.* TO 'test'@'%%';
+        GRANT UPDATE ON *.* TO 'test'@'%%';
+        GRANT DELETE ON *.* TO 'test'@'%%';"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+
+  - label: postgresql_%VERSION%
+    display_name: PostgreSQL %VERSION%
+    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
+    versions:
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
     db_healthcheck: docker exec postgresql psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec postgresql psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=%VERSION%
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
 
+
+  - label: sqlite_3
+    display_name: SQLite 3
+    setup: sudo apt-get install -y sqlite3
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000 -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+  - label: tidb_%VERSION%
+    display_name: TiDB %VERSION%
+    versions:
+      - 6.5
+      - 7.5
+      - 8.5
+    setup: |
+      echo "Install TiUP\n"
+      curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+      echo "\nTiUP installation complete\n"
+      echo "Start TiDB\n"
+      $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
+    db_healthcheck: mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1;" > /dev/null 2>&1
+    create_test_user: |
+      mysql -h 127.0.0.1 -P 4000 -u root -e "
+        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+        GRANT CREATE ON *.* TO 'test'@'%%';
+        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
+        GRANT DROP ON *.* TO 'test'@'%%';
+        GRANT INDEX ON *.* TO 'test'@'%%';
+        GRANT ALTER ON *.* TO 'test'@'%%';
+        GRANT SELECT ON *.* TO 'test'@'%%';
+        GRANT INSERT ON *.* TO 'test'@'%%';
+        GRANT UPDATE ON *.* TO 'test'@'%%';
+        GRANT DELETE ON *.* TO 'test'@'%%';"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
+
+multi-storage:
+  - label: multi-storage
+    display_name: Multi-Storage
+    disable_group_commit: true
+    setup: |
+      docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
+      docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:3.0
+      docker exec cassandra sed -i 's/^authenticator:.*/authenticator: org.apache.cassandra.auth.PasswordAuthenticator/' /etc/cassandra/cassandra.yaml
+      docker exec cassandra sed -i 's/^authorizer:.*/authorizer: org.apache.cassandra.auth.CassandraAuthorizer/' /etc/cassandra/cassandra.yaml
+      docker restart cassandra
+    db_healthcheck: docker exec cassandra cqlsh -u cassandra -p cassandra -e "SELECT now() FROM system.local;" > /dev/null 2>&1
+    create_test_user: |
+      docker exec postgresql psql -U postgres -c "
+        CREATE USER test WITH PASSWORD 'test';
+        GRANT CREATE ON DATABASE postgres TO test;"
+      docker exec cassandra cqlsh -u cassandra -p cassandra -e "CREATE ROLE test WITH PASSWORD = 'test' AND LOGIN = true;
+        GRANT CREATE ON ALL KEYSPACES TO test;
+        GRANT DROP ON ALL KEYSPACES TO test;
+        GRANT ALTER ON ALL KEYSPACES TO test;
+        GRANT SELECT ON ALL KEYSPACES TO test;
+        GRANT MODIFY ON ALL KEYSPACES TO test;"
+    run: ./gradlew integrationTestMultiStorage -Dscalardb.jdbc.contact_points=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test -Dscalardb.max_parallel_fork=${MAX_PARALLEL_FORK}
 
 
 
