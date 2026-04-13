@@ -707,7 +707,7 @@ public final class ConsensusCommitUtils {
    * @param admin a distributed storage admin
    * @param config a consensus commit config
    */
-  static void warnIfBeforeImageIndexesAreMissing(
+  static void warnIfBeforeIndexesAreMissing(
       DistributedStorageAdmin admin, ConsensusCommitConfig config) {
     if (config.getIsolation() == Isolation.SERIALIZABLE
         || config.isIndexEventuallyConsistentReadEnabled()) {
