@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.Put;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -12,6 +13,7 @@ public final class ConsensusCommitOperationAttributes {
       OPERATION_ATTRIBUTE_PREFIX + "implicit-pre-read-enabled";
   public static final String INSERT_MODE_ENABLED =
       OPERATION_ATTRIBUTE_PREFIX + "insert-mode-enabled";
+  public static final String ISOLATION = OPERATION_ATTRIBUTE_PREFIX + "isolation";
 
   private ConsensusCommitOperationAttributes() {}
 
@@ -55,5 +57,21 @@ public final class ConsensusCommitOperationAttributes {
   public static boolean isInsertModeEnabled(Put put) {
     Optional<String> attribute = put.getAttribute(INSERT_MODE_ENABLED);
     return attribute.isPresent() && "true".equalsIgnoreCase(attribute.get());
+  }
+
+  public static void setIsolation(Map<String, String> attributes, Isolation isolation) {
+    attributes.put(ISOLATION, isolation.name());
+  }
+
+  public static void clearIsolation(Map<String, String> attributes) {
+    attributes.remove(ISOLATION);
+  }
+
+  public static Optional<Isolation> getIsolation(Map<String, String> attributes) {
+    String value = attributes.get(ISOLATION);
+    if (value == null) {
+      return Optional.empty();
+    }
+    return Optional.of(Isolation.valueOf(value.toUpperCase(Locale.ROOT)));
   }
 }

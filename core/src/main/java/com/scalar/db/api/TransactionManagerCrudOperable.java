@@ -14,6 +14,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -27,6 +30,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -42,6 +48,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -53,6 +62,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -72,6 +84,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -93,6 +108,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -107,6 +125,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -120,6 +141,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -138,6 +162,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -154,6 +181,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -175,6 +205,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -192,6 +225,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
