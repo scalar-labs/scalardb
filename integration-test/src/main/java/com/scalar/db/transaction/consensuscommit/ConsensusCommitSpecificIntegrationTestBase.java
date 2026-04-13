@@ -7003,9 +7003,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -7066,9 +7064,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -7136,9 +7132,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -7209,9 +7203,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -7289,9 +7281,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -7387,9 +7377,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -7463,9 +7451,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -7546,9 +7532,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -7649,7 +7633,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowShouldBehaveCorrectly(
           Isolation isolation)
           throws UnknownTransactionStatusException, CrudException, RollbackException,
-              CommitException {
+              CommitException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -9655,7 +9639,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
   }
 
-  private DistributedTransaction begin(ConsensusCommitManager manager, boolean readOnly) {
+  private DistributedTransaction begin(ConsensusCommitManager manager, boolean readOnly)
+      throws TransactionException {
     if (readOnly) {
       return manager.beginReadOnly();
     } else {
