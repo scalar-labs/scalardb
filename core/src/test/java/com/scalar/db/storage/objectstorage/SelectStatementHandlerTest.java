@@ -56,8 +56,14 @@ public class SelectStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getSecondaryIndexNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_3)));
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
     when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.ASC);
     when(metadata.getColumnDataType(anyString())).thenReturn(DataType.TEXT);
+  }
+
+  private byte[] serializePartition(ObjectStoragePartition partition) {
+    return ParquetSerializer.serialize(partition, metadata);
   }
 
   private Get prepareGet() {
@@ -128,7 +134,7 @@ public class SelectStatementHandlerTest {
     // Arrange
     Get get = prepareGet();
     ObjectStoragePartition partition = createPartitionWithRecord();
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -147,7 +153,7 @@ public class SelectStatementHandlerTest {
     // Arrange
     Get get = prepareGet();
     ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -206,7 +212,7 @@ public class SelectStatementHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     ObjectStoragePartition partition = createPartitionWithRecord();
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -261,7 +267,7 @@ public class SelectStatementHandlerTest {
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -287,7 +293,7 @@ public class SelectStatementHandlerTest {
                         ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_2))));
 
     ObjectStoragePartition partition1 = createPartitionWithRecord();
-    byte[] serialized1 = Serializer.serialize(partition1);
+    byte[] serialized1 = serializePartition(partition1);
     ObjectStorageWrapperResponse response1 =
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
@@ -295,7 +301,7 @@ public class SelectStatementHandlerTest {
     Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
     Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
     addRecordToPartition(partition2, partitionKey2, clusteringKey2, new HashMap<>());
-    byte[] serialized2 = Serializer.serialize(partition2);
+    byte[] serialized2 = serializePartition(partition2);
     ObjectStorageWrapperResponse response2 =
         new ObjectStorageWrapperResponse(serialized2, "version2");
 
@@ -326,7 +332,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(new HashSet<>(Arrays.asList(objectKey1, objectKey2)));
 
     ObjectStoragePartition partition1 = createPartitionWithRecord();
-    byte[] serialized1 = Serializer.serialize(partition1);
+    byte[] serialized1 = serializePartition(partition1);
     ObjectStorageWrapperResponse response1 =
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
@@ -334,7 +340,7 @@ public class SelectStatementHandlerTest {
     Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
     Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
     addRecordToPartition(partition2, partitionKey2, clusteringKey2, new HashMap<>());
-    byte[] serialized2 = Serializer.serialize(partition2);
+    byte[] serialized2 = serializePartition(partition2);
     ObjectStorageWrapperResponse response2 =
         new ObjectStorageWrapperResponse(serialized2, "version2");
 
@@ -375,7 +381,7 @@ public class SelectStatementHandlerTest {
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -403,7 +409,7 @@ public class SelectStatementHandlerTest {
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -431,7 +437,7 @@ public class SelectStatementHandlerTest {
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));

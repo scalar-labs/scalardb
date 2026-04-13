@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
@@ -64,6 +63,11 @@ public class MutateStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    when(metadata.getColumnNames())
+        .thenReturn(
+            new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3, ANY_NAME_4)));
+    when(metadata.getColumnDataType(ANY_NAME_1)).thenReturn(DataType.TEXT);
+    when(metadata.getColumnDataType(ANY_NAME_2)).thenReturn(DataType.TEXT);
     when(metadata.getColumnDataType(ANY_NAME_3)).thenReturn(DataType.INT);
     when(metadata.getColumnDataType(ANY_NAME_4)).thenReturn(DataType.INT);
   }
@@ -112,11 +116,16 @@ public class MutateStatementHandlerTest {
         .build();
   }
 
-  private ObjectStorageRecord prepareExistingRecord() {
+  private ObjectStorageRecord prepareExistingRecord(String recordId) {
     Map<String, Object> values = new HashMap<>();
     values.put(ANY_NAME_3, ANY_INT_1);
     values.put(ANY_NAME_4, ANY_INT_2);
-    return ObjectStorageRecord.newBuilder().id("concat_key").values(values).build();
+    return ObjectStorageRecord.newBuilder()
+        .id(recordId)
+        .partitionKey(Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2))
+        .values(values)
+        .build();
   }
 
   private void setupNonExistentPartition() throws ObjectStorageWrapperException {
@@ -125,9 +134,9 @@ public class MutateStatementHandlerTest {
 
   private void setupPartitionWithRecord(String recordId) throws ObjectStorageWrapperException {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
-    records.put(recordId, prepareExistingRecord());
+    records.put(recordId, prepareExistingRecord(recordId));
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    byte[] serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = ParquetSerializer.serialize(partition, metadata);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -136,12 +145,12 @@ public class MutateStatementHandlerTest {
   private void setupPartitionWithRecords(String recordId, String... additionalRecordIds)
       throws ObjectStorageWrapperException {
     Map<String, ObjectStorageRecord> records = new HashMap<>();
-    records.put(recordId, prepareExistingRecord());
+    records.put(recordId, prepareExistingRecord(recordId));
     for (String additionalRecordId : additionalRecordIds) {
-      records.put(additionalRecordId, prepareExistingRecord());
+      records.put(additionalRecordId, prepareExistingRecord(additionalRecordId));
     }
     ObjectStoragePartition partition = new ObjectStoragePartition(records);
-    byte[] serializedPartition = Serializer.serialize(partition);
+    byte[] serializedPartition = ParquetSerializer.serialize(partition, metadata);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serializedPartition, VERSION);
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
@@ -422,8 +431,7 @@ public class MutateStatementHandlerTest {
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
     ObjectStoragePartition insertedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+        ParquetSerializer.deserialize(payloadCaptor.getValue(), metadata);
     Optional<ObjectStorageRecord> record = insertedPartition.getRecord(expectedConcatenatedKey);
     assertThat(record).isPresent();
     assertThat(record.get().getValues())
@@ -439,8 +447,7 @@ public class MutateStatementHandlerTest {
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
     ObjectStoragePartition updatedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+        ParquetSerializer.deserialize(payloadCaptor.getValue(), metadata);
     Optional<ObjectStorageRecord> record = updatedPartition.getRecord(expectedConcatenatedKey);
     assertThat(record).isPresent();
     assertThat(record.get().getValues())
@@ -728,8 +735,7 @@ public class MutateStatementHandlerTest {
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
     ObjectStoragePartition updatedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+        ParquetSerializer.deserialize(payloadCaptor.getValue(), metadata);
     assertThat(updatedPartition.getRecord(expectedConcatenatedKey)).isEmpty();
     assertThat(updatedPartition.getRecord(expectedExistingRecordKey)).isPresent();
   }
@@ -769,8 +775,7 @@ public class MutateStatementHandlerTest {
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
 
     ObjectStoragePartition insertedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+        ParquetSerializer.deserialize(payloadCaptor.getValue(), metadata);
     Optional<ObjectStorageRecord> record1 = insertedPartition.getRecord(mutation1.getRecordId());
     assertThat(record1).isPresent();
     assertThat(record1.get().getValues())
@@ -822,8 +827,7 @@ public class MutateStatementHandlerTest {
         .update(objectKeyCaptor.capture(), payloadCaptor.capture(), versionCaptor.capture());
     assertThat(objectKeyCaptor.getValue()).isEqualTo(expectedObjectKey);
     ObjectStoragePartition updatedPartition =
-        Serializer.deserialize(
-            payloadCaptor.getValue(), new TypeReference<ObjectStoragePartition>() {});
+        ParquetSerializer.deserialize(payloadCaptor.getValue(), metadata);
     Optional<ObjectStorageRecord> record1 = updatedPartition.getRecord(mutation1.getRecordId());
     assertThat(record1).isPresent();
     assertThat(record1.get().getValues())

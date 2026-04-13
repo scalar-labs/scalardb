@@ -58,6 +58,8 @@ subprojects {
         spotbugsPluginVersion = '5.2.5'
         errorpronePluginVersion = '4.4.0'
         shadowPluginVersion = '8.1.1'
+        parquetVersion = '1.15.1'
+        hadoopVersion = '3.3.6'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
     }

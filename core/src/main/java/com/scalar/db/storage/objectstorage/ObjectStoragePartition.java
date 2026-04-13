@@ -1,8 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
@@ -29,22 +26,21 @@ import javax.annotation.Nullable;
 public class ObjectStoragePartition {
   private final Map<String, ObjectStorageRecord> records;
 
-  @JsonCreator
-  public ObjectStoragePartition(
-      @JsonProperty("records") @Nullable Map<String, ObjectStorageRecord> records) {
+  public ObjectStoragePartition(@Nullable Map<String, ObjectStorageRecord> records) {
     this.records = records != null ? records : new HashMap<>();
   }
 
-  public static ObjectStoragePartition deserialize(byte[] serializedObject) {
-    return Serializer.deserialize(serializedObject, new TypeReference<ObjectStoragePartition>() {});
+  public static ObjectStoragePartition deserialize(
+      byte[] serializedObject, TableMetadata metadata) {
+    return ParquetSerializer.deserialize(serializedObject, metadata);
   }
 
   public static String getObjectKey(String namespaceName, String tableName, String partitionKey) {
     return ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey);
   }
 
-  public byte[] serialize() {
-    return Serializer.serialize(this);
+  public byte[] serialize(TableMetadata metadata) {
+    return ParquetSerializer.serialize(this, metadata);
   }
 
   public Map<String, ObjectStorageRecord> getRecords() {

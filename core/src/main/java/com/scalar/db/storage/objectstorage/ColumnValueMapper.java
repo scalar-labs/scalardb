@@ -14,7 +14,6 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
-import java.util.Base64;
 import javax.annotation.Nullable;
 
 public class ColumnValueMapper {
@@ -47,7 +46,7 @@ public class ColumnValueMapper {
       case BLOB:
         return recordValue == null
             ? BlobColumn.ofNull(name)
-            : BlobColumn.of(name, Base64.getDecoder().decode((String) recordValue));
+            : BlobColumn.of(name, (byte[]) recordValue);
       case DATE:
         return recordValue == null
             ? DateColumn.ofNull(name)

@@ -19,7 +19,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -79,9 +78,7 @@ public class ResultInterpreterTest {
             .put(ANY_COLUMN_NAME_4, Float.MAX_VALUE)
             .put(ANY_COLUMN_NAME_5, Double.MAX_VALUE)
             .put(ANY_COLUMN_NAME_6, "string")
-            .put(
-                ANY_COLUMN_NAME_7,
-                Base64.getEncoder().encodeToString("bytes".getBytes(StandardCharsets.UTF_8)))
+            .put(ANY_COLUMN_NAME_7, "bytes".getBytes(StandardCharsets.UTF_8))
             .put(
                 ANY_COLUMN_NAME_8,
                 TimeRelatedColumnEncodingUtils.encode(DateColumn.of(ANY_COLUMN_NAME_8, ANY_DATE)))

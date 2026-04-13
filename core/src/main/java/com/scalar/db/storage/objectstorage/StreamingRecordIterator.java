@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -17,6 +18,7 @@ public class StreamingRecordIterator implements Iterator<ObjectStorageRecord> {
   private final ObjectStorageWrapper wrapper;
   private final String namespaceName;
   private final String tableName;
+  private final TableMetadata metadata;
   private final Iterator<String> partitionKeyIterator;
   private Iterator<ObjectStorageRecord> partitionRecordIterator;
 
@@ -24,10 +26,12 @@ public class StreamingRecordIterator implements Iterator<ObjectStorageRecord> {
       ObjectStorageWrapper wrapper,
       String namespaceName,
       String tableName,
-      List<String> partitionKeys) {
+      List<String> partitionKeys,
+      TableMetadata metadata) {
     this.wrapper = wrapper;
     this.namespaceName = namespaceName;
     this.tableName = tableName;
+    this.metadata = metadata;
     this.partitionKeyIterator = partitionKeys.iterator();
     this.partitionRecordIterator = Collections.emptyIterator();
   }
@@ -66,7 +70,7 @@ public class StreamingRecordIterator implements Iterator<ObjectStorageRecord> {
       if (!response.isPresent()) {
         return new ObjectStoragePartition(Collections.emptyMap());
       }
-      return ObjectStoragePartition.deserialize(response.get().getPayload());
+      return ObjectStoragePartition.deserialize(response.get().getPayload(), metadata);
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
