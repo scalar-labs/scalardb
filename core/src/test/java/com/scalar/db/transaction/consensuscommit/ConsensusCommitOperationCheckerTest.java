@@ -328,7 +328,7 @@ public class ConsensusCommitOperationCheckerTest {
 
   @Test
   public void
-      checkForGet_WithSecondaryIndexInSerializableAndBeforeImageIndexExists_ShouldNotThrowException() {
+      checkForGet_WithSecondaryIndexInSerializableAndBeforeIndexExists_ShouldNotThrowException() {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -512,7 +512,7 @@ public class ConsensusCommitOperationCheckerTest {
 
   @Test
   public void
-      checkForScan_WithSecondaryIndexInSerializableAndBeforeImageIndexExists_ShouldNotThrowException() {
+      checkForScan_WithSecondaryIndexInSerializableAndBeforeIndexExists_ShouldNotThrowException() {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -674,7 +674,7 @@ public class ConsensusCommitOperationCheckerTest {
 
   @Test
   public void
-      checkForScan_ScanAllWithConditionOnIndexedColumnInSerializableAndBeforeImageIndexExists_ShouldNotThrowException() {
+      checkForScan_ScanAllWithConditionOnIndexedColumnInSerializableAndBeforeIndexExists_ShouldNotThrowException() {
     // Arrange
 
     // Mock the underlying TableMetadata

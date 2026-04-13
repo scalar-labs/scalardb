@@ -1743,8 +1743,34 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void scan_RuntimeExceptionThrownByIteratorHasNext_ShouldThrowCrudException()
-      throws ExecutionException, IOException {
+  public void
+      scan_RuntimeExceptionWithExecutionExceptionCauseThrownByIteratorHasNext_ShouldThrowCrudException()
+          throws ExecutionException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    RuntimeException runtimeException = new RuntimeException(executionException);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(scanner.iterator()).thenReturn(iterator);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.scan(scan, context))
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+
+    verify(scanner).close();
+  }
+
+  @Test
+  public void
+      scan_RuntimeExceptionWithoutExecutionExceptionCauseThrownByIteratorHasNext_ShouldThrowRuntimeException()
+          throws ExecutionException, IOException {
     // Arrange
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
@@ -1758,9 +1784,7 @@ public class CrudHandlerTest {
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.scan(scan, context))
-        .isInstanceOf(CrudException.class)
-        .hasCause(runtimeException);
+    assertThatThrownBy(() -> handler.scan(scan, context)).isSameAs(runtimeException);
 
     verify(scanner).close();
   }
@@ -2973,6 +2997,60 @@ public class CrudHandlerTest {
     verify(recoveryFuture, never()).get();
     assertThat(context.recoveryResults).hasSize(1);
     assertThat(context.recoveryResults.get(0)).isSameAs(recoveryResult);
+  }
+
+  @Test
+  public void
+      checkAndRecoverBeforeIndexRecords_RuntimeExceptionWithExecutionExceptionCauseThrown_ShouldThrowCrudException()
+          throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    ExecutionException executionException = mock(ExecutionException.class);
+    RuntimeException runtimeException = new RuntimeException(executionException);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator()).thenReturn(iterator);
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                handler.checkAndRecoverBeforeIndexRecords(
+                    scanWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+  }
+
+  @Test
+  public void
+      checkAndRecoverBeforeIndexRecords_RuntimeExceptionWithoutExecutionExceptionCauseThrown_ShouldThrowRuntimeException()
+          throws Exception {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator()).thenReturn(iterator);
+    when(storage.scan(expectedBeforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                handler.checkAndRecoverBeforeIndexRecords(
+                    scanWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isSameAs(runtimeException);
   }
 
   @Test

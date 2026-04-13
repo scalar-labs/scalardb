@@ -830,13 +830,13 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_RECORDS(
       Category.CONCURRENCY_ERROR, "0026", "A conflict occurred when committing records", "", ""),
-  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
       Category.CONCURRENCY_ERROR,
       "0028",
       "Before-image index recovery retry limit exceeded. Transaction ID: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
       Category.CONCURRENCY_ERROR,
       "0029",
       "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
