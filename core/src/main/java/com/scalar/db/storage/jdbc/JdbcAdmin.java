@@ -1092,14 +1092,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       // Fallback: the index may have been created with the original long name before the shortening
       // logic was introduced. Some databases (e.g., PostgreSQL) silently truncate long index names,
       // so retrying with the original long name allows the database to match the truncated name.
-      String originalOldIndexName =
-          String.join("_", INDEX_NAME_PREFIX, schema, oldTable, oldColumn);
-      if (originalOldIndexName.equals(oldIndexName)) {
+      String originalIndexName = getFullIndexName(schema, oldTable, oldColumn);
+      if (originalIndexName.equals(oldIndexName)) {
         throw e;
       }
       String[] fallbackSqls =
-          rdbEngine.renameIndexSqls(
-              schema, newTable, newColumn, originalOldIndexName, newIndexName);
+          rdbEngine.renameIndexSqls(schema, newTable, newColumn, originalIndexName, newIndexName);
       execute(connection, fallbackSqls, requiresExplicitCommit);
     }
   }
@@ -1140,19 +1138,23 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       // Fallback: the index may have been created with the original long name before the shortening
       // logic was introduced. Some databases (e.g., PostgreSQL) silently truncate long index names,
       // so retrying with the original long name allows the database to match the truncated name.
-      String originalName = String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
-      if (originalName.equals(indexName)) {
+      String originalIndexName = getFullIndexName(schema, table, indexedColumn);
+      if (originalIndexName.equals(indexName)) {
         throw e;
       }
-      String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalName);
+      String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalIndexName);
       execute(connection, fallbackSql, requiresExplicitCommit);
     }
   }
 
   @VisibleForTesting
   static String getIndexName(String schema, String table, String indexedColumn) {
-    String name = String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
-    return shortenIndexNameIfNeeded(name, INDEX_NAME_PREFIX + "_");
+    return shortenIndexNameIfNeeded(
+        getFullIndexName(schema, table, indexedColumn), INDEX_NAME_PREFIX + "_");
+  }
+
+  private static String getFullIndexName(String schema, String table, String indexedColumn) {
+    return String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
   }
 
   @Override

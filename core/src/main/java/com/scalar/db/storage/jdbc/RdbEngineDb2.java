@@ -42,7 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineDb2 extends AbstractRdbEngine {
-  private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineDb2.class);
   private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
   private final String keyColumnSize;
