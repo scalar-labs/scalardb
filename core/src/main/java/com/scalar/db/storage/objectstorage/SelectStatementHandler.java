@@ -52,7 +52,8 @@ public class SelectStatementHandler extends StatementHandler {
   private Scanner executeGet(Get get, TableMetadata metadata) throws ExecutionException {
     ObjectStorageOperation operation = new ObjectStorageOperation(get, metadata);
     ObjectStoragePartition partition =
-        getPartition(getNamespace(get), getTable(get), operation.getConcatenatedPartitionKey());
+        getPartition(
+            getNamespace(get), getTable(get), operation.getConcatenatedPartitionKey(), metadata);
     if (!partition.getRecord(operation.getRecordId()).isPresent()) {
       return new EmptyScanner();
     }
@@ -66,7 +67,8 @@ public class SelectStatementHandler extends StatementHandler {
   private Scanner executeScan(Scan scan, TableMetadata metadata) throws ExecutionException {
     ObjectStorageOperation operation = new ObjectStorageOperation(scan, metadata);
     ObjectStoragePartition partition =
-        getPartition(getNamespace(scan), getTable(scan), operation.getConcatenatedPartitionKey());
+        getPartition(
+            getNamespace(scan), getTable(scan), operation.getConcatenatedPartitionKey(), metadata);
     List<ObjectStorageRecord> records = new ArrayList<>(partition.getRecords().values());
 
     ClusteringKeyComparator clusteringKeyComparator = new ClusteringKeyComparator(metadata);
@@ -112,9 +114,12 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Scanner executeScanAll(ScanAll scan, TableMetadata metadata) throws ExecutionException {
     try {
-      List<String> partitionKeys = getPartitionKeysInTable(getNamespace(scan), getTable(scan));
+      String namespaceName = getNamespace(scan);
+      String tableName = getTable(scan);
+      List<String> partitionKeys = getPartitionKeysInTable(namespaceName, tableName);
+      ObjectStorageTableMetadata osMetadata = new ObjectStorageTableMetadata(metadata);
       StreamingRecordIterator iterator =
-          new StreamingRecordIterator(wrapper, getNamespace(scan), getTable(scan), partitionKeys);
+          new StreamingRecordIterator(wrapper, namespaceName, tableName, partitionKeys, osMetadata);
       return new ScannerImpl(
           iterator, new ResultInterpreter(scan.getProjections(), metadata), scan.getLimit());
     } catch (Exception e) {
@@ -124,14 +129,16 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private ObjectStoragePartition getPartition(
-      String namespaceName, String tableName, String partitionKey) throws ExecutionException {
+      String namespaceName, String tableName, String partitionKey, TableMetadata tableMetadata)
+      throws ExecutionException {
     try {
       Optional<ObjectStorageWrapperResponse> response =
           wrapper.get(ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey));
       if (!response.isPresent()) {
         return new ObjectStoragePartition(Collections.emptyMap());
       }
-      return ObjectStoragePartition.deserialize(response.get().getPayload());
+      ObjectStorageTableMetadata osMetadata = new ObjectStorageTableMetadata(tableMetadata);
+      return ObjectStoragePartition.deserialize(response.get().getPayload(), osMetadata);
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);

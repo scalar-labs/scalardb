@@ -840,7 +840,7 @@ public class ObjectStorageOperationCheckerTest {
     // Arrange
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
 
-    int allowedLength = Serializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
+    int allowedLength = JsonSerializer.MAX_STRING_LENGTH_ALLOWED / 4 * 3;
     ByteBuffer mockBuffer = mock(ByteBuffer.class);
     when(mockBuffer.remaining()).thenReturn(allowedLength + 1);
 

@@ -62,7 +62,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
       throw new IllegalArgumentException("The specified table metadata does not exist");
     }
     Map<String, ObjectStorageTableMetadata> metadataTable =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             response.get().getPayload(),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
 
@@ -75,7 +75,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
             .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList("corrupted")))
             .build());
 
-    wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
+    wrapper.update(objectKey, JsonSerializer.serialize(metadataTable), response.get().getVersion());
   }
 
   @Override
@@ -87,7 +87,7 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
       throw new IllegalArgumentException("The specified table metadata does not exist");
     }
     Map<String, ObjectStorageTableMetadata> metadataTable =
-        Serializer.deserialize(
+        JsonSerializer.deserialize(
             response.get().getPayload(),
             new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
 
@@ -99,7 +99,8 @@ public class ObjectStorageAdminTestUtils extends AdminTestUtils {
     if (metadataTable.isEmpty()) {
       wrapper.delete(objectKey);
     } else {
-      wrapper.update(objectKey, Serializer.serialize(metadataTable), response.get().getVersion());
+      wrapper.update(
+          objectKey, JsonSerializer.serialize(metadataTable), response.get().getVersion());
     }
   }
 

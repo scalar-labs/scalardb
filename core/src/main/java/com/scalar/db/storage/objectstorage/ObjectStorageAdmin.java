@@ -429,7 +429,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       if (readVersionMap != null) {
         readVersionMap.put(NAMESPACE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
+      return JsonSerializer.deserialize(
           response.get().getPayload(),
           new TypeReference<Map<String, ObjectStorageNamespaceMetadata>>() {});
     } catch (ObjectStorageWrapperException e) {
@@ -453,7 +453,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       if (readVersionMap != null) {
         readVersionMap.put(TABLE_METADATA_TABLE, response.get().getVersion());
       }
-      return Serializer.deserialize(
+      return JsonSerializer.deserialize(
           response.get().getPayload(),
           new TypeReference<Map<String, ObjectStorageTableMetadata>>() {});
     } catch (ObjectStorageWrapperException e) {
@@ -466,7 +466,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     try {
       wrapper.insert(
           ObjectStorageUtils.getObjectKey(metadataNamespace, table),
-          Serializer.serialize(metadataTable));
+          JsonSerializer.serialize(metadataTable));
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException("Failed to insert the metadata table.", e);
     }
@@ -477,7 +477,7 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
     try {
       wrapper.update(
           ObjectStorageUtils.getObjectKey(metadataNamespace, table),
-          Serializer.serialize(metadataTable),
+          JsonSerializer.serialize(metadataTable),
           readVersion);
     } catch (Exception e) {
       throw new ExecutionException("Failed to update the metadata table.", e);

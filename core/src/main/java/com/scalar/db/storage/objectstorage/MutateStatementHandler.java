@@ -45,7 +45,8 @@ public class MutateStatementHandler extends StatementHandler {
 
   private void mutate(String objectKey, List<? extends Mutation> mutations)
       throws ExecutionException {
-    ObjectStoragePartitionSnapshot snapshot = getPartition(objectKey);
+    ObjectStorageTableMetadata osTableMetadata = getObjectStorageTableMetadata(mutations.get(0));
+    ObjectStoragePartitionSnapshot snapshot = getPartition(objectKey, osTableMetadata);
     for (Mutation mutation : mutations) {
       TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
       if (mutation instanceof Put) {
@@ -55,29 +56,31 @@ public class MutateStatementHandler extends StatementHandler {
         snapshot.applyDelete((Delete) mutation, tableMetadata);
       }
     }
-    writePartition(snapshot);
+    writePartition(snapshot, osTableMetadata);
   }
 
-  /**
-   * Writes a partition to the object storage.
-   *
-   * @param snapshot the partition snapshot
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private void writePartition(ObjectStoragePartitionSnapshot snapshot) throws ExecutionException {
+  private ObjectStorageTableMetadata getObjectStorageTableMetadata(Mutation mutation)
+      throws ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
+    return new ObjectStorageTableMetadata(tableMetadata);
+  }
+
+  private void writePartition(
+      ObjectStoragePartitionSnapshot snapshot, ObjectStorageTableMetadata tableMetadata)
+      throws ExecutionException {
     try {
       if (snapshot.getReadVersion().isPresent()) {
         if (!snapshot.getPartition().isEmpty()) {
           wrapper.update(
               snapshot.getObjectKey(),
-              snapshot.getPartition().serialize(),
+              snapshot.getPartition().serialize(tableMetadata),
               snapshot.getReadVersion().get());
         } else {
           wrapper.delete(snapshot.getObjectKey(), snapshot.getReadVersion().get());
         }
       } else {
         if (!snapshot.getPartition().isEmpty()) {
-          wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize());
+          wrapper.insert(snapshot.getObjectKey(), snapshot.getPartition().serialize(tableMetadata));
         }
       }
     } catch (PreconditionFailedException | ConflictOccurredException e) {
@@ -89,21 +92,15 @@ public class MutateStatementHandler extends StatementHandler {
     }
   }
 
-  /**
-   * Gets a partition and its version as a snapshot from the object storage.
-   *
-   * @param objectKey the object key
-   * @return the partition
-   * @throws ExecutionException if a failure occurs during the operation
-   */
-  private ObjectStoragePartitionSnapshot getPartition(String objectKey) throws ExecutionException {
+  private ObjectStoragePartitionSnapshot getPartition(
+      String objectKey, ObjectStorageTableMetadata tableMetadata) throws ExecutionException {
     try {
       return wrapper
           .get(objectKey)
           .map(
               response ->
                   new ObjectStoragePartitionSnapshot(
-                      objectKey, response.getPayload(), response.getVersion()))
+                      objectKey, response.getPayload(), tableMetadata, response.getVersion()))
           .orElseGet(
               () ->
                   new ObjectStoragePartitionSnapshot(

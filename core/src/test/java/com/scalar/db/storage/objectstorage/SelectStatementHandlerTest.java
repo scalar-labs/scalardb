@@ -57,6 +57,8 @@ public class SelectStatementHandlerTest {
     when(metadata.getSecondaryIndexNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_3)));
     when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.ASC);
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
     when(metadata.getColumnDataType(anyString())).thenReturn(DataType.TEXT);
   }
 
@@ -125,18 +127,15 @@ public class SelectStatementHandlerTest {
 
   @Test
   public void handle_GetOperationGiven_ShouldReturnScanner() throws Exception {
-    // Arrange
     Get get = prepareGet();
     ObjectStoragePartition partition = createPartitionWithRecord();
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(get);
 
-    // Assert
     assertThat(scanner).isNotNull();
     verify(wrapper)
         .get(ObjectStorageUtils.getObjectKey(ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_1));
@@ -144,39 +143,32 @@ public class SelectStatementHandlerTest {
 
   @Test
   public void handle_GetOperationWhenRecordNotFound_ShouldReturnEmptyScanner() throws Exception {
-    // Arrange
     Get get = prepareGet();
     ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(get);
 
-    // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).isEmpty();
   }
 
   @Test
   public void handle_GetOperationWhenPartitionNotFound_ShouldReturnEmptyScanner() throws Exception {
-    // Arrange
     Get get = prepareGet();
     when(wrapper.get(anyString())).thenReturn(Optional.empty());
 
-    // Act
     Scanner scanner = handler.handle(get);
 
-    // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).isEmpty();
   }
 
   @Test
   public void handle_GetOperationWithSecondaryIndex_ShouldThrowUnsupportedOperationException() {
-    // Arrange
     Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Get get =
         Get.newBuilder()
@@ -185,36 +177,30 @@ public class SelectStatementHandlerTest {
             .partitionKey(indexKey)
             .build();
 
-    // Act Assert
     assertThatThrownBy(() -> handler.handle(get)).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
   public void handle_GetOperationWhenExceptionThrown_ShouldThrowExecutionException()
       throws Exception {
-    // Arrange
     Get get = prepareGet();
     when(wrapper.get(anyString()))
         .thenThrow(new ObjectStorageWrapperException("error", new RuntimeException()));
 
-    // Act Assert
     assertThatThrownBy(() -> handler.handle(get)).isInstanceOf(ExecutionException.class);
   }
 
   @Test
   public void handle_ScanOperationGiven_ShouldReturnScanner() throws Exception {
-    // Arrange
     Scan scan = prepareScan();
     ObjectStoragePartition partition = createPartitionWithRecord();
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(scan);
 
-    // Assert
     assertThat(scanner).isNotNull();
     verify(wrapper)
         .get(ObjectStorageUtils.getObjectKey(ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_1));
@@ -222,7 +208,6 @@ public class SelectStatementHandlerTest {
 
   @Test
   public void handle_ScanOperationWithSecondaryIndex_ShouldThrowUnsupportedOperationException() {
-    // Arrange
     Key indexKey = Key.ofText(ANY_NAME_3, ANY_TEXT_3);
     Scan scan =
         Scan.newBuilder()
@@ -231,7 +216,6 @@ public class SelectStatementHandlerTest {
             .partitionKey(indexKey)
             .build();
 
-    // Act Assert
     assertThatThrownBy(() -> handler.handle(scan))
         .isInstanceOf(UnsupportedOperationException.class);
   }
@@ -239,44 +223,37 @@ public class SelectStatementHandlerTest {
   @Test
   public void handle_ScanOperationWhenExceptionThrown_ShouldThrowExecutionException()
       throws Exception {
-    // Arrange
     Scan scan = prepareScan();
     when(wrapper.get(anyString()))
         .thenThrow(new ObjectStorageWrapperException("error", new RuntimeException()));
 
-    // Act Assert
     assertThatThrownBy(() -> handler.handle(scan)).isInstanceOf(ExecutionException.class);
   }
 
   @Test
   public void handle_ScanOperationWithLimit_ShouldReturnLimitedResults() throws Exception {
-    // Arrange
     Scan scan = Scan.newBuilder(prepareScan()).limit(1).build();
     ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
 
-    // Create multiple records
     for (int i = 0; i < 5; i++) {
       Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
       Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(scan);
 
-    // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).hasSize(1);
   }
 
   @Test
   public void handle_ScanAllOperationGiven_ShouldReturnScanner() throws Exception {
-    // Arrange
     Scan scanAll = prepareScanAll();
     when(wrapper.getKeys(anyString()))
         .thenReturn(
@@ -287,7 +264,7 @@ public class SelectStatementHandlerTest {
                         ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_2))));
 
     ObjectStoragePartition partition1 = createPartitionWithRecord();
-    byte[] serialized1 = Serializer.serialize(partition1);
+    byte[] serialized1 = serializePartition(partition1);
     ObjectStorageWrapperResponse response1 =
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
@@ -295,7 +272,7 @@ public class SelectStatementHandlerTest {
     Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
     Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
     addRecordToPartition(partition2, partitionKey2, clusteringKey2, new HashMap<>());
-    byte[] serialized2 = Serializer.serialize(partition2);
+    byte[] serialized2 = serializePartition(partition2);
     ObjectStorageWrapperResponse response2 =
         new ObjectStorageWrapperResponse(serialized2, "version2");
 
@@ -306,17 +283,14 @@ public class SelectStatementHandlerTest {
             ObjectStorageUtils.getObjectKey(ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_2)))
         .thenReturn(Optional.of(response2));
 
-    // Act
     Scanner scanner = handler.handle(scanAll);
 
-    // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).hasSize(2);
   }
 
   @Test
   public void handle_ScanAllOperationWithLimit_ShouldReturnLimitedResults() throws Exception {
-    // Arrange
     Scan scanAll = Scan.newBuilder(prepareScanAll()).limit(1).build();
     String objectKey1 =
         ObjectStorageUtils.getObjectKey(ANY_NAMESPACE_NAME, ANY_TABLE_NAME, ANY_TEXT_1);
@@ -326,7 +300,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(new HashSet<>(Arrays.asList(objectKey1, objectKey2)));
 
     ObjectStoragePartition partition1 = createPartitionWithRecord();
-    byte[] serialized1 = Serializer.serialize(partition1);
+    byte[] serialized1 = serializePartition(partition1);
     ObjectStorageWrapperResponse response1 =
         new ObjectStorageWrapperResponse(serialized1, "version1");
 
@@ -334,17 +308,15 @@ public class SelectStatementHandlerTest {
     Map<String, Object> partitionKey2 = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_2);
     Map<String, Object> clusteringKey2 = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_3);
     addRecordToPartition(partition2, partitionKey2, clusteringKey2, new HashMap<>());
-    byte[] serialized2 = Serializer.serialize(partition2);
+    byte[] serialized2 = serializePartition(partition2);
     ObjectStorageWrapperResponse response2 =
         new ObjectStorageWrapperResponse(serialized2, "version2");
 
     when(wrapper.get(objectKey1)).thenReturn(Optional.of(response1));
     when(wrapper.get(objectKey2)).thenReturn(Optional.of(response2));
 
-    // Act
     Scanner scanner = handler.handle(scanAll);
 
-    // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).hasSize(1);
   }
@@ -352,95 +324,98 @@ public class SelectStatementHandlerTest {
   @Test
   public void handle_ScanAllOperationWhenExceptionThrown_ShouldThrowExecutionException()
       throws Exception {
-    // Arrange
     Scan scanAll = prepareScanAll();
     when(wrapper.getKeys(anyString()))
         .thenThrow(new ObjectStorageWrapperException("error", new RuntimeException()));
 
-    // Act Assert
     assertThatThrownBy(() -> handler.handle(scanAll)).isInstanceOf(ExecutionException.class);
   }
 
   @Test
   public void handle_ScanOperationWithStartClusteringKey_ShouldFilterResults() throws Exception {
-    // Arrange
     Scan scan =
         Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, ANY_TEXT_2 + "2")).build();
     ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
 
-    // Create multiple records with different clustering keys
     for (int i = 0; i < 5; i++) {
       Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
       Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(scan);
 
-    // Assert
     assertThat(scanner).isNotNull();
-    // Should filter records with clustering key >= "text22"
     assertThat(scanner.all()).hasSizeGreaterThanOrEqualTo(1);
   }
 
   @Test
   public void handle_ScanOperationWithEndClusteringKey_ShouldFilterResults() throws Exception {
-    // Arrange
     Scan scan =
         Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, ANY_TEXT_2 + "2")).build();
     ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
 
-    // Create multiple records with different clustering keys
     for (int i = 0; i < 5; i++) {
       Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
       Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(scan);
 
-    // Assert
     assertThat(scanner).isNotNull();
-    // Should filter records with clustering key <= "text22"
     assertThat(scanner.all()).hasSizeGreaterThanOrEqualTo(1);
   }
 
   @Test
   public void handle_ScanOperationWithDescOrdering_ShouldReverseResults() throws Exception {
-    // Arrange
     when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.ASC);
     Scan scan = Scan.newBuilder(prepareScan()).ordering(Scan.Ordering.desc(ANY_NAME_2)).build();
     ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
 
-    // Create multiple records
     for (int i = 0; i < 3; i++) {
       Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
       Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, ANY_TEXT_2 + i);
       addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
     }
 
-    byte[] serialized = Serializer.serialize(partition);
+    byte[] serialized = serializePartition(partition);
     ObjectStorageWrapperResponse response =
         new ObjectStorageWrapperResponse(serialized, "version1");
     when(wrapper.get(anyString())).thenReturn(Optional.of(response));
 
-    // Act
     Scanner scanner = handler.handle(scan);
 
-    // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).hasSize(3);
+  }
+
+  private ObjectStorageTableMetadata createObjectStorageTableMetadata() {
+    Map<String, String> columns = new HashMap<>();
+    columns.put(ANY_NAME_1, "text");
+    columns.put(ANY_NAME_2, "text");
+    columns.put(ANY_NAME_3, "text");
+    return ObjectStorageTableMetadata.newBuilder()
+        .partitionKeyNames(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)))
+        .clusteringKeyNames(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)))
+        .clusteringOrders(Collections.singletonMap(ANY_NAME_2, "ASC"))
+        .secondaryIndexNames(Collections.singleton(ANY_NAME_3))
+        .columns(columns)
+        .build();
+  }
+
+  private byte[] serializePartition(ObjectStoragePartition partition) {
+    ObjectStorageTableMetadata osMetadata = createObjectStorageTableMetadata();
+    return partition.serialize(osMetadata);
   }
 }
