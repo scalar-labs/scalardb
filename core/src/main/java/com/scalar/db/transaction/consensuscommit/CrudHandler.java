@@ -175,8 +175,8 @@ public class CrudHandler {
       if (beforeIndexCheckRequired && checkAndRecoverBeforeIndexRecords(get, context, txMetadata)) {
         if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
           throw new CrudConflictException(
-              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
-                  .buildMessage(context.transactionId),
+              CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED.buildMessage(
+                  context.transactionId),
               context.transactionId);
         }
         continue;
@@ -272,17 +272,15 @@ public class CrudHandler {
           }
         }
       } catch (RuntimeException e) {
-        Exception exception;
         if (e.getCause() instanceof ExecutionException) {
-          exception = (ExecutionException) e.getCause();
-        } else {
-          exception = e;
+          ExecutionException cause = (ExecutionException) e.getCause();
+          throw new CrudException(
+              CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+                  cause.getMessage()),
+              cause,
+              context.transactionId);
         }
-        throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-                exception.getMessage()),
-            exception,
-            context.transactionId);
+        throw e;
       } catch (IOException e) {
         logger.warn("Failed to close the scanner. Transaction ID: {}", context.transactionId, e);
       }
@@ -294,8 +292,8 @@ public class CrudHandler {
           && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
         if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
           throw new CrudConflictException(
-              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
-                  .buildMessage(context.transactionId),
+              CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED.buildMessage(
+                  context.transactionId),
               context.transactionId);
         }
         continue;
@@ -612,8 +610,20 @@ public class CrudHandler {
   }
 
   /**
-   * Returns whether the given selection requires a before-image index check. This is true when the
-   * selection uses a secondary index that has a corresponding before-image secondary index.
+   * Returns whether the given selection requires a before-image index check.
+   *
+   * <p>For index-based selections (Get with index, Scan with index), this returns true when the
+   * index column has a corresponding before-image secondary index. For ScanAll, this returns true
+   * when any conjunction condition is on a column that has both a secondary index and a
+   * corresponding before-image secondary index.
+   *
+   * <p>If the before-image index does not exist (e.g., for tables created before the before-image
+   * index check feature was introduced), the check is skipped. In SNAPSHOT and READ_COMMITTED
+   * isolation, this means index-based reads may return eventually consistent results, which is a
+   * known limitation (a warning is logged at startup via {@code warnIfBeforeIndexesAreMissing}). In
+   * SERIALIZABLE isolation, this case does not occur because {@link
+   * ConsensusCommitOperationChecker} rejects index-based operations on tables without before-image
+   * indexes.
    *
    * @param selection the selection operation
    * @param metadata the transaction table metadata
@@ -626,11 +636,11 @@ public class CrudHandler {
     }
 
     if (selection instanceof ScanAll) {
-      // For ScanAll, check if any conjunction condition is on a column that has a before-image
-      // secondary index
       for (Selection.Conjunction conjunction : selection.getConjunctions()) {
         for (ConditionalExpression condition : conjunction.getConditions()) {
-          if (metadata.hasBeforeImageSecondaryIndex(condition.getColumn().getName())) {
+          String columnName = condition.getColumn().getName();
+          if (metadata.getTableMetadata().getSecondaryIndexNames().contains(columnName)
+              && metadata.hasBeforeImageSecondaryIndex(columnName)) {
             return true;
           }
         }
@@ -710,6 +720,16 @@ public class CrudHandler {
           }
         }
       }
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        ExecutionException cause = (ExecutionException) e.getCause();
+        throw new CrudException(
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+                cause.getMessage()),
+            cause,
+            context.transactionId);
+      }
+      throw e;
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
@@ -846,7 +866,7 @@ public class CrudHandler {
       if (requiresBeforeIndexCheck(scan, txMetadata)
           && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
         throw new CrudConflictException(
-            CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
+            CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
                 context.transactionId),
             context.transactionId);
       }

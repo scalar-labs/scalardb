@@ -27,6 +27,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -86,6 +87,20 @@ public class SnapshotTest {
               .addColumn(ANY_NAME_4, DataType.TEXT)
               .addPartitionKey(ANY_NAME_1)
               .addClusteringKey(ANY_NAME_2)
+              .addSecondaryIndex(ANY_NAME_4)
+              .build());
+
+  // Table metadata where the partition key is also a secondary index
+  private static final TableMetadata TABLE_METADATA_WITH_PK_INDEX =
+      ConsensusCommitUtils.buildTransactionTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.TEXT)
+              .addColumn(ANY_NAME_4, DataType.TEXT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .addSecondaryIndex(ANY_NAME_1)
               .addSecondaryIndex(ANY_NAME_4)
               .build());
 
@@ -1110,6 +1125,12 @@ public class SnapshotTest {
     when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
+    // Mock the before-image index scan
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(getWithIndex);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
+
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
@@ -1166,6 +1187,12 @@ public class SnapshotTest {
         .thenReturn(Optional.of(result2))
         .thenReturn(Optional.empty());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Mock the before-image index scan
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(getWithIndex);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
@@ -1749,6 +1776,12 @@ public class SnapshotTest {
 
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
+    // Mock the before-image index scan
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(scan);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
+
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
@@ -1783,6 +1816,12 @@ public class SnapshotTest {
         Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
+    // Mock the before-image index scan
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(scan);
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator()).thenReturn(Collections.emptyIterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
+
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
 
@@ -1814,6 +1853,129 @@ public class SnapshotTest {
 
     // Assert
     verify(storage).scan(scanForStorage);
+  }
+
+  @Test
+  public void
+      toSerializable_GetSetWithGetWithIndex_WhenBeforeIndexHasUncommittedRecordFromOtherTransaction_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get getWithIndex = prepareGetWithIndex();
+    TransactionResult txResult = prepareResult(ANY_ID + "x");
+    snapshot.putIntoGetSet(getWithIndex, Optional.of(txResult));
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage =
+        Scan.newBuilder(prepareScanWithIndex()).consistency(Consistency.LINEARIZABLE).build();
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(txResult)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Mock the before-image index scan returning a PREPARED record from another transaction
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(getWithIndex);
+    ImmutableMap<String, Column<?>> preparedColumns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_3))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_1))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID + "other"))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.PREPARED.get()))
+            .build();
+    TransactionResult preparedResult =
+        new TransactionResult(new ResultImpl(preparedColumns, TABLE_METADATA));
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.singletonList((Result) preparedResult).iterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithIndexInScanSet_WhenBeforeIndexHasUncommittedRecordFromOtherTransaction_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scan = prepareScanWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage =
+        Scan.newBuilder(scan).limit(0).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Mock the before-image index scan returning a PREPARED record from another transaction
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(scan);
+    ImmutableMap<String, Column<?>> preparedColumns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_3))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_1))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID + "other"))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.PREPARED.get()))
+            .build();
+    TransactionResult preparedResult =
+        new TransactionResult(new ResultImpl(preparedColumns, TABLE_METADATA));
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.singletonList((Result) preparedResult).iterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanWithIndexInScannerSet_WhenBeforeIndexHasUncommittedRecordFromOtherTransaction_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scan = prepareScanWithIndex();
+    TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    snapshot.putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
+
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage = Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Mock the before-image index scan returning a PREPARED record from another transaction
+    Scan beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(scan);
+    ImmutableMap<String, Column<?>> preparedColumns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_3))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_1))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, ANY_TEXT_3))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID + "other"))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.PREPARED.get()))
+            .build();
+    TransactionResult preparedResult =
+        new TransactionResult(new ResultImpl(preparedColumns, TABLE_METADATA));
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(Collections.singletonList((Result) preparedResult).iterator());
+    when(storage.scan(beforeIndexScan)).thenReturn(beforeIndexScanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
   }
 
   @Test
@@ -2455,5 +2617,121 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_GetWithSecondaryIndex_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get get = prepareGetWithIndex();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_ScanWithSecondaryIndex_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scan = prepareScanWithIndex();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scan, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_GetWithPartitionKeyIndex_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA_WITH_PK_INDEX);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_GetWithPartitionKey_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get get = prepareGet();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_ScanAllWithSecondaryIndexCondition_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_4))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void
+      requiresBeforeIndexValidation_ScanAllWithPartitionKeyIndexCondition_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA_WITH_PK_INDEX);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      requiresBeforeIndexValidation_ScanAllWithNonIndexedColumnCondition_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isFalse();
   }
 }
