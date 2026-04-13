@@ -106,7 +106,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
 
-    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
+    ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -149,7 +149,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
 
-    ConsensusCommitUtils.warnIfBeforeImageIndexesAreMissing(admin, config);
+    ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
