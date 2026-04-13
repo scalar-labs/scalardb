@@ -684,7 +684,7 @@ public class JdbcAdminTest {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -704,7 +704,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -718,7 +718,7 @@ public class JdbcAdminTest {
         new RdbEngineOracle(config),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -738,7 +738,7 @@ public class JdbcAdminTest {
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineDb2(config),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(64) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -750,7 +750,7 @@ public class JdbcAdminTest {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.DB2,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -823,7 +823,7 @@ public class JdbcAdminTest {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
         "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX IF NOT EXISTS \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -845,7 +845,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -866,7 +866,7 @@ public class JdbcAdminTest {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.DB2,
         "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c5\" INT NOT NULL,\"c2\" BIGINT,\"c4\" BLOB(2G),\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
   }
@@ -3540,6 +3540,47 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void dropIndex_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                longColumn, DataType.BOOLEAN.toString(), null, null, true));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The first execute (with shortened index name) throws undefined index error,
+    // the second execute (with original long name) and the metadata update succeed
+    String shortenedIndexName = JdbcAdmin.getIndexName(namespace, table, longColumn);
+    String shortenedDropSql = "DROP INDEX \"" + namespace + "\".\"" + shortenedIndexName + "\"";
+    String originalName = String.join("_", "index", namespace, table, longColumn);
+    String fallbackDropSql = "DROP INDEX \"" + namespace + "\".\"" + originalName + "\"";
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_OBJECT);
+    when(statement.execute(shortenedDropSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackDropSql)).thenReturn(false);
+
+    // Act
+    admin.dropIndex(namespace, table, longColumn);
+
+    // Assert
+    verify(statement).execute(shortenedDropSql);
+    verify(statement).execute(fallbackDropSql);
+  }
+
+  @Test
   public void dropIndex_VirtualTableWithColumnInLeftSourceTable_ShouldDropIndexOnLeftSourceTable()
       throws Exception {
     // Arrange
@@ -4234,6 +4275,64 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void renameColumn_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String oldColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    String newColumn = "new_col";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Mock table metadata with a secondary index on the long column
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                oldColumn, DataType.BOOLEAN.toString(), null, null, true));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The rename index with the current name throws undefined index error
+    String oldIndexName = JdbcAdmin.getIndexName(namespace, table, oldColumn);
+    String newIndexName = JdbcAdmin.getIndexName(namespace, table, newColumn);
+    String renameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + oldIndexName
+            + "\" RENAME TO \""
+            + newIndexName
+            + "\"";
+    String originalOldIndexName = String.join("_", "index", namespace, table, oldColumn);
+    String fallbackRenameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + originalOldIndexName
+            + "\" RENAME TO \""
+            + newIndexName
+            + "\"";
+
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_TABLE);
+    when(statement.execute(renameSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackRenameSql)).thenReturn(false);
+
+    // Act
+    admin.renameColumn(namespace, table, oldColumn, newColumn);
+
+    // Assert
+    verify(statement).execute(renameSql);
+    verify(statement).execute(fallbackRenameSql);
+  }
+
+  @Test
   public void alterColumnType_ForMysql_ShouldWorkProperly()
       throws SQLException, ExecutionException {
     alterColumnType_ForX_ShouldWorkProperly(
@@ -4558,6 +4657,64 @@ public class JdbcAdminTest {
         verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
       }
     }
+  }
+
+  @Test
+  public void renameTable_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String oldTable = "my_tbl";
+    String newTable = "my_new_tbl";
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Mock table metadata with a secondary index on the long column
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                longColumn, DataType.BOOLEAN.toString(), null, null, true));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The rename index with the current name throws undefined index error
+    String oldIndexName = JdbcAdmin.getIndexName(namespace, oldTable, longColumn);
+    String newIndexName = JdbcAdmin.getIndexName(namespace, newTable, longColumn);
+    String renameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + oldIndexName
+            + "\" RENAME TO \""
+            + newIndexName
+            + "\"";
+    String originalOldIndexName = String.join("_", "index", namespace, oldTable, longColumn);
+    String fallbackRenameSql =
+        "ALTER INDEX \""
+            + namespace
+            + "\".\""
+            + originalOldIndexName
+            + "\" RENAME TO \""
+            + newIndexName
+            + "\"";
+
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_TABLE);
+    when(statement.execute(renameSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackRenameSql)).thenReturn(false);
+
+    // Act
+    admin.renameTable(namespace, oldTable, newTable);
+
+    // Assert
+    verify(statement).execute(renameSql);
+    verify(statement).execute(fallbackRenameSql);
   }
 
   @Test
