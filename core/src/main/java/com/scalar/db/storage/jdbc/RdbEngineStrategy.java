@@ -160,6 +160,8 @@ public interface RdbEngineStrategy {
     return likeExpression.getEscape();
   }
 
+  boolean isUndefinedIndexError(SQLException e);
+
   default @Nullable String getCatalogName(String namespace) {
     return null;
   }

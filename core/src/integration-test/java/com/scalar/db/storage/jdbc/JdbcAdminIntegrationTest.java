@@ -1,9 +1,15 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+
 import com.scalar.db.api.DistributedStorageAdminIntegrationTestBase;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.util.AdminTestUtils;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -116,5 +122,50 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     // indefinitely) on Db2 community edition version but works on Db2 hosted on IBM Cloud.
     // So we disable these tests until the issue is resolved.
     return !JdbcTestUtils.isDb2(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isDb2() {
+    return JdbcTestUtils.isDb2(rdbEngine);
+  }
+
+  @Test
+  @DisabledIf("isDb2")
+  public void dropIndex_WithLongIndexNameCreatedByOldNaming_ShouldDropIndexByFallback()
+      throws Exception {
+    // Use a long column name that causes the index name to exceed the max length
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - dropIndex should succeed via fallback
+      assertThatCode(() -> admin.dropIndex(getNamespace1(), getTable4(), longColumn))
+          .doesNotThrowAnyException();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), longColumn)).isFalse();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      testUtils.close();
+    }
   }
 }

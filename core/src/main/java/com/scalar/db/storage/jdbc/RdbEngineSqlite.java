@@ -86,6 +86,15 @@ public class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // Error code: SQLITE_ERROR (1)
+    // Message: no such index: XXX
+    return e.getErrorCode() == 1
+        && e.getMessage() != null
+        && e.getMessage().contains("no such index");
+  }
+
+  @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BOOLEAN:

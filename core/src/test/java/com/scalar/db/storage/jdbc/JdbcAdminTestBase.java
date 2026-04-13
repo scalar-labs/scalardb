@@ -928,7 +928,7 @@ public abstract class JdbcAdminTestBase {
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
@@ -1034,7 +1034,7 @@ public abstract class JdbcAdminTestBase {
             + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c4\" RAW(128),\"c2\" NUMBER(16),\"c5\" NUMBER(10),\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
@@ -1144,7 +1144,7 @@ public abstract class JdbcAdminTestBase {
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN NOT NULL,\"c1\" VARCHAR(128) NOT NULL,\"c4\" VARBINARY(128) NOT NULL,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE,\"c7\" REAL,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3), PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
+        "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c4\" ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")",
         "INSERT INTO \""
@@ -2370,6 +2370,49 @@ public abstract class JdbcAdminTestBase {
     assertThat(captor.getAllValues().get(0)).isEqualTo(expectedDropIndexStatement);
     assertThat(captor.getAllValues().get(1)).isEqualTo(expectedAlterColumnStatement);
     assertThat(captor.getAllValues().get(2)).isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void dropIndex_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "my_tbl";
+    String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    PreparedStatement checkStatement = prepareStatementForNamespaceCheck();
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            Arrays.asList(
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false),
+                new GetColumnsResultSetMocker.Row(
+                    longColumn, DataType.BOOLEAN.toString(), null, null, true)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkStatement).thenReturn(selectStatement);
+
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+
+    // The first execute (with shortened index name) throws undefined index error,
+    // the second execute (with original long name) and the metadata update succeed
+    String shortenedIndexName = JdbcAdmin.getIndexName(namespace, table, longColumn);
+    String shortenedDropSql = "DROP INDEX \"" + namespace + "\".\"" + shortenedIndexName + "\"";
+    String originalName = String.join("_", "index", namespace, table, longColumn);
+    String fallbackDropSql = "DROP INDEX \"" + namespace + "\".\"" + originalName + "\"";
+    PSQLException undefinedIndexError = new PSQLException("undefined", PSQLState.UNDEFINED_OBJECT);
+    when(statement.execute(shortenedDropSql)).thenThrow(undefinedIndexError);
+    when(statement.execute(fallbackDropSql)).thenReturn(false);
+
+    // Act
+    admin.dropIndex(namespace, table, longColumn);
+
+    // Assert
+    verify(statement).execute(shortenedDropSql);
+    verify(statement).execute(fallbackDropSql);
   }
 
   @Test
