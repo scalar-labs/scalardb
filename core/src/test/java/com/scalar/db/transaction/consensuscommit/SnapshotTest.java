@@ -90,6 +90,20 @@ public class SnapshotTest {
               .addSecondaryIndex(ANY_NAME_4)
               .build());
 
+  // Table metadata where the partition key is also a secondary index
+  private static final TableMetadata TABLE_METADATA_WITH_PK_INDEX =
+      ConsensusCommitUtils.buildTransactionTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.TEXT)
+              .addColumn(ANY_NAME_4, DataType.TEXT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .addSecondaryIndex(ANY_NAME_1)
+              .addSecondaryIndex(ANY_NAME_4)
+              .build());
+
   private Snapshot snapshot;
   private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
   private ConcurrentMap<Get, Optional<TransactionResult>> getSet;
@@ -2603,5 +2617,121 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_GetWithSecondaryIndex_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get get = prepareGetWithIndex();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_ScanWithSecondaryIndex_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scan = prepareScanWithIndex();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scan, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_GetWithPartitionKeyIndex_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA_WITH_PK_INDEX);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_GetWithPartitionKey_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Get get = prepareGet();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(get, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void requiresBeforeIndexValidation_ScanAllWithSecondaryIndexCondition_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_4))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void
+      requiresBeforeIndexValidation_ScanAllWithPartitionKeyIndexCondition_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_1))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA_WITH_PK_INDEX);
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      requiresBeforeIndexValidation_ScanAllWithNonIndexedColumnCondition_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
+            .build();
+
+    // Act
+    boolean result = snapshot.requiresBeforeIndexValidation(scanAll, TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isFalse();
   }
 }

@@ -453,7 +453,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void createIndex_WithIndexEventuallyConsistentReadEnabled_ShouldNotCreateBeforeImageIndex()
+  public void createIndex_WithIndexEventuallyConsistentReadEnabled_ShouldNotCreateBeforeIndex()
       throws ExecutionException {
     // Arrange
     when(config.isIndexEventuallyConsistentReadEnabled()).thenReturn(true);
@@ -500,7 +500,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void dropIndex_WithIndexEventuallyConsistentReadEnabled_ShouldNotDropBeforeImageIndex()
+  public void dropIndex_WithIndexEventuallyConsistentReadEnabled_ShouldNotDropBeforeIndex()
       throws ExecutionException {
     // Arrange
     when(config.isIndexEventuallyConsistentReadEnabled()).thenReturn(true);
