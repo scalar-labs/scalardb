@@ -195,14 +195,24 @@ public class CrudHandler {
         continue;
       }
 
-      // Put the result in the snapshot
+      // Put the result in the snapshot.
+      //
+      // When the result is present, we always cache it. When the result is absent, we cache
+      // Optional.empty() only when we are certain that no record exists for this key. That
+      // requires both of the following conditions to hold:
+      //
+      //   (a) get.getConjunctions().isEmpty(): the Get has no conjunctions (additional
+      //       predicates applied on top of the key/index lookup). If conjunctions exist, a
+      //       record may actually exist for this key but have been filtered out by the
+      //       conjunctions above. In that case we cannot conclude that the record is absent, so
+      //       we must not cache Optional.empty().
+      //
+      //   (b) !indexKeyFilteredOut: the result was not discarded by the post-rollback
+      //       index-key check above. If it was, a record does exist for this key, but its
+      //       index column value was reverted by rollback to a value that no longer matches the
+      //       queried index key. Caching Optional.empty() in that case would be incorrect
+      //       because the record still exists with a different index value.
       if (result.isPresent() || (get.getConjunctions().isEmpty() && !indexKeyFilteredOut)) {
-        // We put the result into the read set only if a get operation has no conjunction or the
-        // result exists. This is because we don’t know whether the record actually exists or not
-        // due to the conjunction. Additionally, when a result was filtered out because the index
-        // key no longer matches after rollback, we must not cache Optional.empty() in the read
-        // set because the record still exists with a different index value.
-
         if (key != null) {
           putIntoReadSetInSnapshot(key, result, context);
         } else {
