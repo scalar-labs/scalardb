@@ -261,7 +261,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
-        return "NUMBER(16)";
+        return "NUMBER(19)";
       case BLOB:
         return "BLOB";
       case BOOLEAN:
