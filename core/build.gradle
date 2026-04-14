@@ -205,11 +205,15 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'log4j', module: 'log4j'
         exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'io.netty', module: 'netty'
+        exclude group: 'io.netty', module: 'netty-all'
     }
     implementation("org.apache.hadoop:hadoop-hdfs:2.7.3") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'log4j', module: 'log4j'
         exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'io.netty', module: 'netty'
+        exclude group: 'io.netty', module: 'netty-all'
     }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
