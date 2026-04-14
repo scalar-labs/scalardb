@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -342,7 +343,7 @@ public class TransactionExecutorTest {
       ThrowableFunction<CrudOperable<?>, Object, TransactionException> throwableFunction =
           mock(ThrowableFunction.class);
 
-      CrudConflictException exception = mock(CrudConflictException.class);
+      CommitConflictException exception = mock(CommitConflictException.class);
       when(exception.getMessage()).thenReturn("message");
 
       Object expected = new Object();
@@ -372,7 +373,7 @@ public class TransactionExecutorTest {
   @SuppressWarnings("unchecked")
   @Test
   public void
-      executeWithRetries_ThrowableFunctionGivenWithRetryParams_ShouldCallExecuteWithRetriesWithAttributes()
+      executeWithRetries_ThrowableFunctionGivenWithRetryParams_ShouldCallExecuteWithRetriesWithEmptyAttributes()
           throws TransactionException {
     try (MockedStatic<TransactionExecutor> mocked =
         mockStatic(TransactionExecutor.class, CALLS_REAL_METHODS)) {
@@ -499,7 +500,7 @@ public class TransactionExecutorTest {
   @SuppressWarnings("unchecked")
   @Test
   public void
-      executeWithRetries_ThrowableConsumerGivenWithRetryParams_ShouldCallExecuteWithRetriesWithAttributes()
+      executeWithRetries_ThrowableConsumerGivenWithRetryParams_ShouldCallExecuteWithRetriesWithEmptyAttributes()
           throws TransactionException {
     try (MockedStatic<TransactionExecutor> mocked =
         mockStatic(TransactionExecutor.class, CALLS_REAL_METHODS)) {
