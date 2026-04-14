@@ -415,6 +415,43 @@ public class TransactionExecutorTest {
 
   @SuppressWarnings("unchecked")
   @Test
+  public void
+      executeWithRetries_ThrowableFunctionGivenWithAttributesAndRetryParams_ShouldCallExecuteWithRetriesWithAttributes()
+          throws TransactionException {
+    try (MockedStatic<TransactionExecutor> mocked =
+        mockStatic(TransactionExecutor.class, CALLS_REAL_METHODS)) {
+      // Arrange
+      DistributedTransactionManager transactionManager = mock(DistributedTransactionManager.class);
+      Map<String, String> attributes = ImmutableMap.of("key", "value");
+      ThrowableFunction<CrudOperable<?>, Object, TransactionException> throwableFunction =
+          mock(ThrowableFunction.class);
+
+      Object expected = new Object();
+
+      mocked
+          .when(
+              () ->
+                  TransactionExecutor.execute(
+                      any(DistributedTransactionManager.class),
+                      any(Map.class),
+                      any(ThrowableFunction.class)))
+          .thenReturn(expected);
+
+      // Act
+      Object actual =
+          TransactionExecutor.executeWithRetries(
+              transactionManager, attributes, throwableFunction, 100, 1000, 2, 5);
+
+      // Assert
+      mocked.verify(
+          () -> TransactionExecutor.execute(transactionManager, attributes, throwableFunction));
+
+      assertThat(actual).isEqualTo(expected);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
   public void executeWithRetries_ThrowableConsumerGiven_ShouldCallExecuteWithRetriesWithFunction()
       throws TransactionException {
     try (MockedStatic<TransactionExecutor> mocked =
