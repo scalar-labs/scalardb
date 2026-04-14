@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-public class Serializer {
+public class JsonSerializer {
   public static final int MAX_STRING_LENGTH_ALLOWED = Integer.MAX_VALUE;
   private static final ObjectMapper mapper = new ObjectMapper();
 

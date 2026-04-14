@@ -195,6 +195,22 @@ dependencies {
     implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation("org.apache.orc:orc-core:${orcVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    implementation("org.apache.hive:hive-storage-api:2.8.1") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    implementation("org.apache.hadoop:hadoop-common:2.7.3") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+        exclude group: 'log4j', module: 'log4j'
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+    implementation("org.apache.hadoop:hadoop-hdfs:2.7.3") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+        exclude group: 'log4j', module: 'log4j'
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
@@ -216,6 +232,28 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+test {
+    useJUnitPlatform {
+        excludeTags 'benchmark'
+    }
+    systemProperty 'com.google.protobuf.use_unsafe_pre22_gencode', 'true'
+}
+
+task benchmarkTest(type: Test) {
+    description = 'Runs serialization benchmark tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'benchmark'
+    }
+    outputs.upToDateWhen { false }
+    maxHeapSize = '12g'
+    jvmArgs '-XX:MaxDirectMemorySize=2g', '-XX:+UseG1GC'
+    systemProperty 'benchmark.targets', System.getProperty('benchmark.targets', '')
+    systemProperty 'com.google.protobuf.use_unsafe_pre22_gencode', 'true'
 }
 
 javadoc {

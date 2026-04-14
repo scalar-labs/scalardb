@@ -54,6 +54,7 @@ subprojects {
         errorproneVersion = '2.10.0'
         errorproneJavacVersion = '9+181-r4173-1'
         gsonVersion = '2.13.2'
+        orcVersion = '1.9.8'
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
         errorpronePluginVersion = '4.4.0'
