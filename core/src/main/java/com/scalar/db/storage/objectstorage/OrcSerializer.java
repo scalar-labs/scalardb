@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -275,7 +276,14 @@ public class OrcSerializer {
         }
       case "blob":
         {
-          byte[] bytes = (byte[]) value;
+          byte[] bytes;
+          if (value instanceof byte[]) {
+            bytes = (byte[]) value;
+          } else {
+            ByteBuffer buffer = ((ByteBuffer) value).duplicate();
+            bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+          }
           ((BytesColumnVector) col).setVal(row, bytes);
           break;
         }
