@@ -27,8 +27,10 @@ public class OrcSerializerBenchmarkTest {
   private static final int RECORD_COUNT = 500_000;
   private static final int WARMUP_ITERATIONS = 2;
   private static final int BENCHMARK_ITERATIONS = 5;
+  private static final int SMALL_RECORD_COUNT = 100;
 
   private static ObjectStoragePartition partition;
+  private static ObjectStoragePartition smallPartition;
   private static ObjectStorageTableMetadata osMetadata;
   private static long estimatedRecordSize;
 
@@ -131,6 +133,16 @@ public class OrcSerializerBenchmarkTest {
     }
     partition = new ObjectStoragePartition(records);
 
+    // Build small partition from first SMALL_RECORD_COUNT records
+    Map<String, ObjectStorageRecord> smallRecords = new HashMap<>(SMALL_RECORD_COUNT);
+    int count = 0;
+    for (Map.Entry<String, ObjectStorageRecord> entry : records.entrySet()) {
+      if (count >= SMALL_RECORD_COUNT) break;
+      smallRecords.put(entry.getKey(), entry.getValue());
+      count++;
+    }
+    smallPartition = new ObjectStoragePartition(smallRecords);
+
     // Print record structure
     ObjectStorageRecord sample = records.values().iterator().next();
     estimatedRecordSize = estimateRecordSize(sample);
@@ -168,34 +180,46 @@ public class OrcSerializerBenchmarkTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("allSerializerProvider")
   void benchmark(String name, CompressionKind compressionKind) {
-    // Warmup with production data
-    System.gc();
-    warmup(compressionKind);
+    runBenchmark(name, partition, RECORD_COUNT, compressionKind);
+  }
 
-    long[] serializeTimes = new long[BENCHMARK_ITERATIONS];
-    long[] deserializeTimes = new long[BENCHMARK_ITERATIONS];
+  @ParameterizedTest(name = "{0} [small]")
+  @MethodSource("allSerializerProvider")
+  void benchmarkSmall(String name, CompressionKind compressionKind) {
+    runBenchmark(name + " [small]", smallPartition, SMALL_RECORD_COUNT, compressionKind);
+  }
+
+  private void runBenchmark(
+      String name,
+      ObjectStoragePartition targetPartition,
+      int recordCount,
+      CompressionKind compressionKind) {
+    System.gc();
+    for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+      byte[] data = OrcSerializer.serialize(targetPartition, osMetadata, compressionKind);
+      OrcSerializer.deserialize(data, osMetadata);
+    }
+
+    long[] serializeNanos = new long[BENCHMARK_ITERATIONS];
+    long[] deserializeNanos = new long[BENCHMARK_ITERATIONS];
     long[] serializeMemories = new long[BENCHMARK_ITERATIONS];
     long[] deserializeMemories = new long[BENCHMARK_ITERATIONS];
     long serializedSize = 0;
 
     for (int iter = 0; iter < BENCHMARK_ITERATIONS; iter++) {
-      // Measure serialize memory
       System.gc();
       long serializeBaseline = usedMemory();
 
       long serializeStart = System.nanoTime();
-      byte[] serialized = OrcSerializer.serialize(partition, osMetadata, compressionKind);
+      byte[] serialized = OrcSerializer.serialize(targetPartition, osMetadata, compressionKind);
       long serializeEnd = System.nanoTime();
 
       long serializePeak = usedMemory();
-      serializeTimes[iter] = (serializeEnd - serializeStart) / 1_000_000;
+      serializeNanos[iter] = serializeEnd - serializeStart;
       serializedSize = serialized.length;
       serializeMemories[iter] = serializePeak - serializeBaseline;
 
-      // GC between phases to avoid serialize garbage inflating deserialize measurement
       System.gc();
-
-      // Measure deserialize memory
       long deserializeBaseline = usedMemory();
 
       long deserializeStart = System.nanoTime();
@@ -203,48 +227,21 @@ public class OrcSerializerBenchmarkTest {
       long deserializeEnd = System.nanoTime();
 
       deserializeMemories[iter] = usedMemory() - deserializeBaseline;
-      deserializeTimes[iter] = (deserializeEnd - deserializeStart) / 1_000_000;
+      deserializeNanos[iter] = deserializeEnd - deserializeStart;
 
-      // Release for GC
       serialized = null;
-
-      // Correctness check
-      assertThat(deserialized.getRecords()).hasSize(RECORD_COUNT);
+      assertThat(deserialized.getRecords()).hasSize(recordCount);
       deserialized = null;
     }
 
-    // Estimate in-memory size for compression ratio
-    long estimatedInMemoryBytes = (long) RECORD_COUNT * estimatedRecordSize;
-    double compressionRatio = (double) estimatedInMemoryBytes / serializedSize;
-
-    // Print results
-    System.out.printf("--- Benchmark Result: %s ---%n", name);
-    System.out.printf("  Iterations: %d (warmup: %d)%n", BENCHMARK_ITERATIONS, WARMUP_ITERATIONS);
-    for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
-      long roundTrip = serializeTimes[i] + deserializeTimes[i];
-      System.out.printf(
-          "  [%d] Serialize: %,7d ms  Deserialize: %,7d ms  Round-trip: %,7d ms%n",
-          i + 1, serializeTimes[i], deserializeTimes[i], roundTrip);
-    }
-    long avgSerialize = Arrays.stream(serializeTimes).sum() / BENCHMARK_ITERATIONS;
-    long avgDeserialize = Arrays.stream(deserializeTimes).sum() / BENCHMARK_ITERATIONS;
-    long avgRoundTrip = avgSerialize + avgDeserialize;
-    double avgSerMem = Arrays.stream(serializeMemories).average().orElse(0);
-    double avgDesMem = Arrays.stream(deserializeMemories).average().orElse(0);
-    System.out.printf("  [Avg] Serialize time:     %,d ms%n", avgSerialize);
-    System.out.printf("  [Avg] Deserialize time:   %,d ms%n", avgDeserialize);
-    System.out.printf("  [Avg] Total round-trip:   %,d ms%n", avgRoundTrip);
-    System.out.printf(
-        Locale.US,
-        "  Serialized size:    %.2f MiB (%,d bytes)%n",
-        serializedSize / (1024.0 * 1024.0),
-        serializedSize);
-    System.out.printf(Locale.US, "  Compression ratio:  %.2fx%n", compressionRatio);
-    System.out.printf(
-        Locale.US, "  [Avg] Serialize memory:   %.2f MiB%n", avgSerMem / (1024.0 * 1024.0));
-    System.out.printf(
-        Locale.US, "  [Avg] Deserialize memory: %.2f MiB%n", avgDesMem / (1024.0 * 1024.0));
-    System.out.println();
+    printResults(
+        name,
+        recordCount,
+        serializedSize,
+        serializeNanos,
+        deserializeNanos,
+        serializeMemories,
+        deserializeMemories);
   }
 
   private static long usedMemory() {
@@ -254,9 +251,7 @@ public class OrcSerializerBenchmarkTest {
 
   private static long estimateRecordSize(ObjectStorageRecord record) {
     long size = 0;
-    // id
     size += record.getId().length();
-    // partitionKey, clusteringKey, values
     size += estimateMapSize(record.getPartitionKey());
     size += estimateMapSize(record.getClusteringKey());
     size += estimateMapSize(record.getValues());
@@ -285,10 +280,59 @@ public class OrcSerializerBenchmarkTest {
     return size;
   }
 
-  private void warmup(CompressionKind compressionKind) {
-    for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-      byte[] data = OrcSerializer.serialize(partition, osMetadata, compressionKind);
-      OrcSerializer.deserialize(data, osMetadata);
+  private void printResults(
+      String name,
+      int recordCount,
+      long serializedSize,
+      long[] serializeNanos,
+      long[] deserializeNanos,
+      long[] serializeMemories,
+      long[] deserializeMemories) {
+    long estimatedInMemoryBytes = (long) recordCount * estimatedRecordSize;
+    double compressionRatio = (double) estimatedInMemoryBytes / serializedSize;
+
+    long avgRoundTripNs =
+        (Arrays.stream(serializeNanos).sum() + Arrays.stream(deserializeNanos).sum())
+            / BENCHMARK_ITERATIONS;
+    boolean useMicros = avgRoundTripNs < 10_000_000L;
+    String timeUnit = useMicros ? "\u00b5s" : "ms";
+    long timeDivisor = useMicros ? 1_000L : 1_000_000L;
+
+    boolean useKiB = serializedSize < 1024L * 1024L;
+    String sizeUnit = useKiB ? "KiB" : "MiB";
+    double sizeDivisor = useKiB ? 1024.0 : 1024.0 * 1024.0;
+
+    System.out.printf("--- Benchmark Result: %s ---%n", name);
+    System.out.printf(
+        "  Records: %,d  Iterations: %d (warmup: %d)%n",
+        recordCount, BENCHMARK_ITERATIONS, WARMUP_ITERATIONS);
+    for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
+      long ser = serializeNanos[i] / timeDivisor;
+      long des = deserializeNanos[i] / timeDivisor;
+      long rt = ser + des;
+      System.out.printf(
+          "  [%d] Serialize: %,7d %s  Deserialize: %,7d %s  Round-trip: %,7d %s%n",
+          i + 1, ser, timeUnit, des, timeUnit, rt, timeUnit);
     }
+    long avgSer = Arrays.stream(serializeNanos).sum() / BENCHMARK_ITERATIONS / timeDivisor;
+    long avgDes = Arrays.stream(deserializeNanos).sum() / BENCHMARK_ITERATIONS / timeDivisor;
+    long avgRt = avgSer + avgDes;
+    double avgSerMem = Arrays.stream(serializeMemories).average().orElse(0);
+    double avgDesMem = Arrays.stream(deserializeMemories).average().orElse(0);
+    System.out.printf("  [Avg] Serialize time:     %,d %s%n", avgSer, timeUnit);
+    System.out.printf("  [Avg] Deserialize time:   %,d %s%n", avgDes, timeUnit);
+    System.out.printf("  [Avg] Total round-trip:   %,d %s%n", avgRt, timeUnit);
+    System.out.printf(
+        Locale.US,
+        "  Serialized size:    %.2f %s (%,d bytes)%n",
+        serializedSize / sizeDivisor,
+        sizeUnit,
+        serializedSize);
+    System.out.printf(Locale.US, "  Compression ratio:  %.2fx%n", compressionRatio);
+    System.out.printf(
+        Locale.US, "  [Avg] Serialize memory:   %.2f MiB%n", avgSerMem / (1024.0 * 1024.0));
+    System.out.printf(
+        Locale.US, "  [Avg] Deserialize memory: %.2f MiB%n", avgDesMem / (1024.0 * 1024.0));
+    System.out.println();
   }
 }
