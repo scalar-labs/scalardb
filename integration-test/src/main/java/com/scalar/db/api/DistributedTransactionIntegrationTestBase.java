@@ -252,7 +252,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
             .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(2))
             .and(ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true))
-            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(TestUtils.BIGINT_MAX_VALUE))
+            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L))
             .and(ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F))
             .and(ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10))
             .and(ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"))
@@ -1698,7 +1698,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(TestUtils.BIGINT_MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -1783,7 +1783,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(TestUtils.BIGINT_MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -2193,7 +2193,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(TestUtils.BIGINT_MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),

@@ -37,11 +37,6 @@ import org.junit.jupiter.api.Assertions;
 
 public final class TestUtils {
 
-  // The max and min values for BigInt that can be safely used in integration tests. Cosmos DB and
-  // Object Storage store numbers as JSON, which only guarantees precision for integers up to 2^53.
-  public static final long BIGINT_MAX_VALUE = 9007199254740992L;
-  public static final long BIGINT_MIN_VALUE = -9007199254740992L;
-
   public static final int MAX_TEXT_COUNT = 20;
   public static final int MAX_BLOB_LENGTH = 20;
 
@@ -60,7 +55,7 @@ public final class TestUtils {
       case INT:
         return IntColumn.of(columnName, random.nextInt());
       case BIGINT:
-        return BigIntColumn.of(columnName, nextBigInt(random));
+        return BigIntColumn.of(columnName, random.nextLong());
       case FLOAT:
         return FloatColumn.of(columnName, nextFloat(random));
       case DOUBLE:
@@ -89,24 +84,20 @@ public final class TestUtils {
     }
   }
 
-  public static long nextBigInt(Random random) {
-    return random.longs(1, BIGINT_MIN_VALUE, (BIGINT_MAX_VALUE + 1)).findFirst().orElse(0);
-  }
-
-  public static float nextFloat(Random random) {
+  private static float nextFloat(Random random) {
     return (float) random.doubles(1, Float.MIN_VALUE, Float.MAX_VALUE).findFirst().orElse(0.0d);
   }
 
-  public static double nextDouble(Random random) {
+  private static double nextDouble(Random random) {
     return random.doubles(1, Double.MIN_VALUE, Double.MAX_VALUE).findFirst().orElse(0.0d);
   }
 
-  public static LocalDate nextDate(Random random) {
+  private static LocalDate nextDate(Random random) {
     return nextLocalDate(
         random, DateColumn.MIN_VALUE.toEpochDay(), DateColumn.MAX_VALUE.toEpochDay());
   }
 
-  public static LocalTime nextTime(Random random) {
+  private static LocalTime nextTime(Random random) {
     return nextLocalTime(
         random,
         TimeColumn.MIN_VALUE.toNanoOfDay(),
@@ -114,7 +105,7 @@ public final class TestUtils {
         TimeColumn.FRACTIONAL_SECONDS_PRECISION_IN_NANOSECONDS);
   }
 
-  public static LocalDateTime nextTimestamp(Random random) {
+  private static LocalDateTime nextTimestamp(Random random) {
     LocalDate date =
         nextLocalDate(
             random,
@@ -130,7 +121,7 @@ public final class TestUtils {
     return LocalDateTime.of(date, time);
   }
 
-  public static Instant nextTimestampTZ(Random random) {
+  private static Instant nextTimestampTZ(Random random) {
     LocalDate date =
         nextLocalDate(
             random,
@@ -152,7 +143,7 @@ public final class TestUtils {
   }
 
   @SuppressWarnings("JavaLocalTimeGetNano")
-  public static LocalTime nextLocalTime(
+  private static LocalTime nextLocalTime(
       Random random, long minNanoOfDay, long maxNanoOfDay, int resolutionInNanos) {
     long nanoOfDay = random.longs(1, minNanoOfDay, maxNanoOfDay + 1).findFirst().orElse(0);
     LocalTime time = LocalTime.ofNanoOfDay(nanoOfDay);
@@ -168,7 +159,7 @@ public final class TestUtils {
       String columnName, DataType dataType, boolean allowEmpty) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BIGINT_MIN_VALUE);
+        return BigIntColumn.of(columnName, Long.MIN_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
@@ -197,7 +188,7 @@ public final class TestUtils {
   public static Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BIGINT_MAX_VALUE);
+        return BigIntColumn.of(columnName, Long.MAX_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:
