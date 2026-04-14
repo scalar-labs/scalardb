@@ -20,6 +20,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public abstract class DecoratedDistributedTransactionManager
@@ -77,6 +78,17 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
+  public DistributedTransaction begin(Map<String, String> attributes) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.begin(attributes));
+  }
+
+  @Override
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.begin(txId, attributes));
+  }
+
+  @Override
   public DistributedTransaction beginReadOnly() throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly());
   }
@@ -84,6 +96,18 @@ public abstract class DecoratedDistributedTransactionManager
   @Override
   public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(txId));
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(attributes));
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(txId, attributes));
   }
 
   @Override
@@ -97,13 +121,36 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
-  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
-    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId));
+  public DistributedTransaction start(Map<String, String> attributes) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.start(attributes));
+  }
+
+  @Override
+  public DistributedTransaction start(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.start(txId, attributes));
   }
 
   @Override
   public DistributedTransaction startReadOnly() throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly());
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId));
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(attributes));
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId, attributes));
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */

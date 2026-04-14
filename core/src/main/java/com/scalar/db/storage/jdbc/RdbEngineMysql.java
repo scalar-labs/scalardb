@@ -189,6 +189,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1050; Symbol: ER_TABLE_EXISTS_ERROR; SQLSTATE: 42S01
     // Message: Table '%s' already exists
     return e.getErrorCode() == 1050;
@@ -199,14 +200,16 @@ class RdbEngineMysql extends AbstractRdbEngine {
     if (e.getSQLState() == null) {
       return false;
     }
+
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1022; Symbol: ER_DUP_KEY; SQLSTATE: 23000
     // Message: Can't write; duplicate key in table '%s'
-    // etc... See: <https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html>
     return e.getSQLState().equals("23000");
   }
 
   @Override
   public boolean isUndefinedTableError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1049; Symbol: ER_BAD_DB_ERROR; SQLSTATE: 42000
     // Message: Unknown database '%s'
 
@@ -218,6 +221,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public boolean isConflict(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1213; Symbol: ER_LOCK_DEADLOCK; SQLSTATE: 40001
     // Message: Deadlock found when trying to get lock; try restarting transaction
 
@@ -225,6 +229,18 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // Message: Lock wait timeout exceeded; try restarting transaction
 
     return e.getErrorCode() == 1213 || e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
+    // Error number: 1091; Symbol: ER_CANT_DROP_FIELD_OR_KEY; SQLSTATE: 42000
+    // Message: Can't DROP '%s'; check that column/key exists
+
+    // Error number: 1176; Symbol: ER_KEY_NOT_FOUND; SQLSTATE: 42000
+    // Message: Key '%s' doesn't exist in table '%s'
+
+    return e.getErrorCode() == 1091 || e.getErrorCode() == 1176;
   }
 
   @Override

@@ -47,8 +47,10 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,7 +92,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation() {
+  public void begin_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -105,7 +108,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+  public void begin_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -121,7 +125,8 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation() {
+      begin_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdWithParentIdAndSnapshotIsolation()
+          throws TransactionException {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
@@ -158,7 +163,8 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation() {
+      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+          throws TransactionException {
     // Arrange
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
@@ -194,7 +200,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers() {
+  public void begin_CalledTwice_ShouldReturnTransactionsWithSharedHandlers()
+      throws TransactionException {
     // Arrange
 
     // Act
@@ -223,7 +230,8 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      beginReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode() {
+      beginReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode()
+          throws TransactionException {
     // Arrange
     ConsensusCommitManager spied = spy(manager);
 
@@ -237,7 +245,8 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void beginReadOnly_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolationInReadOnlyMode() {
+  public void beginReadOnly_TxIdGiven_ReturnWithSpecifiedTxIdAndSnapshotIsolationInReadOnlyMode()
+      throws TransactionException {
     // Arrange
     ConsensusCommitManager spied = spy(manager);
 
@@ -248,6 +257,74 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(eq(ANY_TX_ID), eq(Isolation.SNAPSHOT), eq(true), eq(false));
 
     assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+  }
+
+  @Test
+  public void
+      begin_TxIdAndAttributesWithIsolationGiven_ReturnWithSpecifiedTxIdAndSpecifiedIsolation() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+
+    // Act
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+  }
+
+  @Test
+  public void
+      begin_TxIdAndAttributesWithoutIsolationGiven_ReturnWithSpecifiedTxIdAndDefaultIsolation() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdAndAttributesWithIsolationGiven_ReturnWithSpecifiedTxIdAndSpecifiedIsolationInReadOnlyMode() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+
+    // Act
+    DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+    ConsensusCommit inner =
+        (ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
+    assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(inner.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(inner.getTransactionContext().readOnly).isTrue();
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdAndAttributesWithoutIsolationGiven_ReturnWithSpecifiedTxIdAndDefaultIsolationInReadOnlyMode() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+    ConsensusCommit inner =
+        (ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
+    assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(inner.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(inner.getTransactionContext().readOnly).isTrue();
   }
 
   @Test
@@ -765,6 +842,38 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void get_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(true), eq(true));
+
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    Result result = mock(Result.class);
+    when(transaction.get(get)).thenReturn(Optional.of(result));
+
+    // Act
+    Optional<Result> actual = spied.get(get);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(true), eq(true));
+    verify(transaction).get(get);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(Optional.of(result));
+  }
+
+  @Test
   public void scan_ShouldScan() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -786,6 +895,39 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).scan(scan);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(results);
+  }
+
+  @Test
+  public void scan_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(true), eq(true));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    List<Result> results =
+        Arrays.asList(mock(Result.class), mock(Result.class), mock(Result.class));
+    when(transaction.scan(scan)).thenReturn(results);
+
+    // Act
+    List<Result> actual = spied.scan(scan);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(true), eq(true));
     verify(transaction).scan(scan);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(results);
@@ -1171,6 +1313,35 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void put_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    // Act
+    spied.put(put);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+    verify(transaction).put(put);
+    verify(transaction).commit();
+  }
+
+  @Test
   public void put_MultiplePutsGiven_ShouldPut() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1238,6 +1409,35 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void insert_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+
+    Insert insert =
+        Insert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    // Act
+    spied.insert(insert);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+    verify(transaction).insert(insert);
+    verify(transaction).commit();
+  }
+
+  @Test
   public void upsert_ShouldUpsert() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1260,6 +1460,35 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
+    verify(transaction).upsert(upsert);
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void upsert_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+
+    Upsert upsert =
+        Upsert.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    // Act
+    spied.upsert(upsert);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
     verify(transaction).upsert(upsert);
     verify(transaction).commit();
   }
@@ -1292,6 +1521,35 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void update_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+
+    Update update =
+        Update.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .intValue("col", 0)
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    // Act
+    spied.update(update);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+    verify(transaction).update(update);
+    verify(transaction).commit();
+  }
+
+  @Test
   public void delete_ShouldDelete() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1309,6 +1567,34 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(false), eq(true));
+    verify(transaction).delete(delete);
+    verify(transaction).commit();
+  }
+
+  @Test
+  public void delete_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 0))
+            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .build();
+
+    // Act
+    spied.delete(delete);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
     verify(transaction).delete(delete);
     verify(transaction).commit();
   }
@@ -1402,6 +1688,41 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
+  public void mutate_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+
+    List<Mutation> mutations =
+        Arrays.asList(
+            Put.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 0))
+                .intValue("col", 0)
+                .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+                .build(),
+            Delete.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 1))
+                .build());
+
+    // Act
+    spied.mutate(mutations);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(false), eq(true));
+    verify(transaction).mutate(mutations);
+    verify(transaction).commit();
+  }
+
+  @Test
   public void batch_ShouldBatch() throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1411,8 +1732,9 @@ public class ConsensusCommitManagerTest {
         .when(spied)
         .begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
 
-    @SuppressWarnings("unchecked")
-    List<Operation> operations = mock(List.class);
+    List<Operation> operations =
+        Collections.singletonList(
+            Get.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 0)).build());
 
     @SuppressWarnings("unchecked")
     List<CrudOperable.BatchResult> batchResults = mock(List.class);
@@ -1424,6 +1746,41 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
+    verify(transaction).batch(operations);
+    verify(transaction).commit();
+    assertThat(actual).isEqualTo(batchResults);
+  }
+
+  @Test
+  public void batch_WithIsolationAttribute_ShouldBeginWithSpecifiedIsolation()
+      throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = mock(DistributedTransaction.class);
+
+    ConsensusCommitManager spied = spy(manager);
+    doReturn(transaction)
+        .when(spied)
+        .begin(anyString(), eq(Isolation.SERIALIZABLE), eq(true), eq(true));
+
+    List<Operation> operations =
+        Collections.singletonList(
+            Get.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .partitionKey(Key.ofInt("pk", 0))
+                .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+                .build());
+
+    @SuppressWarnings("unchecked")
+    List<CrudOperable.BatchResult> batchResults = mock(List.class);
+
+    when(transaction.batch(operations)).thenReturn(batchResults);
+
+    // Act
+    List<CrudOperable.BatchResult> actual = spied.batch(operations);
+
+    // Assert
+    verify(spied).begin(anyString(), eq(Isolation.SERIALIZABLE), eq(true), eq(true));
     verify(transaction).batch(operations);
     verify(transaction).commit();
     assertThat(actual).isEqualTo(batchResults);
