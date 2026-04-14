@@ -1,11 +1,12 @@
 package com.scalar.db.storage.objectstorage;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -82,7 +83,8 @@ public class OrcSerializer {
       }
       int idFieldIndex = schema.getFieldNames().indexOf("id");
 
-      InMemoryFileSystem memFs = new InMemoryFileSystem();
+      int estimatedSize = estimateOutputSize(partition, metadata);
+      InMemoryFileSystem memFs = new InMemoryFileSystem(estimatedSize);
       org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path("mem:///data.orc");
 
       try (Writer writer =
@@ -322,17 +324,61 @@ public class OrcSerializer {
   }
 
   /** In-memory Hadoop FileSystem to avoid temp file I/O for ORC read/write. */
+  private static int estimateOutputSize(
+      ObjectStoragePartition partition, ObjectStorageTableMetadata metadata) {
+    int recordCount = partition.getRecords().size();
+    if (recordCount == 0) {
+      return 1024;
+    }
+
+    long bytesPerRecord = 0;
+    for (String columnType : metadata.getColumns().values()) {
+      switch (columnType) {
+        case "boolean":
+          bytesPerRecord += 1;
+          break;
+        case "int":
+        case "float":
+        case "date":
+          bytesPerRecord += 4;
+          break;
+        case "bigint":
+        case "double":
+        case "time":
+        case "timestamp":
+        case "timestamptz":
+          bytesPerRecord += 8;
+          break;
+        case "text":
+          bytesPerRecord += 64;
+          break;
+        case "blob":
+          bytesPerRecord += 1024;
+          break;
+        default:
+          bytesPerRecord += 32;
+          break;
+      }
+    }
+
+    long estimated = (long) recordCount * bytesPerRecord;
+    return (int) Math.min(estimated, Integer.MAX_VALUE - 8);
+  }
+
   private static final class InMemoryFileSystem extends FileSystem {
     private final byte[] inputData;
-    private ByteArrayOutputStream outputBuffer;
+    private final int initialOutputCapacity;
+    private GrowableByteArrayOutputStream outputBuffer;
 
-    InMemoryFileSystem() {
+    InMemoryFileSystem(int initialOutputCapacity) {
       this.inputData = null;
+      this.initialOutputCapacity = initialOutputCapacity;
       setConf(HADOOP_CONF);
     }
 
     InMemoryFileSystem(byte[] data) {
       this.inputData = data;
+      this.initialOutputCapacity = 0;
       setConf(HADOOP_CONF);
     }
 
@@ -363,7 +409,7 @@ public class OrcSerializer {
         long blockSize,
         Progressable progress)
         throws IOException {
-      outputBuffer = new ByteArrayOutputStream();
+      outputBuffer = new GrowableByteArrayOutputStream(initialOutputCapacity);
       return new FSDataOutputStream(outputBuffer, null);
     }
 
@@ -463,6 +509,46 @@ public class OrcSerializer {
     @Override
     public void readFully(long position, byte[] buffer) throws IOException {
       readFully(position, buffer, 0, buffer.length);
+    }
+  }
+
+  /**
+   * OutputStream backed by a growable byte array. Uses 1.5x growth factor and avoids copying on
+   * {@link #toByteArray()} when the buffer is exactly filled.
+   */
+  private static final class GrowableByteArrayOutputStream extends OutputStream {
+    private byte[] buf;
+    private int count;
+
+    GrowableByteArrayOutputStream(int initialCapacity) {
+      buf = new byte[Math.max(initialCapacity, 256)];
+    }
+
+    @Override
+    public void write(int b) {
+      ensureCapacity(count + 1);
+      buf[count++] = (byte) b;
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) {
+      ensureCapacity(count + len);
+      System.arraycopy(b, off, buf, count, len);
+      count += len;
+    }
+
+    private void ensureCapacity(int minCapacity) {
+      if (minCapacity > buf.length) {
+        buf = Arrays.copyOf(buf, Math.max(buf.length + (buf.length >> 1), minCapacity));
+      }
+    }
+
+    byte[] toByteArray() {
+      return count == buf.length ? buf : Arrays.copyOf(buf, count);
+    }
+
+    int size() {
+      return count;
     }
   }
 }
