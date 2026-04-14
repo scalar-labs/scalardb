@@ -1,0 +1,72 @@
+name: CI Parallel Forks Test
+
+on:
+  push:
+
+env:
+  TERM: dumb
+
+jobs:
+  check:
+    name: Gradle check (maxParallelForks=${{ matrix.max-parallel-forks }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        max-parallel-forks: [1, 2, 3, 4, 5]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v5
+        with:
+          java-version: 8
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Execute Gradle 'check' task
+        id: run-gradle-check
+        run: ./gradlew check buildSrc:check -Dscalardb.max_parallel_fork=${{ matrix.max-parallel-forks }}
+
+      - name: Save Gradle test reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_test_reports/core
+          mkdir -p /tmp/gradle_test_reports/schema-loader
+          mkdir -p /tmp/gradle_test_reports/data-loader/core
+          mkdir -p /tmp/gradle_test_reports/data-loader/cli
+          cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
+          cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
+          cp -a data-loader/core/build/reports/tests/test /tmp/gradle_test_reports/data-loader/core/
+          cp -a data-loader/cli/build/reports/tests/test /tmp/gradle_test_reports/data-loader/cli/
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.run-gradle-check.outcome == 'success' && 'success' || 'failure' }}_gradle_check_reports_forks_${{ matrix.max-parallel-forks }}
+          path: /tmp/gradle_test_reports
+
+      - name: Save SpotBugs reports
+        if: always()
+        run: |
+          mkdir -p /tmp/gradle_spotbugs_reports/core
+          mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
+          mkdir -p /tmp/gradle_spotbugs_reports/integration-test
+          mkdir -p /tmp/gradle_spotbugs_reports/data-loader/core
+          mkdir -p /tmp/gradle_spotbugs_reports/data-loader/cli
+          cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
+          cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
+          cp -a integration-test/build/reports/spotbugs /tmp/gradle_spotbugs_reports/integration-test/
+          cp -a data-loader/core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/data-loader/core/
+          cp -a data-loader/cli/build/reports/spotbugs /tmp/gradle_spotbugs_reports/data-loader/cli/
+
+      - name: Upload Spotbugs reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.run-gradle-check.outcome == 'success' && 'success' || 'failure' }}_gradle_spotbugs_reports_forks_${{ matrix.max-parallel-forks }}
+          path: /tmp/gradle_spotbugs_reports

@@ -184,8 +184,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
     // Act
     waitForDifferentSessionDdl();
-    int exitCode =
-        executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
+    int exitCode = executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -223,8 +222,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
     try {
       // Act
       waitForDifferentSessionDdl();
-      int exitCode =
-          executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
+      int exitCode = executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
 
       // Assert
       assertThat(exitCode).isEqualTo(0);
@@ -264,8 +262,7 @@ public abstract class SchemaLoaderImportIntegrationTestBase {
 
     // Act
     waitForDifferentSessionDdl();
-    int exitCode =
-        executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
+    int exitCode = executeWithArgs(getCommandArgsForImport(configFilePath, importSchemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(1);

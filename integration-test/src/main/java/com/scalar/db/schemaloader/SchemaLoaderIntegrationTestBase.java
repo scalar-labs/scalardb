@@ -441,8 +441,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
     adminTestUtils.dropMetadataTable();
     adminTestUtils.dropTable(namespace1, TABLE_1);
@@ -450,8 +449,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     int exitCodeReparation =
-        executeWithArgs(
-            getCommandArgsForReparationWithCoordinator(configFilePath, schemaFilePath));
+        executeWithArgs(getCommandArgsForReparationWithCoordinator(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCodeReparation).isZero();
@@ -472,8 +470,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   public void createTableThenAlterTables_ShouldExecuteProperly() throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
 
     TableMetadata expectedTable1Metadata =
@@ -506,8 +503,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
       throws Exception {
     // Arrange
     int exitCodeCreation =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
     assertThat(exitCodeCreation).isZero();
     adminTestUtils.dropNamespacesTable();
 
@@ -524,8 +520,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void createTables_ShouldCreateTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeWithArgs(
-            getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
+        executeWithArgs(getCommandArgsForCreationWithCoordinator(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
@@ -569,8 +564,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {
     // Act
     int exitCode =
-        executeWithArgs(
-            getCommandArgsForDeletionWithCoordinator(configFilePath, schemaFilePath));
+        executeWithArgs(getCommandArgsForDeletionWithCoordinator(configFilePath, schemaFilePath));
 
     // Assert
     assertThat(exitCode).isEqualTo(0);
