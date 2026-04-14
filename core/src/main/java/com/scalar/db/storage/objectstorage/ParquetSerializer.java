@@ -46,7 +46,7 @@ public class ParquetSerializer {
                 outputFile, new ObjectStorageRecordWriteSupport(schema, metadata))
             .withCompressionCodec(compressionCodec)
             .withDictionaryEncoding(true)
-            .withRowGroupSize(4 * 1024 * 1024L) // 4MB
+            .withRowGroupSize(128 * 1024 * 1024L) // 128MB
             .withPageSize(256 * 1024) // 256KB
             .withValidation(false);
 
