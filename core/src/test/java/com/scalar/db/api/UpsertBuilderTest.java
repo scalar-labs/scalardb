@@ -3,7 +3,6 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
@@ -87,8 +86,8 @@ public class UpsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -117,10 +116,9 @@ public class UpsertBuilderTest {
     Assertions.<Key>assertThat(actual.getPartitionKey()).isEqualTo(partitionKey1);
     assertThat(actual.getClusteringKey()).hasValue(clusteringKey1);
     assertThat(actual.getColumns().size()).isEqualTo(18);
-    assertThat(actual.getColumns().get("bigint1").getBigIntValue())
-        .isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(actual.getColumns().get("bigint1").getBigIntValue()).isEqualTo(Long.MAX_VALUE);
     assertThat(actual.getColumns().get("bigint2").getBigIntValue())
-        .isEqualTo(Long.valueOf(BigIntColumn.MAX_VALUE));
+        .isEqualTo(Long.valueOf(Long.MAX_VALUE));
     assertThat(actual.getColumns().get("blob1").getBlobValueAsBytes())
         .isEqualTo("blob".getBytes(StandardCharsets.UTF_8));
     assertThat(actual.getColumns().get("blob2").getBlobValueAsByteBuffer())
@@ -230,8 +228,8 @@ public class UpsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -266,8 +264,8 @@ public class UpsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -293,7 +291,7 @@ public class UpsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
+            .bigIntValue("bigint1", Long.MAX_VALUE)
             .readTag("policyName1", "readTag")
             .writeTag("policyName2", "writeTag")
             .build();
@@ -306,8 +304,8 @@ public class UpsertBuilderTest {
             .partitionKey(partitionKey2)
             .clusteringKey(clusteringKey2)
             .clearValues()
-            .bigIntValue("bigint1", BigIntColumn.MIN_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MIN_VALUE))
+            .bigIntValue("bigint1", Long.MIN_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MIN_VALUE))
             .blobValue("blob1", "foo".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(2))
             .booleanValue("bool1", false)
@@ -344,10 +342,9 @@ public class UpsertBuilderTest {
     Assertions.<Key>assertThat(newUpsert1.getPartitionKey()).isEqualTo(partitionKey2);
     assertThat(newUpsert1.getClusteringKey()).hasValue(clusteringKey2);
     assertThat(newUpsert1.getColumns().size()).isEqualTo(18);
-    assertThat(newUpsert1.getColumns().get("bigint1").getBigIntValue())
-        .isEqualTo(BigIntColumn.MIN_VALUE);
+    assertThat(newUpsert1.getColumns().get("bigint1").getBigIntValue()).isEqualTo(Long.MIN_VALUE);
     assertThat(newUpsert1.getColumns().get("bigint2").getBigIntValue())
-        .isEqualTo(Long.valueOf(BigIntColumn.MIN_VALUE));
+        .isEqualTo(Long.valueOf(Long.MIN_VALUE));
     assertThat(newUpsert1.getColumns().get("blob1").getBlobValueAsBytes())
         .isEqualTo("foo".getBytes(StandardCharsets.UTF_8));
     assertThat(newUpsert1.getColumns().get("blob2").getBlobValueAsByteBuffer())
@@ -392,8 +389,7 @@ public class UpsertBuilderTest {
     Assertions.<Key>assertThat(newUpsert2.getPartitionKey()).isEqualTo(partitionKey1);
     assertThat(newUpsert2.getClusteringKey()).hasValue(clusteringKey1);
     assertThat(newUpsert2.getColumns().size()).isEqualTo(1);
-    assertThat(newUpsert2.getColumns().get("bigint1").getBigIntValue())
-        .isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(newUpsert2.getColumns().get("bigint1").getBigIntValue()).isEqualTo(Long.MAX_VALUE);
     assertThat(newUpsert2.getAttributes()).isEmpty();
   }
 
