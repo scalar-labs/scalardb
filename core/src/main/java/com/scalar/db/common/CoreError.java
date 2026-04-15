@@ -292,10 +292,10 @@ public enum CoreError implements ScalarDbError {
           + "to use cross-partition scan with filtering or ordering",
       "",
       ""),
-  OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+  COSMOS_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
       Category.USER_ERROR,
       "0063",
-      "This column value is out of range for BigInt. Value: %s",
+      "This column value is out of range for BigInt in Cosmos DB. Value: %s",
       "",
       ""),
   KEY_BUILD_ERROR_UNSUPPORTED_TYPE(
@@ -1047,6 +1047,12 @@ public enum CoreError implements ScalarDbError {
       "The column definition must be specified since %s is specified as a secondary index",
       "",
       ""),
+  OBJECT_STORAGE_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+      Category.USER_ERROR,
+      "0282",
+      "This column value is out of range for BigInt in Object Storage. Value: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1180,13 +1186,13 @@ public enum CoreError implements ScalarDbError {
       "A transaction conflict occurred in the mutation. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
       Category.CONCURRENCY_ERROR,
       "0028",
       "Before-image index recovery retry limit exceeded. Transaction ID: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
       Category.CONCURRENCY_ERROR,
       "0029",
       "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",

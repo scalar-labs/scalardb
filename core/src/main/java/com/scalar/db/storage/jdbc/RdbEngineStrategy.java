@@ -196,6 +196,8 @@ public interface RdbEngineStrategy {
     return likeExpression.getEscape();
   }
 
+  boolean isUndefinedIndexError(SQLException e);
+
   boolean isDuplicateIndexError(SQLException e);
 
   String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);

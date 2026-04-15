@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
+  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
   public RdbEnginePostgresql() {
@@ -70,7 +71,10 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       sqls.add(
           "CREATE UNIQUE INDEX "
               + (ifNotExists ? "IF NOT EXISTS " : "")
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -190,6 +194,16 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     // 40001: serialization_failure
     // 40P01: deadlock_detected
     return e.getSQLState().equals("40001") || e.getSQLState().equals("40P01");
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
+    // 42704: undefined_object (DROP INDEX returns this)
+    // 42P01: undefined_table (ALTER INDEX RENAME returns this, as indexes are relations)
+    return e.getSQLState().equals("42704") || e.getSQLState().equals("42P01");
   }
 
   @Override
