@@ -67,7 +67,7 @@ public class UnitTestUtils {
   public static final String TEST_VALUE_TX_ID = "txt value 464654654";
   public static final Float TEST_VALUE_FLOAT = Float.MIN_VALUE;
   public static final int TEST_VALUE_INT = Integer.MAX_VALUE;
-  public static final Long TEST_VALUE_LONG = BigIntColumn.MAX_VALUE;
+  public static final Long TEST_VALUE_LONG = Long.MAX_VALUE;
   public static final boolean TEST_VALUE_BOOLEAN = true;
   public static final double TEST_VALUE_DOUBLE = Double.MIN_VALUE;
   public static final LocalDate TEST_VALUE_DATE = LocalDate.of(2000, 1, 1);

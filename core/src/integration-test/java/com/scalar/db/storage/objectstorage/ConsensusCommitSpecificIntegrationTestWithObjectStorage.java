@@ -266,6 +266,24 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
   @Override
   @Disabled("Object Storage does not support index-related operations")
   public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
       scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
           Isolation isolation) {}
 

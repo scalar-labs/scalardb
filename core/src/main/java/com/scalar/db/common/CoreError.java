@@ -292,10 +292,10 @@ public enum CoreError implements ScalarDbError {
           + "to use cross-partition scan with filtering or ordering",
       "",
       ""),
-  OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+  COSMOS_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
       Category.USER_ERROR,
       "0063",
-      "This column value is out of range for BigInt. Value: %s",
+      "This column value is out of range for BigInt in Cosmos DB. Value: %s",
       "",
       ""),
   KEY_BUILD_ERROR_UNSUPPORTED_TYPE(
@@ -1045,6 +1045,12 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0281",
       "The column definition must be specified since %s is specified as a secondary index",
+      "",
+      ""),
+  OBJECT_STORAGE_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+      Category.USER_ERROR,
+      "0282",
+      "This column value is out of range for BigInt in Object Storage. Value: %s",
       "",
       ""),
 

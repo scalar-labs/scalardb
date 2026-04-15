@@ -228,7 +228,7 @@ class KeyUtilsTest {
     Optional<Key> key =
         KeyUtils.createPartitionKeyFromSource(partitionKeySet, dataTypeByColumnName, sourceRecord);
     assertEquals(
-        "Optional[Key{BigIntColumn{name=col1, value=9007199254740992, hasNullValue=false}}]",
+        "Optional[Key{BigIntColumn{name=col1, value=9223372036854775807, hasNullValue=false}}]",
         key.toString());
   }
 
