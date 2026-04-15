@@ -26,6 +26,10 @@ import com.scalar.db.io.TimestampTZColumn;
 import java.nio.ByteBuffer;
 
 public class ObjectStorageOperationChecker extends OperationChecker {
+
+  private static final long BIGINT_MAX_VALUE = 9007199254740992L;
+  private static final long BIGINT_MIN_VALUE = -9007199254740992L;
+
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
     ObjectStorageUtils.OBJECT_KEY_DELIMITER, ObjectStorageUtils.CONCATENATED_KEY_DELIMITER,
   };
@@ -39,7 +43,9 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         public void visit(IntColumn column) {}
 
         @Override
-        public void visit(BigIntColumn column) {}
+        public void visit(BigIntColumn column) {
+          checkBigIntValueRange(column);
+        }
 
         @Override
         public void visit(FloatColumn column) {}
@@ -87,7 +93,9 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         public void visit(IntColumn column) {}
 
         @Override
-        public void visit(BigIntColumn column) {}
+        public void visit(BigIntColumn column) {
+          checkBigIntValueRange(column);
+        }
 
         @Override
         public void visit(FloatColumn column) {}
@@ -172,5 +180,16 @@ public class ObjectStorageOperationChecker extends OperationChecker {
         .getClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
+  }
+
+  private static void checkBigIntValueRange(BigIntColumn column) {
+    if (column.hasNullValue()) {
+      return;
+    }
+    long value = column.getBigIntValue();
+    if (value < BIGINT_MIN_VALUE || value > BIGINT_MAX_VALUE) {
+      throw new IllegalArgumentException(
+          CoreError.OBJECT_STORAGE_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT.buildMessage(value));
+    }
   }
 }

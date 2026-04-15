@@ -2,21 +2,14 @@ package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
-import com.scalar.db.common.CoreError;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
-/**
- * A {@code Column} for a BIGINT type. It is for a signed integer from -2^53 to 2^53. The range is
- * determined by the numbers Double-precision floating-point format can exactly represent.
- */
+/** A {@code Column} for a BIGINT type. */
 @Immutable
 public class BigIntColumn implements Column<Long> {
-
-  public static final long MAX_VALUE = 9007199254740992L;
-  public static final long MIN_VALUE = -9007199254740992L;
 
   private final String name;
   private final long value;
@@ -32,10 +25,6 @@ public class BigIntColumn implements Column<Long> {
 
   private BigIntColumn(String name, long value, boolean hasNullValue) {
     this.name = Objects.requireNonNull(name);
-    if (value < MIN_VALUE || value > MAX_VALUE) {
-      throw new IllegalArgumentException(
-          CoreError.OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT.buildMessage(value));
-    }
     this.value = value;
     this.hasNullValue = hasNullValue;
   }
