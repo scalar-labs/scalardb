@@ -109,8 +109,8 @@ public class PutBuilderTest {
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
             .consistency(Consistency.EVENTUAL)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -156,8 +156,8 @@ public class PutBuilderTest {
                     "true"),
                 condition1,
                 ImmutableMap.<String, Column<?>>builder()
-                    .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
-                    .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                    .put("bigint1", BigIntColumn.of("bigint1", Long.MAX_VALUE))
+                    .put("bigint2", BigIntColumn.of("bigint2", Long.MAX_VALUE))
                     .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
                     .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
                     .put("bool1", BooleanColumn.of("bool1", true))
@@ -265,8 +265,8 @@ public class PutBuilderTest {
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             condition1,
             ImmutableMap.<String, Column<?>>builder()
-                .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
-                .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                .put("bigint1", BigIntColumn.of("bigint1", Long.MAX_VALUE))
+                .put("bigint2", BigIntColumn.of("bigint2", Long.MAX_VALUE))
                 .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
                 .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
                 .put("bool1", BooleanColumn.of("bool1", true))
@@ -305,8 +305,8 @@ public class PutBuilderTest {
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             condition1,
             ImmutableMap.<String, Column<?>>builder()
-                .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
-                .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                .put("bigint1", BigIntColumn.of("bigint1", Long.MAX_VALUE))
+                .put("bigint2", BigIntColumn.of("bigint2", Long.MAX_VALUE))
                 .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
                 .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
                 .put("bool1", BooleanColumn.of("bool1", true))
@@ -335,8 +335,8 @@ public class PutBuilderTest {
             .clusteringKey(clusteringKey2)
             .consistency(Consistency.LINEARIZABLE)
             .clearValues()
-            .bigIntValue("bigint1", BigIntColumn.MIN_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MIN_VALUE))
+            .bigIntValue("bigint1", Long.MIN_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MIN_VALUE))
             .blobValue("blob1", "foo".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(2))
             .booleanValue("bool1", false)
@@ -384,8 +384,8 @@ public class PutBuilderTest {
                     "true"),
                 condition2,
                 ImmutableMap.<String, Column<?>>builder()
-                    .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MIN_VALUE))
-                    .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MIN_VALUE))
+                    .put("bigint1", BigIntColumn.of("bigint1", Long.MIN_VALUE))
+                    .put("bigint2", BigIntColumn.of("bigint2", Long.MIN_VALUE))
                     .put("blob1", BlobColumn.of("blob1", "foo".getBytes(StandardCharsets.UTF_8)))
                     .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(2)))
                     .put("bool1", BooleanColumn.of("bool1", false))
