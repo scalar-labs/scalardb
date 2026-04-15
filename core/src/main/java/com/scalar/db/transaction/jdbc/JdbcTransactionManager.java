@@ -44,8 +44,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -96,24 +96,14 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public DistributedTransaction begin() throws TransactionException {
-    String txId = UUID.randomUUID().toString();
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
     return begin(txId, false);
   }
 
   @Override
-  public DistributedTransaction begin(String txId) throws TransactionException {
-    return begin(txId, false);
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly() throws TransactionException {
-    String txId = UUID.randomUUID().toString();
-    return begin(txId, true);
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
     return begin(txId, true);
   }
 

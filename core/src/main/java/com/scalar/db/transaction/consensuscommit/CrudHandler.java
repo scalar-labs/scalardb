@@ -24,6 +24,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -143,6 +144,7 @@ public class CrudHandler {
 
     for (int i = 0; ; i++) {
       @Nullable Snapshot.Key key = originalKey;
+      boolean indexKeyFilteredOut = false;
 
       Optional<TransactionResult> result = getFromStorage(get, metadata, context.transactionId);
       if (result.isPresent() && !result.get().isCommitted()) {
@@ -156,12 +158,23 @@ public class CrudHandler {
 
         RecoveryExecutor.Result recoveryResult = executeRecovery(key, get, result.get(), context);
         context.recoveryResults.add(recoveryResult);
-        result = recoveryResult.recoveredResult;
+
+        // After recovery (e.g., rollback), the index column value may have changed back to its
+        // original value, which might not match the queried index key. Filter out such results.
+        if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
+          Optional<TransactionResult> unfiltered = recoveryResult.recoveredResult;
+          result = unfiltered.filter(r -> resultMatchesIndexKey(get, r));
+          if (unfiltered.isPresent() && !result.isPresent()) {
+            indexKeyFilteredOut = true;
+          }
+        } else {
+          result = recoveryResult.recoveredResult;
+        }
       }
 
+      // Because we also get records whose before images match the conjunctions, we need to check if
+      // the current status of the records actually match the conjunctions.
       if (!get.getConjunctions().isEmpty()) {
-        // Because we also get records whose before images match the conjunctions, we need to check
-        // if the current status of the records actually match the conjunctions.
         result =
             result.filter(
                 r ->
@@ -175,19 +188,31 @@ public class CrudHandler {
       if (beforeIndexCheckRequired && checkAndRecoverBeforeIndexRecords(get, context, txMetadata)) {
         if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
           throw new CrudConflictException(
-              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
-                  .buildMessage(context.transactionId),
+              CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED.buildMessage(
+                  context.transactionId),
               context.transactionId);
         }
         continue;
       }
 
-      // Put the result in the snapshot
-      if (result.isPresent() || get.getConjunctions().isEmpty()) {
-        // We put the result into the read set only if a get operation has no conjunction or the
-        // result exists. This is because we don’t know whether the record actually exists or not
-        // due to the conjunction.
-
+      // Put the result in the snapshot.
+      //
+      // When the result is present, we always cache it. When the result is absent, we cache
+      // Optional.empty() only when we are certain that no record exists for this key. That
+      // requires both of the following conditions to hold:
+      //
+      //   (a) get.getConjunctions().isEmpty(): the Get has no conjunctions (additional
+      //       predicates applied on top of the key/index lookup). If conjunctions exist, a
+      //       record may actually exist for this key but have been filtered out by the
+      //       conjunctions above. In that case we cannot conclude that the record is absent, so
+      //       we must not cache Optional.empty().
+      //
+      //   (b) !indexKeyFilteredOut: the result was not discarded by the post-rollback
+      //       index-key check above. If it was, a record does exist for this key, but its
+      //       index column value was reverted by rollback to a value that no longer matches the
+      //       queried index key. Caching Optional.empty() in that case would be incorrect
+      //       because the record still exists with a different index value.
+      if (result.isPresent() || (get.getConjunctions().isEmpty() && !indexKeyFilteredOut)) {
         if (key != null) {
           putIntoReadSetInSnapshot(key, result, context);
         } else {
@@ -263,7 +288,7 @@ public class CrudHandler {
           TransactionResult result = new TransactionResult(r);
           Snapshot.Key key = new Snapshot.Key(scan, r, metadata);
           Optional<TransactionResult> processedScanResult =
-              processScanResult(key, scan, result, context);
+              processScanResult(key, scan, result, context, metadata);
           processedScanResult.ifPresent(res -> results.put(key, res));
 
           if (scan.getLimit() > 0 && results.size() >= scan.getLimit()) {
@@ -272,17 +297,15 @@ public class CrudHandler {
           }
         }
       } catch (RuntimeException e) {
-        Exception exception;
         if (e.getCause() instanceof ExecutionException) {
-          exception = (ExecutionException) e.getCause();
-        } else {
-          exception = e;
+          ExecutionException cause = (ExecutionException) e.getCause();
+          throw new CrudException(
+              CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+                  cause.getMessage()),
+              cause,
+              context.transactionId);
         }
-        throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-                exception.getMessage()),
-            exception,
-            context.transactionId);
+        throw e;
       } catch (IOException e) {
         logger.warn("Failed to close the scanner. Transaction ID: {}", context.transactionId, e);
       }
@@ -294,8 +317,8 @@ public class CrudHandler {
           && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
         if (i >= MAX_BEFORE_INDEX_CHECK_RETRIES - 1) {
           throw new CrudConflictException(
-              CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED
-                  .buildMessage(context.transactionId),
+              CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED.buildMessage(
+                  context.transactionId),
               context.transactionId);
         }
         continue;
@@ -309,28 +332,38 @@ public class CrudHandler {
   }
 
   private Optional<TransactionResult> processScanResult(
-      Snapshot.Key key, Scan scan, TransactionResult result, TransactionContext context)
+      Snapshot.Key key,
+      Scan scan,
+      TransactionResult result,
+      TransactionContext context,
+      TableMetadata metadata)
       throws CrudException {
     Optional<TransactionResult> ret;
     if (!result.isCommitted()) {
       // Lazy recovery
       RecoveryExecutor.Result recoveryResult = executeRecovery(key, scan, result, context);
       context.recoveryResults.add(recoveryResult);
-      ret = recoveryResult.recoveredResult;
+
+      // After recovery (e.g., rollback), the index column value may have changed back to its
+      // original value, which might not match the queried index key. Filter out such results.
+      if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
+        ret = recoveryResult.recoveredResult.filter(r -> resultMatchesIndexKey(scan, r));
+      } else {
+        ret = recoveryResult.recoveredResult;
+      }
     } else {
       ret = Optional.of(result);
     }
 
+    // Because we also get records whose before images match the conjunctions, we need to check if
+    // the current status of the records actually match the conjunctions.
     if (!scan.getConjunctions().isEmpty()) {
-      // Because we also get records whose before images match the conjunctions, we need to check if
-      // the current status of the records actually match the conjunctions.
       ret =
           ret.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
                       r.getColumns(), scan.getConjunctions()));
     }
-
     if (ret.isPresent()) {
       putIntoReadSetInSnapshot(key, ret, context);
     }
@@ -622,10 +655,10 @@ public class CrudHandler {
    * <p>If the before-image index does not exist (e.g., for tables created before the before-image
    * index check feature was introduced), the check is skipped. In SNAPSHOT and READ_COMMITTED
    * isolation, this means index-based reads may return eventually consistent results, which is a
-   * known limitation (a warning is logged at startup via {@code
-   * warnIfBeforeImageIndexesAreMissing}). In SERIALIZABLE isolation, this case does not occur
-   * because {@link ConsensusCommitOperationChecker} rejects index-based operations on tables
-   * without before-image indexes.
+   * known limitation (a warning is logged at startup via {@code warnIfBeforeIndexesAreMissing}). In
+   * SERIALIZABLE isolation, this case does not occur because {@link
+   * ConsensusCommitOperationChecker} rejects index-based operations on tables without before-image
+   * indexes.
    *
    * @param selection the selection operation
    * @param metadata the transaction table metadata
@@ -656,6 +689,22 @@ public class CrudHandler {
     }
 
     return false;
+  }
+
+  /**
+   * Checks if the result's index column value matches the queried index key value. This is needed
+   * because after lazy recovery (e.g., rollback), the index column value may revert to its original
+   * value, which might not match the queried index key.
+   *
+   * @param selection the index-based selection operation
+   * @param result the result to check
+   * @return true if the result's index column matches the queried index key
+   */
+  private boolean resultMatchesIndexKey(Selection selection, TransactionResult result) {
+    assert selection.getPartitionKey().getColumns().size() == 1;
+    Column<?> indexColumn = selection.getPartitionKey().getColumns().get(0);
+    Column<?> resultColumn = result.getColumns().get(indexColumn.getName());
+    return resultColumn != null && resultColumn.equals(indexColumn);
   }
 
   /**
@@ -723,17 +772,15 @@ public class CrudHandler {
         }
       }
     } catch (RuntimeException e) {
-      Exception exception;
       if (e.getCause() instanceof ExecutionException) {
-        exception = (ExecutionException) e.getCause();
-      } else {
-        exception = e;
+        ExecutionException cause = (ExecutionException) e.getCause();
+        throw new CrudException(
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
+                cause.getMessage()),
+            cause,
+            context.transactionId);
       }
-      throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-              exception.getMessage()),
-          exception,
-          context.transactionId);
+      throw e;
     } catch (ExecutionException e) {
       throw new CrudException(
           CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
@@ -805,7 +852,7 @@ public class CrudHandler {
           TransactionResult result = new TransactionResult(r.get());
 
           Optional<TransactionResult> processedScanResult =
-              processScanResult(key, scan, result, context);
+              processScanResult(key, scan, result, context, metadata);
           if (!processedScanResult.isPresent()) {
             continue;
           }
@@ -870,7 +917,7 @@ public class CrudHandler {
       if (requiresBeforeIndexCheck(scan, txMetadata)
           && checkAndRecoverBeforeIndexRecords(scan, context, txMetadata)) {
         throw new CrudConflictException(
-            CoreError.CONSENSUS_COMMIT_BEFORE_IMAGE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
+            CoreError.CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER.buildMessage(
                 context.transactionId),
             context.transactionId);
       }
