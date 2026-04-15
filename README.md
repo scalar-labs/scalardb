@@ -80,4 +80,4 @@ When contributing to this project, please follow these guidelines.
 
 ## License
 
-See [licenses](./licenses/) directory.
+See the [LICENSE](./LICENSE) file and the [licenses](./licenses/) directory.
