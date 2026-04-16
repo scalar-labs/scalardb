@@ -750,6 +750,127 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void
+      repairTableWithBeforeAfterState_withOldAndNewMetadataGiven_shouldRepairWithTransactionColumnsAdded()
+          throws ExecutionException {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    String oldTable = "old_table";
+    String newTable = "new_table";
+
+    TableMetadata oldTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+    TableMetadata newTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    TableMetadata expectedOld =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .addSecondaryIndex(Attribute.BEFORE_PREFIX + BALANCE)
+            .build();
+    TableMetadata expectedNew =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairTable(NAMESPACE, oldTable, oldTableMetadata, newTable, newTableMetadata, options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .repairTable(NAMESPACE, oldTable, expectedOld, newTable, expectedNew, options);
+  }
+
+  @Test
+  public void
+      repairTableWithBeforeAfterState_withNullOldMetadata_shouldRepairWithTransactionColumnsAddedForNewOnly()
+          throws ExecutionException {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String BALANCE = "balance";
+
+    TableMetadata newTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .build();
+
+    TableMetadata expectedNew =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairTable(NAMESPACE, null, null, TABLE, newTableMetadata, options);
+
+    // Assert
+    verify(distributedStorageAdmin).repairTable(NAMESPACE, null, null, TABLE, expectedNew, options);
+  }
+
+  @Test
   public void repairCoordinatorTables_ShouldCallDistributedStorageAdminProperly()
       throws ExecutionException {
     // Arrange

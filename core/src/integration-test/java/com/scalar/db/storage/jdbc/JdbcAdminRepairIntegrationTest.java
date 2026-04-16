@@ -12,7 +12,6 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class JdbcAdminRepairIntegrationTest
@@ -442,34 +441,42 @@ public class JdbcAdminRepairIntegrationTest
     assertThat(admin.namespaceExists(getNamespace())).isTrue();
   }
 
-  // Limitation tests (@Disabled) - will be enabled when repairTable is enhanced
+  // Tests for repairTable with before/after state (A→B model)
 
   @Test
-  @Disabled(
-      "Current repairTable does not clean up old table metadata after renameTable. "
-          + "Will be enabled when repairTable is enhanced to accept before/after state.")
   public void repairTable_AfterRenameTable_ShouldCleanUpOldTableMetadata() throws Exception {
     // Arrange: Rename table at storage level (old metadata remains)
     jdbcAdminTestUtils.renameTable(getNamespace(), getTable(), RENAMED_TABLE);
 
-    // Act: repairTable for new table
+    // Act: repairTable with before/after state
     waitForDifferentSessionDdl();
-    admin.repairTable(getNamespace(), RENAMED_TABLE, getTableMetadata(), getCreationOptions());
+    admin.repairTable(
+        getNamespace(),
+        getTable(),
+        getTableMetadata(),
+        RENAMED_TABLE,
+        getTableMetadata(),
+        getCreationOptions());
 
-    // Assert: old table metadata should be cleaned up (currently it is NOT)
+    // Assert: old table metadata should be cleaned up
     waitForDifferentSessionDdl();
     assertThat(admin.getTableMetadata(getNamespace(), getTable())).isNull();
   }
 
   @Test
-  @Disabled("Current repairTable does not drop old-name indexes after renameTable.")
   public void repairTable_AfterRenameTable_ShouldDropOldNameIndexes() throws Exception {
     // Arrange: Rename table at storage level (indexes still have old names)
     jdbcAdminTestUtils.renameTable(getNamespace(), getTable(), RENAMED_TABLE);
 
     // Act
     waitForDifferentSessionDdl();
-    admin.repairTable(getNamespace(), RENAMED_TABLE, getTableMetadata(), getCreationOptions());
+    admin.repairTable(
+        getNamespace(),
+        getTable(),
+        getTableMetadata(),
+        RENAMED_TABLE,
+        getTableMetadata(),
+        getCreationOptions());
 
     // Assert: old-name indexes should not exist on the renamed table
     waitForDifferentSessionDdl();
@@ -482,7 +489,6 @@ public class JdbcAdminRepairIntegrationTest
   }
 
   @Test
-  @Disabled("Current repairTable does not drop old-name index after renameColumn.")
   public void repairTable_AfterRenameColumn_ShouldDropOldNameIndex() throws Exception {
     Assumptions.assumeFalse(JdbcTestUtils.isSqlite(rdbEngine));
 
@@ -498,7 +504,13 @@ public class JdbcAdminRepairIntegrationTest
 
     // Act
     waitForDifferentSessionDdl();
-    admin.repairTable(getNamespace(), getTable(), metadataWithC5New, getCreationOptions());
+    admin.repairTable(
+        getNamespace(),
+        getTable(),
+        getTableMetadata(),
+        getTable(),
+        metadataWithC5New,
+        getCreationOptions());
 
     // Assert: old-name index should not exist
     waitForDifferentSessionDdl();
@@ -507,7 +519,6 @@ public class JdbcAdminRepairIntegrationTest
   }
 
   @Test
-  @Disabled("Current repairTable cannot drop columns from storage.")
   public void repairTable_AfterDropColumn_ShouldDropColumnFromStorage() throws Exception {
     // Arrange: Drop index on c5, but keep the c5 column in storage
     String c5IndexName = JdbcAdminTestUtils.getIndexName(getNamespace(), getTable(), COL_NAME5);
@@ -522,9 +533,15 @@ public class JdbcAdminRepairIntegrationTest
 
     // Act
     waitForDifferentSessionDdl();
-    admin.repairTable(getNamespace(), getTable(), metadataWithoutC5, getCreationOptions());
+    admin.repairTable(
+        getNamespace(),
+        getTable(),
+        getTableMetadata(),
+        getTable(),
+        metadataWithoutC5,
+        getCreationOptions());
 
-    // Assert: c5 should not exist in storage (currently it does)
+    // Assert: c5 should not exist in storage
     waitForDifferentSessionDdl();
     assertThat(jdbcAdminTestUtils.columnExists(getNamespace(), getTable(), COL_NAME5)).isFalse();
   }

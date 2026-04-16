@@ -205,6 +205,30 @@ public class JdbcTransactionAdminTest {
   }
 
   @Test
+  public void repairTableWithBeforeAfterState_ShouldCallJdbcAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String oldTable = "old_tbl";
+    String newTable = "new_tbl";
+    TableMetadata oldMetadata =
+        TableMetadata.newBuilder().addColumn("c1", DataType.INT).addPartitionKey("c1").build();
+    TableMetadata newMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addPartitionKey("c1")
+            .build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairTable(namespace, oldTable, oldMetadata, newTable, newMetadata, options);
+
+    // Assert
+    verify(jdbcAdmin).repairTable(namespace, oldTable, oldMetadata, newTable, newMetadata, options);
+  }
+
+  @Test
   public void repairCoordinatorTables_ShouldDoNothing() {
     // Arrange
 

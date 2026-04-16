@@ -169,6 +169,48 @@ public class CommonDistributedStorageAdminTest {
   }
 
   @Test
+  public void repairTableWithBeforeAfterState_ShouldCallAdminProperly() throws ExecutionException {
+    // Arrange
+    String namespaceName = "ns";
+    String oldTableName = "old_tbl";
+    String newTableName = "new_tbl";
+
+    TableMetadata oldMetadata = mock(TableMetadata.class);
+    TableMetadata newMetadata = mock(TableMetadata.class);
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    // Act
+    commonDistributedStorageAdmin.repairTable(
+        namespaceName, oldTableName, oldMetadata, newTableName, newMetadata, options);
+
+    // Assert
+    verify(admin)
+        .repairTable(namespaceName, oldTableName, oldMetadata, newTableName, newMetadata, options);
+  }
+
+  @Test
+  public void
+      repairTableWithBeforeAfterState_TableMetadataWithEncryptedColumns_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String namespaceName = "ns";
+    String oldTableName = "old_tbl";
+    String newTableName = "new_tbl";
+
+    TableMetadata oldMetadata = mock(TableMetadata.class);
+    TableMetadata newMetadata = mock(TableMetadata.class);
+    when(newMetadata.getEncryptedColumnNames()).thenReturn(Collections.singleton("col"));
+
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                commonDistributedStorageAdmin.repairTable(
+                    namespaceName, oldTableName, oldMetadata, newTableName, newMetadata, options))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void createVirtualTable_ProperArgumentsGiven_ShouldCallAdminProperly()
       throws ExecutionException {
     // Arrange

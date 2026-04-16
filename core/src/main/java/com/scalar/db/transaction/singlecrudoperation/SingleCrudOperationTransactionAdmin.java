@@ -11,6 +11,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -100,6 +101,19 @@ public class SingleCrudOperationTransactionAdmin implements DistributedTransacti
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     distributedStorageAdmin.repairTable(namespace, table, metadata, options);
+  }
+
+  @Override
+  public void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    distributedStorageAdmin.repairTable(
+        namespace, oldTableName, oldMetadata, newTableName, newMetadata, options);
   }
 
   @Override

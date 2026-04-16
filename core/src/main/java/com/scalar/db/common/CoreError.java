@@ -1053,6 +1053,12 @@ public enum CoreError implements ScalarDbError {
       "This column value is out of range for BigInt in Object Storage. Value: %s",
       "",
       ""),
+  REPAIR_TABLE_WITH_BEFORE_AFTER_STATE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0283",
+      "The repairTable operation with before/after state is not supported for this storage implementation",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

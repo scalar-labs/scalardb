@@ -12,6 +12,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /** @deprecated As of release 3.5.0. Will be removed in release 5.0.0 */
@@ -88,6 +89,18 @@ public class AdminService implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     admin.repairTable(namespace, table, metadata, options);
+  }
+
+  @Override
+  public void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    admin.repairTable(namespace, oldTableName, oldMetadata, newTableName, newMetadata, options);
   }
 
   @Override

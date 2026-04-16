@@ -273,6 +273,29 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    if (!newMetadata.getEncryptedColumnNames().isEmpty()) {
+      throw new UnsupportedOperationException(CoreError.ENCRYPTION_NOT_ENABLED.buildMessage());
+    }
+
+    try {
+      admin.repairTable(namespace, oldTableName, oldMetadata, newTableName, newMetadata, options);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          CoreError.REPAIRING_TABLE_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, newTableName)),
+          e);
+    }
+  }
+
+  @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

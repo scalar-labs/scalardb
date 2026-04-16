@@ -1641,6 +1641,104 @@ public class JdbcAdminTest {
     verify(adminSpy).createIndex(connection, namespace, table, "c4", true);
   }
 
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      repairTableWithBeforeAfterState_WithNullOldMetadata_ShouldDelegateToExistingRepairTable(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+
+    // Act
+    adminSpy.repairTable(namespace, null, null, table, metadata, Collections.emptyMap());
+
+    // Assert: should delegate to the existing repairTable
+    verify(adminSpy).repairTable(namespace, table, metadata, Collections.emptyMap());
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      repairTableWithBeforeAfterState_ForSameTableSchemaChange_ShouldCallCreateTableAndAddTableMetadata(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata oldMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .build();
+    TableMetadata newMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Mock DatabaseMetaData for getStorageColumnNames
+    DatabaseMetaData dbMetaData = mock(DatabaseMetaData.class);
+    when(connection.getMetaData()).thenReturn(dbMetaData);
+    ResultSet columnsResultSet = mock(ResultSet.class);
+    when(dbMetaData.getColumns(any(), any(), eq(table), eq("%"))).thenReturn(columnsResultSet);
+    // Return c1, c2 as existing columns (c3 is new)
+    when(columnsResultSet.next()).thenReturn(true, true, false);
+    when(columnsResultSet.getString(JDBC_COL_COLUMN_NAME)).thenReturn("c1", "c2");
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+
+    // Act
+    adminSpy.repairTable(namespace, table, oldMetadata, table, newMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, table, newMetadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, newMetadata, true, true);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      repairTableWithBeforeAfterState_ForRenameTable_ShouldCallCreateTableAndAddTableMetadata(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String oldTable = "old_table";
+    String newTable = "new_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addSecondaryIndex("c2")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+
+    // Act
+    adminSpy.repairTable(namespace, oldTable, metadata, newTable, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).createTableInternal(connection, namespace, newTable, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, newTable, metadata, true, true);
+  }
+
   @Test
   public void
       createMetadataTableIfNotExists_WithInternalDbError_forMysql_shouldThrowInternalDbError()

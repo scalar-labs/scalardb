@@ -863,6 +863,228 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    if (oldMetadata == null) {
+      // createTable/importTable repair: delegate to existing repairTable
+      repairTable(namespace, newTableName, newMetadata, options);
+      return;
+    }
+
+    try {
+      withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          connection -> {
+            throwIfVirtualTableOrSourceTable(connection, namespace, newTableName, "repairTable()");
+
+            createMetadataSchemaIfNotExists(connection);
+
+            // Step 1: Ensure the new table exists at storage level
+            createTableInternal(connection, namespace, newTableName, newMetadata, true);
+
+            // Step 2: Column diff repair (only for same-table operations)
+            if (newTableName.equals(oldTableName)) {
+              repairColumns(connection, namespace, newTableName, oldMetadata, newMetadata);
+            }
+
+            // Step 3: Index diff repair
+            repairIndexes(
+                connection, namespace, oldTableName, oldMetadata, newTableName, newMetadata);
+
+            // Step 4: Column type adjustment (index-compatible types)
+            repairColumnTypes(connection, namespace, newTableName, newMetadata);
+
+            // Step 5: Metadata update
+            if (!newTableName.equals(oldTableName)) {
+              tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
+            }
+            addTableMetadata(connection, namespace, newTableName, newMetadata, true, true);
+          });
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          "Repairing the " + getFullTableName(namespace, newTableName) + " table failed ", e);
+    }
+  }
+
+  private void repairColumns(
+      Connection connection,
+      String namespace,
+      String table,
+      TableMetadata oldMetadata,
+      TableMetadata newMetadata)
+      throws SQLException {
+    Set<String> storageColumns = getStorageColumnNames(connection, namespace, table);
+    Set<String> oldColumns = oldMetadata.getColumnNames();
+    Set<String> newColumns = newMetadata.getColumnNames();
+
+    // Columns in newMetadata but not in storage: rename candidate from oldMetadata or ADD
+    for (String newCol : newColumns) {
+      if (!storageColumns.contains(newCol)) {
+        // Look for a rename candidate: a column in oldMetadata that is not in newMetadata
+        // and still exists in storage, with the same data type
+        String renameCandidate = null;
+        for (String oldCol : oldColumns) {
+          if (!newColumns.contains(oldCol)
+              && storageColumns.contains(oldCol)
+              && oldMetadata.getColumnDataType(oldCol) == newMetadata.getColumnDataType(newCol)) {
+            renameCandidate = oldCol;
+            break;
+          }
+        }
+
+        if (renameCandidate != null) {
+          // RENAME the column
+          String renameColumnStatement =
+              rdbEngine.renameColumnSql(
+                  namespace,
+                  table,
+                  renameCandidate,
+                  newCol,
+                  getVendorDbColumnType(newMetadata, newCol));
+          execute(connection, renameColumnStatement, requiresExplicitCommit);
+        } else {
+          // ADD the column
+          String addColumnStatement =
+              "ALTER TABLE "
+                  + encloseFullTableName(namespace, table)
+                  + " ADD "
+                  + enclose(newCol)
+                  + " "
+                  + getVendorDbColumnType(newMetadata, newCol);
+          execute(connection, addColumnStatement, requiresExplicitCommit);
+        }
+      }
+    }
+
+    // Columns in oldMetadata but not in newMetadata: DROP if still in storage
+    for (String oldCol : oldColumns) {
+      if (!newColumns.contains(oldCol) && storageColumns.contains(oldCol)) {
+        String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, oldCol);
+        execute(connection, dropColumnStatements, requiresExplicitCommit);
+      }
+    }
+
+    // Columns with different types between old and new: ALTER TYPE
+    for (String col : newColumns) {
+      if (oldColumns.contains(col)
+          && oldMetadata.getColumnDataType(col) != newMetadata.getColumnDataType(col)) {
+        String newStorageColumnType = getVendorDbColumnType(newMetadata, col);
+        String[] alterColumnTypeStatements =
+            rdbEngine.alterColumnTypeSql(namespace, table, col, newStorageColumnType);
+        execute(connection, alterColumnTypeStatements, requiresExplicitCommit);
+      }
+    }
+  }
+
+  private void repairIndexes(
+      Connection connection,
+      String namespace,
+      String oldTableName,
+      TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata)
+      throws SQLException {
+    Set<String> oldIndexes = oldMetadata.getSecondaryIndexNames();
+    Set<String> newIndexes = newMetadata.getSecondaryIndexNames();
+
+    // Drop indexes that exist in old but not in new (using old table's naming convention)
+    for (String oldIdx : oldIndexes) {
+      if (!newIndexes.contains(oldIdx)) {
+        dropIndexIfExists(connection, namespace, newTableName, oldTableName, oldIdx);
+      }
+    }
+
+    // If table was renamed, drop all old-name pattern indexes
+    if (!newTableName.equals(oldTableName)) {
+      for (String oldIdx : oldIndexes) {
+        dropIndexIfExists(connection, namespace, newTableName, oldTableName, oldIdx);
+      }
+    }
+
+    // Create indexes that should exist in new (using new table's naming convention)
+    for (String newIdx : newIndexes) {
+      createIndex(connection, namespace, newTableName, newIdx, true);
+    }
+  }
+
+  private void dropIndexIfExists(
+      Connection connection,
+      String namespace,
+      String actualTable,
+      String indexTableName,
+      String indexedColumn)
+      throws SQLException {
+    String indexName = getIndexName(namespace, indexTableName, indexedColumn);
+    String sql = rdbEngine.dropIndexSql(namespace, actualTable, indexName);
+    try {
+      execute(connection, sql, requiresExplicitCommit);
+    } catch (SQLException e) {
+      if (!rdbEngine.isUndefinedIndexError(e)) {
+        throw e;
+      }
+      // Fallback: try the original long name
+      String originalIndexName = getFullIndexName(namespace, indexTableName, indexedColumn);
+      if (originalIndexName.equals(indexName)) {
+        return; // Index does not exist
+      }
+      String fallbackSql = rdbEngine.dropIndexSql(namespace, actualTable, originalIndexName);
+      try {
+        execute(connection, fallbackSql, requiresExplicitCommit);
+      } catch (SQLException e2) {
+        if (!rdbEngine.isUndefinedIndexError(e2)) {
+          throw e2;
+        }
+        // Index does not exist, ignore
+      }
+    }
+  }
+
+  private void repairColumnTypes(
+      Connection connection, String namespace, String table, TableMetadata newMetadata)
+      throws SQLException {
+    for (String col : newMetadata.getColumnNames()) {
+      // Skip primary key columns (their types are already correct from createTableInternal)
+      if (newMetadata.getPartitionKeyNames().contains(col)
+          || newMetadata.getClusteringKeyNames().contains(col)) {
+        continue;
+      }
+
+      String expectedType = getVendorDbColumnType(newMetadata, col);
+      // Determine the type that would be used for a regular (non-indexed) column
+      String regularType = rdbEngine.getDataTypeForEngine(newMetadata.getColumnDataType(col));
+
+      // If expected and regular types differ, it means the column needs index-compatible type
+      // adjustment. We always apply the expected type to ensure correctness.
+      if (!expectedType.equals(regularType)) {
+        String[] alterColumnTypeStatements =
+            rdbEngine.alterColumnTypeSql(namespace, table, col, expectedType);
+        execute(connection, alterColumnTypeStatements, requiresExplicitCommit);
+      }
+    }
+  }
+
+  private Set<String> getStorageColumnNames(Connection connection, String namespace, String table)
+      throws SQLException {
+    String catalogName = rdbEngine.getCatalogName(namespace);
+    String schemaName = rdbEngine.getSchemaName(namespace);
+    DatabaseMetaData metadata = connection.getMetaData();
+    Set<String> columnNames = new LinkedHashSet<>();
+    try (ResultSet rs = metadata.getColumns(catalogName, schemaName, table, "%")) {
+      while (rs.next()) {
+        columnNames.add(rs.getString(JDBC_COL_COLUMN_NAME));
+      }
+    }
+    return columnNames;
+  }
+
+  @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -328,6 +329,29 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
         namespace,
         table,
         buildTransactionTableMetadata(metadata, isIndexEventuallyConsistentReadEnabled),
+        options);
+  }
+
+  @Override
+  public void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    checkNamespace(namespace);
+    throwIfTransactionMetadataDecouplingApplied(namespace, newTableName, "repairTable()");
+
+    admin.repairTable(
+        namespace,
+        oldTableName,
+        oldMetadata != null
+            ? buildTransactionTableMetadata(oldMetadata, isIndexEventuallyConsistentReadEnabled)
+            : null,
+        newTableName,
+        buildTransactionTableMetadata(newMetadata, isIndexEventuallyConsistentReadEnabled),
         options);
   }
 

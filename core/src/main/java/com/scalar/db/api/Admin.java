@@ -389,6 +389,43 @@ public interface Admin {
       throws ExecutionException;
 
   /**
+   * Repairs a table using the before/after state of a DDL operation. This method can repair
+   * scenarios that the basic {@link #repairTable(String, String, TableMetadata, Map)} cannot
+   * handle, such as cleaning up orphaned resources after {@code renameTable}, dropping columns
+   * removed by {@code dropColumn}, or removing old-name indexes after {@code renameColumn}.
+   *
+   * <ul>
+   *   <li>If {@code oldTableName} and {@code oldMetadata} are {@code null}, this is equivalent to a
+   *       {@code createTable}/{@code importTable} repair (same as the basic repairTable).
+   *   <li>If {@code oldTableName} equals {@code newTableName}, this repairs in-place schema changes
+   *       (e.g., addColumn, dropColumn, renameColumn, alterColumnType, createIndex, dropIndex).
+   *   <li>If {@code oldTableName} differs from {@code newTableName}, this repairs a {@code
+   *       renameTable} operation including old metadata cleanup and old-name index removal.
+   * </ul>
+   *
+   * @param namespace the namespace of the table
+   * @param oldTableName the table name before the DDL operation, or {@code null} for
+   *     createTable/importTable repair
+   * @param oldMetadata the table metadata before the DDL operation, or {@code null} for
+   *     createTable/importTable repair
+   * @param newTableName the table name after the DDL operation
+   * @param newMetadata the table metadata after the DDL operation
+   * @param options options to repair
+   * @throws ExecutionException if the operation fails
+   */
+  default void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(
+        CoreError.REPAIR_TABLE_WITH_BEFORE_AFTER_STATE_NOT_SUPPORTED.buildMessage());
+  }
+
+  /**
    * Adds a new column to an existing table. The new column cannot be a partition or clustering key.
    * <br>
    * <br>

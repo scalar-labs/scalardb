@@ -181,6 +181,19 @@ public abstract class DecoratedDistributedTransactionAdmin implements Distribute
   }
 
   @Override
+  public void repairTable(
+      String namespace,
+      @Nullable String oldTableName,
+      @Nullable TableMetadata oldMetadata,
+      String newTableName,
+      TableMetadata newMetadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    distributedTransactionAdmin.repairTable(
+        namespace, oldTableName, oldMetadata, newTableName, newMetadata, options);
+  }
+
+  @Override
   public void addNewColumnToTable(
       String namespace, String table, String columnName, DataType columnType)
       throws ExecutionException {

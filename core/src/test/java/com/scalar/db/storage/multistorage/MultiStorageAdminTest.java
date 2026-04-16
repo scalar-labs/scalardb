@@ -440,6 +440,42 @@ public class MultiStorageAdminTest {
   }
 
   @Test
+  public void repairTableWithBeforeAfterState_ForTable1InNamespace1_ShouldRepairTableInAdmin1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE1;
+    String oldTable = TABLE1;
+    String newTable = TABLE1;
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    multiStorageAdmin.repairTable(
+        namespace, oldTable, tableMetadata, newTable, tableMetadata, options);
+
+    // Assert
+    verify(admin1)
+        .repairTable(namespace, oldTable, tableMetadata, newTable, tableMetadata, options);
+  }
+
+  @Test
+  public void repairTableWithBeforeAfterState_ForTable1InNamespace2_ShouldRepairTableInAdmin2()
+      throws ExecutionException {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String oldTable = TABLE1;
+    String newTable = TABLE1;
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    multiStorageAdmin.repairTable(
+        namespace, oldTable, tableMetadata, newTable, tableMetadata, options);
+
+    // Assert
+    verify(admin2)
+        .repairTable(namespace, oldTable, tableMetadata, newTable, tableMetadata, options);
+  }
+
+  @Test
   public void addNewColumnToTable_ForTable1InNamespace1_ShouldCallAddNewColumnOfAdmin1()
       throws ExecutionException {
     // Arrange
