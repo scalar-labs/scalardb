@@ -1048,8 +1048,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
             execute(connection, renameTableStatement, requiresExplicitCommit);
 
-            tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
-
             for (String indexedColumnName : tableMetadata.getSecondaryIndexNames()) {
               renameIndexInternal(
                   connection,
@@ -1060,6 +1058,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                   indexedColumnName);
             }
 
+            // TODO: Handle these metadata operations in a single transaction
+            tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
             addTableMetadata(connection, namespace, newTableName, tableMetadata, false, false);
           });
     } catch (SQLException e) {
