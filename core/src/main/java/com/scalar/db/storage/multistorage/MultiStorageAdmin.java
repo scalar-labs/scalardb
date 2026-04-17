@@ -275,8 +275,8 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void upgrade(Map<String, String> options) throws ExecutionException {
-    for (String storageName : namespaceStorageNameMap.values()) {
-      nameAdminMap.get(storageName).upgrade(options);
+    for (DistributedStorageAdmin admin : nameAdminMap.values()) {
+      admin.upgrade(options);
     }
   }
 

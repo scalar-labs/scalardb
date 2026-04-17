@@ -865,16 +865,21 @@ public class MultiStorageAdminTest {
   }
 
   @Test
-  public void upgrade_ShouldCallNamespaceAndDefaultAdmins() throws ExecutionException {
+  public void upgrade_ShouldCallEachUnderlyingAdminExactlyOnce() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
-    Map<String, DistributedStorageAdmin> nameAdminMap = ImmutableMap.of("s1", admin1, "s2", admin2);
+    Map<String, DistributedStorageAdmin> nameAdminMap =
+        ImmutableMap.of("s1", admin1, "s2", admin2, "s3", admin3);
     Map<String, String> namespaceStorageNameMap = new HashMap<>();
+    // Multiple namespaces mapped to the same storage (s1) to verify no duplicate calls
     namespaceStorageNameMap.put("ns1", "s1");
-    namespaceStorageNameMap.put("ns2", "s2");
+    namespaceStorageNameMap.put("ns2", "s1");
+    namespaceStorageNameMap.put("ns3", "s2");
+    // Default storage (s3) is not referenced in the namespace mapping, to verify it's still
+    // upgraded
     multiStorageAdmin =
-        new MultiStorageAdmin(nameAdminMap, Collections.emptyMap(), namespaceStorageNameMap, "s2");
+        new MultiStorageAdmin(nameAdminMap, Collections.emptyMap(), namespaceStorageNameMap, "s3");
 
     // Act
     multiStorageAdmin.upgrade(options);
@@ -882,6 +887,7 @@ public class MultiStorageAdminTest {
     // Assert
     verify(admin1).upgrade(options);
     verify(admin2).upgrade(options);
+    verify(admin3).upgrade(options);
   }
 
   @Test
