@@ -1,9 +1,12 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.Put;
 import com.scalar.db.io.Key;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 public class ConsensusCommitOperationAttributesTest {
@@ -188,5 +191,73 @@ public class ConsensusCommitOperationAttributesTest {
 
     // Assert
     assertThat(result).isFalse();
+  }
+
+  @Test
+  public void setIsolation_MapGiven_ShouldAddIsolationToAttributes() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+
+    // Assert
+    assertThat(attributes)
+        .containsEntry(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE");
+  }
+
+  @Test
+  public void clearIsolation_MapGiven_ShouldRemoveIsolationFromAttributes() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "SNAPSHOT");
+
+    // Act
+    ConsensusCommitOperationAttributes.clearIsolation(attributes);
+
+    // Assert
+    assertThat(attributes).doesNotContainKey(ConsensusCommitOperationAttributes.ISOLATION);
+  }
+
+  @Test
+  public void getIsolation_IsolationSetInAttributes_ShouldReturnIsolation() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE");
+
+    // Act Assert
+    assertThat(ConsensusCommitOperationAttributes.getIsolation(attributes))
+        .hasValue(Isolation.SERIALIZABLE);
+  }
+
+  @Test
+  public void getIsolation_IsolationSetInLowerCaseInAttributes_ShouldReturnIsolation() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "snapshot");
+
+    // Act Assert
+    assertThat(ConsensusCommitOperationAttributes.getIsolation(attributes))
+        .hasValue(Isolation.SNAPSHOT);
+  }
+
+  @Test
+  public void getIsolation_IsolationNotSetInAttributes_ShouldReturnEmpty() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act Assert
+    assertThat(ConsensusCommitOperationAttributes.getIsolation(attributes)).isEmpty();
+  }
+
+  @Test
+  public void getIsolation_InvalidIsolationSetInAttributes_ShouldThrowException() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "invalid");
+
+    // Act Assert
+    assertThatThrownBy(() -> ConsensusCommitOperationAttributes.getIsolation(attributes))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
