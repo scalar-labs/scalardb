@@ -102,8 +102,7 @@ public interface RdbEngineStrategy {
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
-  default String[] dropColumnSql(
-      String namespace, String table, String columnName, boolean isIndex) {
+  default String[] dropColumnSql(String namespace, String table, String columnName) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)

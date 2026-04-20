@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
-  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  protected static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
   public RdbEnginePostgresql() {

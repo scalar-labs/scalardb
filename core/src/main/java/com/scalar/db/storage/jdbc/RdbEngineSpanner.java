@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
@@ -27,8 +27,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 class RdbEngineSpanner extends RdbEnginePostgresql {
@@ -200,35 +198,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public String[] createTableInternalSqlsAfterCreateTable(
-      boolean hasDifferentClusteringOrders,
-      String schema,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists) {
-    // Create a unique index for the clustering orders only when both ASC and DESC are contained
-    // in the clustering keys. If all the clustering key orders are DESC, the PRIMARY KEY index
-    // can be used.
-    ArrayList<String> sqls = new ArrayList<>();
-    if (hasDifferentClusteringOrders) {
-      sqls.add(
-          "CREATE UNIQUE INDEX "
-              + (ifNotExists ? "IF NOT EXISTS " : "")
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
-              + " ON "
-              + encloseFullTableName(schema, table)
-              + " ("
-              + Stream.concat(
-                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
-                      metadata.getClusteringKeyNames().stream()
-                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
-                  .collect(Collectors.joining(","))
-              + ")");
-    }
-    return sqls.toArray(new String[0]);
-  }
-
-  @Override
   DataType getDataTypeForScalarDbInternal(
       JDBCType type,
       String typeName,
@@ -318,32 +287,18 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public String[] dropColumnSql(
-      String namespace, String table, String columnName, boolean isIndex) {
-    List<String> sqls = new ArrayList<>();
-    // Index needs to be explicitly dropped before dropping the column
-    if (isIndex) {
-      sqls.add(dropIndexSql(namespace, table, columnName));
-    }
-    sqls.add(
-        "ALTER TABLE "
-            + encloseFullTableName(namespace, table)
-            + " DROP COLUMN "
-            + enclose(columnName));
-    return sqls.toArray(new String[0]);
-  }
-
-  @Override
   public String[] dropTableSql(TableMetadata metadata, String schema, String table) {
     List<String> sqls = new ArrayList<>();
-    // Index needs to be explicitly dropped before dropping the column
+    // Index needs to be explicitly dropped before dropping the table
     for (String index : metadata.getSecondaryIndexNames()) {
       sqls.add(dropIndexSql(schema, table, index));
     }
     if (JdbcUtils.hasDifferentClusteringOrders(metadata)) {
-      // TODO check name
-      sqls.add(
-          dropIndexSql(schema, table, getFullTableName(schema, table) + "_clustering_order_idx)"));
+      String indexName =
+          shortenIndexNameIfNeeded(
+              CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+              CLUSTERING_ORDER_INDEX_NAME_PREFIX);
+      sqls.add(dropIndexSql(schema, table, indexName));
     }
 
     sqls.add("DROP TABLE " + encloseFullTableName(schema, table));

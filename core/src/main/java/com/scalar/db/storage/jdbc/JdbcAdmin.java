@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
+import static com.scalar.db.storage.jdbc.JdbcUtils.hasDifferentClusteringOrders;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -45,17 +47,11 @@ import javax.sql.DataSource;
 @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-
-  @VisibleForTesting
-  static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
-  @VisibleForTesting
-  static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
-  @VisibleForTesting
-  static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
-  @VisibleForTesting
-  static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
-  @VisibleForTesting
-  static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
+  @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
+  @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
+  @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
+  @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
+  @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
   private static final String INDEX_NAME_PREFIX = "index";
 
@@ -218,7 +214,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     createTableStatement +=
         ", "
             + rdbEngine.createTableInternalPrimaryKeyClause(
-            hasDescClusteringOrder(metadata), metadata);
+                hasDescClusteringOrder(metadata), metadata);
     createTable(connection, createTableStatement, ifNotExists);
     createTableInternalSqlsAfterCreateTable(connection, schema, table, metadata, ifNotExists);
     createIndex(connection, schema, table, metadata, ifNotExists);
@@ -294,6 +290,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                           .collect(Collectors.joining(","))));
             }
 
+            // For a regular table
             dropTableInternal(connection, namespace, table);
             tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
           });
@@ -617,7 +614,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   /**
    * Get the vendor DB data type that is equivalent to the ScalarDB data type
    *
-   * @param metadata   a table metadata
+   * @param metadata a table metadata
    * @param columnName a column name
    * @return a vendor DB data type
    */
@@ -909,8 +906,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
 
             TableMetadata updatedTableMetadata =
-                TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
-            String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName, currentTableMetadata.getSecondaryIndexNames().contains(columnName));
+                TableMetadata.newBuilder(currentTableMetadata)
+                    .removeColumn(columnName)
+                    .removeSecondaryIndex(columnName)
+                    .build();
+            String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
 
             execute(connection, dropColumnStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
@@ -1657,7 +1657,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @FunctionalInterface
   interface SqlWarningHandler {
-
     void throwSqlWarningIfNeeded(SQLWarning warning) throws SQLException;
   }
 }

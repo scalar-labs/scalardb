@@ -2,6 +2,8 @@ package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
+import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.TableMetadata;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
