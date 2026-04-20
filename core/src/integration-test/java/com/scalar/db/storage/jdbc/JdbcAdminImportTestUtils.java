@@ -98,7 +98,7 @@ public class JdbcAdminImportTestUtils {
           "INT",
           "INTERVAL YEAR(3) TO MONTH",
           "INTERVAL DAY(2) TO SECOND",
-          "NUMBER(16,0)",
+          "NUMBER(19,0)",
           "ROWID",
           "UROWID");
   static final List<String> UNSUPPORTED_DATA_TYPES_ORACLE_V20_OR_LATER =

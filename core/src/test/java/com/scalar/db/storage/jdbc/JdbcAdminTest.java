@@ -597,7 +597,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -611,7 +611,7 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -738,7 +738,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(16),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -4236,7 +4236,7 @@ public class JdbcAdminTest {
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
-        "ALTER TABLE \"ns\".\"table\" MODIFY ( \"c2\" NUMBER(16) )",
+        "ALTER TABLE \"ns\".\"table\" MODIFY ( \"c2\" NUMBER(19) )",
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'ns.table'",

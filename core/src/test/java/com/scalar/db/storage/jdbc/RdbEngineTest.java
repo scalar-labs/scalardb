@@ -203,9 +203,9 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.DECIMAL, "DECIMAL"), null);
     DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.NUMERIC, "numeric"), null);
     DATA_TYPE_MAP.get(POSTGRESQL).put(new Column(JDBCType.DECIMAL, "decimal"), null);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 15, 0), DataType.BIGINT);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 15, 2), DataType.DOUBLE);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 16, 0), null);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 18, 0), DataType.BIGINT);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 18, 2), DataType.DOUBLE);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 19, 0), null);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NUMERIC, "NUMBER", 1, 0), DataType.BIGINT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NUMERIC, "numeric"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.DECIMAL, "decimal"), null);
