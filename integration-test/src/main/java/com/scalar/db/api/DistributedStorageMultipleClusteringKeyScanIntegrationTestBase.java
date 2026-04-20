@@ -30,6 +30,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterAll;
@@ -80,16 +81,24 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getStorageAdmin();
+    admin = createStorageAdmin(factory);
     namespaceBaseName = getNamespaceBaseName();
     clusteringKeyTypes = getClusteringKeyTypes();
     executorService = Executors.newFixedThreadPool(getThreadNum());
     createTables();
-    storage = factory.getStorage();
+    storage = createStorage(factory);
     seed = System.currentTimeMillis();
     System.out.println(
         "The seed used in the multiple clustering key scan integration test is " + seed);
     random = ThreadLocal.withInitial(Random::new);
+  }
+
+  protected DistributedStorageAdmin createStorageAdmin(StorageFactory factory) {
+    return factory.getStorageAdmin();
+  }
+
+  protected DistributedStorage createStorage(StorageFactory factory) {
+    return factory.getStorage();
   }
 
   protected void initialize(String testName) throws Exception {}
@@ -2093,9 +2102,35 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
   private void executeInParallel(List<Callable<Void>> testCallables)
       throws InterruptedException, java.util.concurrent.ExecutionException {
-    List<Future<Void>> futures = executorService.invokeAll(testCallables);
+    int total = testCallables.size();
+    AtomicInteger completed = new AtomicInteger(0);
+    AtomicInteger lastLoggedPercent = new AtomicInteger(-1);
+
+    List<Callable<Void>> tracked = new ArrayList<>(total);
+    for (Callable<Void> callable : testCallables) {
+      tracked.add(
+          () -> {
+            Void result = callable.call();
+            logProgress(completed, total, lastLoggedPercent);
+            return result;
+          });
+    }
+
+    List<Future<Void>> futures = executorService.invokeAll(tracked);
     for (Future<Void> future : futures) {
       future.get();
+    }
+  }
+
+  private static void logProgress(
+      AtomicInteger completed, int total, AtomicInteger lastLoggedPercent) {
+    // Log for every 10% completed
+    int done = completed.incrementAndGet();
+    int percent = done * 100 / total;
+    int lastLogged = lastLoggedPercent.get();
+    if (percent / 10 > lastLogged / 10) {
+      lastLoggedPercent.set(percent);
+      logger.info("Progress: {}% ({}/{})", percent, done, total);
     }
   }
 

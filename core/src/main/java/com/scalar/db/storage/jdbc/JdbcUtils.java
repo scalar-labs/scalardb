@@ -87,8 +87,7 @@ public final class JdbcUtils {
     hikariConfig.setDriverClassName(rdbEngine.getDriverClassName());
 
     hikariConfig.setJdbcUrl(rdbEngine.adjustJdbcUrl(config.getJdbcUrl()));
-    config.getUsername().ifPresent(hikariConfig::setUsername);
-    config.getPassword().ifPresent(hikariConfig::setPassword);
+    rdbEngine.setConnectionCredentials(config, hikariConfig);
 
     if (transactional) {
       hikariConfig.setAutoCommit(false);

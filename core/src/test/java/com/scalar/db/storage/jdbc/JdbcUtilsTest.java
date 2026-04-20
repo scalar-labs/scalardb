@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -26,6 +28,9 @@ public class JdbcUtilsTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    // setConnectionCredentials is a default interface method that copies username/password from
+    // JdbcConfig to HikariConfig. Mocks no-op default methods, so call the real implementation.
+    doCallRealMethod().when(rdbEngine).setConnectionCredentials(any(), any());
   }
 
   @Test

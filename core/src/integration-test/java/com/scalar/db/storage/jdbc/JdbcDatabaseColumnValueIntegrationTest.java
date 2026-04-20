@@ -125,6 +125,10 @@ public class JdbcDatabaseColumnValueIntegrationTest
       // A BLOB column is mapped to SQLServer `varbinary(8000)` which accepts a maximum size of
       // 8,000 bytes.
       args.add(Arguments.of(8_000, "8 KB"));
+    } else if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      // Spanner maximum size for the column of a record is 10MB and the maximum size for a query is
+      // also 10MB
+      args.add(Arguments.of(10_000_000, "10 MB"));
     } else {
       return super.provideLargeBlobSizes();
     }

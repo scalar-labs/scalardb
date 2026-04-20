@@ -95,6 +95,10 @@ public final class JdbcTestUtils {
     return rdbEngine instanceof RdbEngineTidb;
   }
 
+  public static boolean isSpanner(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineSpanner;
+  }
+
   /**
    * Filters the data types based on the RDB engine and the excluded data types.
    *

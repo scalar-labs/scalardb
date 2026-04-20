@@ -140,8 +140,40 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void dropTable(String namespace, String table) throws Exception {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      dropAllIndexesForTable(namespace, table);
+    }
     String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
     execute(dropTableStatement);
+  }
+
+  private void dropAllIndexesForTable(String namespace, String table) throws SQLException {
+    // Spanner requires all indexes to be dropped before dropping a table.
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          java.util.List<String> indexNames = new java.util.ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT index_name FROM information_schema.indexes"
+                  + " WHERE table_schema = ? AND table_name = ? AND index_type = 'INDEX'",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  indexNames.add(rs.getString(1));
+                }
+                return null;
+              });
+          for (String indexName : indexNames) {
+            String dropIndexSql = rdbEngine.dropIndexSql(namespace, table, indexName);
+            JdbcAdmin.execute(connection, dropIndexSql, requiresExplicitCommit);
+          }
+        });
   }
 
   @Override
@@ -152,7 +184,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public boolean namespaceExists(String namespace) throws SQLException {
     String sql;
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
       sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
     } else if (JdbcTestUtils.isOracle(rdbEngine)) {
       sql = "SELECT 1 FROM all_users WHERE username = ?";

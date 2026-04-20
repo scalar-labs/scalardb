@@ -72,6 +72,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
     // FLOAT and DOUBLE types cannot be used as partition key in Yugabyte
     // BLOB type cannot be used as a partition key in Db2
+    // FLOAT type cannot be used as partition key in Spanner
     return JdbcTestUtils.filterDataTypes(
         super.getPartitionKeyTypes(),
         rdbEngine,
@@ -81,6 +82,8 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
             RdbEngineYugabyte.class,
             ImmutableList.of(DataType.FLOAT, DataType.DOUBLE),
             RdbEngineDb2.class,
-            ImmutableList.of(DataType.BLOB)));
+            ImmutableList.of(DataType.BLOB),
+            RdbEngineSpanner.class,
+            ImmutableList.of(DataType.FLOAT)));
   }
 }
