@@ -202,4 +202,17 @@ public final class JdbcUtils {
       throw new RuntimeException("Failed to get transaction isolation level", e);
     }
   }
+
+  public static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
+  }
 }

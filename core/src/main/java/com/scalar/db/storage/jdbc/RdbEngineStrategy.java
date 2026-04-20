@@ -102,7 +102,8 @@ public interface RdbEngineStrategy {
   void dropNamespaceTranslateSQLException(SQLException e, String namespace)
       throws ExecutionException;
 
-  default String[] dropColumnSql(String namespace, String table, String columnName) {
+  default String[] dropColumnSql(
+      String namespace, String table, String columnName, boolean isIndex) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
@@ -405,5 +406,9 @@ public interface RdbEngineStrategy {
   default void setConnectionCredentials(JdbcConfig config, HikariConfig connectionConfig) {
     config.getUsername().ifPresent(connectionConfig::setUsername);
     config.getPassword().ifPresent(connectionConfig::setPassword);
+  }
+
+  default String[] dropTableSql(TableMetadata metadata, String schema, String table) {
+    return new String[] {"DROP TABLE " + encloseFullTableName(schema, table)};
   }
 }

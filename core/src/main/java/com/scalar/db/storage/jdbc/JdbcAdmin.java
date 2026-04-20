@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
-import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -150,20 +149,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
   }
 
-  @VisibleForTesting
-  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
-    boolean hasAscOrder = false;
-    boolean hasDescOrder = false;
-    for (Order order : metadata.getClusteringOrders().values()) {
-      if (order == Order.ASC) {
-        hasAscOrder = true;
-      } else {
-        hasDescOrder = true;
-      }
-    }
-    return hasAscOrder && hasDescOrder;
-  }
-
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
@@ -309,10 +294,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                           .collect(Collectors.joining(","))));
             }
 
-            // For a regular table
-            if (rdbEngine.requiresExplicitIndexDropBeforeDropTable()) {
-              dropAllIndexesForTable(connection, namespace, table);
-            }
             dropTableInternal(connection, namespace, table);
             tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
           });
@@ -322,30 +303,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void dropAllIndexesForTable(Connection connection, String schema, String table)
-      throws SQLException {
-    TableMetadata metadata = tableMetadataService.getTableMetadata(connection, schema, table);
-    if (metadata == null) {
-      return;
-    }
-    // Drop secondary indexes
-    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      dropIndex(connection, schema, table, indexedColumn);
-    }
-    // Drop the clustering order index if it exists
-    String clusteringOrderIndexName = table + "_clustering_order_idx";
-    try {
-      String sql = rdbEngine.dropIndexSql(schema, table, clusteringOrderIndexName);
-      execute(connection, sql, requiresExplicitCommit);
-    } catch (SQLException e) {
-      // Ignore if the clustering order index does not exist
-    }
-  }
-
   private void dropTableInternal(Connection connection, String schema, String table)
       throws SQLException {
-    String dropTableStatement = "DROP TABLE " + encloseFullTableName(schema, table);
-    execute(connection, dropTableStatement, requiresExplicitCommit);
+    TableMetadata metadata = tableMetadataService.getTableMetadata(connection, schema, table);
+    String[] dropTableStatements = rdbEngine.dropTableSql(metadata, schema, table);
+    execute(connection, dropTableStatements, requiresExplicitCommit);
   }
 
   @Override
@@ -947,11 +909,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
 
             TableMetadata updatedTableMetadata =
-                TableMetadata.newBuilder(currentTableMetadata)
-                    .removeColumn(columnName)
-                    .removeSecondaryIndex(columnName)
-                    .build();
-            String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
+                TableMetadata.newBuilder(currentTableMetadata).removeColumn(columnName).build();
+            String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName, currentTableMetadata.getSecondaryIndexNames().contains(columnName));
 
             execute(connection, dropColumnStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);

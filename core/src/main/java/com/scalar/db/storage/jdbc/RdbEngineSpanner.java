@@ -1,8 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -25,7 +26,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Map;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -205,17 +206,15 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
       String table,
       TableMetadata metadata,
       boolean ifNotExists) {
-    // Spanner PG does not support ASC/DESC in the PRIMARY KEY clause of CREATE TABLE, and does not
-    // support backward index scans. To enforce clustering order, create a separate unique index
-    // with explicit ASC/DESC on the primary key columns.
-    // Spanner PG does not support schema-qualified index names in CREATE INDEX.
-    // Unlike PostgreSQL, the index name must be unqualified (no "schema.index_name" syntax).
+    // Create a unique index for the clustering orders only when both ASC and DESC are contained
+    // in the clustering keys. If all the clustering key orders are DESC, the PRIMARY KEY index
+    // can be used.
     ArrayList<String> sqls = new ArrayList<>();
     if (hasDifferentClusteringOrders) {
       sqls.add(
           "CREATE UNIQUE INDEX "
               + (ifNotExists ? "IF NOT EXISTS " : "")
-              + enclose(table + "_clustering_order_idx")
+              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -316,5 +315,39 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
       System.setProperty("ENABLE_ENCODED_CREDENTIALS", "true");
       connectionConfig.addDataSourceProperty("encodedcredentials", encodedCredentials);
     }
+  }
+
+  @Override
+  public String[] dropColumnSql(
+      String namespace, String table, String columnName, boolean isIndex) {
+    List<String> sqls = new ArrayList<>();
+    // Index needs to be explicitly dropped before dropping the column
+    if (isIndex) {
+      sqls.add(dropIndexSql(namespace, table, columnName));
+    }
+    sqls.add(
+        "ALTER TABLE "
+            + encloseFullTableName(namespace, table)
+            + " DROP COLUMN "
+            + enclose(columnName));
+    return sqls.toArray(new String[0]);
+  }
+
+  @Override
+  public String[] dropTableSql(TableMetadata metadata, String schema, String table) {
+    List<String> sqls = new ArrayList<>();
+    // Index needs to be explicitly dropped before dropping the column
+    for (String index : metadata.getSecondaryIndexNames()) {
+      sqls.add(dropIndexSql(schema, table, index));
+    }
+    if (JdbcUtils.hasDifferentClusteringOrders(metadata)) {
+      // TODO check name
+      sqls.add(
+          dropIndexSql(schema, table, getFullTableName(schema, table) + "_clustering_order_idx)"));
+    }
+
+    sqls.add("DROP TABLE " + encloseFullTableName(schema, table));
+
+    return sqls.toArray(new String[0]);
   }
 }

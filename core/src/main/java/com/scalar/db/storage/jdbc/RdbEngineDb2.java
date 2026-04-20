@@ -254,7 +254,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String[] dropColumnSql(String namespace, String table, String columnName) {
+  public String[] dropColumnSql(
+      String namespace, String table, String columnName, boolean isIndex) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
