@@ -261,7 +261,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
-        return "NUMBER(16)";
+        return "NUMBER(19)";
       case BLOB:
         return "BLOB";
       case BOOLEAN:
@@ -312,7 +312,11 @@ class RdbEngineOracle extends AbstractRdbEngine {
     String numericTypeDescription = String.format("%s(%d, %d)", typeName, columnSize, digits);
     switch (type) {
       case NUMERIC:
-        if (columnSize > 15) {
+        // NUMBER(18) is the maximum precision where all possible values fit within the Java long
+        // range. NUMBER(19) can hold values outside the Java long range (greater than
+        // Long.MAX_VALUE or less than Long.MIN_VALUE), so it is not safe to import since imported
+        // tables may contain data not managed by ScalarDB.
+        if (columnSize > 18) {
           throw new IllegalArgumentException(
               CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
                   numericTypeDescription, columnDescription));
