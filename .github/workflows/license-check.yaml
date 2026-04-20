@@ -1,0 +1,30 @@
+name: License Check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Execute Gradle 'checkLicense' task
+        run: ./gradlew checkLicense
+
+      - name: Show dependencies without allowed license
+        if: failure()
+        run: cat build/reports/dependency-license/dependencies-without-allowed-license.json
