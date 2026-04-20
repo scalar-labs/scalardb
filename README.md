@@ -37,7 +37,7 @@ You can install it in your application using your build tool such as Gradle and 
 To add a dependency on ScalarDB using Gradle, use the following:
 ```gradle
 dependencies {
-    implementation 'com.scalar-labs:scalardb:3.17.2'
+    implementation 'com.scalar-labs:scalardb:3.17.3'
 }
 ```
 
@@ -46,7 +46,7 @@ To add a dependency using Maven:
 <dependency>
   <groupId>com.scalar-labs</groupId>
   <artifactId>scalardb</artifactId>
-  <version>3.17.2</version>
+  <version>3.17.3</version>
 </dependency>
 ```
 
@@ -80,7 +80,4 @@ When contributing to this project, please follow these guidelines.
 
 ## License
 
-ScalarDB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license.
-You may select, at your option, one of the above-listed licenses.
-The commercial license includes several enterprise-grade features such as ScalarDB Cluster, management tools, and declarative query interfaces like GraphQL and SQL interfaces.
-For more information about the commercial license, please [contact us](https://www.scalar-labs.com/contact).
+See the [LICENSE](./LICENSE) file and the [licenses](./licenses/) directory.
