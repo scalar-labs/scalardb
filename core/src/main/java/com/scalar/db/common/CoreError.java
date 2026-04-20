@@ -1069,6 +1069,8 @@ public enum CoreError implements ScalarDbError {
       "Spanner use by default '\\' as escape character and it cannot be configured. Escape character: '%s'",
       "",
       ""),
+  JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
+      Category.USER_ERROR, "0284", "Failed to load the service account key for Spanner.", "", ""),
 
   //
   // Errors for the concurrency error category

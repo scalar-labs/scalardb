@@ -1,6 +1,10 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 public final class JdbcEnv {
@@ -22,19 +26,27 @@ public final class JdbcEnv {
     String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
-
-    // TODO Remove before merging
-    // When running with maxParallelForks, each Gradle test worker gets its own Spanner database
-    // to avoid the emulator's single-transaction-at-a-time limitation
-    String workerId = System.getProperty("org.gradle.test.worker");
-    if (workerId != null && isSpanner()) {
-      jdbcUrl = jdbcUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + workerId);
+    if (isSpanner() && password.isEmpty()) {
+      try {
+        password =
+            String.join(
+                "",
+                Files.readAllLines(
+                    Paths.get("/Users/vguilpain/spanner-credentials.json"),
+                    StandardCharsets.UTF_8));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
-
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
-    properties.setProperty(DatabaseConfig.USERNAME, username);
-    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    if (!username.isEmpty()) {
+      properties.setProperty(DatabaseConfig.USERNAME, username);
+    }
+    if (!password.isEmpty()) {
+      properties.setProperty(DatabaseConfig.PASSWORD, password);
+    }
+
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");

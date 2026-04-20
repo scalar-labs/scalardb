@@ -75,7 +75,7 @@ public class RdbEngineSpannerTest {
     JdbcConfig config = mock(JdbcConfig.class);
 
     // Act
-    RdbEngineSpanner engineWithConfig = new RdbEngineSpanner(config);
+    RdbEngineSpanner engineWithConfig = new RdbEngineSpanner();
 
     // Assert
     assertThat(engineWithConfig).isNotNull();

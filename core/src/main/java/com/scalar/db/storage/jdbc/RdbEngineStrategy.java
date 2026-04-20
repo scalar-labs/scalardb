@@ -12,6 +12,7 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import com.zaxxer.hikari.HikariConfig;
 import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
@@ -400,14 +401,9 @@ public interface RdbEngineStrategy {
     return Connection.TRANSACTION_SERIALIZABLE;
   }
 
-  /**
-   * Returns whether the underlying database requires username and password to be passed as
-   * connection credentials. Most databases require this, but some (e.g., Spanner emulator) do not
-   * accept username/password properties and will reject the connection if they are provided.
-   *
-   * @return true if username and password should be passed to the connection pool, false otherwise
-   */
-  default boolean requiresUsernamePassword() {
-    return true;
+  /** Configure the credentials for the connection */
+  default void setConnectionCredentials(JdbcConfig config, HikariConfig connectionConfig) {
+    config.getUsername().ifPresent(connectionConfig::setUsername);
+    config.getPassword().ifPresent(connectionConfig::setPassword);
   }
 }

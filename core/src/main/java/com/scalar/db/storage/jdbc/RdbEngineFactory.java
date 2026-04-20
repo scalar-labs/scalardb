@@ -31,7 +31,7 @@ public final class RdbEngineFactory {
     } else if (jdbcUrl.startsWith("jdbc:db2:")) {
       return new RdbEngineDb2(config);
     } else if (jdbcUrl.startsWith("jdbc:cloudspanner:")) {
-      return new RdbEngineSpanner(config);
+      return new RdbEngineSpanner();
     } else {
       throw new IllegalArgumentException(
           CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));

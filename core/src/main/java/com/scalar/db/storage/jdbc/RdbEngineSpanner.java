@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -10,6 +12,10 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateExcludedQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import com.zaxxer.hikari.HikariConfig;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,21 +24,20 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 class RdbEngineSpanner extends RdbEnginePostgresql {
 
-  private final RdbEngineTimeTypeSpanner timeTypeEngine = new RdbEngineTimeTypeSpanner();
-
-  RdbEngineSpanner(JdbcConfig config) {
-    // JdbcConfig constructor for consistency with Oracle/DB2 pattern.
-    // No Spanner-specific config properties are read in Phase 1.
-  }
+  private final RdbEngineTimeTypeSpanner timeTypeEngine;
 
   @VisibleForTesting
-  RdbEngineSpanner() {}
+  RdbEngineSpanner() {
+    timeTypeEngine = new RdbEngineTimeTypeSpanner();
+  }
 
   @Override
   public String getDriverClassName() {
@@ -40,35 +45,23 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public boolean requiresUsernamePassword() {
-    // The Spanner JDBC driver does not accept 'user' and 'password' as connection properties.
-    // Passing them causes an INVALID_ARGUMENT error. Authentication is handled via the JDBC URL
-    // (e.g., autoConfigEmulator=true for emulator, or OAuth tokens for production).
-    return false;
-  }
-
-  @Override
-  @Nullable
-  public String getDataTypeForKey(DataType dataType) {
-    // Spanner PG maximum VARCHAR length is 2621440 (vs PostgreSQL's 10485760).
-    if (dataType == DataType.TEXT) {
-      return "VARCHAR(2621440)";
-    }
-    return null;
-  }
-
-  @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
+      case TEXT:
+        return "text";
       case INT:
-        return "BIGINT"; // Spanner PG int is always 8-byte
-        // Only "TIMESTAMPTZ" data type can be used to store time-related data
+        return "bigint"; // Spanner PG int is always 8-byte
       case TIME:
       case TIMESTAMP:
-        return "TIMESTAMPTZ";
+        return "timestamptz";
       default:
         return super.getDataTypeForEngine(scalarDbDataType);
     }
+  }
+
+  @Override
+  public String getDataTypeForKey(DataType dataType) {
+    return null;
   }
 
   @Override
@@ -303,5 +296,25 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
               likeExpression.getEscape()));
     }
     return likeExpression.getEscape();
+  }
+
+  @Override
+  public void setConnectionCredentials(JdbcConfig config, HikariConfig connectionConfig) {
+    if (config.getPassword().isPresent()) {
+      try (ByteArrayInputStream keyStream =
+          new ByteArrayInputStream(config.getPassword().get().getBytes(StandardCharsets.UTF_8))) {
+        // Validate the credentials
+        ServiceAccountCredentials.fromStream(keyStream);
+      } catch (IOException e) {
+        throw new IllegalArgumentException(
+            CoreError.JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED.buildMessage(), e);
+      }
+      String encodedCredentials =
+          Base64.getEncoder()
+              .encodeToString(config.getPassword().get().getBytes(StandardCharsets.UTF_8));
+      // Setting this property is required to use encoded credentials authentication
+      System.setProperty("ENABLE_ENCODED_CREDENTIALS", "true");
+      connectionConfig.addDataSourceProperty("encodedcredentials", encodedCredentials);
+    }
   }
 }
