@@ -23,6 +23,14 @@ public final class JdbcEnv {
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
 
+    // TODO Remove before merging
+    // When running with maxParallelForks, each Gradle test worker gets its own Spanner database
+    // to avoid the emulator's single-transaction-at-a-time limitation
+    String workerId = System.getProperty("org.gradle.test.worker");
+    if (workerId != null && isSpanner()) {
+      jdbcUrl = jdbcUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + workerId);
+    }
+
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
     properties.setProperty(DatabaseConfig.USERNAME, username);
@@ -74,5 +82,9 @@ public final class JdbcEnv {
 
   public static boolean isDb2() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:db2:");
+  }
+
+  public static boolean isSpanner() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:cloudspanner:");
   }
 }

@@ -83,23 +83,17 @@ public class JdbcAdminTest {
   private static final String NAMESPACE = "namespace";
   private static final String TABLE = "table";
   private static final ImmutableMap<RdbEngine, RdbEngineStrategy> RDB_ENGINES =
-      ImmutableMap.of(
-          RdbEngine.MYSQL,
-          new RdbEngineMysql(),
-          RdbEngine.ORACLE,
-          new RdbEngineOracle(),
-          RdbEngine.POSTGRESQL,
-          new RdbEnginePostgresql(),
-          RdbEngine.SQL_SERVER,
-          new RdbEngineSqlServer(),
-          RdbEngine.SQLITE,
-          new RdbEngineSqlite(),
-          RdbEngine.YUGABYTE,
-          new RdbEngineYugabyte(),
-          RdbEngine.MARIADB,
-          new RdbEngineMariaDB(),
-          RdbEngine.DB2,
-          new RdbEngineDb2());
+      ImmutableMap.<RdbEngine, RdbEngineStrategy>builder()
+          .put(RdbEngine.MYSQL, new RdbEngineMysql())
+          .put(RdbEngine.ORACLE, new RdbEngineOracle())
+          .put(RdbEngine.POSTGRESQL, new RdbEnginePostgresql())
+          .put(RdbEngine.SQL_SERVER, new RdbEngineSqlServer())
+          .put(RdbEngine.SQLITE, new RdbEngineSqlite())
+          .put(RdbEngine.YUGABYTE, new RdbEngineYugabyte())
+          .put(RdbEngine.MARIADB, new RdbEngineMariaDB())
+          .put(RdbEngine.DB2, new RdbEngineDb2())
+          .put(RdbEngine.SPANNER, new RdbEngineSpanner())
+          .build();
 
   @Mock private HikariDataSource dataSource;
   @Mock private Connection connection;
@@ -159,6 +153,9 @@ public class JdbcAdminTest {
       case POSTGRESQL:
       case YUGABYTE:
         when(sqlException.getSQLState()).thenReturn("42P01");
+        break;
+      case SPANNER:
+        when(sqlException.getErrorCode()).thenReturn(5); // gRPC NOT_FOUND
         break;
       case ORACLE:
         when(sqlException.getErrorCode()).thenReturn(942);
@@ -5719,6 +5716,10 @@ public class JdbcAdminTest {
       case YUGABYTE:
         duplicateKeyException = mock(SQLException.class);
         when(duplicateKeyException.getSQLState()).thenReturn("23505");
+        break;
+      case SPANNER:
+        duplicateKeyException = mock(SQLException.class);
+        when(duplicateKeyException.getErrorCode()).thenReturn(6); // gRPC ALREADY_EXISTS
         break;
       case SQLITE:
         SQLiteException sqLiteException = mock(SQLiteException.class);

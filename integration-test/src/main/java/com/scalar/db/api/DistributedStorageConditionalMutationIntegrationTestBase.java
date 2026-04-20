@@ -40,6 +40,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -73,8 +74,8 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   private static final int ATTEMPT_COUNT = 5;
   private static final int THREAD_NUM = 10;
 
-  private DistributedStorageAdmin admin;
-  private DistributedStorage storage;
+  protected DistributedStorageAdmin admin;
+  protected DistributedStorage storage;
   private String namespace;
 
   private long seed;
@@ -88,15 +89,24 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     StorageFactory factory = StorageFactory.create(getProperties(TEST_NAME));
-    admin = factory.getStorageAdmin();
+    admin = createStorageAdmin(factory);
     namespace = getNamespace();
     createTable();
-    storage = factory.getStorage();
+    storage = createStorage(factory);
     seed = System.currentTimeMillis();
     System.out.println("The seed used in the conditional mutation integration test is " + seed);
     random = ThreadLocal.withInitial(Random::new);
     operatorAndDataTypeList = getOperatorAndDataTypeListForTest();
     executorService = Executors.newFixedThreadPool(getThreadNum());
+  }
+
+  protected DistributedStorageAdmin createStorageAdmin(StorageFactory factory)
+      throws ExecutionException {
+    return factory.getStorageAdmin();
+  }
+
+  protected DistributedStorage createStorage(StorageFactory factory) throws ExecutionException {
+    return factory.getStorage();
   }
 
   protected void initialize(String testName) throws Exception {}
@@ -112,6 +122,12 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   }
 
   private void createTable() throws ExecutionException {
+    Map<String, String> options = getCreationOptions();
+    admin.createNamespace(namespace, true, options);
+    admin.createTable(namespace, TABLE, getTableMetadata(), true, options);
+  }
+
+  protected TableMetadata getTableMetadata() {
     TableMetadata.Builder tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(PARTITION_KEY, DataType.TEXT)
@@ -131,10 +147,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     if (isConditionOnBlobColumnSupported()) {
       tableMetadata.addColumn(COL_NAME11, DataType.BLOB);
     }
-
-    Map<String, String> options = getCreationOptions();
-    admin.createNamespace(namespace, true, options);
-    admin.createTable(namespace, TABLE, tableMetadata.build(), true, options);
+    return tableMetadata.build();
   }
 
   protected Map<String, String> getCreationOptions() {
@@ -1716,7 +1729,27 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
 
   private void executeInParallel(List<Callable<Void>> testCallables)
       throws InterruptedException, java.util.concurrent.ExecutionException {
-    List<Future<Void>> futures = executorService.invokeAll(testCallables);
+    int total = testCallables.size();
+    AtomicInteger completed = new AtomicInteger(0);
+    AtomicInteger lastLoggedPercent = new AtomicInteger(-1);
+
+    List<Callable<Void>> tracked = new ArrayList<>(total);
+    for (Callable<Void> callable : testCallables) {
+      tracked.add(
+          () -> {
+            Void result = callable.call();
+            int done = completed.incrementAndGet();
+            int percent = done * 100 / total;
+            int lastLogged = lastLoggedPercent.get();
+            if (percent / 10 > lastLogged / 10) {
+              lastLoggedPercent.set(percent);
+              logger.info("Progress: {}% ({}/{})", percent, done, total);
+            }
+            return result;
+          });
+    }
+
+    List<Future<Void>> futures = executorService.invokeAll(tracked);
     for (Future<Void> future : futures) {
       future.get();
     }

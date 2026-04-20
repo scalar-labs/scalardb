@@ -152,6 +152,24 @@ public interface RdbEngineStrategy {
     return false;
   }
 
+  /**
+   * Returns {@code true} if this RDB engine requires an explicit index drop before dropping a
+   * column that has a secondary index. Some engines (e.g. SQL Server, SQLite) do not automatically
+   * drop the index when the column is dropped.
+   */
+  default boolean requiresExplicitIndexDropBeforeDropColumn() {
+    return false;
+  }
+
+  /**
+   * Returns {@code true} if this RDB engine requires all indexes to be explicitly dropped before
+   * dropping a table. Some engines (e.g. Spanner) do not support CASCADE on DROP TABLE and will
+   * reject the operation if indexes still exist on the table.
+   */
+  default boolean requiresExplicitIndexDropBeforeDropTable() {
+    return false;
+  }
+
   String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName);
 
@@ -380,5 +398,16 @@ public interface RdbEngineStrategy {
    */
   default int getHighestIsolationLevel() {
     return Connection.TRANSACTION_SERIALIZABLE;
+  }
+
+  /**
+   * Returns whether the underlying database requires username and password to be passed as
+   * connection credentials. Most databases require this, but some (e.g., Spanner emulator) do not
+   * accept username/password properties and will reject the connection if they are provided.
+   *
+   * @return true if username and password should be passed to the connection pool, false otherwise
+   */
+  default boolean requiresUsernamePassword() {
+    return true;
   }
 }

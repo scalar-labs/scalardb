@@ -192,6 +192,9 @@ dependencies {
     implementation("com.google.cloud:alloydb-jdbc-connector:${alloyDbJdbcConnectorVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerJdbcVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
@@ -272,7 +275,39 @@ task integrationTestJdbc(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    systemProperty 'junit.jupiter.execution.timeout.testclass.method.default', '10m'
     maxHeapSize = "4g"
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        showExceptions true
+        showCauses true
+        showStackTraces true
+        exceptionFormat "full"
+    }
+    //Remove before merging
+    maxParallelForks = 1
+}
+
+task integrationTestJdbcCloud(type: Test) {
+    description = 'Runs the integration tests for a JDBC database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+    systemProperty 'junit.jupiter.execution.timeout.testclass.method.default', '10m'
+    maxHeapSize = "4g"
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        showExceptions true
+        showCauses true
+        showStackTraces true
+        exceptionFormat "full"
+    }
+    //Remove before merging
+    maxParallelForks = 1
 }
 
 task integrationTestObjectStorage(type: Test) {

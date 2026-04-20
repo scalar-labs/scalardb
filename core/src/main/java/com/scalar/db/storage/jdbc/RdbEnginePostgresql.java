@@ -14,10 +14,6 @@ import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -405,8 +401,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, OffsetDateTime>
-      getTimeTypeStrategy() {
+  public RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy() {
     return timeTypeEngine;
   }
 

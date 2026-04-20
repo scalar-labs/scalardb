@@ -244,16 +244,17 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     // Act
     List<Result> results = scanAll(scan);
 
-    // Assert
+    // Assert (order-independent since no ORDER BY is specified in the scan)
     assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).contains(PARTITION_KEY)).isTrue();
-    assertThat(results.get(0).getInt(PARTITION_KEY)).isEqualTo(1);
-    assertThat(results.get(0).contains(INDEX_COL_NAME)).isTrue();
-    assertThat(results.get(0).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getIntValue());
-    assertThat(results.get(1).contains(PARTITION_KEY)).isTrue();
-    assertThat(results.get(1).getInt(PARTITION_KEY)).isEqualTo(2);
-    assertThat(results.get(1).contains(INDEX_COL_NAME)).isTrue();
-    assertThat(results.get(1).getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getIntValue());
+    Set<Integer> expectedPartitionKeys = Sets.newHashSet(1, 2);
+    Set<Integer> actualPartitionKeys = new HashSet<>();
+    for (Result result : results) {
+      assertThat(result.contains(PARTITION_KEY)).isTrue();
+      actualPartitionKeys.add(result.getInt(PARTITION_KEY));
+      assertThat(result.contains(INDEX_COL_NAME)).isTrue();
+      assertThat(result.getInt(INDEX_COL_NAME)).isEqualTo(secondaryIndexValue.getIntValue());
+    }
+    assertThat(actualPartitionKeys).isEqualTo(expectedPartitionKeys);
   }
 
   @Test

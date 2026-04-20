@@ -46,11 +46,17 @@ import javax.sql.DataSource;
 @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
-  @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
-  @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
-  @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
-  @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
-  @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
+
+  @VisibleForTesting
+  static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
+  @VisibleForTesting
+  static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
+  @VisibleForTesting
+  static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
+  @VisibleForTesting
+  static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
+  @VisibleForTesting
+  static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
   private static final String INDEX_NAME_PREFIX = "index";
 
@@ -227,7 +233,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     createTableStatement +=
         ", "
             + rdbEngine.createTableInternalPrimaryKeyClause(
-                hasDescClusteringOrder(metadata), metadata);
+            hasDescClusteringOrder(metadata), metadata);
     createTable(connection, createTableStatement, ifNotExists);
     createTableInternalSqlsAfterCreateTable(connection, schema, table, metadata, ifNotExists);
     createIndex(connection, schema, table, metadata, ifNotExists);
@@ -304,12 +310,35 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
 
             // For a regular table
+            if (rdbEngine.requiresExplicitIndexDropBeforeDropTable()) {
+              dropAllIndexesForTable(connection, namespace, table);
+            }
             dropTableInternal(connection, namespace, table);
             tableMetadataService.deleteTableMetadata(connection, namespace, table, true);
           });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Dropping the " + getFullTableName(namespace, table) + " table failed", e);
+    }
+  }
+
+  private void dropAllIndexesForTable(Connection connection, String schema, String table)
+      throws SQLException {
+    TableMetadata metadata = tableMetadataService.getTableMetadata(connection, schema, table);
+    if (metadata == null) {
+      return;
+    }
+    // Drop secondary indexes
+    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
+      dropIndex(connection, schema, table, indexedColumn);
+    }
+    // Drop the clustering order index if it exists
+    String clusteringOrderIndexName = table + "_clustering_order_idx";
+    try {
+      String sql = rdbEngine.dropIndexSql(schema, table, clusteringOrderIndexName);
+      execute(connection, sql, requiresExplicitCommit);
+    } catch (SQLException e) {
+      // Ignore if the clustering order index does not exist
     }
   }
 
@@ -626,7 +655,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   /**
    * Get the vendor DB data type that is equivalent to the ScalarDB data type
    *
-   * @param metadata a table metadata
+   * @param metadata   a table metadata
    * @param columnName a column name
    * @return a vendor DB data type
    */
@@ -1669,6 +1698,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @FunctionalInterface
   interface SqlWarningHandler {
+
     void throwSqlWarningIfNeeded(SQLWarning warning) throws SQLException;
   }
 }

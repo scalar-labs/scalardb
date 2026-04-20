@@ -118,6 +118,8 @@ public class JdbcAdminImportTestUtils {
           "geography");
   static final List<String> UNSUPPORTED_DATA_TYPES_DB2 =
       Arrays.asList("DECIMAL", "DECFLOAT", "XML");
+  static final List<String> UNSUPPORTED_DATA_TYPES_SPANNER =
+      Arrays.asList("int[]", "jsonb", "decimal", "uuid");
 
   private final RdbEngineStrategy rdbEngine;
   private final int majorVersion;
@@ -137,6 +139,8 @@ public class JdbcAdminImportTestUtils {
     execute(rdbEngine.createSchemaSqls(namespace));
     if (JdbcTestUtils.isMysql(rdbEngine)) {
       return createExistingMysqlDatabaseWithAllDataTypes(namespace);
+    } else if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return createExistingSpannerDatabaseWithAllDataTypes(namespace);
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       return createExistingPostgresDatabaseWithAllDataTypes(namespace);
     } else if (JdbcTestUtils.isOracle(rdbEngine)) {
@@ -587,6 +591,50 @@ public class JdbcAdminImportTestUtils {
         .build();
   }
 
+  private LinkedHashMap<String, String> prepareColumnsForSpanner() {
+    LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+    columns.put("pk1", "bigint");
+    columns.put("pk2", "bigint");
+    columns.put("col01", "boolean");
+    columns.put("col02", "bytea");
+    columns.put("col03", "date");
+    columns.put("col04", "real");
+    columns.put("col05", "double precision");
+    columns.put("col06", "int");
+    columns.put("col07", "bigint");
+    columns.put("col08", "timestamptz"); // override to TIME
+    columns.put("col09", "timestamptz"); // override to TIMESTAMP
+    columns.put("col10", "timestamptz");
+    columns.put("col11", "text");
+    columns.put("col12", "varchar(64)");
+    return columns;
+  }
+
+  private Map<String, DataType> prepareOverrideColumnsTypeForSpanner() {
+    return ImmutableMap.of("col08", DataType.TIME, "col09", DataType.TIMESTAMP);
+  }
+
+  private TableMetadata prepareTableMetadataForSpanner() {
+    return TableMetadata.newBuilder()
+        .addColumn("pk1", DataType.BIGINT)
+        .addColumn("pk2", DataType.BIGINT)
+        .addColumn("col01", DataType.BOOLEAN)
+        .addColumn("col02", DataType.BLOB)
+        .addColumn("col03", DataType.DATE)
+        .addColumn("col04", DataType.FLOAT)
+        .addColumn("col05", DataType.DOUBLE)
+        .addColumn("col06", DataType.BIGINT)
+        .addColumn("col07", DataType.BIGINT)
+        .addColumn("col08", DataType.TIME)
+        .addColumn("col09", DataType.TIMESTAMP)
+        .addColumn("col10", DataType.TIMESTAMPTZ)
+        .addColumn("col11", DataType.TEXT)
+        .addColumn("col12", DataType.TEXT)
+        .addPartitionKey("pk1")
+        .addPartitionKey("pk2")
+        .build();
+  }
+
   private Map<String, Column<?>> prepareInsertColumnsForDb2(TableMetadata metadata) {
     List<Column<?>> customColumns =
         ImmutableList.of(TimeColumn.of("col24", LocalTime.of(11, 8, 35)));
@@ -607,7 +655,9 @@ public class JdbcAdminImportTestUtils {
 
   private String prepareCreateNonImportableTableSql(String namespace, String table, String type) {
     LinkedHashMap<String, String> columns = new LinkedHashMap<>();
-    columns.put("pk", "CHAR(8) NOT NULL");
+    // All storages beside Spanner support CHAR(n)
+    String pkType = JdbcTestUtils.isSpanner(rdbEngine) ? "VARCHAR(8) NOT NULL" : "CHAR(8) NOT NULL";
+    columns.put("pk", pkType);
     columns.put("col", type);
     return prepareCreateTableSql(
         namespace, table, columns, new LinkedHashSet<>(Collections.singletonList("pk")));
@@ -880,6 +930,32 @@ public class JdbcAdminImportTestUtils {
     return ImmutableList.copyOf(data);
   }
 
+  private List<TestData> createExistingSpannerDatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
+    List<JdbcTestData> data = new ArrayList<>();
+
+    TableMetadata tableMetadata = prepareTableMetadataForSpanner();
+    String sql =
+        prepareCreateTableSql(
+            namespace,
+            SUPPORTED_TABLE_NAME,
+            prepareColumnsForSpanner(),
+            tableMetadata.getPartitionKeyNames());
+    data.add(
+        JdbcTestData.createImportableTable(
+            SUPPORTED_TABLE_NAME,
+            sql,
+            tableMetadata,
+            prepareOverrideColumnsTypeForSpanner(),
+            prepareInsertColumnsWithGenericValues(tableMetadata)));
+
+    data.addAll(prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_SPANNER));
+
+    executeCreateTableSql(data);
+
+    return ImmutableList.copyOf(data);
+  }
+
   private ImmutableList<String> getIntCompatibleColumnNamesOnExistingDb2Database(String table) {
     if (table.equals(SUPPORTED_TABLE_NAME)) {
       return ImmutableList.of("col01", "col02");
@@ -1053,6 +1129,15 @@ public class JdbcAdminImportTestUtils {
           .put("VARGRAPHIC(32)", DataType.TEXT)
           .put("NCHAR(3)", DataType.TEXT)
           .put("NVARCHAR(32)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("boolean", DataType.BOOLEAN)
+          .put("real", DataType.FLOAT)
+          .put("double precision", DataType.DOUBLE)
+          .put("int", DataType.BIGINT)
+          .put("bigint", DataType.BIGINT)
+          .put("text", DataType.TEXT)
           .build();
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);

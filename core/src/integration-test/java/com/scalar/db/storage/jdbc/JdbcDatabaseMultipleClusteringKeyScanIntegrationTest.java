@@ -29,12 +29,18 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
+
+    String envThreadNum = System.getenv("SCALARDB_INTEGRATION_TEST_THREAD_NUM");
+    if (envThreadNum != null) {
+      return Integer.parseInt(envThreadNum);
+    }
+
     return super.getThreadNum();
   }
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -95,6 +101,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   protected List<DataType> getDataTypes() {
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
     // BLOB type cannot be used as a clustering key in Db2
+    // FLOAT type cannot be used as clustering key column in Spanner
     return JdbcTestUtils.filterDataTypes(
         super.getDataTypes(),
         rdbEngine,
@@ -102,6 +109,8 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
             RdbEngineOracle.class,
             ImmutableList.of(DataType.TIMESTAMPTZ, DataType.BLOB),
             RdbEngineDb2.class,
-            ImmutableList.of(DataType.BLOB)));
+            ImmutableList.of(DataType.BLOB),
+            RdbEngineSpanner.class,
+            ImmutableList.of(DataType.FLOAT)));
   }
 }

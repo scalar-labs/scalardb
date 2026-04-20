@@ -345,6 +345,10 @@ public class ResultInterpreterTest {
     Timestamp timestamp =
         Timestamp.valueOf(LocalDateTime.of(LocalDate.of(2024, 1, 1), subMicrosecondTime));
     when(resultSet.getTimestamp(ANY_COLUMN_NAME_1)).thenReturn(timestamp);
+    // SPANNER uses getObject(col, OffsetDateTime.class) since TIME is stored as TIMESTAMPTZ(6)
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, OffsetDateTime.class))
+        .thenReturn(
+            OffsetDateTime.of(LocalDate.of(1970, 1, 1), subMicrosecondTime, ZoneOffset.UTC));
 
     ResultInterpreter interpreter =
         new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
