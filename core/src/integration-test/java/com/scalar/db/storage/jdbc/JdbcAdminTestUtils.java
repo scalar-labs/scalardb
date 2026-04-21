@@ -140,9 +140,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
 
   @Override
   public void dropTable(String namespace, String table) throws Exception {
-    if (rdbEngine.requiresExplicitIndexDropBeforeDropTable()) {
-      // Spanner (and potentially other engines) requires all indexes to be dropped before the
-      // table. Drop known index patterns: secondary indexes and the clustering order index.
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
       dropAllIndexesForTable(namespace, table);
     }
     String dropTableStatement = "DROP TABLE " + rdbEngine.encloseFullTableName(namespace, table);
@@ -150,8 +148,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   private void dropAllIndexesForTable(String namespace, String table) throws SQLException {
-    // Spanner PG requires all indexes to be dropped before dropping a table.
-    // Use information_schema.indexes which is available in Spanner PG (pg_indexes is not).
+    // Spanner requires all indexes to be dropped before dropping a table.
     withConnection(
         dataSource,
         requiresExplicitCommit,

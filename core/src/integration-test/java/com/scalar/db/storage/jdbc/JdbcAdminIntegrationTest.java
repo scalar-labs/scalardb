@@ -121,7 +121,10 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   @Override
   @DisabledIf("isSqlite")
   public void
-      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    super.dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException();
+  }
 
   @Test
   @Override
