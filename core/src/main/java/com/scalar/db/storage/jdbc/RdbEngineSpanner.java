@@ -61,6 +61,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public String getDataTypeForKey(DataType dataType) {
+    // No specific handling for key data type is required
     return null;
   }
 
@@ -300,5 +301,4 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   public boolean requiresExplicitDropIndexBeforeDropColumn() {
     return true;
   }
-
 }
