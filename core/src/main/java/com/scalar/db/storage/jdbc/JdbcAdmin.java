@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.getJdbcType;
-import static com.scalar.db.storage.jdbc.JdbcUtils.hasDifferentClusteringOrders;
 import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
@@ -143,6 +142,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static boolean hasDescClusteringOrder(TableMetadata metadata) {
     return metadata.getClusteringKeyNames().stream()
         .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
+  }
+
+  @VisibleForTesting
+  static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
+    boolean hasAscOrder = false;
+    boolean hasDescOrder = false;
+    for (Order order : metadata.getClusteringOrders().values()) {
+      if (order == Order.ASC) {
+        hasAscOrder = true;
+      } else {
+        hasDescOrder = true;
+      }
+    }
+    return hasAscOrder && hasDescOrder;
   }
 
   @Override

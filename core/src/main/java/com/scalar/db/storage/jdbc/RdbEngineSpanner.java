@@ -154,16 +154,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public boolean requiresExplicitIndexDropBeforeDropColumn() {
-    return true;
-  }
-
-  @Override
-  public boolean requiresExplicitIndexDropBeforeDropTable() {
-    return true;
-  }
-
-  @Override
   public RdbEngineTimeTypeStrategy<LocalDate, OffsetDateTime, OffsetDateTime, OffsetDateTime>
       getTimeTypeStrategy() {
     return timeTypeEngine;
@@ -291,16 +281,16 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     List<String> sqls = new ArrayList<>();
     // Index needs to be explicitly dropped before dropping the table
     for (String index : metadata.getSecondaryIndexNames()) {
-      sqls.add(dropIndexSql(schema, table, index));
+      String indexName = JdbcAdmin.getIndexName(schema, table, index);
+      sqls.add(dropIndexSql(schema, table, indexName));
     }
-    if (JdbcUtils.hasDifferentClusteringOrders(metadata)) {
+    if (JdbcAdmin.hasDifferentClusteringOrders(metadata)) {
       String indexName =
           shortenIndexNameIfNeeded(
               CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
               CLUSTERING_ORDER_INDEX_NAME_PREFIX);
       sqls.add(dropIndexSql(schema, table, indexName));
     }
-
     sqls.add("DROP TABLE " + encloseFullTableName(schema, table));
 
     return sqls.toArray(new String[0]);

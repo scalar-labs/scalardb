@@ -2,8 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
-import com.scalar.db.api.Scan.Ordering.Order;
-import com.scalar.db.api.TableMetadata;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
@@ -203,18 +201,5 @@ public final class JdbcUtils {
     } catch (SQLException e) {
       throw new RuntimeException("Failed to get transaction isolation level", e);
     }
-  }
-
-  public static boolean hasDifferentClusteringOrders(TableMetadata metadata) {
-    boolean hasAscOrder = false;
-    boolean hasDescOrder = false;
-    for (Order order : metadata.getClusteringOrders().values()) {
-      if (order == Order.ASC) {
-        hasAscOrder = true;
-      } else {
-        hasDescOrder = true;
-      }
-    }
-    return hasAscOrder && hasDescOrder;
   }
 }
