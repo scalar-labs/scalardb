@@ -39,6 +39,7 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
@@ -68,6 +69,7 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -98,6 +100,7 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -130,6 +133,7 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -424,5 +428,21 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getScanFetchSize()).isEqualTo(1000);
+  }
+
+  @Test
+  public void constructor_PropertiesWithAttributePropagationEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.ATTRIBUTE_PROPAGATION_ENABLED, "false");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.isAttributePropagationEnabled()).isFalse();
   }
 }
