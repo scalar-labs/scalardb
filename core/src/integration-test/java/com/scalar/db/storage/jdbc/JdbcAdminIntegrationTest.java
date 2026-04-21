@@ -113,6 +113,10 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
         || JdbcTestUtils.isSpanner(rdbEngine);
   }
 
+  private boolean isDb2OrSpanner(){
+    return JdbcEnv.isDb2() || JdbcEnv.isSpanner();
+  }
+
   @Test
   @Override
   @DisabledIf("isSqlite")
@@ -894,7 +898,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @Test
-  @DisabledIf("isDb2")
+  @DisabledIf("isDb2OrSpanner")
   public void renameTable_WithLongIndexNameCreatedByOldNaming_ShouldRenameIndexByFallback()
       throws Exception {
     // The column name is chosen so that the original index name
@@ -940,7 +944,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @Test
-  @DisabledIf("isDb2")
+  @DisabledIf("isDb2OrSpanner")
   public void renameColumn_WithLongIndexNameCreatedByOldNaming_ShouldRenameIndexByFallback()
       throws Exception {
     // The column name is chosen so that the original index name

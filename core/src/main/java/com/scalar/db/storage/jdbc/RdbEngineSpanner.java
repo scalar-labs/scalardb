@@ -4,6 +4,7 @@ import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -83,6 +84,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
+    //TODO check all error message
     // In Spanner GoogleSQL dialect, duplicate errors use gRPC ALREADY_EXISTS = 6.
     // In Spanner PostgreSQL dialect, duplicate table/schema errors use gRPC FAILED_PRECONDITION = 9
     // with a message like "Duplicate name in schema: schema.table" or "Duplicate name in schema:
@@ -98,17 +100,17 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   private boolean isSpannerDuplicateNameError(SQLException e) {
-    if (e.getErrorCode() == 6) {
+    if (e.getErrorCode() == Code.ALREADY_EXISTS_VALUE) {
       return true; // ALREADY_EXISTS (GoogleSQL dialect)
     }
     String message = e.getMessage();
-    return e.getErrorCode() == 9 && message != null && message.contains("Duplicate name in schema");
+    return e.getErrorCode() == Code.FAILED_PRECONDITION_VALUE && message != null && message.contains("Duplicate name in schema");
   }
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
     // Spanner JDBC driver passes null SQLSTATE; uses gRPC ALREADY_EXISTS = 6
-    return e.getErrorCode() == 6;
+    return e.getErrorCode() == Code.ALREADY_EXISTS_VALUE;
   }
 
   @Override
@@ -116,17 +118,22 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     // In Spanner GoogleSQL dialect, undefined table errors use gRPC NOT_FOUND = 5.
     // In Spanner PostgreSQL dialect, undefined relation errors use gRPC INVALID_ARGUMENT = 3
     // with a message like "relation ... does not exist".
-    if (e.getErrorCode() == 5) {
+    if (e.getErrorCode() == Code.NOT_FOUND_VALUE) {
       return true;
     }
     String message = e.getMessage();
-    return e.getErrorCode() == 3 && message != null && message.contains("does not exist");
+    return e.getErrorCode() == Code.INVALID_ARGUMENT_VALUE && message != null && message.contains("does not exist");
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    return e.getErrorCode() == Code.NOT_FOUND_VALUE;
   }
 
   @Override
   public boolean isConflict(SQLException e) {
     // Spanner JDBC driver passes null SQLSTATE; uses gRPC ABORTED = 10
-    return e.getErrorCode() == 10;
+    return e.getErrorCode() == Code.ABORTED_VALUE;
   }
 
   @Override
@@ -159,13 +166,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     return timeTypeEngine;
   }
 
-  @Override
-  public String createTableInternalPrimaryKeyClause(
-      boolean hasDescClusteringOrder, TableMetadata metadata) {
-    // TODO MySQL can create a primary key clauses by specifying the ordering on each column,
-    // the emulator rejected it but check if the real Spanner can do it
-    return super.createTableInternalPrimaryKeyClause(hasDescClusteringOrder, metadata);
-  }
 
   @Override
   public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
@@ -295,4 +295,10 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
     return sqls.toArray(new String[0]);
   }
+
+  @Override
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return true;
+  }
+
 }
