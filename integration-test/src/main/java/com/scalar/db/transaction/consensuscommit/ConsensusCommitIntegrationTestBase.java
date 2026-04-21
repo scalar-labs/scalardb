@@ -3,18 +3,29 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionIntegrationTestBase;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.service.TransactionFactory;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 public abstract class ConsensusCommitIntegrationTestBase
@@ -930,5 +941,82 @@ public abstract class ConsensusCommitIntegrationTestBase
     // Assert
     Optional<Result> optResult = get(prepareGet(0, 0));
     assertThat(optResult).isNotPresent();
+  }
+
+  @Test
+  public void scan_CrossPartitionScanWithTransactionAttribute_ShouldPropagateAndSucceed()
+      throws Exception {
+    // Arrange: build a manager with cross-partition-scan disabled at the config level so that
+    // the propagation of the transaction-scoped attribute is what gates the operation.
+    try (DistributedTransactionManager localManager = createManagerWithoutCrossPartitionScan()) {
+      populateRecords();
+
+      Map<String, String> attributes = new HashMap<>();
+      DatabaseOperationAttributes.setCrossPartitionScanEnabled(attributes, true);
+
+      Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+
+      // Act
+      DistributedTransaction transaction = localManager.begin(attributes);
+      List<Result> results = transaction.scan(scanAll);
+      transaction.commit();
+
+      // Assert: every (accountId, accountType) pair populated by populateRecords() must be
+      // present with the expected balance.
+      assertThat(results).hasSize(NUM_ACCOUNTS * NUM_TYPES);
+      Set<List<Integer>> observedKeys = new HashSet<>();
+      for (Result result : results) {
+        int accountId = result.getInt(ACCOUNT_ID);
+        int accountType = result.getInt(ACCOUNT_TYPE);
+        observedKeys.add(Arrays.asList(accountId, accountType));
+        assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+      Set<List<Integer>> expectedKeys = new HashSet<>();
+      for (int i = 0; i < NUM_ACCOUNTS; i++) {
+        for (int j = 0; j < NUM_TYPES; j++) {
+          expectedKeys.add(Arrays.asList(i, j));
+        }
+      }
+      assertThat(observedKeys).isEqualTo(expectedKeys);
+    }
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanWithTransactionAttributeButOperationOverridesItToFalse_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    try (DistributedTransactionManager localManager = createManagerWithoutCrossPartitionScan()) {
+      Map<String, String> attributes = new HashMap<>();
+      DatabaseOperationAttributes.setCrossPartitionScanEnabled(attributes, true);
+
+      // Operation explicitly sets cross-partition-scan-enabled to "false" -- operation-side
+      // value must win over the transaction-scoped "true" -- so the scan must be rejected.
+      Scan scanAll =
+          Scan.newBuilder()
+              .namespace(namespace)
+              .table(TABLE)
+              .all()
+              .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "false")
+              .build();
+
+      // Act Assert
+      DistributedTransaction transaction = localManager.begin(attributes);
+      try {
+        assertThatThrownBy(() -> transaction.scan(scanAll))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Cross-partition scan is not enabled");
+      } finally {
+        transaction.rollback();
+      }
+    }
+  }
+
+  private DistributedTransactionManager createManagerWithoutCrossPartitionScan() {
+    Properties properties = getProperties(getTestName());
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "false");
+    properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_ORDERING, "false");
+    return TransactionFactory.create(properties).getTransactionManager();
   }
 }

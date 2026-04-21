@@ -32,6 +32,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
+import com.scalar.db.common.AttributePropagatingDistributedTransaction;
 import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
@@ -267,12 +268,14 @@ public class ConsensusCommitManagerTest {
     ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
 
     // Act
-    ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID, attributes);
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID, attributes);
 
     // Assert
-    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
-    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
-    assertThat(transaction.getTransactionContext().readOnly).isFalse();
+    ConsensusCommit inner =
+        (ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
+    assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
+    assertThat(inner.getTransactionContext().isolation).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(inner.getTransactionContext().readOnly).isFalse();
   }
 
   @Test
@@ -301,7 +304,6 @@ public class ConsensusCommitManagerTest {
     DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
 
     // Assert
-    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
     ConsensusCommit inner =
         (ConsensusCommit) ((DecoratedDistributedTransaction) transaction).getOriginalTransaction();
     assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
@@ -325,6 +327,58 @@ public class ConsensusCommitManagerTest {
     assertThat(inner.getTransactionContext().transactionId).isEqualTo(ANY_TX_ID);
     assertThat(inner.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
     assertThat(inner.getTransactionContext().readOnly).isTrue();
+  }
+
+  @Test
+  public void begin_WithNonEmptyAttributes_ShouldWrapWithAttributePropagatingDecorator() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put("custom-key", "custom-value");
+
+    // Act
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(AttributePropagatingDistributedTransaction.class);
+  }
+
+  @Test
+  public void begin_WithEmptyAttributes_ShouldNotWrapWithAttributePropagatingDecorator() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    DistributedTransaction transaction = manager.begin(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(ConsensusCommit.class);
+    assertThat(transaction).isNotInstanceOf(AttributePropagatingDistributedTransaction.class);
+  }
+
+  @Test
+  public void beginReadOnly_WithNonEmptyAttributes_ShouldWrapWithAttributePropagatingDecorator() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put("custom-key", "custom-value");
+
+    // Act
+    DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(AttributePropagatingDistributedTransaction.class);
+  }
+
+  @Test
+  public void beginReadOnly_WithEmptyAttributes_ShouldNotWrapWithAttributePropagatingDecorator() {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+
+    // Act
+    DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
+
+    // Assert
+    assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
+    assertThat(transaction).isNotInstanceOf(AttributePropagatingDistributedTransaction.class);
   }
 
   @Test

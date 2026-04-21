@@ -24,6 +24,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
+import com.scalar.db.common.AttributePropagatingDistributedTransaction;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.VirtualTableInfoManager;
@@ -207,20 +208,30 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public DistributedTransaction begin(String txId, Map<String, String> attributes) {
-    return begin(
-        txId,
-        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
-        false,
-        false);
+    DistributedTransaction transaction =
+        begin(
+            txId,
+            ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+            false,
+            false);
+    if (!attributes.isEmpty()) {
+      transaction = new AttributePropagatingDistributedTransaction(transaction, attributes);
+    }
+    return transaction;
   }
 
   @Override
   public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes) {
-    return begin(
-        txId,
-        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
-        true,
-        false);
+    DistributedTransaction transaction =
+        begin(
+            txId,
+            ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+            true,
+            false);
+    if (!attributes.isEmpty()) {
+      transaction = new AttributePropagatingDistributedTransaction(transaction, attributes);
+    }
+    return transaction;
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
