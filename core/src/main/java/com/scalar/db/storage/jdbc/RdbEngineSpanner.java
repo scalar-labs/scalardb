@@ -102,7 +102,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public boolean isUndefinedTableError(SQLException e) {
-    return e.getErrorCode() == Code.NOT_FOUND_VALUE;
+    return e.getErrorCode() == Code.INVALID_ARGUMENT_VALUE;
   }
 
   @Override
