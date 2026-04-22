@@ -106,9 +106,9 @@ public class AttributePropagatingDistributedTransactionManager
 
   /**
    * A {@link DistributedTransaction} decorator that propagates the transaction-scoped attributes
-   * given to {@code begin(..., Map<String, String>)} into every operation issued on the
-   * transaction. If an operation already carries an attribute with the same name, the operation's
-   * value wins.
+   * given to any attribute-taking {@code begin*} / {@code start*} variant (including read-only
+   * variants) into every operation issued on the transaction. If an operation already carries an
+   * attribute with the same name, the operation's value wins.
    */
   @NotThreadSafe
   @VisibleForTesting

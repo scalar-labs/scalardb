@@ -726,6 +726,93 @@ public class AttributePropagatingDistributedTransactionManagerTest {
       verify(wrappedTransaction).batch(same(operations));
     }
 
+    // -------------------- deprecated put(List) / delete(List) --------------------
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void putList_WithTransactionAttributes_ShouldMergeIntoEachPut() throws CrudException {
+      // Arrange
+      AttributePropagatingDistributedTransaction decorator =
+          newDecorator(twoTransactionAttributes());
+      Put put1 = buildPut(Collections.emptyMap());
+      Put put2 = buildPut(Collections.singletonMap(TX_ATTR_KEY_1, "operation-wins"));
+      List<Put> puts = Arrays.asList(put1, put2);
+
+      Put expectedPut1 = buildPut(twoTransactionAttributes());
+      Map<String, String> expectedPut2Attrs = new HashMap<>();
+      expectedPut2Attrs.put(TX_ATTR_KEY_1, "operation-wins");
+      expectedPut2Attrs.put(TX_ATTR_KEY_2, TX_ATTR_VALUE_2);
+      Put expectedPut2 = buildPut(expectedPut2Attrs);
+      List<Put> expected = Arrays.asList(expectedPut1, expectedPut2);
+
+      // Act
+      decorator.put(puts);
+
+      // Assert
+      verify(wrappedTransaction).put(eq(expected));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void putList_WhenEveryPutAlreadyHasAllKeys_ShouldForwardSameListInstance()
+        throws CrudException {
+      // Arrange
+      AttributePropagatingDistributedTransaction decorator =
+          newDecorator(twoTransactionAttributes());
+      Put put1 = buildPut(twoTransactionAttributes());
+      Put put2 = buildPut(twoTransactionAttributes());
+      List<Put> puts = Arrays.asList(put1, put2);
+
+      // Act
+      decorator.put(puts);
+
+      // Assert: no element needed merging, so no new list is allocated.
+      verify(wrappedTransaction).put(same(puts));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void deleteList_WithTransactionAttributes_ShouldMergeIntoEachDelete()
+        throws CrudException {
+      // Arrange
+      AttributePropagatingDistributedTransaction decorator =
+          newDecorator(twoTransactionAttributes());
+      Delete delete1 = buildDelete(Collections.emptyMap());
+      Delete delete2 = buildDelete(Collections.singletonMap(TX_ATTR_KEY_1, "operation-wins"));
+      List<Delete> deletes = Arrays.asList(delete1, delete2);
+
+      Delete expectedDelete1 = buildDelete(twoTransactionAttributes());
+      Map<String, String> expectedDelete2Attrs = new HashMap<>();
+      expectedDelete2Attrs.put(TX_ATTR_KEY_1, "operation-wins");
+      expectedDelete2Attrs.put(TX_ATTR_KEY_2, TX_ATTR_VALUE_2);
+      Delete expectedDelete2 = buildDelete(expectedDelete2Attrs);
+      List<Delete> expected = Arrays.asList(expectedDelete1, expectedDelete2);
+
+      // Act
+      decorator.delete(deletes);
+
+      // Assert
+      verify(wrappedTransaction).delete(eq(expected));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void deleteList_WhenEveryDeleteAlreadyHasAllKeys_ShouldForwardSameListInstance()
+        throws CrudException {
+      // Arrange
+      AttributePropagatingDistributedTransaction decorator =
+          newDecorator(twoTransactionAttributes());
+      Delete delete1 = buildDelete(twoTransactionAttributes());
+      Delete delete2 = buildDelete(twoTransactionAttributes());
+      List<Delete> deletes = Arrays.asList(delete1, delete2);
+
+      // Act
+      decorator.delete(deletes);
+
+      // Assert: no element needed merging, so no new list is allocated.
+      verify(wrappedTransaction).delete(same(deletes));
+    }
+
     // -------------------- pass-through --------------------
 
     @Test
