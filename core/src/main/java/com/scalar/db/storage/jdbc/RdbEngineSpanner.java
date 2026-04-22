@@ -236,7 +236,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
           CoreError.JDBC_SPANNER_LIKE_ESCAPE_CHARACTER_NOT_SUPPORTED.buildMessage(
               likeExpression.getEscape()));
     }
-    return likeExpression.getEscape();
+    return null;
   }
 
   @Override

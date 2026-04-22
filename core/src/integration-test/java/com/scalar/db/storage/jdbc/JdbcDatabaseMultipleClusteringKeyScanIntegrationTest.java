@@ -26,15 +26,9 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (JdbcTestUtils.isOracle(rdbEngine)) {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
       return 1;
     }
-
-    String envThreadNum = System.getenv("SCALARDB_INTEGRATION_TEST_THREAD_NUM");
-    if (envThreadNum != null) {
-      return Integer.parseInt(envThreadNum);
-    }
-
     return super.getThreadNum();
   }
 

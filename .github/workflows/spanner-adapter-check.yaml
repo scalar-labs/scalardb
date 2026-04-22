@@ -69,7 +69,7 @@ jobs:
 
           - name: ConditionalMutation
             label: spanner_cond_mutation
-            tests: "JdbcDatabaseConditionalMutationIntegrationTest"
+            tests: "JdbcDatabaseConditionalMutationIntegrationTestWithSpanner"
 
           # --- Group 1: Admin and import tests (~26m) ---
 
@@ -136,7 +136,7 @@ jobs:
       - name: Check if job should run
         id: should-run
         run: |
-          # For group_commit flavor, filter tests to only *ConsensusCommit* classes
+          # For group_commit flavor, filter tests to only ConsensusCommit* classes
           # Skip entirely if no ConsensusCommit tests exist in this group
           if [ "${{ matrix.group_commit_enabled }}" = "true" ]; then
             CC_TESTS=""

@@ -3,7 +3,6 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -30,8 +29,6 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
   private static final Logger logger =
       LoggerFactory.getLogger(JdbcDatabaseConditionalMutationIntegrationTestWithSpanner.class);
 
-  private static final String TABLE = "test_table";
-
   private final List<DistributedStorage> perThreadStorages = new ArrayList<>();
   private final List<DistributedStorageAdmin> perThreadAdmins = new ArrayList<>();
   private final AtomicInteger threadIndex = new AtomicInteger(0);
@@ -39,22 +36,18 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
 
   @Override
   protected int getThreadNum() {
-    String envThreadNum = System.getProperty("scalardb.int_test.thread_num");
-    if (envThreadNum != null) {
-      return Integer.parseInt(envThreadNum);
-    }
-    return super.getThreadNum();
+    // Optimized for a standard Github action runner
+    return 18;
   }
 
   @Override
   protected void initialize(String testName) throws Exception {
-    int threadNum = 8;
 
-    threadId = ThreadLocal.withInitial(() -> threadIndex.getAndIncrement() % threadNum);
+    threadId = ThreadLocal.withInitial(() -> threadIndex.getAndIncrement() % getThreadNum());
 
     String baseUrl = System.getProperty("scalardb.jdbc.url");
-    logger.debug("Initializing {} per-thread databases for Spanner emulator", threadNum);
-    for (int i = 0; i < threadNum; i++) {
+    logger.debug("Initializing {} per-thread databases for Spanner emulator", getThreadNum());
+    for (int i = 0; i < getThreadNum(); i++) {
       String threadUrl = baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + i);
       logger.info("Thread {}: {}", i, threadUrl);
       Properties props = JdbcEnv.getProperties(testName);
@@ -66,24 +59,14 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
   }
 
   @Override
-  protected DistributedStorageAdmin createStorageAdmin(StorageFactory factory)
-      throws ExecutionException {
-    // Create the table in each per-thread database
-    String namespace = getNamespace();
-    for (DistributedStorageAdmin threadAdmin : perThreadAdmins) {
-      threadAdmin.createNamespace(namespace, true, getCreationOptions());
-      threadAdmin.createTable(namespace, TABLE, getTableMetadata(), true, getCreationOptions());
-    }
+  protected DistributedStorageAdmin createStorageAdmin(StorageFactory factory) {
     return createAdminProxy();
   }
 
   @Override
-  protected DistributedStorage createStorage(StorageFactory factory) throws ExecutionException {
+  protected DistributedStorage createStorage(StorageFactory factory) {
     return createStorageProxy();
   }
-
-  // No setUp() override needed — the admin proxy broadcasts truncateTable to all per-thread
-  // databases
 
   private DistributedStorage createStorageProxy() {
     InvocationHandler handler =

@@ -100,12 +100,11 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
     executorService = Executors.newFixedThreadPool(getThreadNum());
   }
 
-  protected DistributedStorageAdmin createStorageAdmin(StorageFactory factory)
-      throws ExecutionException {
+  protected DistributedStorageAdmin createStorageAdmin(StorageFactory factory) {
     return factory.getStorageAdmin();
   }
 
-  protected DistributedStorage createStorage(StorageFactory factory) throws ExecutionException {
+  protected DistributedStorage createStorage(StorageFactory factory) {
     return factory.getStorage();
   }
 
@@ -1738,6 +1737,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
       tracked.add(
           () -> {
             Void result = callable.call();
+            // TODO remove before merge the logging
             int done = completed.incrementAndGet();
             int percent = done * 100 / total;
             int lastLogged = lastLoggedPercent.get();

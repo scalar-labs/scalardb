@@ -29,18 +29,16 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
-    if (JdbcTestUtils.isSpanner(rdbEngine)) {
-      return 3;
-    }
+    // TODO test if necessary
+    //    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+    //      return 3;
+    //    }
     return super.getThreadNum();
   }
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      return false;
-    }
-    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -95,7 +93,7 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
     // FLOAT and DOUBLE types cannot be used as partition key in Yugabyte
     // BLOB type cannot be used as a partition key in Db2
-    // FLOAT and DOUBLE types cannot be used as partition key in Spanner
+    // FLOAT type cannot be used as partition key in Spanner
     return JdbcTestUtils.filterDataTypes(
         super.getDataTypes(),
         rdbEngine,

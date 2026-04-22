@@ -15,7 +15,6 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
 import java.time.format.SignStyle;
 
-
 class RdbEngineTimeTypeSpanner
     implements RdbEngineTimeTypeStrategy<
         LocalDate, OffsetDateTime, OffsetDateTime, OffsetDateTime> {

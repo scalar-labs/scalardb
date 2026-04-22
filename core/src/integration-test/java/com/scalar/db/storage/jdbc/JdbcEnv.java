@@ -28,12 +28,12 @@ public final class JdbcEnv {
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
     if (isSpanner() && password.isEmpty()) {
       try {
+        // TODO delete before merge
         password =
             String.join(
                 "",
                 Files.readAllLines(
-                    Paths.get("/Users/vguilpain/spanner-credentials.json"),
-                    StandardCharsets.UTF_8));
+                    Paths.get("~/spanner-credentials.json"), StandardCharsets.UTF_8));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
