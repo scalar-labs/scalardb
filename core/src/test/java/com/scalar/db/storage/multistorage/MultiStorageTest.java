@@ -44,14 +44,18 @@ public class MultiStorageTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
+    Map<String, DistributedStorage> nameStorageMap = new HashMap<>();
+    nameStorageMap.put("s1", storage1);
+    nameStorageMap.put("s2", storage2);
+    nameStorageMap.put("s3", storage3);
     Map<String, DistributedStorage> tableStorageMap = new HashMap<>();
     tableStorageMap.put(NAMESPACE1 + "." + TABLE1, storage1);
     tableStorageMap.put(NAMESPACE1 + "." + TABLE2, storage2);
-    Map<String, DistributedStorage> namespaceStorageMap = new HashMap<>();
-    namespaceStorageMap.put(NAMESPACE2, storage2);
-    DistributedStorage defaultStorage = storage3;
+    Map<String, String> namespaceStorageNameMap = new HashMap<>();
+    namespaceStorageNameMap.put(NAMESPACE2, "s2");
     multiStorage =
-        new MultiStorage(databaseConfig, tableStorageMap, namespaceStorageMap, defaultStorage);
+        new MultiStorage(
+            databaseConfig, nameStorageMap, tableStorageMap, namespaceStorageNameMap, "s3");
   }
 
   @Test

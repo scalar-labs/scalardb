@@ -3,11 +3,15 @@ package com.scalar.db.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetWithIndex;
 import com.scalar.db.api.Insert;
@@ -18,18 +22,23 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -632,5 +641,39 @@ public class ScalarDbUtilsTest {
 
     // Assert
     assertThat(actual).isNotPresent();
+  }
+
+  @Test
+  public void getStorageAdmins_MultiStorageAdminGiven_ShouldReturnUnderlyingNameAdminMap()
+      throws ExecutionException {
+    // Arrange
+    DistributedStorageAdmin admin1 = mock(DistributedStorageAdmin.class);
+    DistributedStorageAdmin admin2 = mock(DistributedStorageAdmin.class);
+    MultiStorageAdmin multiStorageAdmin = mock(MultiStorageAdmin.class);
+    when(multiStorageAdmin.getNameAdminMap())
+        .thenReturn(ImmutableMap.of("s1", admin1, "s2", admin2));
+
+    // Act
+    Map<String, DistributedStorageAdmin> actual = ScalarDbUtils.getStorageAdmins(multiStorageAdmin);
+
+    // Assert
+    assertThat(actual).containsOnly(entry("s1", admin1), entry("s2", admin2));
+  }
+
+  @Test
+  public void getStorageAdmins_SingleAdminGiven_ShouldReturnSingleEntryMap()
+      throws ExecutionException {
+    // Arrange
+    DistributedStorageAdmin admin = mock(DistributedStorageAdmin.class);
+    when(admin.getStorageInfo(""))
+        .thenReturn(
+            new StorageInfoImpl(
+                "jdbc", StorageInfo.MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true));
+
+    // Act
+    Map<String, DistributedStorageAdmin> actual = ScalarDbUtils.getStorageAdmins(admin);
+
+    // Assert
+    assertThat(actual).containsOnly(entry("jdbc", admin));
   }
 }
