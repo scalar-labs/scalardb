@@ -33,11 +33,12 @@ import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A {@link DistributedTransactionManager} decorator that wraps the transactions it returns with
- * {@link AttributePropagatingDistributedTransaction} so that attributes given to {@code begin(...,
- * Map<String, String>)} are propagated to every operation issued on the transaction.
+ * {@link AttributePropagatingDistributedTransaction} so that attributes given to any
+ * attribute-taking {@code begin*} / {@code start*} variant (including read-only variants) are
+ * propagated to every operation issued on the transaction.
  *
- * <p>This decorator wraps the transaction only when the attributes map is non-empty, so {@code
- * begin()} / {@code begin(txId)} continue to return the same concrete transaction type as the
+ * <p>This decorator wraps the transaction only when the attributes map is non-empty, so
+ * attribute-free begin/start variants continue to return the same concrete transaction type as the
  * underlying manager.
  */
 @ThreadSafe
@@ -148,7 +149,7 @@ public class AttributePropagatingDistributedTransactionManager
     @Deprecated
     @Override
     public void put(List<Put> puts) throws CrudException {
-      super.put(mergeAttributesForList(puts));
+      super.put(mergeAttributesForEach(puts));
     }
 
     @Override
@@ -175,33 +176,41 @@ public class AttributePropagatingDistributedTransactionManager
     @Deprecated
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
-      super.delete(mergeAttributesForList(deletes));
+      super.delete(mergeAttributesForEach(deletes));
     }
 
     @Override
     public void mutate(List<? extends Mutation> mutations) throws CrudException {
-      List<Mutation> merged = new ArrayList<>(mutations.size());
-      for (Mutation mutation : mutations) {
-        merged.add(mergeAttributes(mutation));
-      }
-      super.mutate(merged);
+      super.mutate(this.<Mutation>mergeAttributesForEach(mutations));
     }
 
     @Override
     public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {
-      List<Operation> merged = new ArrayList<>(operations.size());
-      for (Operation operation : operations) {
-        merged.add(mergeAttributes(operation));
-      }
-      return super.batch(merged);
+      return super.batch(this.<Operation>mergeAttributesForEach(operations));
     }
 
-    private <T extends Operation> List<T> mergeAttributesForList(List<T> operations) {
-      List<T> merged = new ArrayList<>(operations.size());
-      for (T operation : operations) {
-        merged.add(mergeAttributes(operation));
+    @SuppressWarnings("unchecked")
+    private <T extends Operation> List<T> mergeAttributesForEach(List<? extends T> operations) {
+      // Allocates a new list only when some element actually needs merging. Returns the original
+      // list (same reference) when every element is forwarded unchanged so a common case of "no tx
+      // attribute needs to be added on any operation" avoids allocating a list copy.
+      for (int i = 0; i < operations.size(); i++) {
+        T operation = operations.get(i);
+        T mergedOperation = mergeAttributes(operation);
+        if (mergedOperation == operation) {
+          continue;
+        }
+        // Found an operation that needed merging: allocate the new list, backfill the prior
+        // unchanged elements, and merge the remaining elements.
+        List<T> merged = new ArrayList<>(operations.size());
+        merged.addAll(operations.subList(0, i));
+        merged.add(mergedOperation);
+        for (int j = i + 1; j < operations.size(); j++) {
+          merged.add(mergeAttributes(operations.get(j)));
+        }
+        return merged;
       }
-      return merged;
+      return (List<T>) operations;
     }
 
     @SuppressWarnings("unchecked")

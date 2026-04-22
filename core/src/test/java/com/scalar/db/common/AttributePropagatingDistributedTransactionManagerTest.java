@@ -691,6 +691,41 @@ public class AttributePropagatingDistributedTransactionManagerTest {
       verify(wrappedTransaction).batch(eq(expected));
     }
 
+    @Test
+    public void mutate_WhenEveryMutationAlreadyHasAllKeys_ShouldForwardSameListInstance()
+        throws CrudException {
+      // Arrange
+      AttributePropagatingDistributedTransaction decorator =
+          newDecorator(twoTransactionAttributes());
+      Put put = buildPut(twoTransactionAttributes());
+      Delete delete = buildDelete(twoTransactionAttributes());
+      List<Mutation> mutations = Arrays.asList(put, delete);
+
+      // Act
+      decorator.mutate(mutations);
+
+      // Assert: no element needed merging, so no new list is allocated.
+      verify(wrappedTransaction).mutate(same(mutations));
+    }
+
+    @Test
+    public void batch_WhenEveryOperationAlreadyHasAllKeys_ShouldForwardSameListInstance()
+        throws CrudException {
+      // Arrange
+      AttributePropagatingDistributedTransaction decorator =
+          newDecorator(twoTransactionAttributes());
+      Get get = buildGet(twoTransactionAttributes());
+      Put put = buildPut(twoTransactionAttributes());
+      List<Operation> operations = Arrays.asList(get, put);
+      when(wrappedTransaction.batch(any())).thenReturn(Collections.emptyList());
+
+      // Act
+      decorator.batch(operations);
+
+      // Assert: no element needed merging, so no new list is allocated.
+      verify(wrappedTransaction).batch(same(operations));
+    }
+
     // -------------------- pass-through --------------------
 
     @Test
