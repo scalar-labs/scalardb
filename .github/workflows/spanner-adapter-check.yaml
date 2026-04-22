@@ -242,7 +242,7 @@ jobs:
           fi
 
           ./gradlew core:integrationTestJdbc \
-            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" \
+            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
             ${GROUP_COMMIT_OPTS} \
             ${TESTS_ARGS}
 
