@@ -47,10 +47,6 @@ jobs:
         test_group:
           # --- Dedicated runners for slow tests ---
 
-          - name: JdbcAdminIntegrationTest
-            label: spanner_admin
-            tests: "JdbcAdminIntegrationTest"
-
           - name: ConsensusCommitSpecific
             label: spanner_cc_specific
             tests: "ConsensusCommitSpecificIntegrationTestWithJdbcDatabase"
@@ -86,6 +82,8 @@ jobs:
               JdbcAdminRepairIntegrationTest
               JdbcSchemaLoaderImportIntegrationTest
               JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
+              JdbcAdminIntegrationTest
+              JdbcTransactionAdminIntegrationTest
 
           # --- Group 2: Core JDBC database tests (~12m) ---
 
@@ -116,7 +114,7 @@ jobs:
 
           # --- Group 4: ConsensusCommit base + TwoPhase + SingleCrud (~15m) ---
 
-          - name: "CC base & TwoPhase & SingleCrud"
+          - name: "CC base & TwoPhase & SingleCrud & JDBC transaction"
             label: spanner_group4
             tests: >-
               ConsensusCommitIntegrationTestWithJdbcDatabase
@@ -131,6 +129,8 @@ jobs:
               TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
               SingleCrudOperationTransactionIntegrationTestWithJdbcDatabase
               SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
+              JdbcTransactionCrossPartitionScanIntegrationTest
+              JdbcTransactionIntegrationTest
 
     steps:
       - name: Check if job should run
