@@ -34,9 +34,13 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   private final RdbEngineTimeTypeSpanner timeTypeEngine;
 
+  RdbEngineSpanner(JdbcConfig config) {
+    timeTypeEngine = new RdbEngineTimeTypeSpanner(config);
+  }
+
   @VisibleForTesting
   RdbEngineSpanner() {
-    timeTypeEngine = new RdbEngineTimeTypeSpanner();
+    timeTypeEngine = null;
   }
 
   @Override
@@ -50,7 +54,8 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
       case TEXT:
         return "text";
       case INT:
-        return "bigint"; // Spanner PG int is always 8-byte
+        return "bigint"; // Spanner has not INT type coded on 4 bytes. INT type is an alias for a
+        // bigint coded on 8 bytes.
       case TIME:
       case TIMESTAMP:
         return "timestamptz";
@@ -107,7 +112,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public boolean isUndefinedIndexError(SQLException e) {
-    // TODO check error code
     return e.getErrorCode() == Code.NOT_FOUND_VALUE;
   }
 

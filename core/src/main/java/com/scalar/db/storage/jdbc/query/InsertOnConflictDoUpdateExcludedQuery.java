@@ -18,8 +18,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * An UPSERT query for Spanner PostgreSQL that uses {@code excluded.col} references in the {@code ON
  * CONFLICT DO UPDATE SET} clause instead of bind parameters.
  *
- * <p>Spanner PG rejects the standard {@code SET col=?} bind-parameter form and requires the {@code
- * excluded} table alias: {@code SET col=excluded.col}.
+ * <p>Spanner PostgreSQL rejects the standard {@code SET col=?} bind-parameter form and requires the
+ * {@code excluded} table alias: {@code SET col=excluded.col}.
  */
 @ThreadSafe
 public class InsertOnConflictDoUpdateExcludedQuery implements UpsertQuery {

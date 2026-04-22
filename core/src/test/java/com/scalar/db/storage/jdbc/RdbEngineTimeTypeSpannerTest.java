@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,10 +15,13 @@ import org.junit.jupiter.api.Test;
 public class RdbEngineTimeTypeSpannerTest {
 
   private RdbEngineTimeTypeSpanner strategy;
+  private JdbcConfig config;
 
   @BeforeEach
   void setUp() {
-    strategy = new RdbEngineTimeTypeSpanner();
+    config = mock(JdbcConfig.class);
+    when(config.getSpannerTimeColumnDefaultDateComponent()).thenReturn(LocalDate.of(1970, 1, 1));
+    strategy = new RdbEngineTimeTypeSpanner(config);
   }
 
   @Test
@@ -47,6 +52,17 @@ public class RdbEngineTimeTypeSpannerTest {
     OffsetDateTime result = strategy.convert(maxTime);
     assertThat(result.toLocalTime()).isEqualTo(maxTime);
     assertThat(result.toLocalDate()).isEqualTo(LocalDate.of(1970, 1, 1));
+  }
+
+  @Test
+  void convert_LocalTime_ShouldUseConfiguredDateComponent() {
+    LocalDate customDate = LocalDate.of(2024, 1, 1);
+    when(config.getSpannerTimeColumnDefaultDateComponent()).thenReturn(customDate);
+    LocalTime time = LocalTime.of(12, 34, 56);
+    OffsetDateTime result = strategy.convert(time);
+    assertThat(result.toLocalDate()).isEqualTo(customDate);
+    assertThat(result.toLocalTime()).isEqualTo(time);
+    assertThat(result.getOffset()).isEqualTo(ZoneOffset.UTC);
   }
 
   @Test

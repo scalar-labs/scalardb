@@ -15,12 +15,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
 import java.time.format.SignStyle;
 
-/**
- * Spanner PG time type strategy. Spanner PG has no native TIME type, so TIME is stored as
- * TIMESTAMPTZ using epoch date (1970-01-01) as the fixed date component. Spanner PG does not
- * support type modifiers for timestamptz, so TIMESTAMPTZ(6) is invalid; plain TIMESTAMPTZ provides
- * microsecond precision by default.
- */
+
 class RdbEngineTimeTypeSpanner
     implements RdbEngineTimeTypeStrategy<
         LocalDate, OffsetDateTime, OffsetDateTime, OffsetDateTime> {
@@ -38,7 +33,11 @@ class RdbEngineTimeTypeSpanner
           .withResolverStyle(ResolverStyle.STRICT)
           .withChronology(IsoChronology.INSTANCE);
 
-  private static final LocalDate EPOCH_DATE = LocalDate.of(1970, 1, 1);
+  private final JdbcConfig config;
+
+  public RdbEngineTimeTypeSpanner(JdbcConfig config) {
+    this.config = config;
+  }
 
   @Override
   public LocalDate convert(LocalDate date) {
@@ -47,7 +46,8 @@ class RdbEngineTimeTypeSpanner
 
   @Override
   public OffsetDateTime convert(LocalTime time) {
-    return OffsetDateTime.of(EPOCH_DATE, time, ZoneOffset.UTC);
+    return OffsetDateTime.of(
+        config.getSpannerTimeColumnDefaultDateComponent(), time, ZoneOffset.UTC);
   }
 
   @Override

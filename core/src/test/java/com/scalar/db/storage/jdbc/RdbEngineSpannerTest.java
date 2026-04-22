@@ -33,7 +33,7 @@ public class RdbEngineSpannerTest {
 
   @BeforeEach
   void setUp() {
-    engine = new RdbEngineSpanner();
+    engine = new RdbEngineSpanner(mock(JdbcConfig.class));
   }
 
   @Test
@@ -75,7 +75,7 @@ public class RdbEngineSpannerTest {
     JdbcConfig config = mock(JdbcConfig.class);
 
     // Act
-    RdbEngineSpanner engineWithConfig = new RdbEngineSpanner();
+    RdbEngineSpanner engineWithConfig = new RdbEngineSpanner(config);
 
     // Assert
     assertThat(engineWithConfig).isNotNull();
