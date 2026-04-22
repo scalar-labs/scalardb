@@ -1070,7 +1070,7 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
-      Category.USER_ERROR, "0284", "Failed to load the service account key for Spanner.", "", ""),
+      Category.USER_ERROR, "0287", "Failed to load the service account key for Spanner.", "", ""),
 
   //
   // Errors for the concurrency error category

@@ -107,7 +107,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public boolean isUndefinedIndexError(SQLException e) {
-    //TODO check error code
+    // TODO check error code
     return e.getErrorCode() == Code.NOT_FOUND_VALUE;
   }
 
@@ -145,7 +145,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
       getTimeTypeStrategy() {
     return timeTypeEngine;
   }
-
 
   @Override
   public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {

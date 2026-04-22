@@ -192,10 +192,10 @@ dependencies {
     implementation("com.google.cloud:alloydb-jdbc-connector:${alloyDbJdbcConnectorVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerJdbcVersion}") {
+    implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
+        implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerDriverVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"

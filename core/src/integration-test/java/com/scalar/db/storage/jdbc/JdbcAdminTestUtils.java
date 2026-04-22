@@ -184,10 +184,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @Override
   public boolean namespaceExists(String namespace) throws SQLException {
     String sql;
-    if (JdbcTestUtils.isSpanner(rdbEngine)) {
-      // Spanner PG does not have pg_namespace; use information_schema.schemata instead
-      sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
-    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
       sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = ?";
     } else if (JdbcTestUtils.isOracle(rdbEngine)) {
       sql = "SELECT 1 FROM all_users WHERE username = ?";

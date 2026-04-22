@@ -113,7 +113,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
         || JdbcTestUtils.isSpanner(rdbEngine);
   }
 
-  private boolean isDb2OrSpanner(){
+  private boolean isDb2OrSpanner() {
     return JdbcEnv.isDb2() || JdbcEnv.isSpanner();
   }
 
@@ -122,8 +122,9 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   @DisabledIf("isSqlite")
   public void
       dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException()
-      throws Exception {
-    super.dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException();
+          throws Exception {
+    super
+        .dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException();
   }
 
   @Test
