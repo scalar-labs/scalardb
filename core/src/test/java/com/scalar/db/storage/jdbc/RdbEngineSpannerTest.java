@@ -11,7 +11,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
-import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateExcludedQuery;
+import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
@@ -300,7 +300,7 @@ public class RdbEngineSpannerTest {
   // === UPSERT tests (CRUD-05) ===
 
   @Test
-  void buildUpsertQuery_ShouldReturnInsertOnConflictDoUpdateExcludedQuery() {
+  void buildUpsertQuery_ShouldReturnInsertOnConflictDoUpdateQueryWithExcludedAlias() {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -316,7 +316,9 @@ public class RdbEngineSpannerTest {
     UpsertQuery query = builder.build();
 
     // Assert
-    assertThat(query).isInstanceOf(InsertOnConflictDoUpdateExcludedQuery.class);
+    assertThat(query).isInstanceOf(InsertOnConflictDoUpdateQuery.class);
+    // Verify the excluded-alias SET form is used (Spanner-specific)
+    assertThat(query.sql()).contains("=excluded.");
   }
 
   @Test

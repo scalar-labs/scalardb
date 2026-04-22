@@ -12,7 +12,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
-import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateExcludedQuery;
+import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.zaxxer.hikari.HikariConfig;
 import java.io.ByteArrayInputStream;
@@ -215,7 +215,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnConflictDoUpdateExcludedQuery(builder);
+    return new InsertOnConflictDoUpdateQuery(builder, true);
   }
 
   @Override
@@ -253,7 +253,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
       String encodedCredentials =
           Base64.getEncoder()
               .encodeToString(config.getPassword().get().getBytes(StandardCharsets.UTF_8));
-      // Setting this property is required to use encoded credentials authentication
+      // Setting this system property is required to use encoded credentials authentication
       System.setProperty("ENABLE_ENCODED_CREDENTIALS", "true");
       connectionConfig.addDataSourceProperty("encodedcredentials", encodedCredentials);
     }
