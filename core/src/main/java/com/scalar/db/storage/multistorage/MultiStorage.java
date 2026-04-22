@@ -3,6 +3,7 @@ package com.scalar.db.storage.multistorage;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -18,8 +19,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
-import java.util.ArrayList;
-import java.util.HashMap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,54 +39,55 @@ public class MultiStorage extends AbstractDistributedStorage {
   /** @deprecated Will be removed in 5.0.0. */
   @Deprecated private final Map<String, DistributedStorage> tableStorageMap;
 
-  private final Map<String, DistributedStorage> namespaceStorageMap;
-  private final DistributedStorage defaultStorage;
-  private final List<DistributedStorage> storages;
+  private final Map<String, String> namespaceStorageNameMap;
+  private final String defaultStorageName;
+  private final Map<String, DistributedStorage> nameStorageMap;
 
   @Inject
   public MultiStorage(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     MultiStorageConfig config = new MultiStorageConfig(databaseConfig);
 
-    storages = new ArrayList<>();
-    Map<String, DistributedStorage> nameStorageMap = new HashMap<>();
-    config
-        .getDatabasePropertiesMap()
-        .forEach(
-            (storageName, properties) -> {
-              StorageFactory factory = StorageFactory.create(properties);
-              DistributedStorage storage = factory.getStorage();
-              nameStorageMap.put(storageName, storage);
-              storages.add(storage);
-            });
+    nameStorageMap =
+        config.getDatabasePropertiesMap().entrySet().stream()
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Map.Entry::getKey, e -> StorageFactory.create(e.getValue()).getStorage()));
 
-    tableStorageMap = new HashMap<>();
-    config
-        .getTableStorageMap()
-        .forEach(
-            (table, storageName) -> tableStorageMap.put(table, nameStorageMap.get(storageName)));
+    tableStorageMap =
+        config.getTableStorageMap().entrySet().stream()
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Map.Entry::getKey, e -> nameStorageMap.get(e.getValue())));
 
-    namespaceStorageMap = new HashMap<>();
-    config
-        .getNamespaceStorageMap()
-        .forEach(
-            (table, storageName) ->
-                namespaceStorageMap.put(table, nameStorageMap.get(storageName)));
+    namespaceStorageNameMap = ImmutableMap.copyOf(config.getNamespaceStorageMap());
 
-    defaultStorage = nameStorageMap.get(config.getDefaultStorage());
+    defaultStorageName = config.getDefaultStorage();
   }
 
   @VisibleForTesting
   MultiStorage(
       DatabaseConfig databaseConfig,
+      Map<String, DistributedStorage> nameStorageMap,
       Map<String, DistributedStorage> tableStorageMap,
-      Map<String, DistributedStorage> namespaceStorageMap,
-      DistributedStorage defaultStorage) {
+      Map<String, String> namespaceStorageNameMap,
+      String defaultStorageName) {
     super(databaseConfig);
-    this.tableStorageMap = tableStorageMap;
-    this.namespaceStorageMap = namespaceStorageMap;
-    this.defaultStorage = defaultStorage;
-    storages = null;
+    this.nameStorageMap = ImmutableMap.copyOf(nameStorageMap);
+    this.tableStorageMap = ImmutableMap.copyOf(tableStorageMap);
+    this.namespaceStorageNameMap = ImmutableMap.copyOf(namespaceStorageNameMap);
+    this.defaultStorageName = defaultStorageName;
+  }
+
+  /**
+   * Returns a map of underlying storages keyed by the user-defined storage name (configured via
+   * {@code scalar.db.multi_storage.storages}).
+   *
+   * @return an unmodifiable map of underlying storages keyed by storage name
+   */
+  @SuppressFBWarnings("EI_EXPOSE_REP")
+  public Map<String, DistributedStorage> getNameStorageMap() {
+    return nameStorageMap;
   }
 
   @Override
@@ -150,13 +151,13 @@ public class MultiStorage extends AbstractDistributedStorage {
       return storage;
     }
     String namespace = operation.forNamespace().get();
-    storage = namespaceStorageMap.get(namespace);
-    return storage != null ? storage : defaultStorage;
+    String storageName = namespaceStorageNameMap.getOrDefault(namespace, defaultStorageName);
+    return nameStorageMap.get(storageName);
   }
 
   @Override
   public void close() {
-    for (DistributedStorage storage : storages) {
+    for (DistributedStorage storage : nameStorageMap.values()) {
       storage.close();
     }
   }
