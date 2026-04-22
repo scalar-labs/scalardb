@@ -85,55 +85,34 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    //TODO check all error message
-    // In Spanner GoogleSQL dialect, duplicate errors use gRPC ALREADY_EXISTS = 6.
-    // In Spanner PostgreSQL dialect, duplicate table/schema errors use gRPC FAILED_PRECONDITION = 9
-    // with a message like "Duplicate name in schema: schema.table" or "Duplicate name in schema:
-    // schema_name."
-    return isSpannerDuplicateNameError(e);
+    // Since the "IF NOT EXISTS" syntax is used to create a table, we always return false
+    return false;
   }
 
   @Override
   public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
-    // In Spanner PG dialect, duplicate schema errors use gRPC FAILED_PRECONDITION = 9
-    // with message "Duplicate name in schema: schema_name."
-    return isSpannerDuplicateNameError(e);
-  }
-
-  private boolean isSpannerDuplicateNameError(SQLException e) {
-    if (e.getErrorCode() == Code.ALREADY_EXISTS_VALUE) {
-      return true; // ALREADY_EXISTS (GoogleSQL dialect)
-    }
-    String message = e.getMessage();
-    return e.getErrorCode() == Code.FAILED_PRECONDITION_VALUE && message != null && message.contains("Duplicate name in schema");
+    // Since the "IF NOT EXISTS" syntax is used to create a schema, we always return false
+    return false;
   }
 
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
-    // Spanner JDBC driver passes null SQLSTATE; uses gRPC ALREADY_EXISTS = 6
     return e.getErrorCode() == Code.ALREADY_EXISTS_VALUE;
   }
 
   @Override
   public boolean isUndefinedTableError(SQLException e) {
-    // In Spanner GoogleSQL dialect, undefined table errors use gRPC NOT_FOUND = 5.
-    // In Spanner PostgreSQL dialect, undefined relation errors use gRPC INVALID_ARGUMENT = 3
-    // with a message like "relation ... does not exist".
-    if (e.getErrorCode() == Code.NOT_FOUND_VALUE) {
-      return true;
-    }
-    String message = e.getMessage();
-    return e.getErrorCode() == Code.INVALID_ARGUMENT_VALUE && message != null && message.contains("does not exist");
+    return e.getErrorCode() == Code.NOT_FOUND_VALUE;
   }
 
   @Override
   public boolean isUndefinedIndexError(SQLException e) {
+    //TODO check error code
     return e.getErrorCode() == Code.NOT_FOUND_VALUE;
   }
 
   @Override
   public boolean isConflict(SQLException e) {
-    // Spanner JDBC driver passes null SQLSTATE; uses gRPC ABORTED = 10
     return e.getErrorCode() == Code.ABORTED_VALUE;
   }
 
