@@ -454,8 +454,9 @@ public interface AuthAdmin {
   }
 
   /**
-   * Returns whether the given user has the given privilege on the given namespace or table. If
-   * {@code tableName} is null, the check is performed at the namespace level.
+   * Returns whether the given user has the given privilege on the given namespace or table. When
+   * {@code tableName} is non-null, the check considers both table-level and namespace-level
+   * privileges. When {@code tableName} is null, the check is performed at the namespace level only.
    *
    * @param username the username
    * @param namespaceName the namespace name
