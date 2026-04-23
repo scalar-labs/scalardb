@@ -1,10 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Properties;
 
 public final class JdbcEnv {
@@ -27,18 +23,18 @@ public final class JdbcEnv {
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
     // TODO delete before merge
-//    if (isSpanner() && password.isEmpty()) {
-//      try {
+    //    if (isSpanner() && password.isEmpty()) {
+    //      try {
 
-//        password =
-//            String.join(
-//                "",
-//                Files.readAllLines(
-//                    Paths.get("~/spanner-credentials.json"), StandardCharsets.UTF_8));
-//      } catch (IOException e) {
-//        throw new RuntimeException(e);
-//      }
-//    }
+    //        password =
+    //            String.join(
+    //                "",
+    //                Files.readAllLines(
+    //                    Paths.get("~/spanner-credentials.json"), StandardCharsets.UTF_8));
+    //      } catch (IOException e) {
+    //        throw new RuntimeException(e);
+    //      }
+    //    }
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
     if (!username.isEmpty()) {

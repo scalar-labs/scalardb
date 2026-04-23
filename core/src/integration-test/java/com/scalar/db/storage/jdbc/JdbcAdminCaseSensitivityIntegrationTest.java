@@ -132,14 +132,6 @@ public class JdbcAdminCaseSensitivityIntegrationTest
   }
 
   @Test
-  @Override
-  @DisabledIf("isIndexOnFloatColumnNotSupported")
-  public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly()
-      throws ExecutionException {
-    super.createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly();
-  }
-
-  @Test
   @EnabledIf("isDb2")
   public void renameColumn_Db2_ForPrimaryOrIndexKeyColumn_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {

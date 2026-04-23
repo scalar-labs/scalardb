@@ -1075,6 +1075,15 @@ public class JdbcAdminImportTestUtils {
           .put("CHAR(8)", DataType.TEXT)
           .put("VARCHAR(512)", DataType.TEXT)
           .build();
+    } else if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          .put("boolean", DataType.BOOLEAN)
+          .put("double precision", DataType.DOUBLE)
+          .put("int", DataType.BIGINT)
+          .put("bigint", DataType.BIGINT)
+          .put("text", DataType.TEXT)
+          .put("varchar(512)", DataType.TEXT)
+          .build();
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       return ImmutableMap.<String, DataType>builder()
           .put("boolean", DataType.BOOLEAN)
@@ -1129,15 +1138,6 @@ public class JdbcAdminImportTestUtils {
           .put("VARGRAPHIC(32)", DataType.TEXT)
           .put("NCHAR(3)", DataType.TEXT)
           .put("NVARCHAR(32)", DataType.TEXT)
-          .build();
-    } else if (JdbcTestUtils.isSpanner(rdbEngine)) {
-      return ImmutableMap.<String, DataType>builder()
-          .put("boolean", DataType.BOOLEAN)
-          .put("real", DataType.FLOAT)
-          .put("double precision", DataType.DOUBLE)
-          .put("int", DataType.BIGINT)
-          .put("bigint", DataType.BIGINT)
-          .put("text", DataType.TEXT)
           .build();
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);
