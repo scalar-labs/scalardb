@@ -458,7 +458,7 @@ public interface AuthAdmin {
    * {@code tableName} is null, the check is performed at the namespace level.
    *
    * @param username the username
-   * @param namespaceName the namespace name of the table
+   * @param namespaceName the namespace name
    * @param tableName the table name. If null, the privilege is checked at the namespace level
    * @param privilege the privilege to check
    * @return {@code true} if the user has the privilege, {@code false} otherwise
