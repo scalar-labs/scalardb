@@ -9,7 +9,7 @@ import java.util.Properties;
 import java.util.Random;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpanner")
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
 public class JdbcDatabaseConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
 

@@ -29,16 +29,12 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     if (JdbcTestUtils.isOracle(rdbEngine)) {
       return 1;
     }
-    // TODO test if necessary
-    //    if (JdbcTestUtils.isSpanner(rdbEngine)) {
-    //      return 3;
-    //    }
     return super.getThreadNum();
   }
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();

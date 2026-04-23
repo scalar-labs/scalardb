@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * #createStorageAdmin} and {@link #createStorage} to return thread-dispatching proxies that route
  * each executor thread to its own Spanner database.
  */
-@EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpanner")
+@EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
 public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
     extends JdbcDatabaseConditionalMutationIntegrationTest {
 

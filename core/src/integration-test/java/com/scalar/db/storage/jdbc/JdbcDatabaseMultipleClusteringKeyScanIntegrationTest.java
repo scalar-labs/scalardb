@@ -26,7 +26,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return 1;
     }
     return super.getThreadNum();
@@ -34,7 +34,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();

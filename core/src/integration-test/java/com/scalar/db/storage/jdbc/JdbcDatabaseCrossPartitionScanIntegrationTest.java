@@ -45,8 +45,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
-      // Spanner allows only one concurrent DDL operation at a time
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();
