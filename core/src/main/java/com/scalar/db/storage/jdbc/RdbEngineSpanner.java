@@ -4,6 +4,7 @@ import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
@@ -28,6 +29,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 class RdbEngineSpanner extends RdbEnginePostgresql {
@@ -51,14 +53,27 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
+      case INT:
+      case BIGINT:
+        // Spanner has no traditional integer type coded on 4 bytes. "int" type is an alias for a
+        // bigint coded on 8 bytes.
+        return "bigint";
+      case BLOB:
+        return "bytea";
+      case BOOLEAN:
+        return "boolean";
+      case FLOAT:
+        return "real";
+      case DOUBLE:
+        return "double precision";
       case TEXT:
         return "text";
-      case INT:
-        return "bigint"; // Spanner has not INT type coded on 4 bytes. INT type is an alias for a
-        // bigint coded on 8 bytes.
+      case DATE:
+        return "date";
       case TIME:
       case TIMESTAMP:
-        return "timestamptz";
+      case TIMESTAMPTZ:
+        return "timestamp with time zone";
       default:
         return super.getDataTypeForEngine(scalarDbDataType);
     }
@@ -282,5 +297,14 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public boolean requiresExplicitDropIndexBeforeDropColumn() {
     return true;
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
+    // Disable the Spanner JDBC driver's internal abort-retry.
+    // The retry mechanism is useful for operation that produces deterministic results. But since
+    // Scan operations do not necessarily include ORDER BY, the result ordering is not guaranteed.
+    // So it is better to disable the retry mechanism.
+    return ImmutableMap.of("retryabortsinternally", "false");
   }
 }
