@@ -454,17 +454,18 @@ public interface AuthAdmin {
   }
 
   /**
-   * Returns whether the given user has the given privilege on the given table.
+   * Returns whether the given user has the given privilege on the given namespace or table. If
+   * {@code tableName} is null, the check is performed at the namespace level.
    *
    * @param username the username
    * @param namespaceName the namespace name of the table
-   * @param tableName the table name
+   * @param tableName the table name. If null, the privilege is checked at the namespace level
    * @param privilege the privilege to check
    * @return {@code true} if the user has the privilege, {@code false} otherwise
    * @throws ExecutionException if the operation fails
    */
   default boolean hasPrivilege(
-      String username, String namespaceName, String tableName, Privilege privilege)
+      String username, String namespaceName, @Nullable String tableName, Privilege privilege)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
