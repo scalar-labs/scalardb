@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SchemaLoaderIntegrationTestBase {
-  //TODO check schema loader test diff
+  // TODO check schema loader test diff
   private static final Logger logger =
       LoggerFactory.getLogger(SchemaLoaderIntegrationTestBase.class);
 
