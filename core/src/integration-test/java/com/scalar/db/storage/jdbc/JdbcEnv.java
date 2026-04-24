@@ -52,7 +52,8 @@ public final class JdbcEnv {
             String.join(
                 "",
                 Files.readAllLines(
-                    Paths.get("~/spanner-credentials.json"), StandardCharsets.UTF_8));
+                    Paths.get(System.getProperty("user.home"), "spanner-credentials.json"),
+                    StandardCharsets.UTF_8));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
