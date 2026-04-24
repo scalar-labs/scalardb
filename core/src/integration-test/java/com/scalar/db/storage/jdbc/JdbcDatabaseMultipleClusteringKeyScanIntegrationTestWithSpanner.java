@@ -34,10 +34,18 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
   private final AtomicInteger threadIndex = new AtomicInteger(0);
   private ThreadLocal<Integer> threadId;
 
+  // System property override used by the thread-count benchmark workflow to sweep values.
+  // Falls back to 18 — optimized for a standard GitHub Action runner.
+  private static final String THREAD_NUM_PROP = "scalardb.test.multi_ck_scan.thread_num";
+
   @Override
   protected int getThreadNum() {
-    // Optimized for a standard Github action runner
-    return 18;
+    String override = System.getProperty(THREAD_NUM_PROP);
+    if (override != null && !override.isEmpty()) {
+      return Integer.parseInt(override);
+    } else {
+      throw new IllegalStateException("THREAD_NUM_PROP must be set to a non-empty integer value");
+    }
   }
 
   @Override
