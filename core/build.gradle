@@ -288,8 +288,7 @@ task integrationTestJdbc(type: Test) {
     // to amortize Spanner's per-DDL latency across test classes.
     doFirst {
         def jdbcUrl = System.getProperty('scalardb.jdbc.url') ?: ''
-//        if (jdbcUrl.startsWith('jdbc:cloudspanner:') && !jdbcUrl.contains('autoConfigEmulator')) {
-                if (jdbcUrl.startsWith('jdbc:cloudspanner:')) {
+        if (jdbcUrl.startsWith('jdbc:cloudspanner:') && !jdbcUrl.contains('autoConfigEmulator')) {
             maxParallelForks = 5
         }
     }

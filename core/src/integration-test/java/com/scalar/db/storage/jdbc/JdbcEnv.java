@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -13,8 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class JdbcEnv {
-  private static final Logger logger =
-      LoggerFactory.getLogger(JdbcEnv.class);
+  private static final Logger logger = LoggerFactory.getLogger(JdbcEnv.class);
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
@@ -102,8 +100,8 @@ public final class JdbcEnv {
 
   /**
    * Rewrites the database segment of the given Spanner JDBC URL to pin the current Gradle test
-   * worker to a specific database (`test-db-1` .. `test-db-N`), so parallel forks each work
-   * against a different database. The assignment is memoized per worker id in {@link
+   * worker to a specific database (`test-db-1` .. `test-db-N`), so parallel forks each work against
+   * a different database. The assignment is memoized per worker id in {@link
    * #WORKER_TO_SPANNER_DATABASE} so repeated calls within the same worker return the same database.
    *
    * <p>If the process is not running under Gradle test workers (i.e., the {@code

@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Spanner-emulator specific conditional mutation integration test that works the emulator limitation;
+ * Spanner-emulator specific multiple clustering key scan integration test that work around the emulator limitation;
  * The emulator only allows one read-write transaction or schema change at a time.
  *
  * <p>This class is only enabled when running against the Spanner emulator. It overrides
@@ -23,12 +23,12 @@ import org.slf4j.LoggerFactory;
  * route each executor thread to its own Spanner database (test-db-1..test-db-N).
  */
 @EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
-public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
-    extends JdbcDatabaseConditionalMutationIntegrationTest {
+public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
+    extends JdbcDatabaseMultipleClusteringKeyScanIntegrationTest {
 
   private static final Logger logger =
-      LoggerFactory.getLogger(JdbcDatabaseConditionalMutationIntegrationTestWithSpanner.class);
-
+      LoggerFactory.getLogger(
+          JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner.class);
   private final List<DistributedStorage> perThreadStorages = new ArrayList<>();
   private final List<DistributedStorageAdmin> perThreadAdmins = new ArrayList<>();
   private final AtomicInteger threadIndex = new AtomicInteger(0);
@@ -42,13 +42,13 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
 
   @Override
   protected void initialize(String testName) throws Exception {
-
     threadId = ThreadLocal.withInitial(() -> threadIndex.getAndIncrement() % getThreadNum());
 
     String baseUrl = System.getProperty("scalardb.jdbc.url");
-    logger.debug("Initializing {} per-thread databases for Spanner emulator", getThreadNum());
+    logger.info("Initializing {} per-thread Spanner databases", getThreadNum());
     for (int i = 0; i < getThreadNum(); i++) {
-      String threadUrl = baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + i);
+      // Real Spanner uses 1-indexed database names: test-db-1..test-db-N.
+      String threadUrl = baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + (i + 1));
       logger.info("Thread {}: {}", i, threadUrl);
       Properties props = JdbcEnv.getProperties(testName);
       props.setProperty(DatabaseConfig.CONTACT_POINTS, threadUrl);
@@ -100,7 +100,22 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
   private DistributedStorageAdmin createAdminProxy() {
     InvocationHandler handler =
         (proxy, method, args) -> {
-          // Broadcast all admin operations to every per-thread database
+          // Per-thread dispatch: truncateTable only clears data in the calling thread's database,
+          // since only that thread wrote there via the storage proxy.
+          if ("truncateTable".equals(method.getName())) {
+            int idx = threadId.get();
+            logger.debug(
+                "Admin.truncateTable() dispatched to db-{} on thread {}",
+                idx,
+                Thread.currentThread().getName());
+            try {
+              return method.invoke(perThreadAdmins.get(idx), args);
+            } catch (java.lang.reflect.InvocationTargetException e) {
+              throw e.getCause();
+            }
+          }
+          // Broadcast all other admin operations to every per-thread database so the schema stays
+          // consistent across all databases.
           Object result = null;
           int i = 0;
           for (DistributedStorageAdmin a : perThreadAdmins) {

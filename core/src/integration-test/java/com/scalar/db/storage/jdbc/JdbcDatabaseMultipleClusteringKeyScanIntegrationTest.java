@@ -10,7 +10,9 @@ import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.condition.DisabledIf;
 
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
