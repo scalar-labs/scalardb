@@ -481,7 +481,7 @@ public interface AuthAdmin {
    */
   default boolean hasPrivilege(String username, String namespaceName, Privilege privilege)
       throws ExecutionException {
-    return hasPrivilege(username, namespaceName, null, privilege);
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
   /** Represents a user. */
