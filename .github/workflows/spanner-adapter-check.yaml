@@ -226,11 +226,12 @@ jobs:
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}"
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
         run: |
-          # Build the --tests arguments; for group_commit, filter to *ConsensusCommit* only
+          # Build the --tests arguments; for group_commit, filter to ConsensusCommit* only
+          # (prefix match — must match the should-run guard above so TwoPhase* classes are excluded)
           TESTS_ARGS=""
           for test_class in ${{ matrix.test_group.tests }}; do
             if [ "${{ matrix.group_commit_enabled }}" = "true" ]; then
-              case "${test_class}" in *ConsensusCommit*) ;; *) continue ;; esac
+              case "${test_class}" in ConsensusCommit*) ;; *) continue ;; esac
             fi
             TESTS_ARGS="${TESTS_ARGS} --tests ${test_class}"
           done
