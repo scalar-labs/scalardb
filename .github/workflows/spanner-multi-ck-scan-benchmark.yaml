@@ -7,6 +7,12 @@ run-name: "Benchmark MultipleClusteringKeyScan thread count"
 
 on:
   workflow_dispatch:
+  # Temporary push trigger to register the workflow on first merge. Remove once registered.
+  push:
+    branches:
+      - spanner_ci_bench
+    paths:
+      - .github/workflows/spanner-multi-ck-scan-benchmark.yaml
 
 env:
   SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
