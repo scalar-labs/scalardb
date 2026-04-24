@@ -2194,6 +2194,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   protected List<DataType> getDataTypes() {
-    return Arrays.asList(DataType.INT, DataType.BIGINT, DataType.TEXT, DataType.BOOLEAN);
+    return Arrays.asList(DataType.values());
   }
 }

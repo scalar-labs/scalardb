@@ -7,13 +7,6 @@ run-name: "Benchmark MultipleClusteringKeyScan thread count"
 
 on:
   workflow_dispatch:
-  # Temporary push trigger to register the workflow on first merge. Remove once registered.
-  push:
-    branches:
-      - spanner_ci_bench
-    paths:
-      - .github/workflows/spanner-multi-ck-scan-benchmark.yaml
-
 env:
   SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
 
@@ -24,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        thread_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        thread_num: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v6
 
@@ -81,15 +74,27 @@ jobs:
             "-Dscalardb.test.multi_ck_scan.thread_num=${{ matrix.thread_num }}"
           END_TS=$(date +%s)
           DURATION=$((END_TS - START_TS))
+          # Human-readable formatting: "Xh Ym Zs", omitting leading zero units.
+          H=$((DURATION / 3600))
+          M=$(((DURATION % 3600) / 60))
+          S=$((DURATION % 60))
+          if [ "$H" -gt 0 ]; then
+            PRETTY="${H}h ${M}m ${S}s"
+          elif [ "$M" -gt 0 ]; then
+            PRETTY="${M}m ${S}s"
+          else
+            PRETTY="${S}s"
+          fi
           echo "duration_seconds=${DURATION}" >> "$GITHUB_OUTPUT"
-          echo "::notice title=Benchmark result::thread_num=${{ matrix.thread_num }} duration=${DURATION}s"
+          echo "duration_pretty=${PRETTY}" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Benchmark result::thread_num=${{ matrix.thread_num }} duration=${PRETTY} (${DURATION}s)"
 
       - name: Write per-job summary
         if: always()
         run: |
           echo "### Benchmark: thread_num=${{ matrix.thread_num }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Duration: **${{ steps.bench.outputs.duration_seconds }} seconds**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Duration: **${{ steps.bench.outputs.duration_pretty }}** (${{ steps.bench.outputs.duration_seconds }}s)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Outcome: **${{ steps.bench.outcome }}**" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload HTML test report
