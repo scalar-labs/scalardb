@@ -16,7 +16,7 @@ public class StorageFactory {
 
   /**
    * @param config a database config
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     #create(Properties)}, {@link #create(Path)}, {@link #create(File)}, or {@link
    *     #create(String)} instead
    */
@@ -38,7 +38,7 @@ public class StorageFactory {
    * Returns a {@link DistributedStorageAdmin} instance
    *
    * @return a {@link DistributedStorageAdmin} instance
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     #getStorageAdmin()} instead
    */
   @SuppressWarnings("InlineMeSuggester")

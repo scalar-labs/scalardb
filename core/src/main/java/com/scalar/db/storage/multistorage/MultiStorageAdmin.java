@@ -34,7 +34,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorageAdmin implements DistributedStorageAdmin {
 
-  /** @deprecated Will be removed in 5.0.0. */
+  /** @deprecated Will be removed in 4.0.0. */
   @Deprecated private final Map<String, DistributedStorageAdmin> tableAdminMap;
 
   private final Map<String, String> namespaceStorageNameMap;
