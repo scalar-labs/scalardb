@@ -74,7 +74,7 @@ public class OperationChecker {
       }
 
       // The following check is not needed when we use GetWithIndex. But we need to keep it for
-      // backward compatibility. We will remove it in release 5.0.0.
+      // backward compatibility. We will remove it in release 4.0.0.
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(get));
@@ -119,7 +119,7 @@ public class OperationChecker {
       }
 
       // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
-      // backward compatibility. We will remove them in release 5.0.0.
+      // backward compatibility. We will remove them in release 4.0.0.
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(scan));

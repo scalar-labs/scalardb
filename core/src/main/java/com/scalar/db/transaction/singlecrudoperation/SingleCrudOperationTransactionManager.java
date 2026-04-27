@@ -212,7 +212,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException {
@@ -227,7 +227,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     }
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -332,7 +332,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     }
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
