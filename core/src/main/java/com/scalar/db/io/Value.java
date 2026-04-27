@@ -8,7 +8,7 @@ import javax.annotation.Nonnull;
  * An abstraction for storage entry's value (column).
  *
  * @author Hiroyuki Yamada
- * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+ * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
  */
 @Deprecated
 public interface Value<T> extends Comparable<Value<T>> {
