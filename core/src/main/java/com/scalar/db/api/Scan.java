@@ -73,7 +73,7 @@ public class Scan extends Selection {
    * Constructs a {@code Scan} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Scan#newBuilder()} instead
    */
   @Deprecated
@@ -90,7 +90,7 @@ public class Scan extends Selection {
    * Copy a Scan.
    *
    * @param scan a Scan
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Scan#newBuilder(Scan)} instead
    */
   @Deprecated
@@ -131,7 +131,7 @@ public class Scan extends Selection {
    *
    * @param clusteringKey a starting clustering key
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
@@ -145,7 +145,7 @@ public class Scan extends Selection {
    * @param clusteringKey a starting clustering key
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
@@ -179,7 +179,7 @@ public class Scan extends Selection {
    *
    * @param clusteringKey an ending clustering key
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
@@ -193,7 +193,7 @@ public class Scan extends Selection {
    * @param clusteringKey an ending clustering key
    * @param inclusive indicates whether the boundary is inclusive or not
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
@@ -238,7 +238,7 @@ public class Scan extends Selection {
    *
    * @param ordering a scan ordering
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
@@ -261,7 +261,7 @@ public class Scan extends Selection {
    *
    * @param limit the number of results to be returned
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Deprecated
@@ -271,7 +271,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -281,7 +281,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -291,7 +291,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -306,7 +306,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -316,7 +316,7 @@ public class Scan extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -401,7 +401,7 @@ public class Scan extends Selection {
      *
      * @param columnName the column name of a clustering key in an entry to order
      * @param order the {@code Order} of results
-     * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #asc(String)}
+     * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #asc(String)}
      *     or {@link #desc(String)} to create an Ordering object
      */
     @Deprecated
@@ -434,7 +434,7 @@ public class Scan extends Selection {
      * Returns the column name of the ordering clustering key
      *
      * @return the column name of the ordering clustering key
-     * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+     * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
      */
     @Deprecated
     public String getName() {

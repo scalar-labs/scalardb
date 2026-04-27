@@ -29,7 +29,7 @@ public class GetWithIndex extends Get {
    * Constructs an {@code GetWithIndex} with the specified index {@code Key}.
    *
    * @param indexKey an index key
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link Get#newBuilder()}
    *     instead
    */
   @Deprecated
@@ -51,7 +51,7 @@ public class GetWithIndex extends Get {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -61,7 +61,7 @@ public class GetWithIndex extends Get {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -71,7 +71,7 @@ public class GetWithIndex extends Get {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -81,7 +81,7 @@ public class GetWithIndex extends Get {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -91,7 +91,7 @@ public class GetWithIndex extends Get {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
