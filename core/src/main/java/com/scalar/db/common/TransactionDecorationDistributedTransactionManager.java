@@ -86,7 +86,7 @@ public abstract class TransactionDecorationDistributedTransactionManager
       return super.scan(scan);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
     @Deprecated
     @Override
     public void put(Put put) throws CrudException {
@@ -94,7 +94,7 @@ public abstract class TransactionDecorationDistributedTransactionManager
       super.put(put);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
     @Deprecated
     @Override
     public void put(List<Put> puts) throws CrudException {
@@ -108,7 +108,7 @@ public abstract class TransactionDecorationDistributedTransactionManager
       super.delete(delete);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
     @Deprecated
     @Override
     public void delete(List<Delete> deletes) throws CrudException {

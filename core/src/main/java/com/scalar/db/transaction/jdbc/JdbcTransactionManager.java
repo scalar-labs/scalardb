@@ -172,6 +172,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
     return executeTransaction(t -> t.scan(copyAndSetTargetToIfNot(scan)));
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
@@ -182,6 +183,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
         });
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -228,6 +230,7 @@ public class JdbcTransactionManager extends ActiveTransactionManagedDistributedT
         });
   }
 
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {

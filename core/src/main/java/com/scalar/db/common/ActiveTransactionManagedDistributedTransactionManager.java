@@ -113,14 +113,14 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
       return super.scan(scan);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
     @Deprecated
     @Override
     public synchronized void put(Put put) throws CrudException {
       super.put(put);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
     @Deprecated
     @Override
     public synchronized void put(List<Put> puts) throws CrudException {
@@ -132,7 +132,7 @@ public abstract class ActiveTransactionManagedDistributedTransactionManager
       super.delete(delete);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
     @Deprecated
     @Override
     public synchronized void delete(List<Delete> deletes) throws CrudException {

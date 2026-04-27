@@ -25,7 +25,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    *
    * @param namespace default namespace to operate for
    * @param tableName default table name to operate for
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   void with(String namespace, String tableName);
@@ -34,7 +34,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    * Sets the specified namespace as a default value in the instance.
    *
    * @param namespace default namespace to operate for
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   void withNamespace(String namespace);
@@ -43,7 +43,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    * Returns the namespace.
    *
    * @return an {@code Optional} with the namespace
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   Optional<String> getNamespace();
@@ -52,7 +52,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    * Sets the specified table name as a default value in the instance.
    *
    * @param tableName default table name to operate for
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   void withTable(String tableName);
@@ -61,7 +61,7 @@ public interface DistributedTransaction extends TransactionCrudOperable {
    * Returns the table name.
    *
    * @return an {@code Optional} with the table name
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   Optional<String> getTable();
