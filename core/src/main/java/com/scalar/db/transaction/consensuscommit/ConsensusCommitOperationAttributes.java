@@ -146,6 +146,8 @@ public final class ConsensusCommitOperationAttributes {
    * @param attributes the operation attributes
    * @return an {@code Optional} containing the isolation level, or an empty {@code Optional} if not
    *     set
+   * @throws IllegalArgumentException if the isolation level value in the attributes is not a valid
+   *     {@link Isolation}
    */
   public static Optional<Isolation> getIsolation(Map<String, String> attributes) {
     String value = attributes.get(ISOLATION);
