@@ -29,35 +29,35 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
     this.transactionManager = transactionManager;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     transactionManager.with(namespace, tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     transactionManager.withNamespace(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return transactionManager.getNamespace();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     transactionManager.withTable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
@@ -114,14 +114,14 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
     return transactionManager.getScanner(scan);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     transactionManager.put(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -148,7 +148,7 @@ public abstract class DecoratedTwoPhaseCommitTransactionManager
     transactionManager.delete(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {

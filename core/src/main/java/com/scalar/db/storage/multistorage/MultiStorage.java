@@ -36,7 +36,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorage extends AbstractDistributedStorage {
 
-  /** @deprecated Will be removed in 5.0.0. */
+  /** @deprecated Will be removed in 4.0.0. */
   @Deprecated private final Map<String, DistributedStorage> tableStorageMap;
 
   private final Map<String, DistributedStorage> namespaceStorageMap;
