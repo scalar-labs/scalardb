@@ -35,7 +35,7 @@ public class Delete extends Mutation {
    * Constructs a {@code Delete} with the specified partition {@code Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Delete#newBuilder()} instead
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -50,7 +50,7 @@ public class Delete extends Mutation {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Delete#newBuilder()} instead
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -63,7 +63,7 @@ public class Delete extends Mutation {
    * Copy a Delete.
    *
    * @param delete a Delete
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Delete#newBuilder(Delete)} instead.
    */
   @Deprecated
@@ -93,7 +93,7 @@ public class Delete extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
    */
   @Override
@@ -103,7 +103,7 @@ public class Delete extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
    */
   @Override
@@ -113,7 +113,7 @@ public class Delete extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
    */
   @Override
@@ -128,7 +128,7 @@ public class Delete extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Delete builder instead; to create a Delete builder, use {@link Delete#newBuilder()}
    */
   @Override

@@ -25,7 +25,7 @@ import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 
-/** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+/** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
 @Deprecated
 public class TransactionModule extends AbstractModule {
 

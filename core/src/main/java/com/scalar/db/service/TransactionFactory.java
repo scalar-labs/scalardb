@@ -21,7 +21,7 @@ public class TransactionFactory {
 
   /**
    * @param config a database config
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     #create(Properties)}, {@link #create(Path)}, {@link #create(File)}, or {@link
    *     #create(String)} instead
    */

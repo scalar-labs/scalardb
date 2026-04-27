@@ -292,7 +292,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
@@ -304,7 +304,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -356,7 +356,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
