@@ -45,7 +45,7 @@ public class ScanWithIndex extends Scan {
 
   /**
    * @param indexKey an index key
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Scan#newBuilder()} instead
    */
   @Deprecated
@@ -58,7 +58,7 @@ public class ScanWithIndex extends Scan {
    * Copy a ScanWithIndex.
    *
    * @param scanWithIndex a ScanWithIndex
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Scan#newBuilder(Scan)} instead
    */
   @Deprecated
@@ -128,7 +128,7 @@ public class ScanWithIndex extends Scan {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -138,7 +138,7 @@ public class ScanWithIndex extends Scan {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -148,7 +148,7 @@ public class ScanWithIndex extends Scan {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -158,7 +158,7 @@ public class ScanWithIndex extends Scan {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -168,7 +168,7 @@ public class ScanWithIndex extends Scan {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override
@@ -178,7 +178,7 @@ public class ScanWithIndex extends Scan {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Scan builder instead; to create a Scan builder, use {@link Scan#newBuilder()}
    */
   @Override

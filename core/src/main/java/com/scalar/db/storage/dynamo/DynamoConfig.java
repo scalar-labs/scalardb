@@ -46,7 +46,7 @@ public class DynamoConfig {
     secretAccessKey = databaseConfig.getPassword().orElse(null);
     if (databaseConfig.getProperties().containsKey("scalar.db.dynamo.endpoint-override")) {
       logger.warn(
-          "The property \"scalar.db.dynamo.endpoint-override\" is deprecated and will be removed in 5.0.0. "
+          "The property \"scalar.db.dynamo.endpoint-override\" is deprecated and will be removed in 4.0.0. "
               + "Please use \""
               + ENDPOINT_OVERRIDE
               + "\" instead");
@@ -63,7 +63,7 @@ public class DynamoConfig {
       logger.warn(
           "The configuration property \""
               + TABLE_METADATA_NAMESPACE
-              + "\" is deprecated and will be removed in 5.0.0.");
+              + "\" is deprecated and will be removed in 4.0.0.");
 
       metadataNamespace =
           getString(

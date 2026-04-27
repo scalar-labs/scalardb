@@ -170,7 +170,7 @@ public class JdbcConfig {
               + "'");
     }
 
-    // Show a warning when removed properties are set. We will keep checking them until 5.0.0.
+    // Show a warning when removed properties are set. We will keep checking them until 4.0.0.
     Stream.of(
             "connection_pool.max_idle",
             "prepared_statements_pool.enabled",
@@ -312,7 +312,7 @@ public class JdbcConfig {
       logger.warn(
           "The configuration property \""
               + TABLE_METADATA_SCHEMA
-              + "\" is deprecated and will be removed in 5.0.0.");
+              + "\" is deprecated and will be removed in 4.0.0.");
 
       metadataSchema =
           getString(

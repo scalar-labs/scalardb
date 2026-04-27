@@ -45,7 +45,7 @@ public class CosmosConfig {
       logger.warn(
           "The configuration property \""
               + TABLE_METADATA_DATABASE
-              + "\" is deprecated and will be removed in 5.0.0.");
+              + "\" is deprecated and will be removed in 4.0.0.");
       metadataDatabase =
           getString(
               databaseConfig.getProperties(),
