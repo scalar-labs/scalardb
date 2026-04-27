@@ -96,7 +96,7 @@ public class ConsensusCommitConfig {
 
     if (databaseConfig.getProperties().containsKey("scalar.db.isolation_level")) {
       logger.warn(
-          "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
+          "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 4.0.0. "
               + "Please use \""
               + ISOLATION_LEVEL
               + "\" instead");
@@ -113,6 +113,15 @@ public class ConsensusCommitConfig {
                 .toUpperCase(Locale.ROOT));
     if (isolation.equals(Isolation.SERIALIZABLE)) {
       validateCrossPartitionScanConfig(databaseConfig);
+
+      if (databaseConfig
+          .getProperties()
+          .containsKey("scalar.db.consensus_commit.serializable_strategy")) {
+        logger.warn(
+            "The property \"scalar.db.consensus_commit.serializable_strategy\" is deprecated and will "
+                + "be removed in 4.0.0. The EXTRA_READ strategy is always used for the SERIALIZABLE "
+                + "isolation level.");
+      }
     }
     strategy =
         SerializableStrategy.valueOf(

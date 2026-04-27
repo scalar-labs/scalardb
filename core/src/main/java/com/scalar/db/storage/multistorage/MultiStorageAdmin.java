@@ -27,7 +27,9 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorageAdmin implements DistributedStorageAdmin {
 
-  private final Map<String, DistributedStorageAdmin> tableAdminMap;
+  /** @deprecated Will be removed in 4.0.0. */
+  @Deprecated private final Map<String, DistributedStorageAdmin> tableAdminMap;
+
   private final Map<String, DistributedStorageAdmin> namespaceAdminMap;
   private final DistributedStorageAdmin defaultAdmin;
   private final List<DistributedStorageAdmin> admins;
