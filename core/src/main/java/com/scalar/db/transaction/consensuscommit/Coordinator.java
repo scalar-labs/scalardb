@@ -61,7 +61,7 @@ public class Coordinator {
 
   /**
    * @param storage a storage
-   * @deprecated As of release 3.3.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.3.0. Will be removed in release 4.0.0
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Deprecated

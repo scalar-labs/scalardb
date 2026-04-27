@@ -41,7 +41,7 @@ public abstract class Selection extends Operation {
   /**
    * @param partitionKey a partition key
    * @param clusteringKey a clustering key
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Selection(Key partitionKey, Key clusteringKey) {
@@ -52,7 +52,7 @@ public abstract class Selection extends Operation {
 
   /**
    * @param selection a selection
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Selection(Selection selection) {
@@ -66,7 +66,7 @@ public abstract class Selection extends Operation {
    *
    * @param projection a column name to project
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Selection withProjection(String projection) {
@@ -79,7 +79,7 @@ public abstract class Selection extends Operation {
    *
    * @param projections a collection of the column names to project
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Selection withProjections(Collection<String> projections) {
@@ -87,7 +87,7 @@ public abstract class Selection extends Operation {
     return this;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0. */
   @Deprecated
   public void clearProjections() {
     projections.clear();
