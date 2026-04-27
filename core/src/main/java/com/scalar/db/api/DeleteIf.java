@@ -25,7 +25,7 @@ public class DeleteIf implements MutationCondition {
    * Constructs a {@code DeleteIf} with the specified conditional expressions.
    *
    * @param expressions a variable length expressions specified with {@code ConditionalExpression}s
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -39,7 +39,7 @@ public class DeleteIf implements MutationCondition {
    * Constructs a {@code DeleteIf} with the specified list of conditional expressions.
    *
    * @param expressions a list of expressions specified with {@code ConditionalExpression}s
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
