@@ -55,7 +55,7 @@ public interface TransactionCrudOperable extends CrudOperable<CrudException> {
    *     still fail if the cause is nontransient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   @Override
@@ -71,7 +71,7 @@ public interface TransactionCrudOperable extends CrudOperable<CrudException> {
    *     still fail if the cause is nontransient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
    *     instead.
    */
   @Deprecated
@@ -143,7 +143,7 @@ public interface TransactionCrudOperable extends CrudOperable<CrudException> {
    *     still fail if the cause is nontransient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
    *     instead.
    */
   @Deprecated
