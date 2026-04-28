@@ -1058,7 +1058,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_SPANNER_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
       Category.USER_ERROR,
       "0284",
-      "Spanner does not support column type conversion expect from BLOB to TEXT. Conversion: from %s to %s",
+      "Spanner does not support column type conversion except from BLOB to TEXT. Conversion: from %s to %s",
       "",
       ""),
   JDBC_SPANNER_RENAME_TABLE_NOT_SUPPORTED(
@@ -1066,11 +1066,17 @@ public enum CoreError implements ScalarDbError {
   JDBC_SPANNER_LIKE_ESCAPE_CHARACTER_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0286",
-      "Spanner use by default '\\' as escape character and it cannot be configured or disabled. Escape character: '%s'",
+      "Spanner uses '\\' as the default LIKE escape character and it cannot be configured or disabled. Escape character: '%s'",
       "",
       ""),
   JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
-      Category.USER_ERROR, "0287", "Failed to load the service account key for Spanner.", "", ""),
+      Category.USER_ERROR, "0287", "Failed to load the service account key for Spanner", "", ""),
+  JDBC_SPANNER_CREDENTIALS_ALREADY_REGISTERED(
+      Category.USER_ERROR,
+      "0288",
+      "Different Spanner credentials are already registered in this JVM. ScalarDB's Spanner adapter supports only one set of Spanner credentials per JVM",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

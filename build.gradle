@@ -101,7 +101,7 @@ subprojects {
         mariadDbDriverVersion = '3.5.8'
         alloyDbJdbcConnectorVersion = '1.3.0'
         googleCloudStorageVersion = '2.67.0'
-        spannerDriverVersion='2.38.0'
+        spannerDriverVersion = '2.38.0'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'

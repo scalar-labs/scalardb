@@ -2,7 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
-import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
@@ -26,7 +26,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -244,7 +243,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public String getEscape(LikeExpression likeExpression) {
-    if (likeExpression.getEscape().isEmpty() || !likeExpression.getEscape().equals("\\")) {
+    if (!likeExpression.getEscape().equals("\\")) {
       throw new UnsupportedOperationException(
           CoreError.JDBC_SPANNER_LIKE_ESCAPE_CHARACTER_NOT_SUPPORTED.buildMessage(
               likeExpression.getEscape()));
@@ -255,18 +254,26 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public void setConnectionCredentials(JdbcConfig config, HikariConfig connectionConfig) {
     if (config.getPassword().isPresent()) {
-      byte[] credentials = config.getPassword().get().getBytes(StandardCharsets.UTF_8);
-      try (ByteArrayInputStream keyStream = new ByteArrayInputStream(credentials)) {
-        // Validate the credentials
-        ServiceAccountCredentials.fromStream(keyStream);
+      // The password contains the credentials in the format of a Google Cloud service account key
+      // in JSON format
+      // The username is never used
+      byte[] credentialsBytes = config.getPassword().get().getBytes(StandardCharsets.UTF_8);
+      GoogleCredentials credentials;
+      try (ByteArrayInputStream keyStream = new ByteArrayInputStream(credentialsBytes)) {
+        credentials = GoogleCredentials.fromStream(keyStream);
       } catch (IOException e) {
         throw new IllegalArgumentException(
             CoreError.JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED.buildMessage(), e);
       }
-      String encodedCredentials = Base64.getEncoder().encodeToString(credentials);
-      // Setting this system property is required to use encoded credentials authentication
-      System.setProperty("ENABLE_ENCODED_CREDENTIALS", "true");
-      connectionConfig.addDataSourceProperty("encodedcredentials", encodedCredentials);
+      // The driver instantiates the credentialsProvider class reflectively via a
+      // no-arg constructor, so the credentials are passed through a static registry rather than
+      // through the connection property itself. This avoids putting the service-account key into
+      // a HikariConfig data-source property (which would surface in Hikari diagnostic logs)
+      SpannerCredentialsProvider.register(credentials);
+      // Setting a system property is required by the driver to use this authentication mode
+      System.setProperty("ENABLE_CREDENTIALS_PROVIDER", "true");
+      connectionConfig.addDataSourceProperty(
+          "credentialsProvider", SpannerCredentialsProvider.class.getName());
     }
   }
 

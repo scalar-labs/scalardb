@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -75,5 +77,54 @@ public class RdbEngineTimeTypeSpannerTest {
   void convert_OffsetDateTime_ShouldReturnSameTimestampTz() {
     OffsetDateTime timestampTz = OffsetDateTime.of(2024, 6, 15, 14, 30, 45, 0, ZoneOffset.UTC);
     assertThat(strategy.convert(timestampTz)).isEqualTo(timestampTz);
+  }
+
+  @Test
+  void convert_OffsetDateTimeWithNonUtcOffset_ShouldPreserveOffset() {
+    OffsetDateTime timestampTz =
+        OffsetDateTime.of(2024, 6, 15, 14, 30, 45, 0, ZoneOffset.ofHours(9));
+    OffsetDateTime result = strategy.convert(timestampTz);
+    assertThat(result).isEqualTo(timestampTz);
+    assertThat(result.getOffset()).isEqualTo(ZoneOffset.ofHours(9));
+  }
+
+  @Test
+  void convert_LocalDateTimeWithNanos_ShouldPreserveNanos() {
+    LocalDateTime timestamp = LocalDateTime.of(2024, 6, 15, 14, 30, 45, 123_456_789);
+    OffsetDateTime result = strategy.convert(timestamp);
+    assertThat(result).isEqualTo(OffsetDateTime.of(timestamp, ZoneOffset.UTC));
+    assertThat(result.getNano()).isEqualTo(123_456_789);
+  }
+
+  @Test
+  void convert_LocalDateOnLeapDay_ShouldReturnSameDate() {
+    LocalDate leapDay = LocalDate.of(2020, 2, 29);
+    assertThat(strategy.convert(leapDay)).isEqualTo(leapDay);
+  }
+
+  @Test
+  void dateFormatter_ParsesValidDate() {
+    LocalDate parsed = RdbEngineTimeTypeSpanner.DATE_FORMATTER.parse("2020-03-04", LocalDate::from);
+    assertThat(parsed).isEqualTo(LocalDate.of(2020, 3, 4));
+  }
+
+  @Test
+  void dateFormatter_RejectsInvalidDate() {
+    // Strict resolver style must reject impossible dates such as Feb 30.
+    assertThatThrownBy(
+            () -> RdbEngineTimeTypeSpanner.DATE_FORMATTER.parse("2020-02-30", LocalDate::from))
+        .isInstanceOf(DateTimeParseException.class);
+  }
+
+  @Test
+  void dateFormatter_ParsesLeapDay() {
+    LocalDate parsed = RdbEngineTimeTypeSpanner.DATE_FORMATTER.parse("2020-02-29", LocalDate::from);
+    assertThat(parsed).isEqualTo(LocalDate.of(2020, 2, 29));
+  }
+
+  @Test
+  void dateFormatter_FormatsWithZeroPadding() {
+    String formatted = RdbEngineTimeTypeSpanner.DATE_FORMATTER.format(LocalDate.of(2024, 3, 4));
+    assertThat(formatted).isEqualTo("2024-03-04");
   }
 }

@@ -195,7 +195,7 @@ dependencies {
     implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-        implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerDriverVersion}") {
+    implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerDriverVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
