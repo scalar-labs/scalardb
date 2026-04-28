@@ -34,6 +34,7 @@ public class DatabaseConfig {
   private long metadataCacheExpirationTimeSecs;
   private boolean activeTransactionManagementEnabled;
   private long activeTransactionManagementExpirationTimeMillis;
+  private boolean attributePropagationEnabled;
   @Nullable private String defaultNamespaceName;
   private boolean crossPartitionScanEnabled;
   private boolean crossPartitionScanFilteringEnabled;
@@ -53,6 +54,8 @@ public class DatabaseConfig {
       PREFIX + "active_transaction_management.enabled";
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
       PREFIX + "active_transaction_management.expiration_time_millis";
+  public static final String ATTRIBUTE_PROPAGATION_ENABLED =
+      PREFIX + "attribute_propagation.enabled";
   public static final String DEFAULT_NAMESPACE_NAME = PREFIX + "default_namespace_name";
   public static final String SCAN_PREFIX = PREFIX + "cross_partition_scan.";
   public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
@@ -108,6 +111,7 @@ public class DatabaseConfig {
         getBoolean(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, true);
     activeTransactionManagementExpirationTimeMillis =
         getActiveTransactionManagementExpirationTimeMillis(getProperties());
+    attributePropagationEnabled = getBoolean(getProperties(), ATTRIBUTE_PROPAGATION_ENABLED, true);
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
     crossPartitionScanEnabled = getBoolean(getProperties(), CROSS_PARTITION_SCAN, true);
     crossPartitionScanFilteringEnabled =
@@ -160,6 +164,10 @@ public class DatabaseConfig {
 
   public long getActiveTransactionManagementExpirationTimeMillis() {
     return activeTransactionManagementExpirationTimeMillis;
+  }
+
+  public boolean isAttributePropagationEnabled() {
+    return attributePropagationEnabled;
   }
 
   public Optional<String> getDefaultNamespaceName() {
