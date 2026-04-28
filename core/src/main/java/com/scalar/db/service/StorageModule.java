@@ -17,7 +17,7 @@ import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 
-/** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+/** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
 @Deprecated
 public class StorageModule extends AbstractModule {
 
