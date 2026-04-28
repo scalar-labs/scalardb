@@ -232,6 +232,9 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
+    // Reading the column directly as a `LocalDate` returns a value offset by 10 days for dates
+    // around the Julian-to-Gregorian calendar transition (October 1582). Read it as a String and
+    // parse manually to preserve the original date.
     String dateStr = resultSet.getString(columnName);
     if (dateStr == null) {
       return DateColumn.ofNull(columnName);
