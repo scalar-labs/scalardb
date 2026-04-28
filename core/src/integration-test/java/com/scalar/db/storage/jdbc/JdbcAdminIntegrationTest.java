@@ -113,6 +113,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
         || JdbcTestUtils.isSpanner(rdbEngine);
   }
 
+  @SuppressWarnings("unused")
   private boolean isDb2OrSpanner() {
     return JdbcEnv.isDb2() || JdbcEnv.isSpanner();
   }
