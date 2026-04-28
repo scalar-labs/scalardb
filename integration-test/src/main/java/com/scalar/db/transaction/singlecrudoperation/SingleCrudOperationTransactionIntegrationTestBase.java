@@ -501,4 +501,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @EnumSource(ScanType.class)
   public void scanOrGetScanner_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords(
       ScanType scanType) {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttribute_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttributeButEnabledByScanAttribute_ShouldScanProperly() {}
 }
