@@ -315,8 +315,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private void dropTableInternal(Connection connection, String schema, String table)
       throws SQLException {
-    TableMetadata metadata = tableMetadataService.getTableMetadata(connection, schema, table);
-    String[] dropTableStatements = rdbEngine.dropTableSql(metadata, schema, table);
+    TableMetadata tableMetadata = tableMetadataService.getTableMetadata(connection, schema, table);
+    assert tableMetadata != null;
+    String[] dropTableStatements = rdbEngine.dropTableSql(tableMetadata, schema, table);
     execute(connection, dropTableStatements, requiresExplicitCommit);
   }
 
