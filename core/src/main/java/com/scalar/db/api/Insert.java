@@ -34,7 +34,7 @@ public class Insert extends Mutation {
     return columns;
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Nonnull
   @Override
@@ -42,7 +42,7 @@ public class Insert extends Mutation {
     throw new UnsupportedOperationException();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public Mutation withCondition(MutationCondition condition) {
@@ -54,7 +54,7 @@ public class Insert extends Mutation {
     throw new UnsupportedOperationException();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Operation withConsistency(Consistency consistency) {
