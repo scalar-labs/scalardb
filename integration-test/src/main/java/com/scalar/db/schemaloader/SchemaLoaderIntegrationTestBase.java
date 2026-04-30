@@ -220,7 +220,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
                     .put("col12", "INT")
                     .put("col13", "BLOB")
                     .build())
-            .put("secondary-index", Arrays.asList("col3", "col12"))
+            .put("secondary-index", Arrays.asList("col8", "col12"))
             .put("compaction-strategy", "LCS")
             .put("network-strategy", "SimpleStrategy")
             .put("replication-factor", "1")
@@ -478,7 +478,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
             .addColumn("col13", DataType.BLOB)
             .removeSecondaryIndex("col1")
             .removeSecondaryIndex("col5")
-            .addSecondaryIndex("col3")
+            .addSecondaryIndex("col8")
             .addSecondaryIndex("col12")
             .build();
     TableMetadata expectedTable2Metadata =

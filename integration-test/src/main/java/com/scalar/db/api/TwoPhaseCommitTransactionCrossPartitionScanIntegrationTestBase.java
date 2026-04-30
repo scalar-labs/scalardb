@@ -269,21 +269,37 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
     populateRecordsForLike(manager2, namespace2, TABLE_2);
     TwoPhaseCommitTransaction transaction = manager2.start();
     Scan scan1 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "%scalar[$]");
-    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "+_scalar[$]", "+");
-    Scan scan3 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, false, "\\_scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, false, "\\_scalar[$]");
 
     // Act
     List<Result> actual1 = transaction.scan(scan1);
     List<Result> actual2 = transaction.scan(scan2);
-    List<Result> actual3 = transaction.scan(scan3);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
 
     // Assert
     assertScanResult(actual1, ImmutableList.of(1, 2, 3));
-    assertScanResult(actual2, ImmutableList.of(3));
-    assertScanResult(actual3, ImmutableList.of(1, 2));
+    assertScanResult(actual2, ImmutableList.of(1, 2));
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanWithLikeWithCustomEscapeCharacterGivenForCommittedRecord_ShouldReturnRecords()
+          throws TransactionException {
+    // Arrange
+    populateRecordsForLike(manager2, namespace2, TABLE_2);
+    TwoPhaseCommitTransaction transaction = manager2.start();
+    Scan scan = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "+_scalar[$]", "+");
+
+    // Act
+    List<Result> actual = transaction.scan(scan);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    assertScanResult(actual, ImmutableList.of(3));
   }
 
   @Test

@@ -25,8 +25,12 @@ public final class JdbcEnv {
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
-    properties.setProperty(DatabaseConfig.USERNAME, username);
-    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    if (!username.isEmpty()) {
+      properties.setProperty(DatabaseConfig.USERNAME, username);
+    }
+    if (!password.isEmpty()) {
+      properties.setProperty(DatabaseConfig.PASSWORD, password);
+    }
     properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN, "true");
     properties.setProperty(DatabaseConfig.CROSS_PARTITION_SCAN_FILTERING, "true");
@@ -74,5 +78,14 @@ public final class JdbcEnv {
 
   public static boolean isDb2() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:db2:");
+  }
+
+  public static boolean isSpanner() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:cloudspanner:");
+  }
+
+  public static boolean isSpannerEmulator() {
+    return isSpanner()
+        && System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).contains("autoConfigEmulator");
   }
 }

@@ -94,17 +94,23 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isSpanner() {
+    return JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isColumnTypeConversionToTextNotFullySupported() {
     return JdbcEnv.isDb2()
         || JdbcEnv.isSqlServer()
         || JdbcEnv.isOracle()
         || JdbcEnv.isSqlite()
-        || isTidb();
+        || isTidb()
+        || JdbcEnv.isSpanner();
   }
 
   @SuppressWarnings("unused")
   private boolean isWideningColumnTypeConversionNotFullySupported() {
-    return JdbcEnv.isOracle() || JdbcEnv.isSqlite();
+    return JdbcEnv.isOracle() || JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
   }
 
   @Test
@@ -267,6 +273,54 @@ public class JdbcAdminImportTableIntegrationTest
           if (!metadata.getPartitionKeyNames().contains(column)
               && !metadata.getClusteringKeyNames().contains(column)) {
             if (metadata.getColumnDataType(column).equals(DataType.BLOB)) {
+              continue;
+            }
+            assertThat(newMetadata.getColumnDataType(column)).isEqualTo(DataType.TEXT);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  @EnabledIf("isSpanner")
+  public void
+      alterColumnType_Spanner_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
+          throws Exception {
+    // Arrange
+    testDataList.addAll(createExistingDatabaseWithAllDataTypes());
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        admin.importTable(
+            getNamespace(),
+            testData.getTableName(),
+            Collections.emptyMap(),
+            testData.getOverrideColumnsType());
+      }
+    }
+
+    for (TestData testData : testDataList) {
+      if (testData.isImportableTable()) {
+        // Act
+        TableMetadata metadata = testData.getTableMetadata();
+        for (String column : metadata.getColumnNames()) {
+          if (!metadata.getPartitionKeyNames().contains(column)
+              && !metadata.getClusteringKeyNames().contains(column)) {
+            if (!metadata.getColumnDataType(column).equals(DataType.BLOB)) {
+              // For Spanner, only BLOB to TEXT alteration is supported
+              continue;
+            }
+            admin.alterColumnType(getNamespace(), testData.getTableName(), column, DataType.TEXT);
+          }
+        }
+
+        // Assert
+        TableMetadata newMetadata = admin.getTableMetadata(getNamespace(), testData.getTableName());
+        assertThat(newMetadata).isNotNull();
+        for (String column : metadata.getColumnNames()) {
+          if (!metadata.getPartitionKeyNames().contains(column)
+              && !metadata.getClusteringKeyNames().contains(column)) {
+            if (!metadata.getColumnDataType(column).equals(DataType.BLOB)) {
               continue;
             }
             assertThat(newMetadata.getColumnDataType(column)).isEqualTo(DataType.TEXT);

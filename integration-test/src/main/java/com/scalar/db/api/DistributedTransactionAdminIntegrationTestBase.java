@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -575,7 +576,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         admin.createIndex(namespace1, table, COL_NAME3, options);
       }
       admin.createIndex(namespace1, table, COL_NAME4, options);
-      admin.createIndex(namespace1, table, COL_NAME5, options);
+      if (isIndexOnFloatColumnSupported()) {
+        admin.createIndex(namespace1, table, COL_NAME5, options);
+      }
       admin.createIndex(namespace1, table, COL_NAME6, options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, table, COL_NAME7, options);
@@ -596,7 +599,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         assertThat(admin.indexExists(namespace1, table, COL_NAME3)).isTrue();
       }
       assertThat(admin.indexExists(namespace1, table, COL_NAME4)).isTrue();
-      assertThat(admin.indexExists(namespace1, table, COL_NAME5)).isTrue();
+      if (isIndexOnFloatColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, table, COL_NAME5)).isTrue();
+      }
       assertThat(admin.indexExists(namespace1, table, COL_NAME6)).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, table, COL_NAME7)).isTrue();
@@ -615,8 +620,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       Set<String> actualSecondaryIndexNames =
           admin.getTableMetadata(namespace1, table).getSecondaryIndexNames();
       assertThat(actualSecondaryIndexNames)
-          .contains(COL_NAME2, COL_NAME4, COL_NAME5, COL_NAME9, COL_NAME10, COL_NAME11, COL_NAME12);
-      int indexCount = 8;
+          .contains(COL_NAME2, COL_NAME4, COL_NAME9, COL_NAME10, COL_NAME11, COL_NAME12);
+      int indexCount = 7;
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(actualSecondaryIndexNames).contains(COL_NAME7);
         indexCount++;
@@ -632,6 +637,10 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       if (isIndexOnBlobColumnSupported()) {
         assertThat(actualSecondaryIndexNames).contains(COL_NAME8);
         indexCount += 1;
+      }
+      if (isIndexOnFloatColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(COL_NAME5);
+        indexCount++;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
     } finally {
@@ -733,7 +742,6 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
               .addSecondaryIndex(COL_NAME2)
               .addSecondaryIndex(COL_NAME3)
               .addSecondaryIndex(COL_NAME4)
-              .addSecondaryIndex(COL_NAME5)
               .addSecondaryIndex(COL_NAME6)
               .addSecondaryIndex(COL_NAME9)
               .addSecondaryIndex(COL_NAME9)
@@ -745,6 +753,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       }
       if (isIndexOnBlobColumnSupported()) {
         metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME8);
+      }
+      if (isIndexOnFloatColumnSupported()) {
+        metadataBuilder = metadataBuilder.addSecondaryIndex(COL_NAME5);
       }
       if (isTimestampTypeSupported()) {
         metadataBuilder.addColumn(COL_NAME13, DataType.TIMESTAMP);
@@ -781,7 +792,9 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
       admin.dropIndex(namespace1, table, COL_NAME2);
       admin.dropIndex(namespace1, table, COL_NAME3);
       admin.dropIndex(namespace1, table, COL_NAME4);
-      admin.dropIndex(namespace1, table, COL_NAME5);
+      if (isIndexOnFloatColumnSupported()) {
+        admin.dropIndex(namespace1, table, COL_NAME5);
+      }
       admin.dropIndex(namespace1, table, COL_NAME6);
       if (isIndexOnBooleanColumnSupported()) {
         admin.dropIndex(namespace1, table, COL_NAME7);
@@ -1369,6 +1382,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
     String newTableName = "new" + TABLE4;
@@ -1396,6 +1410,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
@@ -1405,6 +1420,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
       throws ExecutionException {
@@ -1430,6 +1446,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly()
       throws ExecutionException {
@@ -1467,6 +1484,7 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly()
       throws ExecutionException {
@@ -1620,6 +1638,14 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   protected boolean isCreateIndexOnTextColumnEnabled() {
+    return true;
+  }
+
+  protected boolean isIndexOnFloatColumnSupported() {
+    return true;
+  }
+
+  protected boolean isRenameTableSupported() {
     return true;
   }
 
