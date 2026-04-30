@@ -189,7 +189,7 @@ public class AttributePropagatingDistributedTransactionManager
       return super.batch(this.<Operation>mergeAttributesForEach(operations));
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "ReferenceEquality"})
     private <T extends Operation> List<T> mergeAttributesForEach(List<? extends T> operations) {
       // Allocates a new list only when some element actually needs merging. Returns the original
       // list (same reference) when every element is forwarded unchanged so a common case of "no tx
