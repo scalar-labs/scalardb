@@ -1071,10 +1071,10 @@ public enum CoreError implements ScalarDbError {
       ""),
   JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
       Category.USER_ERROR, "0287", "Failed to load the service account key for Spanner", "", ""),
-  JDBC_SPANNER_CREDENTIALS_ALREADY_REGISTERED(
+  JDBC_SPANNER_CREDENTIALS_LIMIT_EXCEEDED(
       Category.USER_ERROR,
       "0288",
-      "Different Spanner credentials are already registered in this JVM. ScalarDB's Spanner adapter supports only one set of Spanner credentials per JVM",
+      "All %d Spanner credential slots are already in use. ScalarDB's Spanner adapter supports up to that many distinct sets of Spanner credentials per JVM",
       "",
       ""),
 

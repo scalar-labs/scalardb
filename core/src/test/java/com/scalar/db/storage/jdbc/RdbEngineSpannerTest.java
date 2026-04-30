@@ -377,9 +377,11 @@ public class RdbEngineSpannerTest {
 
     rdbEngine.setConnectionCredentials(config, hikariConfig);
 
+    // The first registration in a clean JVM goes into Slot0.
     verify(hikariConfig, times(1))
-        .addDataSourceProperty("credentialsProvider", SpannerCredentialsProvider.class.getName());
-    assertThat(new SpannerCredentialsProvider().getCredentials()).isNotNull();
+        .addDataSourceProperty(
+            "credentialsProvider", SpannerCredentialsProvider.Slot0.class.getName());
+    assertThat(new SpannerCredentialsProvider.Slot0().getCredentials()).isNotNull();
   }
 
   @Test
@@ -391,6 +393,15 @@ public class RdbEngineSpannerTest {
     assertThatThrownBy(() -> rdbEngine.setConnectionCredentials(config, hikariConfig))
         .isInstanceOf(IllegalArgumentException.class);
     verify(hikariConfig, never()).addDataSourceProperty(eq("credentialsProvider"), any());
+  }
+
+  @Test
+  void getConnectionProperties_ShouldReturnPostgresqlDialect() {
+    JdbcConfig config = mock(JdbcConfig.class);
+
+    assertThat(rdbEngine.getConnectionProperties(config))
+        .hasSize(1)
+        .containsEntry("dialect", "POSTGRESQL");
   }
 
   /**

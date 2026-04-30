@@ -4,6 +4,7 @@ import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
@@ -27,6 +28,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 class RdbEngineSpanner extends RdbEnginePostgresql {
@@ -272,11 +274,14 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
       // no-arg constructor, so the credentials are passed through a static registry rather than
       // through the connection property itself. This avoids putting the service-account key into
       // a HikariConfig data-source property (which would surface in Hikari diagnostic logs)
-      SpannerCredentialsProvider.register(credentials);
-      // Setting a system property is required by the driver to use this authentication mode
+      // The raw service-account JSON bytes are the stable identity of these credentials and let
+      // SpannerCredentialsProvider dedup repeated registrations without depending on
+      // Credentials.equals (which is unreliable across implementations).
+      String credentialsProviderClassName =
+          SpannerCredentialsProvider.register(credentials, credentialsBytes);
+      // The driver requires setting this system property to use this authentication mode
       System.setProperty("ENABLE_CREDENTIALS_PROVIDER", "true");
-      connectionConfig.addDataSourceProperty(
-          "credentialsProvider", SpannerCredentialsProvider.class.getName());
+      connectionConfig.addDataSourceProperty("credentialsProvider", credentialsProviderClassName);
     }
   }
 
@@ -303,5 +308,10 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public boolean requiresExplicitDropIndexBeforeDropColumn() {
     return true;
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
+    return ImmutableMap.of("dialect", "POSTGRESQL");
   }
 }
