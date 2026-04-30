@@ -4,7 +4,11 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionAdminIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "single_crud_operation_transaction")
 public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
     extends SingleCrudOperationTransactionAdminIntegrationTestBase {
 

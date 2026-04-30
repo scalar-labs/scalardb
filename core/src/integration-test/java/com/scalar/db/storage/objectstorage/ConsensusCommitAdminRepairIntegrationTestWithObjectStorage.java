@@ -5,7 +5,11 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairIntegrationTestBase;
 import java.util.Properties;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "consensus_commit_admin")
 public class ConsensusCommitAdminRepairIntegrationTestWithObjectStorage
     extends ConsensusCommitAdminRepairIntegrationTestBase {
 

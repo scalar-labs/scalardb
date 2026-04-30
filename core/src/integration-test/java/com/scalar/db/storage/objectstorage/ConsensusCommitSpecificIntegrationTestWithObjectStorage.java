@@ -10,7 +10,11 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "consensus_commit_specific")
 public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
     extends ConsensusCommitSpecificIntegrationTestBase {
 

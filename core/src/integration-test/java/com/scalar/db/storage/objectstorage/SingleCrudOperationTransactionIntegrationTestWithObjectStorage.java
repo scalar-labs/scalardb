@@ -10,7 +10,11 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionIntegrationTestBase;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "single_crud_operation_transaction")
 public class SingleCrudOperationTransactionIntegrationTestWithObjectStorage
     extends SingleCrudOperationTransactionIntegrationTestBase {
 

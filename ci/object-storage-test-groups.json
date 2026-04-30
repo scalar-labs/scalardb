@@ -1,0 +1,100 @@
+[
+  {
+    "label": "consensus_commit_default",
+    "test_group": "consensus_commit",
+    "tests_filter": "--tests \"**.ConsensusCommitIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage\"",
+    "bucket_suffix": "consensus-commit",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "consensus_commit_with_group_commit",
+    "test_group": "consensus_commit",
+    "tests_filter": "--tests \"**.ConsensusCommitIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage\"",
+    "bucket_suffix": "consensus-commit-gc",
+    "group_commit_enabled": true
+  },
+  {
+    "label": "consensus_commit_admin",
+    "test_group": "consensus_commit_admin",
+    "tests_filter": "--tests \"**.ConsensusCommitAdminIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage\"",
+    "bucket_suffix": "consensus-commit-admin",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "consensus_commit_admin_with_group_commit",
+    "test_group": "consensus_commit_admin",
+    "tests_filter": "--tests \"**.ConsensusCommitAdminIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage\"",
+    "bucket_suffix": "consensus-commit-admin-gc",
+    "group_commit_enabled": true
+  },
+  {
+    "label": "consensus_commit_specific",
+    "test_group": "consensus_commit_specific",
+    "tests_filter": "--tests \"**.ConsensusCommitSpecificIntegrationTestWithObjectStorage\"",
+    "bucket_suffix": "consensus-commit-specific",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "consensus_commit_specific_with_group_commit",
+    "test_group": "consensus_commit_specific",
+    "tests_filter": "--tests \"**.ConsensusCommitSpecificIntegrationTestWithObjectStorage\"",
+    "bucket_suffix": "consensus-commit-specific-gc",
+    "group_commit_enabled": true
+  },
+  {
+    "label": "storage_scan_single",
+    "test_group": "storage_scan_single",
+    "tests_filter": "--tests \"**.ObjectStorageSingle**\"",
+    "bucket_suffix": "storage-scan-single",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "storage_scan_multiple",
+    "test_group": "storage_scan_multiple",
+    "tests_filter": "--tests \"**.ObjectStorageMultiple**\"",
+    "bucket_suffix": "storage-scan-multiple",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "storage_wrapper",
+    "test_group": "storage_wrapper",
+    "tests_filter": "--tests \"**.ObjectStorageWrapper**\"",
+    "bucket_suffix": "storage-wrapper",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "storage_admin",
+    "test_group": "storage_admin",
+    "tests_filter": "--tests \"**.ObjectStorageAdmin**\"",
+    "bucket_suffix": "storage-admin",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "storage_cm",
+    "test_group": "storage_cm",
+    "tests_filter": "--tests \"**.ObjectStorageConditionalMutation**\"",
+    "bucket_suffix": "storage-cm",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "storage_others",
+    "test_group": "",
+    "tests_filter": "",
+    "bucket_suffix": "storage",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "two_phase_consensus_commit",
+    "test_group": "two_phase_consensus_commit",
+    "tests_filter": "--tests \"**.TwoPhaseConsensusCommit**\"",
+    "bucket_suffix": "2pcc",
+    "group_commit_enabled": false
+  },
+  {
+    "label": "single_crud_operation_transaction",
+    "test_group": "single_crud_operation_transaction",
+    "tests_filter": "--tests \"**.SingleCrudOperationTransaction**\"",
+    "bucket_suffix": "single-crud",
+    "group_commit_enabled": false
+  }
+]

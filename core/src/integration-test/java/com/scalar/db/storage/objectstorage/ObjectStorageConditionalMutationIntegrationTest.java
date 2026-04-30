@@ -6,7 +6,9 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(named = "scalardb.object_storage.test_group", matches = "storage_cm")
 public class ObjectStorageConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
 

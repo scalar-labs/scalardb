@@ -9,7 +9,11 @@ import com.scalar.db.util.TestUtils;
 import java.util.Properties;
 import java.util.Random;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "storage_scan_multiple")
 public class ObjectStorageMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
