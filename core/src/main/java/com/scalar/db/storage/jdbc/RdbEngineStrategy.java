@@ -151,6 +151,9 @@ public interface RdbEngineStrategy {
    * Returns {@code true} if this RDB engine requires an explicit index drop before dropping a
    * column that has a secondary index. Some engines (e.g. SQL Server, SQLite) do not automatically
    * drop the index when the column is dropped.
+   *
+   * @return {@code true} if an explicit index drop is required before dropping a column that has a
+   *     secondary index, {@code false} otherwise
    */
   default boolean requiresExplicitDropIndexBeforeDropColumn() {
     return false;
