@@ -395,7 +395,8 @@ public interface RdbEngineStrategy {
     config.getPassword().ifPresent(connectionConfig::setPassword);
   }
 
-  default String[] dropTableSql(TableMetadata metadata, String schema, String table) {
-    return new String[] {"DROP TABLE " + encloseFullTableName(schema, table)};
+  default String[] dropTableInternalSqlsBeforeDropTable(
+      String schema, String table, TableMetadata metadata) {
+    return new String[] {};
   }
 }

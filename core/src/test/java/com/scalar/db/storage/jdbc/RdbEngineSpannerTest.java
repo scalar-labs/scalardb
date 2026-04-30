@@ -111,42 +111,39 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void dropTableSql_WithoutIndexesOrMixedOrders_ShouldReturnDropTableOnly() {
+  void dropTableInternalSqlsBeforeDropTable_WithoutIndexesOrMixedOrders_ShouldReturnEmpty() {
     TableMetadata metadata = mock(TableMetadata.class);
     when(metadata.getSecondaryIndexNames()).thenReturn(Collections.emptySet());
     when(metadata.getClusteringOrders()).thenReturn(Collections.emptyMap());
 
-    String[] sqls = rdbEngine.dropTableSql(metadata, "ns", "tbl");
+    String[] sqls = rdbEngine.dropTableInternalSqlsBeforeDropTable("ns", "tbl", metadata);
 
-    assertThat(sqls).hasSize(1);
-    assertThat(sqls[0]).isEqualTo("DROP TABLE \"ns\".\"tbl\"");
+    assertThat(sqls).isEmpty();
   }
 
   @Test
-  void dropTableSql_WithSecondaryIndexes_ShouldDropIndexesBeforeTable() {
+  void dropTableInternalSqlsBeforeDropTable_WithSecondaryIndexes_ShouldReturnIndexDrop() {
     TableMetadata metadata = mock(TableMetadata.class);
     when(metadata.getSecondaryIndexNames()).thenReturn(ImmutableSet.of("c1"));
     when(metadata.getClusteringOrders()).thenReturn(Collections.emptyMap());
 
-    String[] sqls = rdbEngine.dropTableSql(metadata, "ns", "tbl");
+    String[] sqls = rdbEngine.dropTableInternalSqlsBeforeDropTable("ns", "tbl", metadata);
 
-    assertThat(sqls).hasSize(2);
+    assertThat(sqls).hasSize(1);
     assertThat(sqls[0]).startsWith("DROP INDEX");
-    assertThat(sqls[1]).isEqualTo("DROP TABLE \"ns\".\"tbl\"");
   }
 
   @Test
-  void dropTableSql_WithMixedClusteringOrders_ShouldDropClusteringOrderIndex() {
+  void dropTableInternalSqlsBeforeDropTable_WithMixedClusteringOrders_ShouldReturnIndexDrop() {
     TableMetadata metadata = mock(TableMetadata.class);
     when(metadata.getSecondaryIndexNames()).thenReturn(Collections.emptySet());
     when(metadata.getClusteringOrders())
         .thenReturn(ImmutableMap.of("ck1", Order.ASC, "ck2", Order.DESC));
 
-    String[] sqls = rdbEngine.dropTableSql(metadata, "ns", "tbl");
+    String[] sqls = rdbEngine.dropTableInternalSqlsBeforeDropTable("ns", "tbl", metadata);
 
-    assertThat(sqls).hasSize(2);
+    assertThat(sqls).hasSize(1);
     assertThat(sqls[0]).startsWith("DROP INDEX");
-    assertThat(sqls[1]).isEqualTo("DROP TABLE \"ns\".\"tbl\"");
   }
 
   @Test

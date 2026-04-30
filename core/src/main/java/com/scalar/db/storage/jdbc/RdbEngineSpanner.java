@@ -285,27 +285,27 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public String[] dropTableSql(TableMetadata metadata, String schema, String table) {
-    List<String> sqls = new ArrayList<>();
-    // Index needs to be explicitly dropped before dropping the table
-    for (String index : metadata.getSecondaryIndexNames()) {
-      String indexName = JdbcAdmin.getIndexName(schema, table, index);
-      sqls.add(dropIndexSql(schema, table, indexName));
-    }
-    if (JdbcAdmin.hasDifferentClusteringOrders(metadata)) {
-      String indexName =
-          shortenIndexNameIfNeeded(
-              CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
-              CLUSTERING_ORDER_INDEX_NAME_PREFIX);
-      sqls.add(dropIndexSql(schema, table, indexName));
-    }
-    sqls.add("DROP TABLE " + encloseFullTableName(schema, table));
-
-    return sqls.toArray(new String[0]);
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return true;
   }
 
   @Override
-  public boolean requiresExplicitDropIndexBeforeDropColumn() {
-    return true;
+  public String[] dropTableInternalSqlsBeforeDropTable(
+      String schema, String table, TableMetadata metadata) {
+    // Indexes must be dropped explicitly before dropping the table.
+    List<String> sqls = new ArrayList<>();
+    for (String index : metadata.getSecondaryIndexNames()) {
+      sqls.add(dropIndexSql(schema, table, JdbcAdmin.getIndexName(schema, table, index)));
+    }
+    if (JdbcAdmin.hasDifferentClusteringOrders(metadata)) {
+      sqls.add(
+          dropIndexSql(
+              schema,
+              table,
+              shortenIndexNameIfNeeded(
+                  CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                  CLUSTERING_ORDER_INDEX_NAME_PREFIX)));
+    }
+    return sqls.toArray(new String[0]);
   }
 }
