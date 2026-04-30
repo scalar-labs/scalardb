@@ -580,8 +580,8 @@ public interface AuthAdmin {
 
   /** The authentication methods. */
   enum AuthenticationMethod {
-    /** Password-based authentication. */
-    PASSWORD,
+    /** Username and password-based authentication. */
+    USERPASS,
 
     /** OpenID Connect (OIDC) authentication. */
     OIDC,
