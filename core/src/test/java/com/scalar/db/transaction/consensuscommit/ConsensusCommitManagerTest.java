@@ -264,7 +264,7 @@ public class ConsensusCommitManagerTest {
       begin_TxIdAndAttributesWithIsolationGiven_ReturnWithSpecifiedTxIdAndSpecifiedIsolation() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+    ConsensusCommitOperationAttributes.setTransactionIsolation(attributes, Isolation.SERIALIZABLE);
 
     // Act
     ConsensusCommit transaction = (ConsensusCommit) manager.begin(ANY_TX_ID, attributes);
@@ -295,7 +295,7 @@ public class ConsensusCommitManagerTest {
       beginReadOnly_TxIdAndAttributesWithIsolationGiven_ReturnWithSpecifiedTxIdAndSpecifiedIsolationInReadOnlyMode() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+    ConsensusCommitOperationAttributes.setTransactionIsolation(attributes, Isolation.SERIALIZABLE);
 
     // Act
     DistributedTransaction transaction = manager.beginReadOnly(ANY_TX_ID, attributes);
@@ -857,7 +857,7 @@ public class ConsensusCommitManagerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     Result result = mock(Result.class);
@@ -916,7 +916,7 @@ public class ConsensusCommitManagerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     List<Result> results =
@@ -1329,7 +1329,7 @@ public class ConsensusCommitManagerTest {
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
             .intValue("col", 0)
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     // Act
@@ -1425,7 +1425,7 @@ public class ConsensusCommitManagerTest {
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
             .intValue("col", 0)
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     // Act
@@ -1481,7 +1481,7 @@ public class ConsensusCommitManagerTest {
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
             .intValue("col", 0)
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     // Act
@@ -1537,7 +1537,7 @@ public class ConsensusCommitManagerTest {
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
             .intValue("col", 0)
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     // Act
@@ -1587,7 +1587,7 @@ public class ConsensusCommitManagerTest {
             .namespace("ns")
             .table("tbl")
             .partitionKey(Key.ofInt("pk", 0))
-            .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+            .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
             .build();
 
     // Act
@@ -1705,7 +1705,7 @@ public class ConsensusCommitManagerTest {
                 .table("tbl")
                 .partitionKey(Key.ofInt("pk", 0))
                 .intValue("col", 0)
-                .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+                .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
                 .build(),
             Delete.newBuilder()
                 .namespace("ns")
@@ -1768,7 +1768,7 @@ public class ConsensusCommitManagerTest {
                 .namespace("ns")
                 .table("tbl")
                 .partitionKey(Key.ofInt("pk", 0))
-                .attribute(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE")
+                .attribute(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE")
                 .build());
 
     @SuppressWarnings("unchecked")
