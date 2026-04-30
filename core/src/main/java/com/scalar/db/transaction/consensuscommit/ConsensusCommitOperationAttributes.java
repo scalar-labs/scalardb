@@ -18,8 +18,9 @@ public final class ConsensusCommitOperationAttributes {
   public static final String INSERT_MODE_ENABLED =
       OPERATION_ATTRIBUTE_PREFIX + "insert-mode-enabled";
 
-  /** The operation attribute key for the isolation level. */
-  public static final String ISOLATION = OPERATION_ATTRIBUTE_PREFIX + "isolation";
+  /** The operation attribute key for the transaction isolation level. */
+  public static final String TRANSACTION_ISOLATION =
+      OPERATION_ATTRIBUTE_PREFIX + "transaction-isolation";
 
   private ConsensusCommitOperationAttributes() {}
 
@@ -122,35 +123,35 @@ public final class ConsensusCommitOperationAttributes {
   }
 
   /**
-   * Sets the specified isolation level in the operation attributes.
+   * Sets the specified transaction isolation level in the operation attributes.
    *
    * @param attributes the operation attributes
-   * @param isolation the isolation level
+   * @param isolation the transaction isolation level
    */
-  public static void setIsolation(Map<String, String> attributes, Isolation isolation) {
-    attributes.put(ISOLATION, isolation.name());
+  public static void setTransactionIsolation(Map<String, String> attributes, Isolation isolation) {
+    attributes.put(TRANSACTION_ISOLATION, isolation.name());
   }
 
   /**
-   * Clears the isolation level from the operation attributes.
+   * Clears the transaction isolation level from the operation attributes.
    *
    * @param attributes the operation attributes
    */
-  public static void clearIsolation(Map<String, String> attributes) {
-    attributes.remove(ISOLATION);
+  public static void clearTransactionIsolation(Map<String, String> attributes) {
+    attributes.remove(TRANSACTION_ISOLATION);
   }
 
   /**
-   * Returns the isolation level from the operation attributes.
+   * Returns the transaction isolation level from the operation attributes.
    *
    * @param attributes the operation attributes
-   * @return an {@code Optional} containing the isolation level, or an empty {@code Optional} if not
-   *     set
-   * @throws IllegalArgumentException if the isolation level value in the attributes is not a valid
-   *     {@link Isolation}
+   * @return an {@code Optional} containing the transaction isolation level, or an empty {@code
+   *     Optional} if not set
+   * @throws IllegalArgumentException if the transaction isolation level value in the attributes is
+   *     not a valid {@link Isolation}
    */
-  public static Optional<Isolation> getIsolation(Map<String, String> attributes) {
-    String value = attributes.get(ISOLATION);
+  public static Optional<Isolation> getTransactionIsolation(Map<String, String> attributes) {
+    String value = attributes.get(TRANSACTION_ISOLATION);
     if (value == null) {
       return Optional.empty();
     }
