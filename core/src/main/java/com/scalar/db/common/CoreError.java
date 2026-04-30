@@ -1053,6 +1053,30 @@ public enum CoreError implements ScalarDbError {
       "This column value is out of range for BigInt in Object Storage. Value: %s",
       "",
       ""),
+  JDBC_SPANNER_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0283", "Spanner does not support renaming columns", "", ""),
+  JDBC_SPANNER_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0284",
+      "Spanner does not support column type conversion except from BLOB to TEXT. Conversion: from %s to %s",
+      "",
+      ""),
+  JDBC_SPANNER_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0285", "Spanner does not support renaming tables", "", ""),
+  JDBC_SPANNER_LIKE_ESCAPE_CHARACTER_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0286",
+      "Spanner uses '\\' as the default LIKE escape character and it cannot be configured or disabled. Escape character: '%s'",
+      "",
+      ""),
+  JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
+      Category.USER_ERROR, "0287", "Failed to load the service account key for Spanner", "", ""),
+  JDBC_SPANNER_CREDENTIALS_LIMIT_EXCEEDED(
+      Category.USER_ERROR,
+      "0288",
+      "All %d Spanner credential slots are already in use. ScalarDB's Spanner adapter supports up to that many distinct sets of Spanner credentials per JVM",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

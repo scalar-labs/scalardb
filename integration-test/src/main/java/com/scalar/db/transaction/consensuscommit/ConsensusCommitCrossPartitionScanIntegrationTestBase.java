@@ -114,8 +114,8 @@ public abstract class ConsensusCommitCrossPartitionScanIntegrationTestBase
     // Arrange
     populateRecordsForLike();
     DistributedTransaction transaction = manager.start();
-    Put put = preparePut(999, "\\scalar[$]");
-    Scan scan = prepareCrossPartitionScanWithLike(true, "\\_scalar[$]", "");
+    Put put = preparePut(999, "&scalar[$]");
+    Scan scan = prepareCrossPartitionScanWithLike(true, "&_scalar[$]");
 
     // Act Assert
     assertDoesNotThrow(
@@ -132,8 +132,8 @@ public abstract class ConsensusCommitCrossPartitionScanIntegrationTestBase
     // Arrange
     populateRecordsForLike();
     DistributedTransaction transaction = manager.start();
-    Put put = preparePut(999, "\\scalar[$]");
-    Scan scan = prepareCrossPartitionScanWithLike(true, "\\%scalar[$]", "");
+    Put put = preparePut(999, "&scalar[$]");
+    Scan scan = prepareCrossPartitionScanWithLike(true, "&%scalar[$]");
 
     // Act
     Throwable thrown =
