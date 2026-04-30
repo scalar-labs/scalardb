@@ -283,6 +283,7 @@ public class JdbcAdminImportTableIntegrationTest
       alterColumnType_Spanner_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly()
           throws Exception {
     // Arrange
+    admin.createNamespace(getNamespace(), getCreationOptions());
     testDataList.addAll(createExistingDatabaseWithAllDataTypes());
     for (TestData testData : testDataList) {
       if (testData.isImportableTable()) {
