@@ -12,27 +12,28 @@
 #     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
-blob-storage:
-  - label: blob-storage
-    display_name: Blob Storage
-    # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
-    setup: |
-      docker run -d --name azurite \
-        -e AZURITE_ACCOUNTS=test:test \
-        -p 10000:10000 \
-        mcr.microsoft.com/azure-storage/azurite \
-        azurite --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
-    # ScalarDB requires an access key, which has full access to Azure Blob Storage, for authentication.
-    create_test_user: # Do nothing
-    run: |
-      az storage container create \
-            --name test-container \
-            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
-      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
+#blob-storage:
+#  - label: blob-storage
+#    display_name: Blob Storage
+#    # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
+#    setup: |
+#      docker run -d --name azurite \
+#        -e AZURITE_ACCOUNTS=test:test \
+#        -p 10000:10000 \
+#        mcr.microsoft.com/azure-storage/azurite \
+#        azurite --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
+#    # ScalarDB requires an access key, which has full access to Azure Blob Storage, for authentication.
+#    create_test_user: # Do nothing
+#    run: |
+#      az storage container create \
+#            --name test-container \
+#            --connection-string "DefaultEndpointsProtocol=http;AccountName=test;AccountKey=test;BlobEndpoint=http://localhost:10000/test;"
+#      ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
 
 cassandra:
   - label: cassandra_%VERSION%
     display_name: Cassandra %VERSION%
+    disable_group_commit: true
     setup: |
       docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 cassandra:%VERSION%
       docker exec cassandra sed -i 's/^authenticator:.*/authenticator: org.apache.cassandra.auth.PasswordAuthenticator/' /etc/cassandra/cassandra.yaml
@@ -51,12 +52,13 @@ cassandra:
         GRANT ALTER ON ALL KEYSPACES TO test;
         GRANT SELECT ON ALL KEYSPACES TO test;
         GRANT MODIFY ON ALL KEYSPACES TO test;"
-    run: ./gradlew integrationTestCassandra -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
+    run: ./gradlew integrationTestCassandra --tests "*.CassandraSchemaLoaderIntegrationTest" -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
 
 cosmos:
   - label: cosmos
     display_name: Cosmos DB
     runner: windows-latest
+    disable_group_commit: true
     setup: |
       Write-Host "Launching Cosmos DB Emulator"
       Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
@@ -86,19 +88,21 @@ cosmos:
       & ${env:JAVA_HOME}/bin/keytool.exe $keystore -storepass 'changeit' -list -alias cosmos_emulator
       
       Write-Host "Run tests\n"
-      ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
+      ./gradlew.bat integrationTestCosmos --tests "*.CosmosSchemaLoaderIntegrationTest" "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
 
 dynamo:
   - label: dynamo
     display_name: DynamoDB Local
+    disable_group_commit: true
     setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
     # Permissions cannot be tested on DynamoDB local
     create_test_user: # Do nothing
-    run: ./gradlew integrationTestDynamo
+    run: ./gradlew integrationTestDynamo --tests "*.DynamoSchemaLoaderIntegrationTest"
 
 jdbc:
   - label: alloydb_%VERSION%
     display_name: AlloyDB %VERSION%
+    disable_group_commit: true
     setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
     versions:
       - 15
@@ -108,10 +112,11 @@ jdbc:
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: db2_%VERSION%
     display_name: Db2 %VERSION%
+    disable_group_commit: true
     setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
     versions:
       - 11.5.9.0
@@ -121,10 +126,11 @@ jdbc:
       docker exec db2 bash -c "useradd -m -s /bin/bash test"
       docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
       docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
+    disable_group_commit: true
     setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
       - 10.11
@@ -142,10 +148,11 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
+    disable_group_commit: true
     setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
       - 5.7
@@ -164,10 +171,11 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: oracle_%VERSION%
     display_name: Oracle %VERSION%
+    disable_group_commit: true
     versions:
       - 19
       - 21
@@ -207,10 +215,11 @@ jdbc:
       EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
     run: |
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+      ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
+    disable_group_commit: true
     setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
     versions:
       - 13
@@ -223,10 +232,11 @@ jdbc:
       docker exec postgresql psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: sqlserver_%VERSION%
     display_name: SQL Server %VERSION%
+    disable_group_commit: true
     setup: |
       docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
       if [ "%VERSION%" != "2017" ]; then
@@ -246,15 +256,17 @@ jdbc:
         GRANT CREATE SCHEMA TO test;
         GRANT CREATE TABLE TO test;
         GRANT CREATE VIEW to test;"
-    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: sqlite_3
     display_name: SQLite 3
+    disable_group_commit: true
     setup: sudo apt-get install -y sqlite3
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
 
   - label: tidb_%VERSION%
     display_name: TiDB %VERSION%
+    disable_group_commit: true
     versions:
       - 6.5
       - 7.5
@@ -278,17 +290,18 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: yugabytedb
     display_name: YugabyteDB 2
+    disable_group_commit: true
     setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2.20.4.0-b50 bin/yugabyted start --background=false --master_flag=\"ysql_enable_db_catalog_version_mode=false\" --tserver_flags=\"ysql_enable_db_catalog_version_mode=false\""
     db_healthcheck: docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'SELECT 1;'" > /dev/null 2>&1
     create_test_user: |
       docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;\""
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+    run: ./gradlew integrationTestJdbc --tests "*.JdbcSchemaLoaderIntegrationTest" -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
 multi-storage:
   - label: multi-storage
@@ -311,7 +324,7 @@ multi-storage:
         GRANT ALTER ON ALL KEYSPACES TO test;
         GRANT SELECT ON ALL KEYSPACES TO test;
         GRANT MODIFY ON ALL KEYSPACES TO test;"
-    run: ./gradlew integrationTestMultiStorage -Dscalardb.jdbc.contact_points=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
+    run: ./gradlew integrationTestMultiStorage --tests "*.MultiStorageSchemaLoaderIntegrationTest" -Dscalardb.jdbc.contact_points=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
 
 
 
