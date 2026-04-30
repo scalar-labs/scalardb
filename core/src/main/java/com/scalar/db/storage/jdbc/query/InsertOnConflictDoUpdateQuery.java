@@ -14,6 +14,15 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
+/**
+ * An UPSERT query using {@code INSERT ... ON CONFLICT (pk) DO UPDATE SET ...}.
+ *
+ * <p>The SET-clause format depends on the backend. Standard PostgreSQL and SQLite accept bind
+ * parameters ({@code SET col=?}), while Spanner PostgreSQL rejects that form and requires the
+ * {@code excluded} table alias ({@code SET col=excluded.col}). Pass {@code useExcludedAlias=true}
+ * to produce the Spanner-compatible form, which also skips the second bind pass since the SET
+ * clause no longer contains placeholders.
+ */
 @ThreadSafe
 public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
@@ -24,9 +33,15 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
+  private final boolean useExcludedAlias;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public InsertOnConflictDoUpdateQuery(Builder builder) {
+    this(builder, false);
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public InsertOnConflictDoUpdateQuery(Builder builder, boolean useExcludedAlias) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
@@ -34,6 +49,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     columns = builder.columns;
+    this.useExcludedAlias = useExcludedAlias;
   }
 
   @Override
@@ -72,7 +88,11 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
       sql.append("UPDATE SET ")
           .append(
               columns.keySet().stream()
-                  .map(n -> rdbEngine.enclose(n) + "=?")
+                  .map(
+                      n ->
+                          useExcludedAlias
+                              ? rdbEngine.enclose(n) + "=excluded." + rdbEngine.enclose(n)
+                              : rdbEngine.enclose(n) + "=?")
                   .collect(Collectors.joining(",")));
     } else {
       sql.append("NOTHING");
@@ -102,10 +122,14 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
       binder.throwSQLExceptionIfOccurred();
     }
 
-    // For ON DUPLICATE KEY UPDATE
-    for (Column<?> column : columns.values()) {
-      column.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+    if (!useExcludedAlias) {
+      // Second bind pass for the "SET col=?" placeholders in the ON CONFLICT DO UPDATE clause.
+      // When useExcludedAlias is true, the SET clause uses excluded.col references with no
+      // placeholders, so this pass is skipped.
+      for (Column<?> column : columns.values()) {
+        column.accept(binder);
+        binder.throwSQLExceptionIfOccurred();
+      }
     }
   }
 }

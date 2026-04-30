@@ -45,7 +45,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -67,9 +67,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
       return Stream.of(
           Arguments.of(allColumnNames.subList(0, allColumnNames.size() / 2)),
           Arguments.of(allColumnNames.subList(allColumnNames.size() / 2, allColumnNames.size())));
-    } else if (JdbcTestUtils.isDb2(rdbEngine)) {
-      // Db2 requires an even smaller number of conditions to be able to process the query so we
-      // split the conditions into 3 parts
+    } else if (JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isSpanner(rdbEngine)) {
+      // Db2 and Spanner require an even smaller number of conditions to be able to process the
+      // query so we split the conditions into 3 parts
       Collections.shuffle(allColumnNames, random.get());
       return Stream.of(
           Arguments.of(allColumnNames.subList(0, allColumnNames.size() / 3)),
@@ -83,11 +83,18 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isOrderingOnBlobColumnSupported() {
-    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+    return !(JdbcTestUtils.isDb2(rdbEngine)
+        || JdbcTestUtils.isOracle(rdbEngine)
+        || JdbcTestUtils.isSpanner(rdbEngine));
   }
 
   @Override
   protected boolean isConditionOnBlobColumnSupported() {
     return !JdbcTestUtils.isOracle(rdbEngine);
+  }
+
+  @Override
+  protected boolean isLikeExpressionWithCustomEscapeCharSupported() {
+    return !JdbcEnv.isSpanner();
   }
 }

@@ -13,7 +13,8 @@ public enum RdbEngine {
   SQLITE,
   YUGABYTE,
   MARIADB,
-  DB2;
+  DB2,
+  SPANNER;
 
   public static RdbEngineStrategy createRdbEngineStrategy(RdbEngine rdbEngine) {
     switch (rdbEngine) {
@@ -33,6 +34,8 @@ public enum RdbEngine {
         return new RdbEngineMariaDB();
       case DB2:
         return new RdbEngineDb2();
+      case SPANNER:
+        return new RdbEngineSpanner();
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
