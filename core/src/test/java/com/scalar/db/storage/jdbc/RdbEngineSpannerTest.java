@@ -395,15 +395,6 @@ public class RdbEngineSpannerTest {
     verify(hikariConfig, never()).addDataSourceProperty(eq("credentialsProvider"), any());
   }
 
-  @Test
-  void getConnectionProperties_ShouldReturnPostgresqlDialect() {
-    JdbcConfig config = mock(JdbcConfig.class);
-
-    assertThat(rdbEngine.getConnectionProperties(config))
-        .hasSize(1)
-        .containsEntry("dialect", "POSTGRESQL");
-  }
-
   /**
    * A syntactically valid (but non-functional) service-account key — enough for {@code
    * GoogleCredentials.fromStream} to parse without making a network call. The private key is a

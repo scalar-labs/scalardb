@@ -310,8 +310,4 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     return true;
   }
 
-  @Override
-  public Map<String, String> getConnectionProperties(JdbcConfig config) {
-    return ImmutableMap.of("dialect", "POSTGRESQL");
-  }
 }
