@@ -209,7 +209,7 @@ public final class ScalarDbUtils {
       return true;
     }
 
-    // We need to keep this for backward compatibility. We will remove it in release 5.0.0.
+    // We need to keep this for backward compatibility. We will remove it in release 4.0.0.
     List<Column<?>> columns = selection.getPartitionKey().getColumns();
     if (columns.size() == 1) {
       String name = columns.get(0).getName();
@@ -252,7 +252,7 @@ public final class ScalarDbUtils {
    *
    * @param column a column to convert
    * @return a value converted from the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public static Value<?> toValue(Column<?> column) {
@@ -287,7 +287,7 @@ public final class ScalarDbUtils {
    *
    * @param value a value to convert
    * @return a column converted from the value
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public static Column<?> toColumn(Value<?> value) {

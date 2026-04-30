@@ -64,7 +64,7 @@ public class Put extends Mutation {
    * Constructs a {@code Put} with the specified partition {@link Key}.
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Put#newBuilder()}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link Put#newBuilder()}
    *     instead
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -79,7 +79,7 @@ public class Put extends Mutation {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Put#newBuilder()}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link Put#newBuilder()}
    *     instead
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -93,7 +93,7 @@ public class Put extends Mutation {
    * Copy a Put.
    *
    * @param put a Put
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     Put#newBuilder(Put)} instead
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -129,7 +129,7 @@ public class Put extends Mutation {
    *
    * @param value a {@code Value} to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -144,7 +144,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param booleanValue a BOOLEAN value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -159,7 +159,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BOOLEAN value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -175,7 +175,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BOOLEAN value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -194,7 +194,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param intValue a INT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -209,7 +209,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a INT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -225,7 +225,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a INT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -244,7 +244,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param bigIntValue a BIGINT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -259,7 +259,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BIGINT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -275,7 +275,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BIGINT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -294,7 +294,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param floatValue a value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -309,7 +309,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a FLOAT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -325,7 +325,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a FLOAT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -344,7 +344,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param doubleValue a DOUBLE value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -359,7 +359,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a DOUBLE value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -375,7 +375,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a DOUBLE value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -394,7 +394,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param textValue a TEXT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -409,7 +409,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a TEXT value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -425,7 +425,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param blobValue a BLOB value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -440,7 +440,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BLOB value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -456,7 +456,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param blobValue a BLOB value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -471,7 +471,7 @@ public class Put extends Mutation {
    * @param columnName a column name of the value
    * @param value a BLOB value to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -486,7 +486,7 @@ public class Put extends Mutation {
    *
    * @param values a collection of {@code Value}s to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public Put withValues(Collection<Value<?>> values) {
@@ -502,7 +502,7 @@ public class Put extends Mutation {
    *
    * @param column a column to put
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @Deprecated
@@ -515,7 +515,7 @@ public class Put extends Mutation {
    * Returns a map of {@link Value}s.
    *
    * @return a map of {@code Value}s
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public Map<String, Value<?>> getValues() {
@@ -780,7 +780,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @Deprecated
@@ -790,7 +790,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @Deprecated
@@ -800,7 +800,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @Deprecated
@@ -810,7 +810,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Put builder instead; to create a Put builder, use {@link Put#newBuilder()}
    */
   @Override
@@ -830,7 +830,7 @@ public class Put extends Mutation {
    * Consensus Commit.
    *
    * @return whether implicit pre-read is enabled for this Put
-   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.15.0. Will be removed in release 4.0.0. Use {@link
    *     ConsensusCommitOperationAttributes#isImplicitPreReadEnabled(Put)} instead
    */
   @SuppressWarnings("InlineMeSuggester")
@@ -844,7 +844,7 @@ public class Put extends Mutation {
    * Commit.
    *
    * @return whether the insert mode is enabled for this Put
-   * @deprecated As of release 3.15.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.15.0. Will be removed in release 4.0.0. Use {@link
    *     ConsensusCommitOperationAttributes#isInsertModeEnabled(Put)} instead
    */
   @SuppressWarnings("InlineMeSuggester")

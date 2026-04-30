@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
-/** @deprecated As of release 3.5.0. Will be removed in release 5.0.0 */
+/** @deprecated As of release 3.5.0. Will be removed in release 4.0.0 */
 @Deprecated
 @ThreadSafe
 public class StorageService implements DistributedStorage {
@@ -27,35 +27,35 @@ public class StorageService implements DistributedStorage {
     this.storage = storage;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     storage.with(namespace, tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     storage.withNamespace(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return storage.getNamespace();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     storage.withTable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {

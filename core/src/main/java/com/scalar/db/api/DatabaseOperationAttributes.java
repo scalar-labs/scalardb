@@ -22,16 +22,19 @@ public final class DatabaseOperationAttributes {
   private DatabaseOperationAttributes() {}
 
   /**
-   * Returns whether cross-partition scan is enabled for the specified {@link ScanAll} operation.
+   * Returns whether cross-partition scan is enabled for the given {@link ScanAll} according to the
+   * operation attribute, falling back to the given default value when the attribute is absent.
    *
-   * @param scanAll the {@code ScanAll} operation
-   * @return {@code true} if cross-partition scan is enabled, {@code false} otherwise
+   * @param scanAll the scan
+   * @param defaultValue the value to return when the attribute is not set on the operation
+   * @return {@code true} if cross-partition scan is enabled by the operation attribute (or by
+   *     {@code defaultValue} when the attribute is absent)
    */
-  public static boolean isCrossPartitionScanEnabled(ScanAll scanAll) {
+  public static boolean isCrossPartitionScanEnabled(ScanAll scanAll, boolean defaultValue) {
     return scanAll
         .getAttribute(CROSS_PARTITION_SCAN_ENABLED)
         .map(Boolean::parseBoolean)
-        .orElse(false);
+        .orElse(defaultValue);
   }
 
   /**
@@ -45,17 +48,21 @@ public final class DatabaseOperationAttributes {
   }
 
   /**
-   * Returns whether cross-partition scan filtering is enabled for the specified {@link ScanAll}
-   * operation.
+   * Returns whether cross-partition scan filtering is enabled for the given {@link ScanAll}
+   * according to the operation attribute, falling back to the given default value when the
+   * attribute is absent.
    *
-   * @param scanAll the {@code ScanAll} operation
-   * @return {@code true} if cross-partition scan filtering is enabled, {@code false} otherwise
+   * @param scanAll the scan
+   * @param defaultValue the value to return when the attribute is not set on the operation
+   * @return {@code true} if cross-partition scan filtering is enabled by the operation attribute
+   *     (or by {@code defaultValue} when the attribute is absent)
    */
-  public static boolean isCrossPartitionScanFilteringEnabled(ScanAll scanAll) {
+  public static boolean isCrossPartitionScanFilteringEnabled(
+      ScanAll scanAll, boolean defaultValue) {
     return scanAll
         .getAttribute(CROSS_PARTITION_SCAN_FILTERING_ENABLED)
         .map(Boolean::parseBoolean)
-        .orElse(false);
+        .orElse(defaultValue);
   }
 
   /**
@@ -71,17 +78,20 @@ public final class DatabaseOperationAttributes {
   }
 
   /**
-   * Returns whether cross-partition scan ordering is enabled for the specified {@link ScanAll}
-   * operation.
+   * Returns whether cross-partition scan ordering is enabled for the given {@link ScanAll}
+   * according to the operation attribute, falling back to the given default value when the
+   * attribute is absent.
    *
-   * @param scanAll the {@code ScanAll} operation
-   * @return {@code true} if cross-partition scan ordering is enabled, {@code false} otherwise
+   * @param scanAll the scan
+   * @param defaultValue the value to return when the attribute is not set on the operation
+   * @return {@code true} if cross-partition scan ordering is enabled by the operation attribute (or
+   *     by {@code defaultValue} when the attribute is absent)
    */
-  public static boolean isCrossPartitionScanOrderingEnabled(ScanAll scanAll) {
+  public static boolean isCrossPartitionScanOrderingEnabled(ScanAll scanAll, boolean defaultValue) {
     return scanAll
         .getAttribute(CROSS_PARTITION_SCAN_ORDERING_ENABLED)
         .map(Boolean::parseBoolean)
-        .orElse(false);
+        .orElse(defaultValue);
   }
 
   /**

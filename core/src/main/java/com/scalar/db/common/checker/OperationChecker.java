@@ -74,7 +74,7 @@ public class OperationChecker {
       }
 
       // The following check is not needed when we use GetWithIndex. But we need to keep it for
-      // backward compatibility. We will remove it in release 5.0.0.
+      // backward compatibility. We will remove it in release 4.0.0.
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(get));
@@ -119,7 +119,7 @@ public class OperationChecker {
       }
 
       // The following checks are not needed when we use ScanWithIndex. But we need to keep them for
-      // backward compatibility. We will remove them in release 5.0.0.
+      // backward compatibility. We will remove them in release 4.0.0.
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             CoreError.OPERATION_CHECK_ERROR_INDEX_CLUSTERING_KEY_SPECIFIED.buildMessage(scan));
@@ -144,8 +144,8 @@ public class OperationChecker {
   }
 
   private void check(ScanAll scanAll) throws ExecutionException {
-    if (!config.isCrossPartitionScanEnabled()
-        && !DatabaseOperationAttributes.isCrossPartitionScanEnabled(scanAll)) {
+    if (!DatabaseOperationAttributes.isCrossPartitionScanEnabled(
+        scanAll, config.isCrossPartitionScanEnabled())) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN.buildMessage(scanAll));
     }
@@ -159,16 +159,16 @@ public class OperationChecker {
           CoreError.OPERATION_CHECK_ERROR_LIMIT.buildMessage(scanAll));
     }
 
-    if (!config.isCrossPartitionScanOrderingEnabled()
-        && !DatabaseOperationAttributes.isCrossPartitionScanOrderingEnabled(scanAll)
+    if (!DatabaseOperationAttributes.isCrossPartitionScanOrderingEnabled(
+            scanAll, config.isCrossPartitionScanOrderingEnabled())
         && !scanAll.getOrderings().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
     checkOrderingsForScanAll(scanAll, metadata);
 
-    if (!config.isCrossPartitionScanFilteringEnabled()
-        && !DatabaseOperationAttributes.isCrossPartitionScanFilteringEnabled(scanAll)
+    if (!DatabaseOperationAttributes.isCrossPartitionScanFilteringEnabled(
+            scanAll, config.isCrossPartitionScanFilteringEnabled())
         && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_FILTERING.buildMessage(scanAll));
