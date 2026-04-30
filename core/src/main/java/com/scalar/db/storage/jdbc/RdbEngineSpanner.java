@@ -3,8 +3,8 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.spanner.jdbc.JdbcDriver;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
@@ -28,7 +28,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import javax.annotation.Nullable;
 
 class RdbEngineSpanner extends RdbEnginePostgresql {
@@ -46,7 +45,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   public String getDriverClassName() {
-    return "com.google.cloud.spanner.jdbc.JdbcDriver";
+    return JdbcDriver.class.getName();
   }
 
   @Override
@@ -309,5 +308,4 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   public boolean requiresExplicitDropIndexBeforeDropColumn() {
     return true;
   }
-
 }
