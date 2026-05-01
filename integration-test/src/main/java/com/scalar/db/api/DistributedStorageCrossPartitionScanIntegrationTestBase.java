@@ -1035,38 +1035,6 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     testCallables.add(
         () -> {
           scan_WithLikeCondition_ShouldReturnProperResult(
-              prepareScanWithLike(true, "+%scalar[$]", "+"),
-              ImmutableList.of(3),
-              "escape % with specified escape");
-          return null;
-        });
-    testCallables.add(
-        () -> {
-          scan_WithLikeCondition_ShouldReturnProperResult(
-              prepareScanWithLike(true, "+_scalar[$]", "+"),
-              ImmutableList.of(4),
-              "escape _ with specified escape");
-          return null;
-        });
-    testCallables.add(
-        () -> {
-          scan_WithLikeCondition_ShouldReturnProperResult(
-              prepareScanWithLike(true, "\\%scalar[$]", ""),
-              ImmutableList.of(5, 6),
-              "no escape character");
-          return null;
-        });
-    testCallables.add(
-        () -> {
-          scan_WithLikeCondition_ShouldReturnProperResult(
-              prepareScanWithLike(true, "\\_scalar[$]", ""),
-              ImmutableList.of(6),
-              "no escape character");
-          return null;
-        });
-    testCallables.add(
-        () -> {
-          scan_WithLikeCondition_ShouldReturnProperResult(
               prepareScanWithLike(false, "\\%scalar[$]"),
               ImmutableList.of(1, 2, 4, 5, 6, 7),
               "not like and escape % with default escape");
@@ -1080,22 +1048,57 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
               "not like and escape _ with default escape");
           return null;
         });
-    testCallables.add(
-        () -> {
-          scan_WithLikeCondition_ShouldReturnProperResult(
-              prepareScanWithLike(false, "+%scalar[$]", "+"),
-              ImmutableList.of(1, 2, 4, 5, 6, 7),
-              "not like and escape % with specified escape");
-          return null;
-        });
-    testCallables.add(
-        () -> {
-          scan_WithLikeCondition_ShouldReturnProperResult(
-              prepareScanWithLike(false, "\\_scalar[$]", ""),
-              ImmutableList.of(1, 2, 3, 4, 5, 7),
-              "not like with no escape character");
-          return null;
-        });
+    if (isLikeExpressionWithCustomEscapeCharSupported()) {
+      testCallables.add(
+          () -> {
+            scan_WithLikeCondition_ShouldReturnProperResult(
+                prepareScanWithLike(true, "+%scalar[$]", "+"),
+                ImmutableList.of(3),
+                "escape % with specified escape");
+            return null;
+          });
+      testCallables.add(
+          () -> {
+            scan_WithLikeCondition_ShouldReturnProperResult(
+                prepareScanWithLike(true, "+_scalar[$]", "+"),
+                ImmutableList.of(4),
+                "escape _ with specified escape");
+            return null;
+          });
+      testCallables.add(
+          () -> {
+            scan_WithLikeCondition_ShouldReturnProperResult(
+                prepareScanWithLike(true, "\\%scalar[$]", ""),
+                ImmutableList.of(5, 6),
+                "no escape character");
+            return null;
+          });
+      testCallables.add(
+          () -> {
+            scan_WithLikeCondition_ShouldReturnProperResult(
+                prepareScanWithLike(true, "\\_scalar[$]", ""),
+                ImmutableList.of(6),
+                "no escape character");
+            return null;
+          });
+
+      testCallables.add(
+          () -> {
+            scan_WithLikeCondition_ShouldReturnProperResult(
+                prepareScanWithLike(false, "+%scalar[$]", "+"),
+                ImmutableList.of(1, 2, 4, 5, 6, 7),
+                "not like and escape % with specified escape");
+            return null;
+          });
+      testCallables.add(
+          () -> {
+            scan_WithLikeCondition_ShouldReturnProperResult(
+                prepareScanWithLike(false, "\\_scalar[$]", ""),
+                ImmutableList.of(1, 2, 3, 4, 5, 7),
+                "not like with no escape character");
+            return null;
+          });
+    }
 
     executeInParallel(testCallables);
   }
@@ -1268,6 +1271,10 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
   }
 
   protected boolean isConditionOnBlobColumnSupported() {
+    return true;
+  }
+
+  protected boolean isLikeExpressionWithCustomEscapeCharSupported() {
     return true;
   }
 }

@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.rpc.Code;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
@@ -82,23 +83,17 @@ public class JdbcAdminTest {
   private static final String NAMESPACE = "namespace";
   private static final String TABLE = "table";
   private static final ImmutableMap<RdbEngine, RdbEngineStrategy> RDB_ENGINES =
-      ImmutableMap.of(
-          RdbEngine.MYSQL,
-          new RdbEngineMysql(),
-          RdbEngine.ORACLE,
-          new RdbEngineOracle(),
-          RdbEngine.POSTGRESQL,
-          new RdbEnginePostgresql(),
-          RdbEngine.SQL_SERVER,
-          new RdbEngineSqlServer(),
-          RdbEngine.SQLITE,
-          new RdbEngineSqlite(),
-          RdbEngine.YUGABYTE,
-          new RdbEngineYugabyte(),
-          RdbEngine.MARIADB,
-          new RdbEngineMariaDB(),
-          RdbEngine.DB2,
-          new RdbEngineDb2());
+      ImmutableMap.<RdbEngine, RdbEngineStrategy>builder()
+          .put(RdbEngine.MYSQL, new RdbEngineMysql())
+          .put(RdbEngine.ORACLE, new RdbEngineOracle())
+          .put(RdbEngine.POSTGRESQL, new RdbEnginePostgresql())
+          .put(RdbEngine.SQL_SERVER, new RdbEngineSqlServer())
+          .put(RdbEngine.SQLITE, new RdbEngineSqlite())
+          .put(RdbEngine.YUGABYTE, new RdbEngineYugabyte())
+          .put(RdbEngine.MARIADB, new RdbEngineMariaDB())
+          .put(RdbEngine.DB2, new RdbEngineDb2())
+          .put(RdbEngine.SPANNER, new RdbEngineSpanner())
+          .build();
 
   @Mock private HikariDataSource dataSource;
   @Mock private Connection connection;
@@ -152,6 +147,9 @@ public class JdbcAdminTest {
       case POSTGRESQL:
       case YUGABYTE:
         when(sqlException.getSQLState()).thenReturn("42P01");
+        break;
+      case SPANNER:
+        when(sqlException.getErrorCode()).thenReturn(Code.INVALID_ARGUMENT_VALUE);
         break;
       case ORACLE:
         when(sqlException.getErrorCode()).thenReturn(942);
@@ -248,6 +246,16 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     getTableMetadata_forX_ShouldReturnTableMetadata(
         RdbEngine.DB2,
+        "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
+  }
+
+  @Test
+  public void getTableMetadata_forSpanner_ShouldReturnTableMetadata()
+      throws SQLException, ExecutionException {
+    getTableMetadata_forX_ShouldReturnTableMetadata(
+        RdbEngine.SPANNER,
         "SELECT \"column_name\",\"data_type\",\"key_type\",\"clustering_order\",\"indexed\" FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC");
@@ -493,6 +501,13 @@ public class JdbcAdminTest {
       throws ExecutionException, SQLException {
     createNamespace_forX_shouldExecuteCreateNamespaceStatement(
         RdbEngine.DB2, "CREATE SCHEMA \"my_ns\"");
+  }
+
+  @Test
+  public void createNamespace_forSpanner_shouldExecuteCreateNamespaceStatement()
+      throws ExecutionException, SQLException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.SPANNER, "CREATE SCHEMA \"my_ns\"");
   }
 
   private void createNamespace_forX_shouldExecuteCreateNamespaceStatement(
@@ -1805,6 +1820,13 @@ public class JdbcAdminTest {
         RdbEngine.DB2, "TRUNCATE TABLE \"my_ns\".\"foo_table\" IMMEDIATE");
   }
 
+  @Test
+  public void truncateTable_forSpanner_shouldExecuteTruncateTableStatement()
+      throws SQLException, ExecutionException {
+    truncateTable_forX_shouldExecuteTruncateTableStatement(
+        RdbEngine.SPANNER, "DELETE FROM \"my_ns\".\"foo_table\" WHERE TRUE");
+  }
+
   private void truncateTable_forX_shouldExecuteTruncateTableStatement(
       RdbEngine rdbEngine, String expectedTruncateTableStatement)
       throws SQLException, ExecutionException {
@@ -1983,6 +2005,19 @@ public class JdbcAdminTest {
         "DROP SCHEMA \"" + METADATA_SCHEMA + "\" RESTRICT");
   }
 
+  @Test
+  public void dropTable_forSpannerWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata()
+      throws Exception {
+    dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
+        RdbEngine.SPANNER,
+        "DROP TABLE \"my_ns\".\"foo_table\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
+        "DROP TABLE \"" + METADATA_SCHEMA + "\".\"metadata\"");
+  }
+
   private void dropTable_forXWithNoMoreMetadataAfterDeletion_shouldDropTableAndDeleteMetadata(
       RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
     // Arrange
@@ -2010,6 +2045,15 @@ public class JdbcAdminTest {
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
+
+    // Mock the table metadata fetch issued by JdbcAdmin.dropTableInternal before the DROP.
+    PreparedStatement metadataSelectStatement = mock(PreparedStatement.class);
+    ResultSet metadataResultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false));
+    when(metadataSelectStatement.executeQuery()).thenReturn(metadataResultSet);
+    when(connection.prepareStatement(any())).thenReturn(metadataSelectStatement);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
@@ -2104,6 +2148,19 @@ public class JdbcAdminTest {
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"");
   }
 
+  @Test
+  public void
+      dropTable_forSpannerWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable()
+          throws Exception {
+    dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
+        RdbEngine.SPANNER,
+        "DROP TABLE \"my_ns\".\"foo_table\"",
+        "DELETE FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"");
+  }
+
   private void
       dropTable_forXWithOtherMetadataAfterDeletion_ShouldDropTableAndDeleteMetadataButNotMetadataTable(
           RdbEngine rdbEngine, String... expectedSqlStatements) throws Exception {
@@ -2132,6 +2189,15 @@ public class JdbcAdminTest {
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
+
+    // Mock the table metadata fetch issued by JdbcAdmin.dropTableInternal before the DROP.
+    PreparedStatement metadataSelectStatement = mock(PreparedStatement.class);
+    ResultSet metadataResultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false));
+    when(metadataSelectStatement.executeQuery()).thenReturn(metadataResultSet);
+    when(connection.prepareStatement(any())).thenReturn(metadataSelectStatement);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
@@ -2426,6 +2492,15 @@ public class JdbcAdminTest {
             + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
   }
 
+  @Test
+  public void getNamespaceTableNames_forSpanner_ShouldReturnTableNames() throws Exception {
+    getNamespaceTableNames_forX_ShouldReturnTableNames(
+        RdbEngine.SPANNER,
+        "SELECT DISTINCT \"full_table_name\" FROM \""
+            + METADATA_SCHEMA
+            + "\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
+  }
+
   private void getNamespaceTableNames_forX_ShouldReturnTableNames(
       RdbEngine rdbEngine, String expectedSelectStatement) throws Exception {
     // Arrange
@@ -2635,6 +2710,14 @@ public class JdbcAdminTest {
   public void namespaceExists_forDb2WithExistingNamespace_shouldReturnTrue() throws Exception {
     namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.DB2, "SELECT 1 FROM syscat.schemata WHERE schemaname = ?", "");
+  }
+
+  @Test
+  public void namespaceExists_forSpannerWithExistingNamespace_shouldReturnTrue() throws Exception {
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+        RdbEngine.SPANNER,
+        "SELECT 1 FROM \"information_schema\".\"schemata\" WHERE \"schema_name\" = ?",
+        "");
   }
 
   private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
@@ -4643,6 +4726,13 @@ public class JdbcAdminTest {
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"");
   }
 
+  @Test
+  public void getNamespaceNames_forSpanner_ShouldReturnNamespaceNames() throws Exception {
+    getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
+        RdbEngine.SPANNER,
+        "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"");
+  }
+
   private void getNamespaceNames_ForX_WithExistingTables_ShouldWorkProperly(
       RdbEngine rdbEngine, String getTableMetadataNamespacesStatement)
       throws SQLException, ExecutionException {
@@ -4783,10 +4873,17 @@ public class JdbcAdminTest {
         .thenReturn("pk1")
         .thenReturn("pk2")
         .thenReturn("col");
-    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
-        .thenReturn(Types.VARCHAR)
-        .thenReturn(Types.VARCHAR)
-        .thenReturn(Types.REAL);
+    if (rdbEngine == RdbEngine.SPANNER) {
+      when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+          .thenReturn(Types.NVARCHAR)
+          .thenReturn(Types.NVARCHAR)
+          .thenReturn(Types.REAL);
+    } else {
+      when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+          .thenReturn(Types.VARCHAR)
+          .thenReturn(Types.VARCHAR)
+          .thenReturn(Types.REAL);
+    }
     when(columnResults.getString(JDBC_COL_TYPE_NAME))
         .thenReturn("VARCHAR")
         .thenReturn("VARCHAR")

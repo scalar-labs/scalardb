@@ -14,10 +14,6 @@ import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
-  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  protected static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
   public RdbEnginePostgresql() {
@@ -409,8 +405,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, OffsetDateTime>
-      getTimeTypeStrategy() {
+  public RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy() {
     return timeTypeEngine;
   }
 
