@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import org.junit.jupiter.params.provider.Arguments;
 public class JdbcDatabaseCrossPartitionScanIntegrationTest
     extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
+  private final Object truncateLock = new Object();
   private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -44,6 +46,18 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
   }
 
   @Override
+  protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
+      throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      synchronized (truncateLock) {
+        super.truncateTable(firstColumnType, secondColumnType);
+      }
+      return;
+    }
+    super.truncateTable(firstColumnType, secondColumnType);
+  }
+
+  @Override
   protected boolean isParallelDdlSupported() {
     if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return false;
@@ -56,9 +70,10 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     List<String> allColumnNames =
         prepareNonKeyColumns(0).stream().map(Column::getName).collect(Collectors.toList());
 
-    if ((JdbcTestUtils.isOracle(rdbEngine)
+    if (JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlServer(rdbEngine)
-        || JdbcTestUtils.isSqlite(rdbEngine))) {
+        || JdbcTestUtils.isSqlite(rdbEngine)
+        || JdbcTestUtils.isYugabyte(rdbEngine)) {
       // Oracle, SQLServer and SQLite do not support having too many conditions as CNF because it
       // is converted internally to a query with conditions in DNF which can be too large for the
       // storage to process.
