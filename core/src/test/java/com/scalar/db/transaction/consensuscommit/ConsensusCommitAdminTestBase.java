@@ -998,8 +998,9 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void upgrade_CoordinatorTableExistsButMissingChildIdsColumn_ShouldAddChildIdsColumn()
-      throws ExecutionException {
+  public void
+      upgrade_CoordinatorTableExistsButMissingChildIdsAndWriteSetColumns_ShouldAddMissingColumns()
+          throws ExecutionException {
     // Arrange
     Map<String, String> options = Collections.emptyMap();
     TableMetadata oldCoordinatorMetadata =
@@ -1020,6 +1021,9 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .addNewColumnToTable(
             coordinatorNamespaceName, Coordinator.TABLE, Attribute.CHILD_IDS, DataType.TEXT);
+    verify(distributedStorageAdmin)
+        .addNewColumnToTable(
+            coordinatorNamespaceName, Coordinator.TABLE, Attribute.WRITE_SET, DataType.BLOB);
   }
 
   @Test
