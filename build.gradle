@@ -5,7 +5,7 @@ import com.scalar.db.PomOnlyFilter
 
 plugins {
     id "com.diffplug.spotless" version "6.13.0"
-    id "org.jreleaser" version "1.23.0"
+    id "org.jreleaser" version "1.24.0"
     id "com.github.jk1.dependency-license-report"
 }
 
@@ -90,9 +90,9 @@ subprojects {
         azureCosmosVersion = '4.79.1'
         azureBlobStorageVersion = '12.33.3'
         jooqVersion = '3.14.16'
-        awssdkVersion = '2.42.4'
+        awssdkVersion = '2.44.0'
         hikariCpVersion = '4.0.3'
-        postgresqlDriverVersion = '42.7.10'
+        postgresqlDriverVersion = '42.7.11'
         oracleDriverVersion = '23.26.1.0.0'
         sqlserverDriverVersion = '12.8.2.jre8'
         sqliteDriverVersion = '3.53.0.0'
@@ -107,7 +107,7 @@ subprojects {
         caffeineVersion = '2.9.3'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.20.0'
-        jacksonVersion = '2.21.2'
+        jacksonVersion = '2.21.3'
         nettyVersion = '4.1.132.Final'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
