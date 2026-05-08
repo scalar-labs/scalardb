@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultiplePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.Random;
 public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
+  private final Object truncateLock = new Object();
   @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -30,6 +32,18 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
       return 1;
     }
     return super.getThreadNum();
+  }
+
+  @Override
+  protected void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
+      throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      synchronized (truncateLock) {
+        super.truncateTable(firstPartitionKeyType, secondPartitionKeyType);
+      }
+      return;
+    }
+    super.truncateTable(firstPartitionKeyType, secondPartitionKeyType);
   }
 
   @Override

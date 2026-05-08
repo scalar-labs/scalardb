@@ -4,7 +4,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.List;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
+  private final Object truncateLock = new Object();
   @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -36,6 +39,30 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       return 1;
     }
     return super.getThreadNum();
+  }
+
+  @Override
+  protected void truncateTable(
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder)
+      throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      synchronized (truncateLock) {
+        super.truncateTable(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder);
+      }
+      return;
+    }
+    super.truncateTable(
+        firstClusteringKeyType,
+        firstClusteringOrder,
+        secondClusteringKeyType,
+        secondClusteringOrder);
   }
 
   @Override
