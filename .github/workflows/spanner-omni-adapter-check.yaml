@@ -2,7 +2,6 @@ name: CI for Spanner Adapter using Spanner Omni
 run-name: "CI for Spanner Adapter using Spanner Omni : JDK ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }} (${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }})"
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       INT_TEST_JAVA_RUNTIME_VERSION:
