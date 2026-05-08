@@ -93,8 +93,9 @@ public final class JdbcTestUtils {
   public static void deleteAllRows(
       DistributedTransactionManager manager, String namespace, String table)
       throws ExecutionException {
+    DistributedTransaction tx = null;
     try {
-      DistributedTransaction tx = manager.begin();
+      tx = manager.begin();
       List<Result> results =
           tx.scan(Scan.newBuilder().namespace(namespace).table(table).all().build());
       for (Result r : results) {
@@ -108,6 +109,12 @@ public final class JdbcTestUtils {
       }
       tx.commit();
     } catch (Exception e) {
+      if (tx != null) {
+        try {
+          tx.rollback();
+        } catch (Exception ignored) {
+        }
+      }
       throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
     }
   }

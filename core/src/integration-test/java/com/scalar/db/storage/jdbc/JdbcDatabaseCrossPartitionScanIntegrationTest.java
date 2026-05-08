@@ -22,7 +22,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    return JdbcEnv.getProperties(testName);
+    return properties;
   }
 
   @Override
@@ -60,9 +60,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
         || JdbcTestUtils.isSqlServer(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
         || JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // Oracle, SQLServer and SQLite do not support having too many conditions as CNF because it
-      // is converted internally to a query with conditions in DNF which can be too large for the
-      // storage to process.
+      // Oracle, SQLServer, SQLite and YugabyteDB do not support having too many conditions as CNF
+      // because it is converted internally to a query with conditions in DNF which can be too large
+      // for the storage to process.
       // So we split the columns into two parts randomly to split the test into two executions
       Collections.shuffle(allColumnNames, random.get());
       return Stream.of(
