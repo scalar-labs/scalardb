@@ -74,12 +74,9 @@ public abstract class AdminTestUtils {
     if (tableMetadata == null) {
       return false;
     }
-    TableMetadata expectedMetadata;
-    if (config.isCoordinatorGroupCommitEnabled()) {
-      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
-    } else {
-      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
-    }
+    TableMetadata expectedMetadata =
+        Coordinator.buildTableMetadata(
+            config.isCoordinatorGroupCommitEnabled(), config.isCoordinatorWriteSetLoggingEnabled());
     return tableMetadata.equals(expectedMetadata);
   }
 

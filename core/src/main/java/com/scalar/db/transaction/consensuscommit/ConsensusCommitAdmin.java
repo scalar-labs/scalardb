@@ -333,23 +333,24 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
 
     // Pick the desired schema:
-    // - If the existing Coordinator already has the CHILD_IDS column (i.e., it was previously
-    //   created with group commit enabled), preserve the WITH_GROUP_COMMIT_ENABLED schema
-    //   regardless of the current config value. The ScalarDB-side metadata must reflect the
-    //   physical column set; the runtime config independently decides whether to USE the column.
-    //   Without this, toggling group commit from true to false and then running repair would
-    //   upsert no-child_ids metadata against a with-child_ids physical table, leaving them out
-    //   of sync (and breaking subsequent toggles back to enabled, where ALTER TABLE ADD COLUMN
-    //   would fail because the column already exists physically).
-    // - Otherwise (no existing Coordinator, or existing Coordinator without CHILD_IDS), use the
-    //   config-dependent schema, which lets a user upgrade a pre-group-commit Coordinator to
-    //   WITH_GROUP_COMMIT_ENABLED by toggling the config and calling repairCoordinatorTables.
-    TableMetadata coordinatorTableMetadata;
-    if (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.CHILD_IDS)) {
-      coordinatorTableMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
-    } else {
-      coordinatorTableMetadata = getCoordinatorTableMetadata();
-    }
+    // - For each optional column (CHILD_IDS, WRITE_SET): include it in the desired schema if the
+    //   existing Coordinator already has it OR the corresponding config is enabled.
+    // - The "preserve if already present" half ensures the ScalarDB-side metadata stays aligned
+    //   with the physical column set even if the operator toggles a feature off (e.g., disables
+    //   group commit, or write-set logging) and runs repair. Without this, repair would upsert a
+    //   metadata that no longer mentions the column, while the physical column still exists, and
+    //   subsequent toggles back to enabled would fail with "column already exists" on ALTER ADD.
+    // - The "include if config enabled" half lets an operator upgrade an existing Coordinator
+    //   table to a wider schema (adding CHILD_IDS / WRITE_SET) by toggling the corresponding
+    //   config and calling repairCoordinatorTables.
+    boolean groupCommitInSchema =
+        (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.CHILD_IDS))
+            || config.isCoordinatorGroupCommitEnabled();
+    boolean writeSetLoggingInSchema =
+        (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.WRITE_SET))
+            || config.isCoordinatorWriteSetLoggingEnabled();
+    TableMetadata coordinatorTableMetadata =
+        Coordinator.buildTableMetadata(groupCommitInSchema, writeSetLoggingInSchema);
 
     // Upgrade the schema (ALTER TABLE ADD COLUMN for any non-key columns the desired schema
     // requires that the existing Coordinator is missing) BEFORE repairTable. addNewColumnToTable
@@ -587,11 +588,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   private TableMetadata getCoordinatorTableMetadata() {
-    if (config.isCoordinatorGroupCommitEnabled()) {
-      return Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
-    } else {
-      return Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
-    }
+    return Coordinator.buildTableMetadata(
+        config.isCoordinatorGroupCommitEnabled(), config.isCoordinatorWriteSetLoggingEnabled());
   }
 
   private boolean isTransactionMetadataDecouplingEnabled(Map<String, String> options) {

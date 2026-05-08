@@ -32,6 +32,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
     assertThat(config.isIndexEventuallyConsistentReadEnabled()).isFalse();
+    assertThat(config.isCoordinatorWriteSetLoggingEnabled()).isFalse();
   }
 
   @Test
@@ -222,5 +223,19 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isIndexEventuallyConsistentReadEnabled()).isTrue();
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithCoordinatorWriteSetLoggingEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isCoordinatorWriteSetLoggingEnabled()).isTrue();
   }
 }

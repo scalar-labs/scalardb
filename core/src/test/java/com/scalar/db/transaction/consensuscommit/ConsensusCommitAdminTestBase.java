@@ -73,7 +73,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .createTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED,
+            Coordinator.buildTableMetadata(false, false),
             Collections.emptyMap());
   }
 
@@ -95,7 +95,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .createTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            Coordinator.buildTableMetadata(true, false),
             Collections.emptyMap());
   }
 
@@ -127,7 +127,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .createTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED,
+            Coordinator.buildTableMetadata(false, false),
             options);
   }
 
@@ -151,8 +151,55 @@ public abstract class ConsensusCommitAdminTestBase {
         .createTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            Coordinator.buildTableMetadata(true, false),
             options);
+  }
+
+  @Test
+  public void
+      createCoordinatorTables_WithWriteSetLoggingEnabled_shouldCreateCoordinatorTableProperly()
+          throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithWriteSetLogging =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // Act
+    adminWithWriteSetLogging.createCoordinatorTables();
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .createNamespace(coordinatorNamespaceName, Collections.emptyMap());
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.buildTableMetadata(false, true),
+            Collections.emptyMap());
+  }
+
+  @Test
+  public void
+      createCoordinatorTables_WithGroupCommitAndWriteSetLoggingEnabled_shouldCreateCoordinatorTableProperly()
+          throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithBoth =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // Act
+    adminWithBoth.createCoordinatorTables();
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .createNamespace(coordinatorNamespaceName, Collections.emptyMap());
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.buildTableMetadata(true, true),
+            Collections.emptyMap());
   }
 
   @Test
@@ -814,7 +861,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .repairTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED,
+            Coordinator.buildTableMetadata(false, false),
             options);
   }
 
@@ -837,7 +884,53 @@ public abstract class ConsensusCommitAdminTestBase {
         .repairTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            Coordinator.buildTableMetadata(true, false),
+            options);
+  }
+
+  @Test
+  public void repairCoordinatorTables_WithWriteSetLoggingEnabled_ShouldCallJdbcAdminProperly()
+      throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithWriteSetLogging =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    adminWithWriteSetLogging.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.buildTableMetadata(false, true),
+            options);
+  }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithGroupCommitAndWriteSetLoggingEnabled_ShouldCallJdbcAdminProperly()
+          throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithBoth =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    adminWithBoth.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.buildTableMetadata(true, true),
             options);
   }
 
@@ -853,7 +946,7 @@ public abstract class ConsensusCommitAdminTestBase {
     // The existing Coordinator table was created with group commit disabled, so it does not have
     // the CHILD_IDS column.
     when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
-        .thenReturn(Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED);
+        .thenReturn(Coordinator.buildTableMetadata(false, false));
 
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -866,7 +959,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .repairTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            Coordinator.buildTableMetadata(true, false),
             options);
     verify(distributedStorageAdmin)
         .addNewColumnToTable(
@@ -885,7 +978,7 @@ public abstract class ConsensusCommitAdminTestBase {
     // upsert the WITH_GROUP_COMMIT_ENABLED metadata, NOT the disabled variant, and should not
     // attempt any column ALTER.
     when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
-        .thenReturn(Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED);
+        .thenReturn(Coordinator.buildTableMetadata(true, false));
 
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -898,7 +991,69 @@ public abstract class ConsensusCommitAdminTestBase {
         .repairTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
-            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            Coordinator.buildTableMetadata(true, false),
+            options);
+    verify(distributedStorageAdmin, never()).addNewColumnToTable(any(), any(), any(), any());
+  }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithWriteSetLoggingEnabledAndExistingTableMissingWriteSetColumn_ShouldAddWriteSetColumn()
+          throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithWriteSetLogging =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // The existing Coordinator table was created without write-set logging, so it does not have
+    // the WRITE_SET column.
+    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(Coordinator.buildTableMetadata(false, false));
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    adminWithWriteSetLogging.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.buildTableMetadata(false, true),
+            options);
+    verify(distributedStorageAdmin)
+        .addNewColumnToTable(
+            coordinatorNamespaceName, Coordinator.TABLE, Attribute.WRITE_SET, DataType.BLOB);
+  }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithWriteSetLoggingDisabledAndExistingTableHavingWriteSetColumn_ShouldPreserveWithWriteSetSchemaAndNotAlterTable()
+          throws ExecutionException {
+    // Arrange
+    // The existing Coordinator table was created with write-set logging enabled, so it already
+    // has the WRITE_SET column. We are now repairing with write-set logging disabled. The
+    // ScalarDB-side metadata must stay aligned with the physical column set (still WITH
+    // write_set); the runtime write-set logging config independently decides whether to use that
+    // column. So repair should upsert the WITH-WRITE_SET metadata, NOT the disabled variant, and
+    // should not attempt any column ALTER.
+    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(Coordinator.buildTableMetadata(false, true));
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.buildTableMetadata(false, true),
             options);
     verify(distributedStorageAdmin, never()).addNewColumnToTable(any(), any(), any(), any());
   }
