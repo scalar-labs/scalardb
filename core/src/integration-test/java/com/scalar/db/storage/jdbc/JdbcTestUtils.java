@@ -1,19 +1,23 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.Admin;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
 import java.sql.Connection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -91,21 +95,28 @@ public final class JdbcTestUtils {
   }
 
   public static void deleteAllRows(
-      DistributedTransactionManager manager, String namespace, String table)
+      DistributedTransactionManager manager, Admin admin, String namespace, String table)
       throws ExecutionException {
+    TableMetadata metadata = admin.getTableMetadata(namespace, table);
+    LinkedHashSet<String> partitionKeyNames = metadata.getPartitionKeyNames();
+    LinkedHashSet<String> clusteringKeyNames = metadata.getClusteringKeyNames();
+
     DistributedTransaction tx = null;
     try {
       tx = manager.begin();
       List<Result> results =
           tx.scan(Scan.newBuilder().namespace(namespace).table(table).all().build());
       for (Result r : results) {
-        DeleteBuilder.Buildable builder =
-            Delete.newBuilder()
-                .namespace(namespace)
-                .table(table)
-                .partitionKey(r.getPartitionKey().get());
-        r.getClusteringKey().ifPresent(builder::clusteringKey);
-        tx.delete(builder.build());
+        Map<String, Column<?>> columns = r.getColumns();
+        Key partitionKey = buildKey(partitionKeyNames, columns);
+        Key clusteringKey =
+            clusteringKeyNames.isEmpty() ? null : buildKey(clusteringKeyNames, columns);
+        DeleteBuilder.Buildable deleteBuilder =
+            Delete.newBuilder().namespace(namespace).table(table).partitionKey(partitionKey);
+        if (clusteringKey != null) {
+          deleteBuilder.clusteringKey(clusteringKey);
+        }
+        tx.delete(deleteBuilder.build());
       }
       tx.commit();
     } catch (Exception e) {
@@ -117,6 +128,15 @@ public final class JdbcTestUtils {
       }
       throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
     }
+  }
+
+  private static Key buildKey(
+      LinkedHashSet<String> keyColumnNames, Map<String, Column<?>> columns) {
+    Key.Builder builder = Key.newBuilder();
+    for (String name : keyColumnNames) {
+      builder.add(columns.get(name));
+    }
+    return builder.build();
   }
 
   public static boolean isDb2(RdbEngineStrategy rdbEngine) {

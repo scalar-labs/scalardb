@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -14,6 +15,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
 
   private RdbEngineStrategy rdbEngine;
   private DistributedTransactionManager truncationManager;
+  private DistributedTransactionAdmin truncationAdmin;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -23,7 +25,9 @@ public class ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       Properties managerProps = new Properties(properties);
       ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(managerProps, testName);
-      truncationManager = TransactionFactory.create(managerProps).getTransactionManager();
+      TransactionFactory factory = TransactionFactory.create(managerProps);
+      truncationManager = factory.getTransactionManager();
+      truncationAdmin = factory.getTransactionAdmin();
     }
     return properties;
   }
@@ -31,7 +35,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
   @Override
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcTestUtils.deleteAllRows(truncationManager, namespace, table);
+      JdbcTestUtils.deleteAllRows(truncationManager, truncationAdmin, namespace, table);
       return;
     }
     super.truncateTable(namespace, table);
@@ -43,6 +47,9 @@ public class ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
     try {
       super.afterAll();
     } finally {
+      if (truncationAdmin != null) {
+        truncationAdmin.close();
+      }
       if (truncationManager != null) {
         truncationManager.close();
       }

@@ -29,7 +29,7 @@ public class ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabas
   @Override
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcTestUtils.deleteAllRows(manager, namespace, table);
+      JdbcTestUtils.deleteAllRows(manager, admin, namespace, table);
       return;
     }
     super.truncateTable(namespace, table);
