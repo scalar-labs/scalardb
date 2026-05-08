@@ -29,7 +29,7 @@ env:
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
   INT_TEST_JAVA_RUNTIME_VERSION: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}
   INT_TEST_JAVA_RUNTIME_VENDOR: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
-  SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
+  SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:15000/databases/test-db;isExperimentalHost=true;usePlainText=true"
 
 # Group commit only applies to **.ConsensusCommit** tests.
 # Groups without ConsensusCommit tests have group_commit_tests are skipped in the group_commit
@@ -162,41 +162,41 @@ jobs:
       - uses: actions/checkout@v6
         if: steps.should-run.outputs.skip == 'false'
 
-      # Use the binary emulator instead of Docker image for a slight performance gain
-      - name: Install Spanner emulator
+      - name: Start Spanner Omni
         if: steps.should-run.outputs.skip == 'false'
         run: |
-          echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" \
-            | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
-          curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-            | sudo tee /usr/share/keyrings/cloud.google.asc > /dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq google-cloud-cli-spanner-emulator
+          docker run -d --name spanneromni \
+            -p 15000:15000 -p 15026:15026 \
+            us-docker.pkg.dev/spanner-omni/images/spanner-omni:2026.r1-beta \
+            start-single-server
 
-      - name: Start Spanner emulator
-        if: steps.should-run.outputs.skip == 'false'
-        run: |
-          EMULATOR_DIR=/usr/lib/google-cloud-sdk/bin/cloud_spanner_emulator
-          ${EMULATOR_DIR}/gateway_main \
-            --hostname 0.0.0.0 \
-            --grpc_port 9010 \
-            --http_port 9020 \
-            --grpc_binary ${EMULATOR_DIR}/emulator_main \
-            &
-
-      - name: Wait for Spanner emulator to be ready
+      - name: Wait for Spanner Omni to be ready
         if: steps.should-run.outputs.skip == 'false'
         run: |
           SECONDS=0
-          until curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1; do
+          until docker exec spanneromni /google/spanner/bin/spanner databases list > /dev/null 2>&1; do
             if (( SECONDS > 60 )); then
-              echo "Timeout: Spanner emulator failed to start within 60 seconds"
+              echo "Timeout: Spanner Omni failed to start within 60 seconds"
+              docker logs spanneromni || true
               exit 1
             fi
-            echo "Waiting for Spanner emulator..."
+            echo "Waiting for Spanner Omni..."
             sleep 2
           done
-          echo "Spanner emulator is ready"
+          echo "Spanner Omni is ready"
+
+      - name: Create test-db
+        if: steps.should-run.outputs.skip == 'false'
+        run: |
+          docker exec spanneromni /google/spanner/bin/spanner databases create test-db --database-dialect POSTGRESQL
+
+      - name: Create database and test user
+        if: steps.should-run.outputs.skip == 'false'
+        run: |
+          docker exec spanneromni sh -c 'echo TestPass1@ > /tmp/pw && chmod 600 /tmp/pw'
+          docker exec spanneromni /google/spanner/bin/spanner users create test \
+            --roles roles/spanner.databaseUser \
+            --password-file /tmp/pw
 
       - name: Set up JDK 8
         if: steps.should-run.outputs.skip == 'false'
@@ -250,7 +250,7 @@ jobs:
           fi
 
           ./gradlew core:integrationTestJdbc \
-            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
+            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=test" "-Dscalardb.jdbc.password=TestPass1@" \
             ${GROUP_COMMIT_OPTS} \
             ${TESTS_ARGS}
 

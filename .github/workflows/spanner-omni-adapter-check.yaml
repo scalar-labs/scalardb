@@ -63,6 +63,13 @@ jobs:
         run: |
           docker exec spanneromni /google/spanner/bin/spanner databases create test-db --database-dialect POSTGRESQL
 
+      - name: Create test user
+        run: |
+          docker exec spanneromni sh -c 'echo TestPass1@ > /tmp/pw && chmod 600 /tmp/pw'
+          docker exec spanneromni /google/spanner/bin/spanner users create test \
+            --roles roles/spanner.databaseUser \
+            --password-file /tmp/pw
+
       - name: Set up JDK 8
         uses: actions/setup-java@v5
         with:
@@ -96,7 +103,7 @@ jobs:
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
         run: |
           ./gradlew core:integrationTestJdbc \
-            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
+            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=test" "-Dscalardb.jdbc.password=TestPass1@" \
             --tests JdbcDatabaseColumnValueIntegrationTest
 
       - name: Upload HTML test report
