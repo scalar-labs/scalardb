@@ -350,8 +350,16 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       coordinatorTableMetadata = getCoordinatorTableMetadata();
     }
 
-    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, coordinatorTableMetadata, options);
+    // Upgrade the schema (ALTER TABLE ADD COLUMN for any non-key columns the desired schema
+    // requires that the existing Coordinator is missing) BEFORE repairTable. addNewColumnToTable
+    // checks the existing metadata via getTableMetadata, so it must run while the metadata still
+    // reflects the pre-upgrade column set. If repairTable runs first, it upserts the metadata to
+    // the desired schema (which already includes the column), and the subsequent
+    // addNewColumnToTable call would be rejected with "column already exists" against the
+    // ScalarDB-side metadata even though the physical column does not yet exist.
     upgradeCoordinatorTableSchema(currentMetadata, coordinatorTableMetadata);
+
+    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, coordinatorTableMetadata, options);
   }
 
   // Adds any non-key columns the desired Coordinator table schema requires that the existing
