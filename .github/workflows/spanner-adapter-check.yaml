@@ -60,11 +60,11 @@ jobs:
 
           - name: MultipleClusteringKeyScan
             label: spanner_multi_ck_scan
-            tests: "JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner"
+            tests: "JdbcDatabaseMultipleClusteringKeyScanIntegrationTest"
 
           - name: ConditionalMutation
             label: spanner_cond_mutation
-            tests: "JdbcDatabaseConditionalMutationIntegrationTestWithSpanner"
+            tests: "JdbcDatabaseConditionalMutationIntegrationTest"
 
           - name: "Admin & Import"
             label: spanner_group1
