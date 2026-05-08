@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitCrossPartitionScanIntegrationTestBase;
 import java.util.Properties;
@@ -9,9 +11,23 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
     extends ConsensusCommitCrossPartitionScanIntegrationTestBase {
 
+  private RdbEngineStrategy rdbEngine;
+
   @Override
   protected Properties getProps(String testName) {
-    return ConsensusCommitJdbcEnv.getProperties(testName);
+    Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    rdbEngine = RdbEngineFactory.create(config);
+    return properties;
+  }
+
+  @Override
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcTestUtils.deleteAllRows(manager, namespace, table);
+      return;
+    }
+    super.truncateTable(namespace, table);
   }
 
   @Test

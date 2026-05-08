@@ -1,5 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteBuilder;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
@@ -81,6 +88,28 @@ public final class JdbcTestUtils {
 
   public static boolean isYugabyte(RdbEngineStrategy rdbEngine) {
     return rdbEngine instanceof RdbEngineYugabyte;
+  }
+
+  public static void deleteAllRows(
+      DistributedTransactionManager manager, String namespace, String table)
+      throws ExecutionException {
+    try {
+      DistributedTransaction tx = manager.begin();
+      List<Result> results =
+          tx.scan(Scan.newBuilder().namespace(namespace).table(table).all().build());
+      for (Result r : results) {
+        DeleteBuilder.Buildable builder =
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(table)
+                .partitionKey(r.getPartitionKey().get());
+        r.getClusteringKey().ifPresent(builder::clusteringKey);
+        tx.delete(builder.build());
+      }
+      tx.commit();
+    } catch (Exception e) {
+      throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
+    }
   }
 
   public static boolean isDb2(RdbEngineStrategy rdbEngine) {

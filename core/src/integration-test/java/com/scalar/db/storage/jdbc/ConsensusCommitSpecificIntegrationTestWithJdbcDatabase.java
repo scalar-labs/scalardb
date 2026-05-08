@@ -1,13 +1,18 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -15,9 +20,41 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
     extends ConsensusCommitSpecificIntegrationTestBase {
 
+  private RdbEngineStrategy rdbEngine;
+  private DistributedTransactionManager truncationManager;
+
   @Override
   protected Properties getProperties(String testName) {
-    return ConsensusCommitJdbcEnv.getProperties(testName);
+    Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    rdbEngine = RdbEngineFactory.create(config);
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      Properties managerProps = new Properties(properties);
+      ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(managerProps, testName);
+      truncationManager = TransactionFactory.create(managerProps).getTransactionManager();
+    }
+    return properties;
+  }
+
+  @Override
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcTestUtils.deleteAllRows(truncationManager, namespace, table);
+      return;
+    }
+    super.truncateTable(namespace, table);
+  }
+
+  @AfterAll
+  @Override
+  protected void afterAll() throws Exception {
+    try {
+      super.afterAll();
+    } finally {
+      if (truncationManager != null) {
+        truncationManager.close();
+      }
+    }
   }
 
   @Override

@@ -202,9 +202,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
-    consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
+    truncateTable(namespace1, TABLE_1);
+    truncateTable(namespace2, TABLE_2);
     consensusCommitAdmin.truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin.truncateTable(namespace, table);
   }
 
   @AfterAll

@@ -2,7 +2,6 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -16,7 +15,6 @@ import org.junit.jupiter.params.provider.Arguments;
 public class JdbcDatabaseCrossPartitionScanIntegrationTest
     extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
-  private final Object truncateLock = new Object();
   private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -43,18 +41,6 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
       }
     }
     return super.getRandomColumn(random, columnName, dataType);
-  }
-
-  @Override
-  protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
-      throws ExecutionException {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      synchronized (truncateLock) {
-        super.truncateTable(firstColumnType, secondColumnType);
-      }
-      return;
-    }
-    super.truncateTable(firstColumnType, secondColumnType);
   }
 
   @Override

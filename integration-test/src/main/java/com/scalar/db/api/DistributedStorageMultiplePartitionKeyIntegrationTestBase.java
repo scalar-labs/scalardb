@@ -192,7 +192,7 @@ public abstract class DistributedStorageMultiplePartitionKeyIntegrationTestBase 
     executeDdls(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
-  protected void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
+  private void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
       throws ExecutionException {
     admin.truncateTable(
         getNamespaceName(firstPartitionKeyType),

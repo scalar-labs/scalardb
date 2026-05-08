@@ -103,9 +103,13 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
-    admin.truncateTable(namespace, TABLE_WITH_TEXT);
+    truncateTable(namespace, TABLE);
+    truncateTable(namespace, TABLE_WITH_TEXT);
     admin.truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
   }
 
   @AfterAll

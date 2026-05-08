@@ -700,7 +700,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     admin.truncateTable(getNamespaceName(), CONDITION_TEST_TABLE);
   }
 
-  protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
+  private void truncateTable(DataType firstColumnType, DataType secondColumnType)
       throws ExecutionException {
     admin.truncateTable(
         getNamespaceName(firstColumnType), getTableName(firstColumnType, secondColumnType));

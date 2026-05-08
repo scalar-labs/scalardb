@@ -93,8 +93,12 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
+    truncateTable(namespace, TABLE);
     admin.truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
   }
 
   @AfterAll
