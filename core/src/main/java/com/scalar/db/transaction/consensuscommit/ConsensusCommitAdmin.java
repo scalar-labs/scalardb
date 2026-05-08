@@ -326,8 +326,69 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
-    admin.repairTable(
-        coordinatorNamespace, Coordinator.TABLE, getCoordinatorTableMetadata(), options);
+    admin.createNamespace(coordinatorNamespace, true, options);
+
+    // Snapshot the current Coordinator table metadata before repairTable upserts the desired one.
+    TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+
+    // Pick the desired schema:
+    // - If the existing Coordinator already has the CHILD_IDS column (i.e., it was previously
+    //   created with group commit enabled), preserve the WITH_GROUP_COMMIT_ENABLED schema
+    //   regardless of the current config value. The ScalarDB-side metadata must reflect the
+    //   physical column set; the runtime config independently decides whether to USE the column.
+    //   Without this, toggling group commit from true to false and then running repair would
+    //   upsert no-child_ids metadata against a with-child_ids physical table, leaving them out
+    //   of sync (and breaking subsequent toggles back to enabled, where ALTER TABLE ADD COLUMN
+    //   would fail because the column already exists physically).
+    // - Otherwise (no existing Coordinator, or existing Coordinator without CHILD_IDS), use the
+    //   config-dependent schema, which lets a user upgrade a pre-group-commit Coordinator to
+    //   WITH_GROUP_COMMIT_ENABLED by toggling the config and calling repairCoordinatorTables.
+    TableMetadata coordinatorTableMetadata;
+    if (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.CHILD_IDS)) {
+      coordinatorTableMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
+    } else {
+      coordinatorTableMetadata = getCoordinatorTableMetadata();
+    }
+
+    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, coordinatorTableMetadata, options);
+    upgradeCoordinatorTableSchema(currentMetadata, coordinatorTableMetadata);
+  }
+
+  // Adds any non-key columns the desired Coordinator table schema requires that the existing
+  // Coordinator table is still missing. Specifically handles the case where group commit is being
+  // turned on against a Coordinator table that was previously created with group commit disabled
+  // (i.e., without the {@code child_ids} column). Mirrors the column-migration logic that master
+  // implements in upgradeCoordinatorTable() under the (master-only) {@code upgrade()} API.
+  private void upgradeCoordinatorTableSchema(
+      TableMetadata currentMetadata, TableMetadata coordinatorTableMetadata)
+      throws ExecutionException {
+    if (currentMetadata == null) {
+      return;
+    }
+    for (String columnName : coordinatorTableMetadata.getColumnNames()) {
+      if (currentMetadata.getColumnNames().contains(columnName)) {
+        continue;
+      }
+      if (coordinatorTableMetadata.getPartitionKeyNames().contains(columnName)
+          || coordinatorTableMetadata.getClusteringKeyNames().contains(columnName)
+          || coordinatorTableMetadata.getSecondaryIndexNames().contains(columnName)) {
+        // In practice, this currently doesn't happen. Special handling would be needed if a key
+        // column were ever added to the Coordinator table metadata in the future.
+        throw new IllegalStateException(
+            String.format(
+                "Failed to upgrade the Coordinator table schema. Key columns can't be migrated. Column: %s",
+                columnName));
+      }
+    }
+
+    for (String columnName : coordinatorTableMetadata.getColumnNames()) {
+      if (currentMetadata.getColumnNames().contains(columnName)) {
+        continue;
+      }
+      DataType columnDataType = coordinatorTableMetadata.getColumnDataType(columnName);
+      admin.addNewColumnToTable(
+          coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
+    }
   }
 
   @Override
