@@ -1,0 +1,108 @@
+name: CI for Spanner Adapter using Spanner Omni
+run-name: "CI for Spanner Adapter using Spanner Omni : JDK ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }} (${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }})"
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      INT_TEST_JAVA_RUNTIME_VERSION:
+        description: JDK version used to run the integration test
+        type: choice
+        default: '8'
+        options:
+          - '8'
+          - '11'
+          - '17'
+          - '21'
+      INT_TEST_JAVA_RUNTIME_VENDOR:
+        description: Vendor of the JDK used to run the integration test
+        type: choice
+        default: 'temurin'
+        options:
+          - 'corretto'
+          - 'microsoft'
+          - 'oracle'
+          - 'temurin'
+
+env:
+  ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
+  INT_TEST_JAVA_RUNTIME_VERSION: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}
+  INT_TEST_JAVA_RUNTIME_VENDOR: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
+  SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:15000/databases/test-db;isExperimentalHost=true;usePlainText=true"
+  SPANNER_OMNI_IMAGE: "us-docker.pkg.dev/spanner-omni/images/spanner-omni:2026.r1-beta"
+
+jobs:
+  spanner-integration-test:
+    name: "Spanner Omni integration test"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Start Spanner Omni
+        run: |
+          docker run -d --name spanneromni \
+            -p 15000:15000 -p 15026:15026 \
+            "${SPANNER_OMNI_IMAGE}" \
+            start-single-server
+
+      - name: Wait for Spanner Omni to be ready
+        run: |
+          SECONDS=0
+          until docker exec spanneromni /google/spanner/bin/spanner databases list > /dev/null 2>&1; do
+            if (( SECONDS > 60 )); then
+              echo "Timeout: Spanner Omni failed to start within 60 seconds"
+              docker logs spanneromni || true
+              exit 1
+            fi
+            echo "Waiting for Spanner Omni..."
+            sleep 2
+          done
+          echo "Spanner Omni is ready"
+
+      - name: Create test-db
+        run: |
+          docker exec spanneromni /google/spanner/bin/spanner databases create test-db --database-dialect POSTGRESQL
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v5
+        with:
+          java-version: 8
+          distribution: temurin
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
+        id: setup-int-test-jdk
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle' }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
+          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
+
+      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
+        if: ${{ steps.setup-int-test-jdk.outcome == 'skipped' }}
+        run: |
+          echo ${{ secrets.OCR_TOKEN }} | docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} --password-stdin
+          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
+          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Run integration test
+        id: run-integration-test
+        env:
+          ORG_GRADLE_PROJECT_javaVersion: '8'
+          ORG_GRADLE_PROJECT_javaVendor: 'temurin'
+          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}"
+          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+        run: |
+          ./gradlew core:integrationTestJdbc \
+            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
+            --tests JdbcDatabaseColumnValueIntegrationTest
+
+      - name: Upload HTML test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.run-integration-test.outcome == 'success' && 'success' || 'failure' }}_report_${{ env.ARTIFACT_SUFFIX }}
+          path: core/build/reports/tests/
