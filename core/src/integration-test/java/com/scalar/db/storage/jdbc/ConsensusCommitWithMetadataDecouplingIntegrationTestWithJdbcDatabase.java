@@ -28,10 +28,18 @@ public class ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabas
 
   @Override
   protected void truncateTable(String namespace, String table) throws ExecutionException {
-    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    // Virtual tables (views) don't support DELETE, so use synchronized TRUNCATE as fallback.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
-      return;
+      try {
+        JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
+        return;
+      } catch (ExecutionException e) {
+        synchronized (ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase.class) {
+          super.truncateTable(namespace, table);
+        }
+        return;
+      }
     }
     super.truncateTable(namespace, table);
   }

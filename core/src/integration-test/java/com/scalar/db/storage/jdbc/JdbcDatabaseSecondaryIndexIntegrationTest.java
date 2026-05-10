@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.scalar.db.api.DistributedStorageSecondaryIndexIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.TestUtils;
@@ -24,6 +25,16 @@ public class JdbcDatabaseSecondaryIndexIntegrationTest
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     return properties;
+  }
+
+  @Override
+  protected void truncateTable(DataType secondaryIndexType) throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace(), secondaryIndexType.toString());
+      return;
+    }
+    super.truncateTable(secondaryIndexType);
   }
 
   @Override

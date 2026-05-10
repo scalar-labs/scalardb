@@ -49,6 +49,16 @@ public class JdbcDatabaseColumnValueIntegrationTest
   }
 
   @Override
+  protected void truncateTable() throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace(), TABLE);
+      return;
+    }
+    super.truncateTable();
+  }
+
+  @Override
   protected Column<?> getColumnWithRandomValue(
       Random random, String columnName, DataType dataType) {
     if (JdbcTestUtils.isOracle(rdbEngine)) {

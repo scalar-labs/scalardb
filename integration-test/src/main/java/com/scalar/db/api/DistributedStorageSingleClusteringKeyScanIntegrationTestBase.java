@@ -148,7 +148,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     admin.dropNamespace(namespace);
   }
 
-  private void truncateTable(DataType clusteringKeyType, Order clusteringOrder)
+  protected void truncateTable(DataType clusteringKeyType, Order clusteringOrder)
       throws ExecutionException {
     admin.truncateTable(namespace, getTableName(clusteringKeyType, clusteringOrder));
   }

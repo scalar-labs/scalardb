@@ -3,7 +3,9 @@ package com.scalar.db.storage.jdbc;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.List;
@@ -21,6 +23,18 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
     return properties;
+  }
+
+  @Override
+  protected void truncateTable(DataType clusteringKeyType, Order clusteringOrder)
+      throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcTestUtils.deleteAllRowsWithSql(
+          rdbEngine, getNamespace(), clusteringKeyType + "_" + clusteringOrder);
+      return;
+    }
+    super.truncateTable(clusteringKeyType, clusteringOrder);
   }
 
   @Override
