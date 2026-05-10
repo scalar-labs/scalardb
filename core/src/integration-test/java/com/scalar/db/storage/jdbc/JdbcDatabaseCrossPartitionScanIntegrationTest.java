@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.Arguments;
 public class JdbcDatabaseCrossPartitionScanIntegrationTest
     extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
-  private final Object truncateLock = new Object();
   private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -48,10 +47,12 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
   @Override
   protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
       throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      synchronized (truncateLock) {
-        super.truncateTable(firstColumnType, secondColumnType);
-      }
+      JdbcTestUtils.deleteAllRowsWithSql(
+          rdbEngine,
+          getNamespaceBaseName() + firstColumnType,
+          firstColumnType + "_" + secondColumnType);
       return;
     }
     super.truncateTable(firstColumnType, secondColumnType);

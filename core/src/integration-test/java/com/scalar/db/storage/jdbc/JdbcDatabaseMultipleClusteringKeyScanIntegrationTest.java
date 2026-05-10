@@ -22,7 +22,6 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  private final Object truncateLock = new Object();
   @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -48,14 +47,18 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       DataType secondClusteringKeyType,
       Order secondClusteringOrder)
       throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      synchronized (truncateLock) {
-        super.truncateTable(
-            firstClusteringKeyType,
-            firstClusteringOrder,
-            secondClusteringKeyType,
-            secondClusteringOrder);
-      }
+      JdbcTestUtils.deleteAllRowsWithSql(
+          rdbEngine,
+          getNamespaceBaseName() + firstClusteringKeyType + "_" + firstClusteringOrder,
+          firstClusteringKeyType
+              + "_"
+              + firstClusteringOrder
+              + "_"
+              + secondClusteringKeyType
+              + "_"
+              + secondClusteringOrder);
       return;
     }
     super.truncateTable(

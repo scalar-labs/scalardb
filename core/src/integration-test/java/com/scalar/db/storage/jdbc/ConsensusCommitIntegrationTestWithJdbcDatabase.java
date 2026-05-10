@@ -22,7 +22,7 @@ public class ConsensusCommitIntegrationTestWithJdbcDatabase
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcTestUtils.deleteAllRows(manager, admin, namespace, table);
+      JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
       return;
     }
     super.truncateTable(namespace, table);

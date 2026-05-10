@@ -15,7 +15,6 @@ import java.util.Random;
 public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
     extends DistributedStorageMultiplePartitionKeyIntegrationTestBase {
 
-  private final Object truncateLock = new Object();
   @LazyInit private RdbEngineStrategy rdbEngine;
 
   @Override
@@ -37,10 +36,12 @@ public class JdbcDatabaseMultiplePartitionKeyIntegrationTest
   @Override
   protected void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
       throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      synchronized (truncateLock) {
-        super.truncateTable(firstPartitionKeyType, secondPartitionKeyType);
-      }
+      JdbcTestUtils.deleteAllRowsWithSql(
+          rdbEngine,
+          getNamespaceBaseName() + firstPartitionKeyType,
+          firstPartitionKeyType + "_" + secondPartitionKeyType);
       return;
     }
     super.truncateTable(firstPartitionKeyType, secondPartitionKeyType);
