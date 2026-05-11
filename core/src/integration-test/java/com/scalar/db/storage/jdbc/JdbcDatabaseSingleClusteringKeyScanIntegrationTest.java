@@ -29,6 +29,7 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
   protected void truncateTable(DataType clusteringKeyType, Order clusteringOrder)
       throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       JdbcTestUtils.deleteAllRowsWithSql(
           rdbEngine, getNamespace(), clusteringKeyType + "_" + clusteringOrder);

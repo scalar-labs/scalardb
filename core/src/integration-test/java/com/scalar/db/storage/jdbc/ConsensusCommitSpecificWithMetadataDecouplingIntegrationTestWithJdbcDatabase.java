@@ -37,18 +37,12 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
   @Override
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
-    // Virtual tables (views) don't support DELETE, so use synchronized TRUNCATE as fallback.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
+    // With metadata-decoupling, tables are views joining <table>_data and <table>_tx_metadata,
+    // so DELETE must target the underlying source tables directly.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      try {
-        JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
-        return;
-      } catch (ExecutionException e) {
-        synchronized (
-            ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase.class) {
-          super.truncateTable(namespace, table);
-        }
-        return;
-      }
+      JdbcTestUtils.deleteAllRowsFromVirtualTableWithSql(rdbEngine, namespace, table);
+      return;
     }
     super.truncateTable(namespace, table);
   }

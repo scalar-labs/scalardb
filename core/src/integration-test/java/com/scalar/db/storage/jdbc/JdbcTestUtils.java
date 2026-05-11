@@ -101,6 +101,17 @@ public final class JdbcTestUtils {
     }
   }
 
+  /**
+   * Deletes all rows from the underlying source tables of a virtual table (view). With
+   * metadata-decoupling, a table is a VIEW joining {@code <table>_data} and {@code
+   * <table>_tx_metadata}. DELETE cannot target a multi-table view directly.
+   */
+  public static void deleteAllRowsFromVirtualTableWithSql(
+      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
+    deleteAllRowsWithSql(rdbEngine, namespace, table + "_data");
+    deleteAllRowsWithSql(rdbEngine, namespace, table + "_tx_metadata");
+  }
+
   public static boolean isDb2(RdbEngineStrategy rdbEngine) {
     return rdbEngine instanceof RdbEngineDb2;
   }

@@ -51,6 +51,7 @@ public class JdbcDatabaseColumnValueIntegrationTest
   @Override
   protected void truncateTable() throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
       JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace(), TABLE);
       return;
