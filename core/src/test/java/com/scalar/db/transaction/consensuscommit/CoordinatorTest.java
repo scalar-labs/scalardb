@@ -27,9 +27,15 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Key;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -71,6 +77,7 @@ public class CoordinatorTest {
     when(result.contains(Attribute.CHILD_IDS)).thenReturn(false);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -116,6 +123,7 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(childIdsStr);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -144,6 +152,7 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -226,6 +235,7 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -305,6 +315,7 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Assuming these states exist:
     //
@@ -362,6 +373,7 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(dummyChildIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(fullId);
@@ -369,6 +381,7 @@ public class CoordinatorTest {
     when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForSingleCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Assuming these states exist:
     //
@@ -421,6 +434,7 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Look up with the same parent ID and a wrong child ID.
     String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
@@ -476,6 +490,7 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(targetFullId);
@@ -483,6 +498,7 @@ public class CoordinatorTest {
     when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForSingleCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Assuming these states exist:
     //
@@ -536,6 +552,7 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Look up with the same parent ID and a wrong child ID.
     // Also, the full ID doesn't match any single committed state.
@@ -919,5 +936,132 @@ public class CoordinatorTest {
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
     verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
+  public void state_WriteSetSerializationRoundTrip_ShouldPreserveContent()
+      throws CoordinatorException {
+    // Arrange — build a State that carries a populated WriteSet.
+    Entry writeEntry =
+        Entry.newBuilder()
+            .setEntryType(Entry.EntryType.ENTRY_TYPE_WRITE)
+            .setNamespaceName("ns")
+            .setTableName("tbl")
+            .setPartitionKey(
+                Key.newBuilder()
+                    .addColumns(
+                        Column.newBuilder()
+                            .setName("pk")
+                            .setTextValue(Column.TextValue.newBuilder().setValue("p1")))
+                    .build())
+            .build();
+    WriteSet originalWriteSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .addEntryGroups(EntryGroup.newBuilder().addEntries(writeEntry))
+            .build();
+    State state = new State(ANY_ID_1, originalWriteSet, TransactionState.COMMITTED);
+
+    // Serialize via createPutWith
+    Put put = coordinator.createPutWith(state);
+    byte[] serializedBytes =
+        ((BlobColumn) put.getColumns().get(Attribute.WRITE_SET)).getBlobValueAsBytes();
+    assertThat(serializedBytes).isNotNull();
+
+    // Deserialize via State(Result)
+    Result result = mock(Result.class);
+    when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(false);
+    when(result.getBlobAsBytes(Attribute.WRITE_SET)).thenReturn(serializedBytes);
+    State parsedState = new State(result);
+
+    // Assert — round-trip preserves the WriteSet (including schema_version)
+    assertThat(parsedState.getWriteSet()).isPresent();
+    WriteSet parsedWriteSet = parsedState.getWriteSet().get();
+    assertThat(parsedWriteSet.getSchemaVersion()).isEqualTo(1);
+    assertThat(parsedWriteSet).isEqualTo(originalWriteSet);
+  }
+
+  @Test
+  public void state_NullWriteSet_ShouldNotPersistColumn() {
+    // Arrange — State with null writeSet (lazy-recovery abort, etc.)
+    State state = new State(ANY_ID_1, TransactionState.ABORTED);
+
+    // Act
+    Put put = coordinator.createPutWith(state);
+
+    // Assert — the WRITE_SET column should not be populated.
+    assertThat(put.getColumns()).doesNotContainKey(Attribute.WRITE_SET);
+  }
+
+  @Test
+  public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
+      throws CoordinatorException {
+    // Arrange — State with an empty (but non-null) WriteSet that explicitly carries
+    // schema_version, mirroring what CommitHandler#buildSingleGroupWriteSet builds for read-only
+    // commits.
+    WriteSet emptyWriteSet = WriteSet.newBuilder().setSchemaVersion(1).build();
+    State state = new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED);
+
+    // Serialize
+    Put put = coordinator.createPutWith(state);
+    byte[] serializedBytes =
+        ((BlobColumn) put.getColumns().get(Attribute.WRITE_SET)).getBlobValueAsBytes();
+    assertThat(serializedBytes).isNotEmpty();
+
+    // Deserialize
+    Result result = mock(Result.class);
+    when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(false);
+    when(result.getBlobAsBytes(Attribute.WRITE_SET)).thenReturn(serializedBytes);
+    State parsedState = new State(result);
+
+    // Assert — empty WriteSet survives the round trip and is distinguishable from null.
+    assertThat(parsedState.getWriteSet()).isPresent();
+    assertThat(parsedState.getWriteSet().get().getSchemaVersion()).isEqualTo(1);
+    assertThat(parsedState.getWriteSet().get().getEntryGroupsList()).isEmpty();
+  }
+
+  @Test
+  public void state_CorruptWriteSetBytes_ShouldThrowCoordinatorException() {
+    // Arrange — Result returns non-proto garbage bytes for tx_write_set.
+    Result result = mock(Result.class);
+    when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.isNull(Attribute.WRITE_SET)).thenReturn(false);
+    when(result.getBlobAsBytes(Attribute.WRITE_SET))
+        .thenReturn(new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff});
+
+    // Act Assert
+    assertThatThrownBy(() -> new State(result)).isInstanceOf(CoordinatorException.class);
+  }
+
+  @Test
+  public void state_EqualityWithDifferentWriteSet_ShouldNotBeEqual() {
+    // Arrange
+    WriteSet writeSet1 = WriteSet.newBuilder().setSchemaVersion(1).build();
+    WriteSet writeSet2 =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .addEntryGroups(EntryGroup.newBuilder().setChildId("child-1"))
+            .build();
+    State stateWithNullWriteSet = new State(ANY_ID_1, TransactionState.COMMITTED);
+    State stateWithWriteSet1 = new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED);
+    State stateWithWriteSet1Again = new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED);
+    State stateWithWriteSet2 = new State(ANY_ID_1, writeSet2, TransactionState.COMMITTED);
+
+    // Assert
+    assertThat(stateWithNullWriteSet).isNotEqualTo(stateWithWriteSet1);
+    assertThat(stateWithWriteSet1).isNotEqualTo(stateWithWriteSet2);
+    assertThat(stateWithWriteSet1).isEqualTo(stateWithWriteSet1Again);
+    assertThat(stateWithWriteSet1.hashCode()).isEqualTo(stateWithWriteSet1Again.hashCode());
   }
 }

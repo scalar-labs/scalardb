@@ -6,6 +6,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
@@ -19,6 +20,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
@@ -28,6 +30,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,6 +177,16 @@ public class Coordinator {
   void putStateForGroupCommit(
       String parentId, List<String> fullIds, TransactionState transactionState, long createdAt)
       throws CoordinatorException {
+    putStateForGroupCommit(parentId, fullIds, null, transactionState, createdAt);
+  }
+
+  void putStateForGroupCommit(
+      String parentId,
+      List<String> fullIds,
+      @Nullable WriteSet writeSet,
+      TransactionState transactionState,
+      long createdAt)
+      throws CoordinatorException {
 
     if (keyManipulator.isFullKey(parentId)) {
       throw new AssertionError(
@@ -186,7 +199,7 @@ public class Coordinator {
       Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
       childIds.add(keys.childKey);
     }
-    State state = new State(parentId, childIds, transactionState, createdAt);
+    State state = new State(parentId, childIds, writeSet, transactionState, createdAt);
 
     Put put = createPutWith(state);
     put(put, state.getId());
@@ -351,6 +364,9 @@ public class Coordinator {
     if (!childIds.isEmpty()) {
       builder = builder.textValue(Attribute.CHILD_IDS, childIds);
     }
+    if (state.getWriteSet().isPresent()) {
+      builder = builder.blobValue(Attribute.WRITE_SET, state.getWriteSet().get().toByteArray());
+    }
     return builder.build();
   }
 
@@ -395,16 +411,14 @@ public class Coordinator {
     private static final List<String> EMPTY_CHILD_IDS = Collections.emptyList();
     private static final String CHILD_IDS_DELIMITER = ",";
     private final String id;
+    private final List<String> childIds;
+    @Nullable private final WriteSet writeSet;
     private final TransactionState state;
     private final long createdAt;
-    private final List<String> childIds;
 
     public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
       id = result.getText(Attribute.ID);
-      state = TransactionState.getInstance(result.getInt(Attribute.STATE));
-      createdAt = result.getBigInt(Attribute.CREATED_AT);
-
       if (result.contains(Attribute.CHILD_IDS)) {
         String childIdsStr = result.getText(Attribute.CHILD_IDS);
         if (childIdsStr != null) {
@@ -415,6 +429,9 @@ public class Coordinator {
       } else {
         childIds = EMPTY_CHILD_IDS;
       }
+      writeSet = parseWriteSet(result);
+      state = TransactionState.getInstance(result.getInt(Attribute.STATE));
+      createdAt = result.getBigInt(Attribute.CREATED_AT);
     }
 
     public State(String id, TransactionState state) {
@@ -425,8 +442,27 @@ public class Coordinator {
       this(id, childIds, state, System.currentTimeMillis());
     }
 
+    public State(String id, @Nullable WriteSet writeSet, TransactionState state) {
+      this(id, EMPTY_CHILD_IDS, writeSet, state, System.currentTimeMillis());
+    }
+
+    public State(
+        String id, List<String> childIds, @Nullable WriteSet writeSet, TransactionState state) {
+      this(id, childIds, writeSet, state, System.currentTimeMillis());
+    }
+
     @VisibleForTesting
     State(String id, List<String> childIds, TransactionState state, long createdAt) {
+      this(id, childIds, null, state, createdAt);
+    }
+
+    @VisibleForTesting
+    State(
+        String id,
+        List<String> childIds,
+        @Nullable WriteSet writeSet,
+        TransactionState state,
+        long createdAt) {
       this.id = checkNotNull(id);
       for (String childId : childIds) {
         if (childId.contains(CHILD_IDS_DELIMITER)) {
@@ -437,27 +473,19 @@ public class Coordinator {
         }
       }
       this.childIds = childIds;
+      this.writeSet = writeSet;
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
     }
 
     @VisibleForTesting
     State(String id, TransactionState state, long createdAt) {
-      this(id, EMPTY_CHILD_IDS, state, createdAt);
+      this(id, EMPTY_CHILD_IDS, null, state, createdAt);
     }
 
     @Nonnull
     public String getId() {
       return id;
-    }
-
-    @Nonnull
-    public TransactionState getState() {
-      return state;
-    }
-
-    public long getCreatedAt() {
-      return createdAt;
     }
 
     @SuppressFBWarnings("EI_EXPOSE_REP")
@@ -471,6 +499,33 @@ public class Coordinator {
       return Joiner.on(CHILD_IDS_DELIMITER).join(childIds);
     }
 
+    /**
+     * Returns the write set persisted in the {@code tx_write_set} column, if any.
+     *
+     * <p>Returns {@link Optional#empty()} for rows written before the {@code tx_write_set} feature
+     * was introduced and for ABORTED rows written by the lazy-recovery / manager-level rollback
+     * paths (which do not have access to the original transaction's writes). For read-only
+     * transactions, returns an {@code Optional} containing a {@link WriteSet} with {@code
+     * schema_version = 1} and an empty {@code entry_groups} list — this is distinct from {@link
+     * Optional#empty()} and lets callers distinguish "no info recorded" from "transaction had no
+     * writes".
+     *
+     * @return the persisted write set, or empty if none is recorded for this row
+     */
+    @Nonnull
+    public Optional<WriteSet> getWriteSet() {
+      return Optional.ofNullable(writeSet);
+    }
+
+    @Nonnull
+    public TransactionState getState() {
+      return state;
+    }
+
+    public long getCreatedAt() {
+      return createdAt;
+    }
+
     @Override
     public boolean equals(Object o) {
       if (o == this) {
@@ -482,17 +537,38 @@ public class Coordinator {
       State other = (State) o;
       // NOTICE: createdAt is not taken into account
       return Objects.equals(id, other.id)
-          && state == other.state
-          && Objects.equals(childIds, other.childIds);
+          && Objects.equals(childIds, other.childIds)
+          && Objects.equals(writeSet, other.writeSet)
+          && state == other.state;
     }
 
     @Override
     public int hashCode() {
       // NOTICE: createdAt is not taken into account
-      return Objects.hash(id, state, childIds);
+      return Objects.hash(id, childIds, writeSet, state);
     }
 
-    private void checkNotMissingRequired(Result result) throws CoordinatorException {
+    @Nullable
+    private static WriteSet parseWriteSet(Result result) throws CoordinatorException {
+      if (!result.contains(Attribute.WRITE_SET) || result.isNull(Attribute.WRITE_SET)) {
+        // The column is not present in the schema (write-set logging is opt-in on branch 3 and
+        // defaults to disabled), or the column is present but unset for this row (written before
+        // this feature, by the lazy-recovery abort path, or by a path that doesn't carry a
+        // tx-wide write set). The reader treats both as "no info" and falls back to per-record
+        // lazy recovery.
+        return null;
+      }
+      // The column is set. The bytes always contain at least the schema_version field, so an
+      // empty (no entry_groups) WriteSet still parses as a non-null proto and is distinguishable
+      // from the NULL case above.
+      try {
+        return WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
+      } catch (InvalidProtocolBufferException e) {
+        throw new CoordinatorException("Failed to parse the write set", e);
+      }
+    }
+
+    private static void checkNotMissingRequired(Result result) throws CoordinatorException {
       if (result.isNull(Attribute.ID) || result.getText(Attribute.ID) == null) {
         throw new CoordinatorException("id is missing in the coordinator state");
       }

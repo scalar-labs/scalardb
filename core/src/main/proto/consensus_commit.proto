@@ -1,0 +1,229 @@
+// Persistence schema for the Consensus Commit Coordinator table's `tx_write_set` column.
+//
+// The Coordinator table stores the per-transaction state (committed / aborted, etc.). The
+// `tx_write_set` column carries a serialized `WriteSet` proto that lists the records each
+// transaction wrote, so a future recovery / backup component can reconstruct what was modified
+// without reading the user tables one record at a time.
+//
+// This is an internal persistence format owned by ScalarDB. The version suffix in the package
+// (`v1`) lets us introduce a breaking-change variant alongside this one in the future without
+// disrupting deployed clusters.
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.scalar.db.transaction.consensuscommit.proto.v1";
+option java_outer_classname = "ConsensusCommitProto";
+
+package scalardb.consensus_commit.proto.v1;
+
+// A column of a record that has a name and a value.
+message Column {
+  // A Boolean value. If the value is not set, indicates null.
+  message BooleanValue {
+    optional bool value = 1;
+  }
+
+  // An Int value. If the value is not set, indicates null.
+  message IntValue {
+    optional int32 value = 1;
+  }
+
+  // A BigInt value. If the value is not set, indicates null.
+  message BigIntValue {
+    optional int64 value = 1;
+  }
+
+  // A Float value. If the value is not set, indicates null.
+  message FloatValue {
+    optional float value = 1;
+  }
+
+  // A Double value. If the value is not set, indicates null.
+  message DoubleValue {
+    optional double value = 1;
+  }
+
+  // A Text value. If the value is not set, indicates null.
+  message TextValue {
+    optional string value = 1;
+  }
+
+  // A Blob value. If the value is not set, indicates null.
+  message BlobValue {
+    optional bytes value = 1;
+  }
+
+  // A Date value. If the value is not set, indicates null.
+  message DateValue {
+    // The epochDay value of the Date. It is an incrementing count of days
+    // where day 0 is 1970-01-01. Negative numbers represent earlier days.
+    optional sint32 value = 1;
+  }
+
+  // A Time value. If the value is not set, indicates null.
+  message TimeValue {
+    // The nanoOfDay value of the Time. It is the number of nanoseconds from
+    // the start of the day.
+    optional int64 value = 1;
+  }
+
+  // A Timestamp value. If the value is not set, indicates null.
+  message TimestampValue {
+    // Even though the Timestamp value represents a date-time without a time
+    // zone, for encoding purpose we consider as if it is a timestamp in the
+    // UTC timezone. The value can then be encoded identically as a
+    // TimestampTZValue.
+    optional sint64 value = 1;
+  }
+
+  // A TimestampTZ value. If the value is not set, indicates null.
+  message TimestampTZValue {
+    // The value format is "<epochSecond><millisecondOfSecond>", where the
+    // rightmost 3 digits are the millisecondOfSecond with a value from 000 to
+    // 999, the other digits on the left are the epochSecond:
+    // - epochSecond is the number of seconds from 1970-01-01T00:00:00Z
+    // - millisecondOfSecond is the number of milliseconds from the start of
+    //   the second
+    //
+    // To preserve the timestamptz ordering if the epochSecond is negative
+    // (in case a timestamptz value is before 1970), the millisecondOfSecond
+    // is converted to its complement with the formula
+    // "complementOfN = 1000 - 1 - N", where N is the millisecondOfSecond.
+    //
+    // For example:
+    // - if epochSecond=12345 and millisecondOfSecond=789, then the resulting
+    //   value will be "12345789"
+    // - if epochSecond=-12345 and millisecondOfSecond=789, then
+    //   millisecondOfSecondComplement = 1000 - 1 - 789 = 210. So the
+    //   resulting value will be "-12345210".
+    optional sint64 value = 1;
+  }
+
+  // The column name.
+  string name = 1;
+
+  // The column value. It's a oneof value for each data type.
+  oneof value {
+    // For the Boolean value.
+    BooleanValue boolean_value = 2;
+
+    // For the Int value.
+    IntValue int_value = 3;
+
+    // For the BigInt value.
+    BigIntValue bigint_value = 4;
+
+    // For the Float value.
+    FloatValue float_value = 5;
+
+    // For the Double value.
+    DoubleValue double_value = 6;
+
+    // For the Text value.
+    TextValue text_value = 7;
+
+    // For the Blob value.
+    BlobValue blob_value = 8;
+
+    // For the Date value.
+    DateValue date_value = 9;
+
+    // For the Time value.
+    TimeValue time_value = 10;
+
+    // For the Timestamp value.
+    TimestampValue timestamp_value = 11;
+
+    // For the TimestampTZ value.
+    TimestampTZValue timestamptz_value = 12;
+  }
+}
+
+// A key for partition key and clustering key.
+message Key {
+  // The columns that compose a key.
+  repeated Column columns = 1;
+}
+
+// The contents of the `tx_write_set` column on the Coordinator table.
+//
+// Records the set of records a transaction wrote on commit/abort.
+//
+// For non-group-commit transactions, the WriteSet contains exactly one EntryGroup (with no
+// `child_id`). For group-commit transactions, the parent state row carries one EntryGroup per
+// child that performed writes; read-only children are omitted entirely from `entry_groups`.
+//
+// A WriteSet with an empty `entry_groups` list is meaningful: it represents a read-only commit
+// (or a group commit in which every child was read-only). The reader treats it as "the
+// transaction had no writes" and is distinct from the absent-column case (NULL bytes), which
+// represents "no information" — a row written before this feature, by the lazy-recovery abort
+// path, or on a deployment where the feature is disabled. The reader falls back to per-record
+// lazy recovery when the column is NULL.
+message WriteSet {
+  // Schema version of this WriteSet. Currently 1.
+  //
+  // The proto3 default of 0 is also treated as v1 (i.e., a row that does not explicitly carry
+  // the field is interpreted as v1). Field 1 is reserved across every WriteSet schema version,
+  // so a future reader can parse just this field first to detect the version and then dispatch
+  // to the appropriate full parser.
+  //
+  // The writer always sets this field to a non-zero value so that the persisted BLOB is
+  // unambiguously non-empty on every storage backend. This guarantees the wire-level
+  // distinction between "empty WriteSet (no writes recorded)" and "no WriteSet column written".
+  int32 schema_version = 1;
+
+  // One EntryGroup per writing transaction within the Coordinator state row. For non-group-
+  // commit, this list contains exactly one element. For group commit, it contains one element
+  // per child that wrote at least one record; read-only children are omitted.
+  repeated EntryGroup entry_groups = 2;
+}
+
+// A group of write entries belonging to a single transaction.
+message EntryGroup {
+  // The child transaction id within a group commit. Unset for non-group-commit transactions.
+  // For group commit, this is the per-child portion of the full transaction id (i.e., not the
+  // parent id, which is the partition key of the enclosing Coordinator state row).
+  optional string child_id = 1;
+
+  // The records the transaction wrote, in writer-determined order. The current writer emits
+  // WRITE entries (puts) before DELETE entries (deletes); readers must not rely on this order
+  // beyond what the EntryType field signals.
+  repeated Entry entries = 2;
+}
+
+// A single record write performed by a transaction. Captures the storage-layer mutation that
+// the transaction applied (or attempted to apply) to a user table.
+message Entry {
+  // The kind of record write.
+  enum EntryType {
+    ENTRY_TYPE_UNSPECIFIED = 0;
+
+    // The transaction wrote the record (storage-layer Put).
+    ENTRY_TYPE_WRITE = 1;
+
+    // The transaction deleted the record (storage-layer Delete).
+    ENTRY_TYPE_DELETE = 2;
+  }
+
+  // The entry type (write or delete) of this record.
+  EntryType entry_type = 1;
+
+  // The namespace name of the user table the record belongs to.
+  string namespace_name = 2;
+
+  // The table name of the user table the record belongs to.
+  string table_name = 3;
+
+  // The partition key of the record. Always present.
+  Key partition_key = 4;
+
+  // The clustering key of the record. Absent when the user table has no clustering key.
+  optional Key clustering_key = 5;
+
+  // The non-key columns of the record. Only populated when `entry_type` is
+  // `ENTRY_TYPE_WRITE`, and even then it is not always populated — the writer may persist just
+  // the primary keys (e.g., the active-recovery use case) and leave this field empty.
+  // `ENTRY_TYPE_DELETE` entries always leave this field empty.
+  repeated Column columns = 6;
+}

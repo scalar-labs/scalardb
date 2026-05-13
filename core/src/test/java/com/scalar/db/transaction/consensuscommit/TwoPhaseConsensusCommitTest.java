@@ -843,7 +843,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(context);
+    verify(commit).commitStateWithoutWriteSet(context);
     verify(commit).commitRecords(context);
   }
 
@@ -860,7 +860,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(context);
+    verify(commit).commitStateWithoutWriteSet(context);
     verify(commit).commitRecords(context);
   }
 
@@ -885,7 +885,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(context).closeScanners();
-    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).abortStateWithoutWriteSet(ANY_TX_ID);
     verify(commit).rollbackRecords(context);
   }
 
@@ -901,7 +901,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(context).closeScanners();
-    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).abortStateWithoutWriteSet(ANY_TX_ID);
     verify(commit).rollbackRecords(context);
   }
 
@@ -910,7 +910,7 @@ public class TwoPhaseConsensusCommitTest {
       throws TransactionException {
     // Arrange
     transaction.prepare();
-    doThrow(CommitConflictException.class).when(commit).commitState(context);
+    doThrow(CommitConflictException.class).when(commit).commitStateWithoutWriteSet(context);
 
     // Act
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
@@ -918,7 +918,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(context).closeScanners();
-    verify(commit, never()).abortState(ANY_TX_ID);
+    verify(commit, never()).abortStateWithoutWriteSet(ANY_TX_ID);
     verify(commit, never()).rollbackRecords(context);
   }
 
@@ -928,7 +928,8 @@ public class TwoPhaseConsensusCommitTest {
           throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortStateWithoutWriteSet(ANY_TX_ID))
+        .thenThrow(UnknownTransactionStatusException.class);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
@@ -942,7 +943,7 @@ public class TwoPhaseConsensusCommitTest {
       throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(commit.abortState(ANY_TX_ID)).thenReturn(TransactionState.COMMITTED);
+    when(commit.abortStateWithoutWriteSet(ANY_TX_ID)).thenReturn(TransactionState.COMMITTED);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
