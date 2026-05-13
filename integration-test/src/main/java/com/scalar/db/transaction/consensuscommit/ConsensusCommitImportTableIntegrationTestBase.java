@@ -237,12 +237,20 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   }
 
   private void prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-      TransactionState recordState, long preparedAt, TransactionState coordinatorState)
+      TransactionState recordState, long preparedAtOffsetMillis, TransactionState coordinatorState)
       throws Exception {
     createStorageTable();
     adminTestUtils.truncateNamespacesTable();
     adminTestUtils.truncateMetadataTable();
     importTable();
+    consensusCommitAdmin.createCoordinatorTables(true, getCreationOptions());
+
+    // Compute preparedAt AFTER all slow DDL above. Otherwise, on storage with slow DDL
+    // (e.g., real Spanner), the time spent on DDL would exceed
+    // RecoveryHandler.TRANSACTION_LIFETIME_MILLIS, making a "not expired" record
+    // (offset = 0) look expired by the time the reader checks — breaking tests
+    // that assert UncommittedRecordException is thrown.
+    long preparedAt = System.currentTimeMillis() + preparedAtOffsetMillis;
 
     Put put =
         Put.newBuilder()
@@ -271,8 +279,6 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
         // retry
       }
     }
-
-    consensusCommitAdmin.createCoordinatorTables(true, getCreationOptions());
 
     if (coordinatorState == null) {
       return;
@@ -470,9 +476,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, current, TransactionState.COMMITTED);
+        TransactionState.PREPARED, 0, TransactionState.COMMITTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -519,9 +524,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, current, TransactionState.ABORTED);
+        TransactionState.PREPARED, 0, TransactionState.ABORTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -568,9 +572,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, prepared_at, null);
+        TransactionState.PREPARED, 0, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -614,9 +617,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, prepared_at, null);
+        TransactionState.PREPARED, -RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -667,9 +669,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, current, TransactionState.COMMITTED);
+        TransactionState.DELETED, 0, TransactionState.COMMITTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -707,9 +708,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, current, TransactionState.ABORTED);
+        TransactionState.DELETED, 0, TransactionState.ABORTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -756,9 +756,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, prepared_at, null);
+        TransactionState.DELETED, 0, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -802,9 +801,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, prepared_at, null);
+        TransactionState.DELETED, -RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
