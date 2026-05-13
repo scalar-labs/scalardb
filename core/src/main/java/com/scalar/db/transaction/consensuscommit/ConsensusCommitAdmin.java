@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -368,7 +369,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   // (i.e., without the {@code child_ids} column). Mirrors the column-migration logic that master
   // implements in upgradeCoordinatorTable() under the (master-only) {@code upgrade()} API.
   private void upgradeCoordinatorTableSchema(
-      TableMetadata currentMetadata, TableMetadata coordinatorTableMetadata)
+      @Nullable TableMetadata currentMetadata, TableMetadata coordinatorTableMetadata)
       throws ExecutionException {
     if (currentMetadata == null) {
       return;
