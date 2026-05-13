@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -12,8 +13,8 @@ import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(new Emitter(coordinator));
+    groupCommitter.setEmitter(new Emitter(coordinator, writeSetBuilder));
     this.groupCommitter = groupCommitter;
   }
 
@@ -126,16 +127,27 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  public TransactionState abortState(String id) throws UnknownTransactionStatusException {
+  public TransactionState abortStateWithoutWriteSet(String id)
+      throws UnknownTransactionStatusException {
     cancelGroupCommitIfNeeded(id);
-    return super.abortState(id);
+    return super.abortStateWithoutWriteSet(id);
   }
 
-  private static class Emitter implements Emittable<String, String, TransactionContext> {
-    private final Coordinator coordinator;
+  @Override
+  public TransactionState abortState(TransactionContext context)
+      throws UnknownTransactionStatusException {
+    cancelGroupCommitIfNeeded(context.transactionId);
+    return super.abortState(context);
+  }
 
-    public Emitter(Coordinator coordinator) {
+  @VisibleForTesting
+  static class Emitter implements Emittable<String, String, TransactionContext> {
+    private final Coordinator coordinator;
+    private final WriteSetBuilder writeSetBuilder;
+
+    public Emitter(Coordinator coordinator, WriteSetBuilder writeSetBuilder) {
       this.coordinator = coordinator;
+      this.writeSetBuilder = writeSetBuilder;
     }
 
     @Override
@@ -148,11 +160,17 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
 
       // These transactions are contained in a normal group that has multiple transactions.
       // Therefore, the transaction states should be put together in Coordinator.State.
-      List<String> transactionIds =
-          contexts.stream().map(c -> c.transactionId).collect(Collectors.toList());
+      List<String> transactionIds = new ArrayList<>(contexts.size());
+      for (TransactionContext context : contexts) {
+        transactionIds.add(context.transactionId);
+      }
 
       coordinator.putStateForGroupCommit(
-          parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
+          parentId,
+          transactionIds,
+          writeSetBuilder.buildMultiGroupWriteSet(contexts, false),
+          TransactionState.COMMITTED,
+          System.currentTimeMillis());
 
       logger.debug(
           "Transaction {} (parent ID) is committed successfully at {}",
@@ -166,7 +184,11 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       // This transaction is contained in a delayed group that has only a single transaction.
       // Therefore, the transaction state can be committed as if it's a normal commit (not a
       // group commit).
-      coordinator.putState(new State(fullId, TransactionState.COMMITTED));
+      coordinator.putState(
+          new State(
+              fullId,
+              writeSetBuilder.buildSingleGroupWriteSet(context, false),
+              TransactionState.COMMITTED));
 
       logger.debug(
           "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());

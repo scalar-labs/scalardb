@@ -55,6 +55,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -8030,7 +8031,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
           return;
         }
         verify(coordinator).putState(any(Coordinator.State.class));
@@ -8053,7 +8058,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8136,7 +8145,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
         } else {
           verify(coordinator).putState(any(Coordinator.State.class));
         }
@@ -8158,7 +8171,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8241,7 +8258,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
       } else {
         verify(coordinator).putState(any(Coordinator.State.class));
       }
@@ -8259,7 +8281,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8279,7 +8305,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             if (isGroupCommitEnabled()) {
               verify(coordinator)
                   .putStateForGroupCommit(
-                      anyString(), anyList(), any(TransactionState.class), anyLong());
+                      anyString(),
+                      anyList(),
+                      any(WriteSet.class),
+                      any(TransactionState.class),
+                      anyLong());
             } else {
               verify(coordinator).putState(any(Coordinator.State.class));
             }
@@ -8384,7 +8414,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
           return;
         }
         verify(coordinator).putState(any(Coordinator.State.class));
@@ -8407,7 +8441,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8512,7 +8550,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
         } else {
           verify(coordinator).putState(any(Coordinator.State.class));
         }
@@ -8534,7 +8576,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8639,7 +8685,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
       } else {
         verify(coordinator).putState(any(Coordinator.State.class));
       }
@@ -8657,7 +8708,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8677,7 +8732,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             if (isGroupCommitEnabled()) {
               verify(coordinator)
                   .putStateForGroupCommit(
-                      anyString(), anyList(), any(TransactionState.class), anyLong());
+                      anyString(),
+                      anyList(),
+                      any(WriteSet.class),
+                      any(TransactionState.class),
+                      anyLong());
             } else {
               verify(coordinator).putState(any(Coordinator.State.class));
             }
@@ -8776,7 +8835,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
         return;
       }
       verify(coordinator).putState(any(Coordinator.State.class));
@@ -8799,7 +8863,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
       } else {
         verify(coordinator).putState(any(Coordinator.State.class));
       }

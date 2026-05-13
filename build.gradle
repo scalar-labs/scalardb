@@ -105,6 +105,7 @@ subprojects {
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
+        protobufVersion = '4.34.1'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.20.0'
         jacksonVersion = '2.21.2'
@@ -118,6 +119,7 @@ subprojects {
         stefanbirknerSystemLambdaVersion = '1.2.1'
         spotbugsPluginVersion = '5.2.5'
         errorpronePluginVersion = '4.4.0'
+        protobufPluginVersion = '0.9.5'
         shadowPluginVersion = '8.1.1'
         // Make JDK11+ use the same version as JDK8 uses
         googleJavaFormatVersion = '1.7'
