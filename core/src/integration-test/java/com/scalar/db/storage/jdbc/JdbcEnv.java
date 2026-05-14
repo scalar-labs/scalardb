@@ -2,8 +2,14 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class JdbcEnv {
+  private static final Logger logger = LoggerFactory.getLogger(JdbcEnv.class);
+
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
@@ -16,10 +22,14 @@ public final class JdbcEnv {
   private static final String DEFAULT_JDBC_NORMAL_USERNAME = "test";
   private static final String DEFAULT_JDBC_NORMAL_PASSWORD = "test";
 
+  private static final int SPANNER_DATABASE_COUNT = 4;
+  private static final Pattern SPANNER_DATABASE_PATTERN =
+      Pattern.compile("(/databases/test-db-)\\d+");
+
   private JdbcEnv() {}
 
   public static Properties getProperties(String testName) {
-    String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
+    String jdbcUrl = resolveJdbcUrl(System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL));
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
 
@@ -87,5 +97,32 @@ public final class JdbcEnv {
   public static boolean isSpannerEmulator() {
     return isSpanner()
         && System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).contains("autoConfigEmulator");
+  }
+
+  // Spreads parallel Gradle test workers across distinct Spanner databases (test-db-1..N) by
+  // rewriting the database segment of the configured Cloud Spanner JDBC URL based on the
+  // org.gradle.test.worker system property that Gradle assigns to each forked test JVM.
+  static String resolveJdbcUrl(String jdbcUrl) {
+    if (!jdbcUrl.startsWith("jdbc:cloudspanner:")) {
+      return jdbcUrl;
+    }
+    String workerProp = System.getProperty("org.gradle.test.worker");
+    if (workerProp == null) {
+      return jdbcUrl;
+    }
+    int workerId;
+    try {
+      workerId = Integer.parseInt(workerProp);
+    } catch (NumberFormatException e) {
+      return jdbcUrl;
+    }
+    int dbIndex = ((workerId - 1) % SPANNER_DATABASE_COUNT) + 1;
+    Matcher matcher = SPANNER_DATABASE_PATTERN.matcher(jdbcUrl);
+    if (!matcher.find()) {
+      return jdbcUrl;
+    }
+    String resolved = matcher.replaceFirst("$1" + dbIndex);
+    logger.info("Gradle test worker {} is using Spanner database test-db-{}", workerId, dbIndex);
+    return resolved;
   }
 }

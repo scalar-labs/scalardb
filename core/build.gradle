@@ -278,6 +278,27 @@ task integrationTestJdbc(type: Test) {
     maxHeapSize = "4g"
 }
 
+task integrationTestJdbcCloud(type: Test) {
+    description = 'Runs the integration tests for a JDBC database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+    maxHeapSize = "4g"
+    maxParallelForks = 4
+    testLogging {
+        events "passed", "skipped", "failed", "standard_out", "standard_error"
+        exceptionFormat = "full"
+        showStandardStreams = true
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+    }
+}
+
 task integrationTestObjectStorage(type: Test) {
     description = 'Runs the integration tests for Object Storages.'
     group = 'verification'
