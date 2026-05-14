@@ -25,6 +25,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -145,37 +146,6 @@ public class JdbcAdminTest {
     }
   }
 
-  private void mockUndefinedTableError(RdbEngine rdbEngine, SQLException sqlException) {
-    switch (rdbEngine) {
-      case MYSQL:
-      case MARIADB:
-        when(sqlException.getErrorCode()).thenReturn(1049);
-        break;
-      case POSTGRESQL:
-      case YUGABYTE:
-        when(sqlException.getSQLState()).thenReturn("42P01");
-        break;
-      case SPANNER:
-        when(sqlException.getErrorCode()).thenReturn(Code.INVALID_ARGUMENT_VALUE);
-        break;
-      case ORACLE:
-        when(sqlException.getErrorCode()).thenReturn(942);
-        break;
-      case SQL_SERVER:
-        when(sqlException.getErrorCode()).thenReturn(208);
-        break;
-      case SQLITE:
-        when(sqlException.getErrorCode()).thenReturn(1);
-        when(sqlException.getMessage()).thenReturn("no such table: ");
-        break;
-      case DB2:
-        when(sqlException.getErrorCode()).thenReturn(-204);
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
-  }
-
   private ResultSet mockResultSet(SelectAllFromMetadataTableResultSetMocker.Row... rows)
       throws SQLException {
     ResultSet resultSet = mock(ResultSet.class);
@@ -286,6 +256,11 @@ public class JdbcAdminTest {
     String namespace = "ns";
     String table = "table";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -312,7 +287,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 "c11", DataType.TIMESTAMPTZ.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -362,13 +337,13 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     Connection connection = mock(Connection.class);
-    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(selectStatement.executeQuery()).thenThrow(sqlException);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false);
 
     // Act
     TableMetadata actual = admin.getTableMetadata("my_ns", "my_tbl");
@@ -486,7 +461,7 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         Collections.singletonList("CREATE SCHEMA `my_ns`"),
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
-        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
+        "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -500,7 +475,7 @@ public class JdbcAdminTest {
         RdbEngine.POSTGRESQL,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -514,7 +489,7 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         Collections.singletonList("CREATE SCHEMA [my_ns]"),
         Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -532,7 +507,7 @@ public class JdbcAdminTest {
         Arrays.asList(
             "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
+        "SELECT 1 FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -546,7 +521,7 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE,
         Collections.emptyList(),
         Collections.emptyList(),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -560,7 +535,7 @@ public class JdbcAdminTest {
         RdbEngine.DB2,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
         Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        "SELECT 1 FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = ? AND TYPE = 'T'",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -574,7 +549,7 @@ public class JdbcAdminTest {
         RdbEngine.SPANNER,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -598,11 +573,11 @@ public class JdbcAdminTest {
       mockedCreateSchemaStatements.add(mock(Statement.class));
     }
 
-    Statement mockedNamespacesTableExistsStatement = mock(Statement.class);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
-        .thenThrow(sqlException);
+    PreparedStatement mockedNamespacesTableExistsStatement = mock(PreparedStatement.class);
+    ResultSet namespacesTableExistsResultSet = mock(ResultSet.class);
+    when(mockedNamespacesTableExistsStatement.executeQuery())
+        .thenReturn(namespacesTableExistsResultSet);
+    when(namespacesTableExistsResultSet.next()).thenReturn(false);
 
     List<Statement> mockedCreateMetadataSchemaStatements = new ArrayList<>();
     for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
@@ -615,7 +590,6 @@ public class JdbcAdminTest {
         ImmutableList.<Statement>builder()
             .addAll(mockedCreateSchemaStatements)
             .addAll(mockedCreateMetadataSchemaStatements)
-            .add(mockedNamespacesTableExistsStatement)
             .add(mockedCreateNamespacesTableStatement)
             .build();
     when(connection.createStatement())
@@ -625,6 +599,8 @@ public class JdbcAdminTest {
 
     PreparedStatement mockedInsertNamespaceStatement1 = mock(PreparedStatement.class);
     PreparedStatement mockedInsertNamespaceStatement2 = mock(PreparedStatement.class);
+    when(connection.prepareStatement(namespacesTableExistsSql))
+        .thenReturn(mockedNamespacesTableExistsStatement);
     when(connection.prepareStatement(insertNamespaceSql))
         .thenReturn(mockedInsertNamespaceStatement1, mockedInsertNamespaceStatement2);
 
@@ -640,7 +616,15 @@ public class JdbcAdminTest {
     for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
       verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
     }
-    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
+    verify(connection).prepareStatement(namespacesTableExistsSql);
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(mockedNamespacesTableExistsStatement)
+          .setString(1, METADATA_SCHEMA + "$" + NamespaceMetadataService.TABLE_NAME);
+    } else {
+      verify(mockedNamespacesTableExistsStatement).setString(1, METADATA_SCHEMA);
+      verify(mockedNamespacesTableExistsStatement)
+          .setString(2, NamespaceMetadataService.TABLE_NAME);
+    }
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement2).setString(1, namespace);
@@ -1941,6 +1925,11 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "foo_table";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(false);
 
@@ -1966,7 +1955,8 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 "c1", DataType.TEXT.toString(), "PARTITION", null, false));
     when(metadataSelectStatement.executeQuery()).thenReturn(metadataResultSet);
-    when(connection.prepareStatement(any())).thenReturn(metadataSelectStatement);
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, metadataSelectStatement);
 
     ResultSet resultSetForSelectAllNamespacesTable =
         mockResultSet(
@@ -2088,6 +2078,11 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "foo_table";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(true);
 
@@ -2113,7 +2108,8 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 "c1", DataType.TEXT.toString(), "PARTITION", null, false));
     when(metadataSelectStatement.executeQuery()).thenReturn(metadataResultSet);
-    when(connection.prepareStatement(any())).thenReturn(metadataSelectStatement);
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, metadataSelectStatement);
 
     ResultSet resultSetForSelectAllNamespacesTable =
         mockResultSet(
@@ -2549,8 +2545,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void dropNamespace_WithNonScalarDBTableLeftForSqlite_ShouldThrowIllegalArgumentException()
-      throws Exception {
+  public void
+      dropNamespace_WithNonScalarDBTableLeftForSqlite_ShouldThrowIllegalArgumentException() {
     // Do nothing. SQLite does not have a concept of namespaces.
   }
 
@@ -2658,6 +2654,12 @@ public class JdbcAdminTest {
     String namespace = "ns1";
     String table1 = "t1";
     String table2 = "t2";
+
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     ResultSet resultSet = mock(ResultSet.class);
 
     // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
@@ -2672,7 +2674,7 @@ public class JdbcAdminTest {
         .next();
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
     when(preparedStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, preparedStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -2689,6 +2691,32 @@ public class JdbcAdminTest {
     verify(connection).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
     verify(preparedStatement).setString(1, namespace + ".%");
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void getNamespaceTableNames_WhenMetadataTableDoesNotExist_ShouldReturnEmptySet(
+      RdbEngine rdbEngine) throws Exception {
+    // Arrange
+    String namespace = "ns1";
+
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false); // metadata table does not exist
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
+
+    // Assert
+    assertThat(actualTableNames).isEmpty();
+    verify(selectStatement, never()).executeQuery();
   }
 
   @Test
@@ -2877,11 +2905,15 @@ public class JdbcAdminTest {
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
     Connection connection = mock(Connection.class);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet results = mock(ResultSet.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     when(results.next()).thenReturn(true);
     when(selectStatement.executeQuery()).thenReturn(results);
 
@@ -2897,6 +2929,32 @@ public class JdbcAdminTest {
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void namespaceExists_WhenMetadataTableDoesNotExist_ShouldReturnFalse(RdbEngine rdbEngine)
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false); // namespaces metadata table does not exist
+
+    // Act
+    boolean exists = admin.namespaceExists(namespace);
+
+    // Assert
+    assertThat(exists).isFalse();
+    verify(selectStatement, never()).executeQuery();
   }
 
   @Test
@@ -2999,6 +3057,11 @@ public class JdbcAdminTest {
     String indexColumn = "my_column";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -3007,7 +3070,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 indexColumn, DataType.BOOLEAN.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     Statement statement = mock(Statement.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
@@ -3116,6 +3179,11 @@ public class JdbcAdminTest {
     String indexColumn = "my_column";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -3124,7 +3192,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 indexColumn, DataType.TEXT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
 
     Statement statement = mock(Statement.class);
 
@@ -3486,6 +3554,12 @@ public class JdbcAdminTest {
     String table = "my_tbl";
     String indexColumn = "my_column";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -3494,7 +3568,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 indexColumn, DataType.BOOLEAN.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
 
     Statement statement = mock(Statement.class);
 
@@ -3595,6 +3669,12 @@ public class JdbcAdminTest {
     String table = "my_tbl";
     String indexColumn = "my_column";
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -3603,7 +3683,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 indexColumn, DataType.TEXT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
 
     Statement statement = mock(Statement.class);
 
@@ -3637,6 +3717,11 @@ public class JdbcAdminTest {
     String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -3645,7 +3730,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 longColumn, DataType.BOOLEAN.toString(), null, null, true));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
 
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -4037,6 +4122,11 @@ public class JdbcAdminTest {
     String currentColumn = "c1";
     String newColumn = "c2";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -4044,11 +4134,10 @@ public class JdbcAdminTest {
                 currentColumn, DataType.TEXT.toString(), "PARTITION", null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.length; i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
+      expectedStatements.add(mock(Statement.class));
     }
     when(connection.createStatement())
         .thenReturn(
@@ -4175,6 +4264,11 @@ public class JdbcAdminTest {
     String column1 = "c1";
     String column2 = "c2";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -4184,11 +4278,10 @@ public class JdbcAdminTest {
                 column2, DataType.INT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.length; i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
+      expectedStatements.add(mock(Statement.class));
     }
     when(connection.createStatement())
         .thenReturn(
@@ -4329,6 +4422,11 @@ public class JdbcAdminTest {
     String columnName2 = "c2";
     String columnName3 = "c3";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -4338,11 +4436,10 @@ public class JdbcAdminTest {
                 columnName2, DataType.INT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.length; i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
+      expectedStatements.add(mock(Statement.class));
     }
     when(connection.createStatement())
         .thenReturn(
@@ -4373,6 +4470,11 @@ public class JdbcAdminTest {
     String newColumn = "new_col";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     // Mock table metadata with a secondary index on the long column
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
@@ -4382,7 +4484,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 oldColumn, DataType.BOOLEAN.toString(), null, null, true));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
 
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -4506,6 +4608,11 @@ public class JdbcAdminTest {
     String columnName1 = "c1";
     String columnName2 = "c2";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -4514,7 +4621,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 columnName2, DataType.INT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     when(dataSource.getConnection()).thenReturn(connection);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQLITE);
 
@@ -4553,6 +4660,11 @@ public class JdbcAdminTest {
     String columnName1 = "c1";
     String columnName2 = "c2";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -4562,11 +4674,10 @@ public class JdbcAdminTest {
                 columnName2, DataType.INT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
     for (int i = 0; i < expectedSqlStatements.length; i++) {
-      Statement expectedStatement = mock(Statement.class);
-      expectedStatements.add(expectedStatement);
+      expectedStatements.add(mock(Statement.class));
     }
     when(connection.createStatement())
         .thenReturn(
@@ -4706,6 +4817,11 @@ public class JdbcAdminTest {
     String columnName1 = "c1";
     String columnName2 = "c2";
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet1 =
         mockResultSet(
@@ -4714,7 +4830,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 columnName2, DataType.INT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet1);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     List<Statement> expectedStatements = new ArrayList<>();
     for (String expectedSqlStatement : expectedSqlStatements) {
       Statement mock = mock(Statement.class);
@@ -4758,6 +4874,11 @@ public class JdbcAdminTest {
     String longColumn = "a_very_long_column_name_that_exceeds_the_maximum_index_name_length";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     // Mock table metadata with a secondary index on the long column
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
@@ -4767,7 +4888,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 longColumn, DataType.BOOLEAN.toString(), null, null, true));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
 
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -4853,6 +4974,13 @@ public class JdbcAdminTest {
     // Arrange
     String namespace1 = "ns1";
     String namespace2 = "ns2";
+
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+
     ResultSet resultSet =
         mockResultSet(
             new SelectNamespaceNameFromNamespaceTableResultSetMocker.Row(namespace1),
@@ -4878,6 +5006,31 @@ public class JdbcAdminTest {
   }
 
   @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void getNamespaceNames_WhenMetadataTableDoesNotExist_ShouldReturnEmptySet(
+      RdbEngine rdbEngine) throws Exception {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false); // namespaces metadata table does not exist
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+
+    Statement selectStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(selectStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    Set<String> actualNamespaceNames = admin.getNamespaceNames();
+
+    // Assert
+    assertThat(actualNamespaceNames).isEmpty();
+    verify(selectStatement, never()).executeQuery(anyString());
+  }
+
+  @ParameterizedTest
   @EnumSource(
       value = RdbEngine.class,
       mode = Mode.EXCLUDE,
@@ -4886,16 +5039,19 @@ public class JdbcAdminTest {
       })
   public void getImportTableMetadata_ForXBesidesSqlite_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
-    String expectedCheckTableExistStatement = prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE);
+    String expectedCheckTableExistStatement = prepareSqlForTableCheck(rdbEngine);
 
     // Arrange
-    Statement checkTableExistStatement = mock(Statement.class);
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     ResultSet primaryKeyResults = mock(ResultSet.class);
     ResultSet columnResults = mock(ResultSet.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1").thenReturn("pk2");
     when(columnResults.next())
@@ -4951,8 +5107,7 @@ public class JdbcAdminTest {
     TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE, overrideColumnsType);
 
     // Assert
-    verify(checkTableExistStatement, description(description))
-        .execute(expectedCheckTableExistStatement);
+    verify(connection, description(description)).prepareStatement(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
     verify(connection).setReadOnly(true);
@@ -4988,7 +5143,7 @@ public class JdbcAdminTest {
     for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
       if (!rdbEngine.equals(RdbEngine.SQLITE)) {
         getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowIllegalStateException(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+            rdbEngine, prepareSqlForTableCheck(rdbEngine));
       }
     }
   }
@@ -4999,7 +5154,7 @@ public class JdbcAdminTest {
     for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
       if (!rdbEngine.equals(RdbEngine.SQLITE)) {
         getImportTableMetadata_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+            rdbEngine, prepareSqlForTableCheck(rdbEngine));
       }
     }
   }
@@ -5007,34 +5162,37 @@ public class JdbcAdminTest {
   private void getImportTableMetadata_WithNonExistingTableForX_ShouldThrowIllegalArgumentException(
       RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
     // Arrange
-    Statement checkTableExistStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    reset(connection);
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
         .isInstanceOf(IllegalArgumentException.class);
-    verify(
-            checkTableExistStatement,
-            description("database engine specific test failed: " + rdbEngine))
-        .execute(expectedCheckTableExistStatement);
+    verify(connection, description("database engine specific test failed: " + rdbEngine))
+        .prepareStatement(expectedCheckTableExistStatement);
   }
 
   private void getImportTableMetadata_PrimaryKeyNotExistsForX_ShouldThrowIllegalStateException(
       RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
     // Arrange
-    Statement checkTableExistStatement = mock(Statement.class);
+    reset(connection);
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     ResultSet primaryKeyResults = mock(ResultSet.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
     when(primaryKeyResults.next()).thenReturn(false);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
     RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
@@ -5051,8 +5209,7 @@ public class JdbcAdminTest {
             () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
-    verify(checkTableExistStatement, description(description))
-        .execute(expectedCheckTableExistStatement);
+    verify(connection, description(description)).prepareStatement(expectedCheckTableExistStatement);
     assertThat(thrown).as(description).isInstanceOf(IllegalStateException.class);
   }
 
@@ -5062,7 +5219,7 @@ public class JdbcAdminTest {
     for (RdbEngine rdbEngine : RDB_ENGINES.keySet()) {
       if (!rdbEngine.equals(RdbEngine.SQLITE)) {
         getImportTableMetadata_UnsupportedDataTypeGivenForX_ShouldThrowExecutionException(
-            rdbEngine, prepareSqlForTableCheck(rdbEngine, NAMESPACE, TABLE));
+            rdbEngine, prepareSqlForTableCheck(rdbEngine));
       }
     }
   }
@@ -5070,13 +5227,17 @@ public class JdbcAdminTest {
   private void getImportTableMetadata_UnsupportedDataTypeGivenForX_ShouldThrowExecutionException(
       RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
     // Arrange
-    Statement checkTableExistStatement = mock(Statement.class);
+    reset(connection);
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
     ResultSet primaryKeyResults = mock(ResultSet.class);
     ResultSet columnResults = mock(ResultSet.class);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
     when(connection.getMetaData()).thenReturn(metadata);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
     when(columnResults.next()).thenReturn(true).thenReturn(false);
@@ -5104,8 +5265,7 @@ public class JdbcAdminTest {
             () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
 
     // Assert
-    verify(checkTableExistStatement, description(description))
-        .execute(expectedCheckTableExistStatement);
+    verify(connection, description(description)).prepareStatement(expectedCheckTableExistStatement);
     assertThat(thrown).as(description).isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -5158,25 +5318,8 @@ public class JdbcAdminTest {
     assertThat(thrown).isInstanceOf(UnsupportedOperationException.class);
   }
 
-  private String prepareSqlForTableCheck(RdbEngine rdbEngine, String namespace, String table) {
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
-    StringBuilder sql =
-        new StringBuilder("SELECT ")
-            .append(rdbEngine.equals(RdbEngine.SQL_SERVER) ? "TOP 1 1" : "1")
-            .append(" FROM ")
-            .append(rdbEngineStrategy.encloseFullTableName(namespace, table));
-
-    switch (rdbEngine) {
-      case ORACLE:
-        sql.append(" FETCH FIRST 1 ROWS ONLY");
-        break;
-      case SQL_SERVER:
-        break;
-      default:
-        sql.append(" LIMIT 1");
-    }
-
-    return sql.toString();
+  private String prepareSqlForTableCheck(RdbEngine rdbEngine) {
+    return getRdbEngineStrategy(rdbEngine).internalTableExistsCheckSql();
   }
 
   private RdbEngineStrategy getRdbEngineStrategy(RdbEngine rdbEngine) {
@@ -5194,7 +5337,7 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `my_ns`"),
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
-        "SELECT 1 FROM `scalardb`.`namespaces` LIMIT 1",
+        "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -5208,7 +5351,7 @@ public class JdbcAdminTest {
         RdbEngine.POSTGRESQL,
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"my_ns\""),
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5222,7 +5365,7 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         Collections.singletonList("CREATE SCHEMA [my_ns]"),
         Collections.singletonList("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
+        "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -5240,7 +5383,7 @@ public class JdbcAdminTest {
         Arrays.asList(
             "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
+        "SELECT 1 FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5254,7 +5397,7 @@ public class JdbcAdminTest {
         RdbEngine.DB2,
         Collections.singletonList("CREATE SCHEMA \"my_ns\""),
         Collections.singletonList("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        "SELECT 1 FROM SYSCAT.TABLES WHERE TABSCHEMA = ? AND TABNAME = ? AND TYPE = 'T'",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -5268,7 +5411,7 @@ public class JdbcAdminTest {
         RdbEngine.SPANNER,
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"my_ns\""),
         Collections.singletonList("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5282,7 +5425,7 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE,
         Collections.emptyList(),
         Collections.emptyList(),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -5306,11 +5449,11 @@ public class JdbcAdminTest {
       mockedCreateSchemaIfNotExistsStatements.add(mock(Statement.class));
     }
 
-    Statement mockedNamespacesTableExistsStatement = mock(Statement.class);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
-        .thenThrow(sqlException);
+    PreparedStatement mockedNamespacesTableExistsStatement = mock(PreparedStatement.class);
+    ResultSet namespacesTableExistsResultSet = mock(ResultSet.class);
+    when(mockedNamespacesTableExistsStatement.executeQuery())
+        .thenReturn(namespacesTableExistsResultSet);
+    when(namespacesTableExistsResultSet.next()).thenReturn(false);
 
     List<Statement> mockedCreateMetadataSchemaStatements = new ArrayList<>();
     for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
@@ -5323,7 +5466,6 @@ public class JdbcAdminTest {
         ImmutableList.<Statement>builder()
             .addAll(mockedCreateSchemaIfNotExistsStatements)
             .addAll(mockedCreateMetadataSchemaStatements)
-            .add(mockedNamespacesTableExistsStatement)
             .add(mockedCreateNamespacesTableStatement)
             .build();
 
@@ -5334,6 +5476,8 @@ public class JdbcAdminTest {
 
     PreparedStatement mockedInsertNamespaceStatement1 = mock(PreparedStatement.class);
     PreparedStatement mockedInsertNamespaceStatement2 = mock(PreparedStatement.class);
+    when(connection.prepareStatement(namespacesTableExistsSql))
+        .thenReturn(mockedNamespacesTableExistsStatement);
     when(connection.prepareStatement(insertNamespaceSql))
         .thenReturn(mockedInsertNamespaceStatement1, mockedInsertNamespaceStatement2);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -5349,7 +5493,15 @@ public class JdbcAdminTest {
     for (int i = 0; i < createMetadataSchemaSqls.size(); i++) {
       verify(mockedCreateMetadataSchemaStatements.get(i)).execute(createMetadataSchemaSqls.get(i));
     }
-    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
+    verify(connection).prepareStatement(namespacesTableExistsSql);
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(mockedNamespacesTableExistsStatement)
+          .setString(1, METADATA_SCHEMA + "$" + NamespaceMetadataService.TABLE_NAME);
+    } else {
+      verify(mockedNamespacesTableExistsStatement).setString(1, METADATA_SCHEMA);
+      verify(mockedNamespacesTableExistsStatement)
+          .setString(2, NamespaceMetadataService.TABLE_NAME);
+    }
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement1).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement2).setString(1, namespace);
@@ -5375,10 +5527,8 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.MYSQL,
-        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`metadata` LIMIT 1",
         "SELECT DISTINCT `full_table_name` FROM `" + METADATA_SCHEMA + "`.`metadata`",
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
-        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -5390,10 +5540,8 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5405,12 +5553,10 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.ORACLE,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" FETCH FIRST 1 ROWS ONLY",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         ImmutableList.of(
             "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5422,10 +5568,8 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.SQL_SERVER,
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[metadata]",
         "SELECT DISTINCT [full_table_name] FROM [" + METADATA_SCHEMA + "].[metadata]",
         ImmutableList.of("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -5437,10 +5581,8 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.SQLITE,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$metadata\" LIMIT 1",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "$metadata\"",
         Collections.emptyList(),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -5452,10 +5594,8 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
         RdbEngine.DB2,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"metadata\" LIMIT 1",
         "SELECT DISTINCT \"full_table_name\" FROM \"" + METADATA_SCHEMA + "\".\"metadata\"",
         ImmutableList.of("CREATE SCHEMA \"" + METADATA_SCHEMA + "\""),
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -5464,33 +5604,48 @@ public class JdbcAdminTest {
 
   private void upgrade_ForX_ShouldInsertAllNamespacesFromMetadataTable(
       RdbEngine rdbEngine,
-      String tableMetadataExistStatement,
       String getTableMetadataNamespacesStatement,
       List<String> createMetadataNamespaceStatements,
-      String namespacesTableExistsStatement,
       String createNamespaceTableStatement,
       String insertNamespaceStatement)
       throws SQLException, ExecutionException {
     // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    String checkSql = rdbEngineStrategy.internalTableExistsCheckSql();
+
     // Instantiate mocks
-    Statement tableMetadataExistsStatementMock = mock(Statement.class);
-    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
-    Statement namespacesTableExistsStatementMock = mock(Statement.class);
-    List<Statement> createMetadataNamespaceStatementsMock =
-        prepareMockStatements(createMetadataNamespaceStatements.size());
-    Statement createNamespaceTableStatementMock = mock(Statement.class);
+    PreparedStatement checkMetadataPrepStmt = mock(PreparedStatement.class);
+    PreparedStatement checkNamespacesPrepStmt = mock(PreparedStatement.class);
     PreparedStatement insertNamespacePrepStmt1 = mock(PreparedStatement.class);
     PreparedStatement insertNamespacePrepStmt2 = mock(PreparedStatement.class);
     PreparedStatement insertNamespacePrepStmt3 = mock(PreparedStatement.class);
+    Statement getTableMetadataNamespacesStatementMock = mock(Statement.class);
+    List<Statement> createMetadataNamespaceStatementsMock =
+        prepareMockStatements(createMetadataNamespaceStatements.size());
+    Statement createNamespaceTableStatementMock = mock(Statement.class);
 
-    when(connection.prepareStatement(anyString()))
+    // metadata table exists → true; namespaces table exists → false
+    ResultSet checkMetadataResultSet = mock(ResultSet.class);
+    when(checkMetadataPrepStmt.executeQuery()).thenReturn(checkMetadataResultSet);
+    when(checkMetadataResultSet.next()).thenReturn(true);
+
+    ResultSet checkNamespacesResultSet = mock(ResultSet.class);
+    when(checkNamespacesPrepStmt.executeQuery()).thenReturn(checkNamespacesResultSet);
+    when(checkNamespacesResultSet.next()).thenReturn(false);
+
+    when(connection.prepareStatement(checkSql))
+        .thenReturn(checkMetadataPrepStmt, checkNamespacesPrepStmt);
+    when(connection.prepareStatement(insertNamespaceStatement))
         .thenReturn(insertNamespacePrepStmt1, insertNamespacePrepStmt2, insertNamespacePrepStmt3);
+
+    // virtualTableMetadataService is a mock; stub it to return empty set
+    when(virtualTableMetadataService.getNamespaceNamesOfExistingTables(connection))
+        .thenReturn(Collections.emptySet());
+
     List<Statement> statementsMock =
         ImmutableList.<Statement>builder()
-            .add(tableMetadataExistsStatementMock)
             .add(getTableMetadataNamespacesStatementMock)
             .addAll(createMetadataNamespaceStatementsMock)
-            .add(namespacesTableExistsStatementMock)
             .add(createNamespaceTableStatementMock)
             .build();
 
@@ -5499,12 +5654,7 @@ public class JdbcAdminTest {
         .thenReturn(
             statementsMock.get(0),
             statementsMock.subList(1, statementsMock.size()).toArray(new Statement[0]));
-    Connection connection2 = mock(Connection.class);
-    when(dataSource.getConnection()).thenReturn(connection, connection2);
-
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(namespacesTableExistsStatementMock.execute(anyString())).thenThrow(sqlException);
+    when(dataSource.getConnection()).thenReturn(connection);
 
     ResultSet resultSet1 =
         mockResultSet(
@@ -5518,14 +5668,27 @@ public class JdbcAdminTest {
     admin.upgrade(Collections.emptyMap());
 
     // Assert
-    verify(tableMetadataExistsStatementMock).execute(tableMetadataExistStatement);
+    verify(connection, times(2)).prepareStatement(checkSql);
+    // metadata table check bindings
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(checkMetadataPrepStmt).setString(1, METADATA_SCHEMA + "$metadata");
+    } else {
+      verify(checkMetadataPrepStmt).setString(1, METADATA_SCHEMA);
+      verify(checkMetadataPrepStmt).setString(2, "metadata");
+    }
+    // namespaces check bindings
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(checkNamespacesPrepStmt).setString(1, METADATA_SCHEMA + "$namespaces");
+    } else {
+      verify(checkNamespacesPrepStmt).setString(1, METADATA_SCHEMA);
+      verify(checkNamespacesPrepStmt).setString(2, "namespaces");
+    }
     verify(getTableMetadataNamespacesStatementMock)
         .executeQuery(getTableMetadataNamespacesStatement);
     for (int i = 0; i < createMetadataNamespaceStatementsMock.size(); i++) {
       verify(createMetadataNamespaceStatementsMock.get(i))
           .execute(createMetadataNamespaceStatements.get(i));
     }
-    verify(namespacesTableExistsStatementMock).execute(namespacesTableExistsStatement);
     verify(createNamespaceTableStatementMock).execute(createNamespaceTableStatement);
     verify(connection, times(3)).prepareStatement(insertNamespaceStatement);
     verify(insertNamespacePrepStmt1).setString(1, METADATA_SCHEMA);
@@ -5714,7 +5877,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.MYSQL,
-        "SELECT 1 FROM `" + METADATA_SCHEMA + "`.`namespaces` LIMIT 1",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
@@ -5727,7 +5889,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5740,7 +5901,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SQL_SERVER,
-        "SELECT TOP 1 1 FROM [" + METADATA_SCHEMA + "].[namespaces]",
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
@@ -5753,7 +5913,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.ORACLE,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" FETCH FIRST 1 ROWS ONLY",
         "CREATE TABLE \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5766,7 +5925,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SQLITE,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "$namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
@@ -5779,7 +5937,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.DB2,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) NOT NULL, PRIMARY KEY (\"namespace_name\"))",
@@ -5792,7 +5949,6 @@ public class JdbcAdminTest {
           throws ExecutionException, SQLException {
     createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
         RdbEngine.SPANNER,
-        "SELECT 1 FROM \"" + METADATA_SCHEMA + "\".\"namespaces\" LIMIT 1",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
@@ -5801,24 +5957,23 @@ public class JdbcAdminTest {
 
   public void
       createNamespaceTableIfNotExists_forX_shouldCreateMetadataSchemaAndNamespacesTableIfNotExists(
-          RdbEngine rdbEngine,
-          String namespacesTableExistsSql,
-          String createNamespacesTableSql,
-          String insertNamespaceSql)
-          throws SQLException, ExecutionException {
+          RdbEngine rdbEngine, String createNamespacesTableSql, String insertNamespaceSql)
+          throws SQLException {
     // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    String checkSql = rdbEngineStrategy.internalTableExistsCheckSql();
+
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
 
-    Statement mockedNamespacesTableExistsStatement = mock(Statement.class);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(mockedNamespacesTableExistsStatement.execute(namespacesTableExistsSql))
-        .thenThrow(sqlException);
+    PreparedStatement mockedNamespacesTableExistsStatement = mock(PreparedStatement.class);
+    ResultSet namespacesTableExistsResultSet = mock(ResultSet.class);
+    when(mockedNamespacesTableExistsStatement.executeQuery())
+        .thenReturn(namespacesTableExistsResultSet);
+    when(namespacesTableExistsResultSet.next()).thenReturn(false);
+    when(connection.prepareStatement(checkSql)).thenReturn(mockedNamespacesTableExistsStatement);
 
     Statement mockedCreateNamespacesTableStatement = mock(Statement.class);
-
-    when(connection.createStatement())
-        .thenReturn(mockedNamespacesTableExistsStatement, mockedCreateNamespacesTableStatement);
+    when(connection.createStatement()).thenReturn(mockedCreateNamespacesTableStatement);
 
     PreparedStatement mockedInsertNamespaceStatement = mock(PreparedStatement.class);
     when(connection.prepareStatement(insertNamespaceSql))
@@ -5828,7 +5983,13 @@ public class JdbcAdminTest {
     admin.createNamespacesTableIfNotExists(connection);
 
     // Assert
-    verify(mockedNamespacesTableExistsStatement).execute(namespacesTableExistsSql);
+    verify(connection).prepareStatement(checkSql);
+    if (rdbEngine == RdbEngine.SQLITE) {
+      verify(mockedNamespacesTableExistsStatement).setString(1, METADATA_SCHEMA + "$namespaces");
+    } else {
+      verify(mockedNamespacesTableExistsStatement).setString(1, METADATA_SCHEMA);
+      verify(mockedNamespacesTableExistsStatement).setString(2, "namespaces");
+    }
     verify(mockedCreateNamespacesTableStatement).execute(createNamespacesTableSql);
     verify(mockedInsertNamespaceStatement).setString(1, METADATA_SCHEMA);
     verify(mockedInsertNamespaceStatement).executeUpdate();
@@ -6015,6 +6176,11 @@ public class JdbcAdminTest {
     String indexColumn = "index_col";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -6023,7 +6189,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 indexColumn, DataType.BLOB.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     Statement statement = mock(Statement.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
@@ -6079,6 +6245,11 @@ public class JdbcAdminTest {
     String indexColumn = "index_col";
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
 
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
     PreparedStatement selectStatement = mock(PreparedStatement.class);
     ResultSet resultSet =
         mockResultSet(
@@ -6087,7 +6258,7 @@ public class JdbcAdminTest {
             new SelectAllFromMetadataTableResultSetMocker.Row(
                 indexColumn, DataType.BLOB.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
-    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
     Statement statement = mock(Statement.class);
 
     when(dataSource.getConnection()).thenReturn(connection);
