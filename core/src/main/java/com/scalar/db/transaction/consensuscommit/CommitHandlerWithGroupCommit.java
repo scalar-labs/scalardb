@@ -44,7 +44,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(new Emitter(coordinator, writeSetBuilder));
+    groupCommitter.setEmitter(new Emitter(coordinator, writeSetEncoder));
     this.groupCommitter = groupCommitter;
   }
 
@@ -143,11 +143,11 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @VisibleForTesting
   static class Emitter implements Emittable<String, String, TransactionContext> {
     private final Coordinator coordinator;
-    private final WriteSetBuilder writeSetBuilder;
+    private final WriteSetEncoder writeSetEncoder;
 
-    public Emitter(Coordinator coordinator, WriteSetBuilder writeSetBuilder) {
+    public Emitter(Coordinator coordinator, WriteSetEncoder writeSetEncoder) {
       this.coordinator = coordinator;
-      this.writeSetBuilder = writeSetBuilder;
+      this.writeSetEncoder = writeSetEncoder;
     }
 
     @Override
@@ -168,7 +168,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       coordinator.putStateForGroupCommit(
           parentId,
           transactionIds,
-          writeSetBuilder.buildMultiGroupWriteSet(contexts, false),
+          writeSetEncoder.encodeMultiGroupWriteSet(contexts, false),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
 
@@ -187,7 +187,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       coordinator.putState(
           new State(
               fullId,
-              writeSetBuilder.buildSingleGroupWriteSet(context, false),
+              writeSetEncoder.encodeSingleGroupWriteSet(context, false),
               TransactionState.COMMITTED));
 
       logger.debug(
