@@ -227,14 +227,14 @@ public class CommitHandlerTest {
     }
   }
 
-  // Test helper: build the WriteSet that production would persist for a single-group transaction
+  // Test helper: encode the WriteSet that production would persist for a single-group transaction
   // commit/abort whose snapshot is `snapshot`. The WriteSet output depends only on the snapshot
   // content (not on the transaction id), so wrapping in a fresh TransactionContext is sufficient.
   private com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet expectedSingleGroupWriteSet(
       Snapshot snapshot) {
     TransactionContext context =
         new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-    return handler.writeSetBuilder.buildSingleGroupWriteSet(context, false);
+    return handler.writeSetEncoder.encodeSingleGroupWriteSet(context, false);
   }
 
   @ParameterizedTest

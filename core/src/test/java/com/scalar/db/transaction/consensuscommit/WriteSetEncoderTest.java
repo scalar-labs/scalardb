@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class WriteSetBuilderTest {
+class WriteSetEncoderTest {
 
   private static final String NAMESPACE = "ns";
   private static final String TABLE = "tbl";
@@ -33,7 +33,7 @@ class WriteSetBuilderTest {
 
   private TransactionTableMetadataManager tableMetadataManager;
   private ParallelExecutor parallelExecutor;
-  private WriteSetBuilder writeSetBuilder;
+  private WriteSetEncoder writeSetEncoder;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -55,7 +55,7 @@ class WriteSetBuilderTest {
         .thenReturn(transactionTableMetadata);
 
     parallelExecutor = new ParallelExecutor(mock(ConsensusCommitConfig.class));
-    writeSetBuilder = new WriteSetBuilder(tableMetadataManager);
+    writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
   }
 
   private Snapshot newSnapshot() {
@@ -64,7 +64,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_NonGroupCommitWithPutAndDelete_ShouldBuildEntryGroupWithoutChildId(
+  void encodeEntryGroup_NonGroupCommitWithPutAndDelete_ShouldEncodeEntryGroupWithoutChildId(
       boolean includeColumns) throws Exception {
     // Arrange
     Snapshot snapshot = newSnapshot();
@@ -87,7 +87,7 @@ class WriteSetBuilderTest {
     snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
 
     // Assert
     assertThat(group.hasChildId()).isFalse();
@@ -122,7 +122,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_GroupCommitChild_ShouldSetChildId(boolean includeColumns) throws Exception {
+  void encodeEntryGroup_GroupCommitChild_ShouldSetChildId(boolean includeColumns) throws Exception {
     // Arrange
     Snapshot snapshot = newSnapshot();
     Put put =
@@ -136,7 +136,7 @@ class WriteSetBuilderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, "child-1", includeColumns);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, "child-1", includeColumns);
 
     // Assert
     assertThat(group.hasChildId()).isTrue();
@@ -147,12 +147,12 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_NoWritesOrDeletes_ShouldBuildEmptyEntryGroup(boolean includeColumns) {
+  void encodeEntryGroup_NoWritesOrDeletes_ShouldEncodeEmptyEntryGroup(boolean includeColumns) {
     // Arrange
     Snapshot snapshot = newSnapshot();
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
 
     // Assert
     assertThat(group.hasChildId()).isFalse();
@@ -161,7 +161,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_CompositeKey_ShouldEncodeAllKeyColumns(boolean includeColumns)
+  void encodeEntryGroup_CompositeKey_ShouldEncodeAllKeyColumns(boolean includeColumns)
       throws Exception {
     // Arrange
     TableMetadata compositeKeyMetadata =
@@ -193,7 +193,7 @@ class WriteSetBuilderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
 
     // Assert
     Entry entry = group.getEntries(0);
@@ -209,7 +209,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_BooleanKey_ShouldEncodeBooleanValue(boolean includeColumns)
+  void encodeEntryGroup_BooleanKey_ShouldEncodeBooleanValue(boolean includeColumns)
       throws Exception {
     EntryGroup group = encodeKey(DataType.BOOLEAN, Key.ofBoolean("pk", true), includeColumns);
     assertThat(group.getEntries(0).getPartitionKey().getColumns(0).getBooleanValue().getValue())
@@ -218,7 +218,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_BigIntKey_ShouldEncodeBigIntValue(boolean includeColumns) throws Exception {
+  void encodeEntryGroup_BigIntKey_ShouldEncodeBigIntValue(boolean includeColumns) throws Exception {
     EntryGroup group =
         encodeKey(DataType.BIGINT, Key.ofBigInt("pk", 12345678901234L), includeColumns);
     assertThat(group.getEntries(0).getPartitionKey().getColumns(0).getBigintValue().getValue())
@@ -227,7 +227,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_FloatKey_ShouldEncodeFloatValue(boolean includeColumns) throws Exception {
+  void encodeEntryGroup_FloatKey_ShouldEncodeFloatValue(boolean includeColumns) throws Exception {
     EntryGroup group = encodeKey(DataType.FLOAT, Key.ofFloat("pk", 1.25f), includeColumns);
     assertThat(group.getEntries(0).getPartitionKey().getColumns(0).getFloatValue().getValue())
         .isEqualTo(1.25f);
@@ -235,7 +235,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_DoubleKey_ShouldEncodeDoubleValue(boolean includeColumns) throws Exception {
+  void encodeEntryGroup_DoubleKey_ShouldEncodeDoubleValue(boolean includeColumns) throws Exception {
     EntryGroup group = encodeKey(DataType.DOUBLE, Key.ofDouble("pk", 12.345), includeColumns);
     assertThat(group.getEntries(0).getPartitionKey().getColumns(0).getDoubleValue().getValue())
         .isEqualTo(12.345);
@@ -243,7 +243,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_BlobKey_ShouldEncodeBlobValue(boolean includeColumns) throws Exception {
+  void encodeEntryGroup_BlobKey_ShouldEncodeBlobValue(boolean includeColumns) throws Exception {
     byte[] blobValue = new byte[] {1, 2, 3, 4};
     EntryGroup group = encodeKey(DataType.BLOB, Key.ofBlob("pk", blobValue), includeColumns);
     assertThat(
@@ -259,7 +259,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_DateKey_ShouldEncodeDateValueAsEpochDay(boolean includeColumns)
+  void encodeEntryGroup_DateKey_ShouldEncodeDateValueAsEpochDay(boolean includeColumns)
       throws Exception {
     LocalDate date = LocalDate.of(2026, 5, 10);
     EntryGroup group = encodeKey(DataType.DATE, Key.ofDate("pk", date), includeColumns);
@@ -270,7 +270,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_TimeKey_ShouldEncodeTimeValueAsNanoOfDay(boolean includeColumns)
+  void encodeEntryGroup_TimeKey_ShouldEncodeTimeValueAsNanoOfDay(boolean includeColumns)
       throws Exception {
     LocalTime time = LocalTime.of(12, 34, 56);
     EntryGroup group = encodeKey(DataType.TIME, Key.ofTime("pk", time), includeColumns);
@@ -281,7 +281,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_TimestampKey_ShouldEncodeTimestampValue(boolean includeColumns)
+  void encodeEntryGroup_TimestampKey_ShouldEncodeTimestampValue(boolean includeColumns)
       throws Exception {
     LocalDateTime ts = LocalDateTime.of(2026, 5, 10, 12, 34, 56);
     EntryGroup group = encodeKey(DataType.TIMESTAMP, Key.ofTimestamp("pk", ts), includeColumns);
@@ -292,7 +292,7 @@ class WriteSetBuilderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_TimestampTZKey_ShouldEncodeTimestampTZValue(boolean includeColumns)
+  void encodeEntryGroup_TimestampTZKey_ShouldEncodeTimestampTZValue(boolean includeColumns)
       throws Exception {
     Instant instant = Instant.ofEpochSecond(1747000000L);
     EntryGroup group =
@@ -303,13 +303,13 @@ class WriteSetBuilderTest {
   }
 
   /**
-   * Builds an EntryGroup containing a single Put whose single-column partition key has the given
+   * Encodes an EntryGroup containing a single Put whose single-column partition key has the given
    * type and value. Helper used by the per-type encoding tests above.
    *
    * @param pkType the data type of the partition key column
    * @param partitionKey the partition key value
    * @param includeColumns whether to include non-key column values in the resulting entries
-   * @return the built {@link EntryGroup}
+   * @return the encoded {@link EntryGroup}
    * @throws Exception if table metadata setup fails
    */
   private EntryGroup encodeKey(DataType pkType, Key partitionKey, boolean includeColumns)
@@ -334,12 +334,12 @@ class WriteSetBuilderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    return writeSetBuilder.buildEntryGroup(snapshot, null, includeColumns);
+    return writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void buildEntryGroup_PartitionKeyOnly_ShouldOmitClusteringKey(boolean includeColumns)
+  void encodeEntryGroup_PartitionKeyOnly_ShouldOmitClusteringKey(boolean includeColumns)
       throws Exception {
     // Arrange
     Snapshot snapshot = newSnapshot();
@@ -364,7 +364,7 @@ class WriteSetBuilderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
 
     // Assert
     assertThat(group.getEntriesList()).hasSize(1);
@@ -374,9 +374,9 @@ class WriteSetBuilderTest {
   }
 
   @Test
-  void buildEntryGroup_IncludeColumnsTrue_WithNullValuedColumn_ShouldEmitEmptyInnerValue()
+  void encodeEntryGroup_IncludeColumnsTrue_WithNullValuedColumn_ShouldEmitEmptyInnerValue()
       throws Exception {
-    // Arrange — a Put with a null-valued non-key column. The ColumnToProto visitor should encode
+    // Arrange — a Put with a null-valued non-key column. The encoding visitor should encode
     // it as a Column whose inner TextValue carries no `value` field (proto3 default).
     Snapshot snapshot = newSnapshot();
     Put put =
@@ -390,7 +390,7 @@ class WriteSetBuilderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, null, true);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, true);
 
     // Assert
     Entry putEntry = group.getEntries(0);
@@ -401,7 +401,7 @@ class WriteSetBuilderTest {
   }
 
   @Test
-  void buildEntryGroup_IncludeColumnsTrue_ShouldFilterTransactionMetaColumns() throws Exception {
+  void encodeEntryGroup_IncludeColumnsTrue_ShouldFilterTransactionMetaColumns() throws Exception {
     // Arrange — a Put that carries both a user column ("v") and ConsensusCommit-injected
     // transaction-meta columns (tx_state and before_v). The latter must not appear in the emitted
     // entry when includeColumns is true.
@@ -419,7 +419,7 @@ class WriteSetBuilderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetBuilder.buildEntryGroup(snapshot, null, true);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, true);
 
     // Assert — only the user column survives the filter.
     Entry putEntry = group.getEntries(0);

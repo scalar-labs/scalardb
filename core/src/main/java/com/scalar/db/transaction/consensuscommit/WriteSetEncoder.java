@@ -45,7 +45,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
- * Builds the proto {@link WriteSet} / {@link EntryGroup} payload persisted in the Coordinator
+ * Encodes the proto {@link WriteSet} / {@link EntryGroup} payload persisted in the Coordinator
  * table's {@code tx_write_set} column.
  *
  * <p>Primary keys (namespace, table, partition key, optional clustering key) are always recorded.
@@ -56,17 +56,17 @@ import javax.annotation.Nullable;
  * ConsensusCommit's own bookkeeping are filtered out so the persisted payload contains only user
  * data.
  */
-final class WriteSetBuilder {
+final class WriteSetEncoder {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
 
-  WriteSetBuilder(TransactionTableMetadataManager tableMetadataManager) {
+  WriteSetEncoder(TransactionTableMetadataManager tableMetadataManager) {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
   }
 
   /**
-   * Builds a {@link WriteSet} for a single-group transaction (non-group-commit, or a delayed group
+   * Encodes a {@link WriteSet} for a single-group transaction (non-group-commit, or a delayed group
    * commit that contains only this transaction).
    *
    * <p>For a transaction with writes/deletes, the returned WriteSet contains a single populated
@@ -78,19 +78,19 @@ final class WriteSetBuilder {
    *
    * @param context the transaction context
    * @param includeColumns whether to include non-key column values for {@code Put} entries
-   * @return the built {@link WriteSet}
+   * @return the encoded {@link WriteSet}
    */
-  WriteSet buildSingleGroupWriteSet(TransactionContext context, boolean includeColumns) {
+  WriteSet encodeSingleGroupWriteSet(TransactionContext context, boolean includeColumns) {
     WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
     if (context.snapshot.hasWritesOrDeletes()) {
-      builder.addEntryGroups(buildEntryGroup(context.snapshot, null, includeColumns));
+      builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, includeColumns));
     }
     return builder.build();
   }
 
   /**
-   * Builds a {@link WriteSet} for a normal group commit that contains multiple transactions sharing
-   * a parent state row.
+   * Encodes a {@link WriteSet} for a normal group commit that contains multiple transactions
+   * sharing a parent state row.
    *
    * <p>The returned WriteSet contains one {@link EntryGroup} per writing child (tagged with the
    * child id derived from the context's transaction id). Read-only children are omitted so the
@@ -99,9 +99,9 @@ final class WriteSetBuilder {
    *
    * @param contexts the transaction contexts in the group, in the desired emit order
    * @param includeColumns whether to include non-key column values for {@code Put} entries
-   * @return the built {@link WriteSet}
+   * @return the encoded {@link WriteSet}
    */
-  WriteSet buildMultiGroupWriteSet(List<TransactionContext> contexts, boolean includeColumns) {
+  WriteSet encodeMultiGroupWriteSet(List<TransactionContext> contexts, boolean includeColumns) {
     WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
     for (TransactionContext context : contexts) {
       if (!context.snapshot.hasWritesOrDeletes()) {
@@ -109,27 +109,27 @@ final class WriteSetBuilder {
         continue;
       }
       String childId = keyManipulator.keysFromFullKey(context.transactionId).childKey;
-      builder.addEntryGroups(buildEntryGroup(context.snapshot, childId, includeColumns));
+      builder.addEntryGroups(encodeEntryGroup(context.snapshot, childId, includeColumns));
     }
     return builder.build();
   }
 
   /**
-   * Builds an {@link EntryGroup} from the {@link Snapshot}'s write/delete sets.
+   * Encodes an {@link EntryGroup} from the {@link Snapshot}'s write/delete sets.
    *
    * <p>Visible for testing only — production callers go through {@link
-   * #buildSingleGroupWriteSet(TransactionContext, boolean)} or {@link
-   * #buildMultiGroupWriteSet(List, boolean)}.
+   * #encodeSingleGroupWriteSet(TransactionContext, boolean)} or {@link
+   * #encodeMultiGroupWriteSet(List, boolean)}.
    *
    * @param snapshot the snapshot of the transaction
    * @param childId the child id within a group commit, or {@code null} for non-group-commit
    * @param includeColumns whether to include non-key column values for {@code Put} entries; when
    *     {@code false}, only primary keys are recorded. Transaction-meta columns are always filtered
    *     out when {@code includeColumns} is true
-   * @return the built {@link EntryGroup}
+   * @return the encoded {@link EntryGroup}
    */
   @VisibleForTesting
-  EntryGroup buildEntryGroup(Snapshot snapshot, @Nullable String childId, boolean includeColumns) {
+  EntryGroup encodeEntryGroup(Snapshot snapshot, @Nullable String childId, boolean includeColumns) {
     EntryGroup.Builder builder = EntryGroup.newBuilder();
     if (childId != null) {
       builder.setChildId(childId);
@@ -138,11 +138,11 @@ final class WriteSetBuilder {
       Put put = e.getValue();
       TableMetadata tableMetadata = includeColumns ? getTableMetadata(put) : null;
       builder.addEntries(
-          toEntry(put, Entry.EntryType.ENTRY_TYPE_WRITE, includeColumns, tableMetadata));
+          encodeEntry(put, Entry.EntryType.ENTRY_TYPE_WRITE, includeColumns, tableMetadata));
     }
     for (Map.Entry<Snapshot.Key, Delete> e : snapshot.getDeleteSet()) {
       // Delete entries never carry non-key columns, so no meta-column filtering is needed.
-      builder.addEntries(toEntry(e.getValue(), Entry.EntryType.ENTRY_TYPE_DELETE, false, null));
+      builder.addEntries(encodeEntry(e.getValue(), Entry.EntryType.ENTRY_TYPE_DELETE, false, null));
     }
     return builder.build();
   }
@@ -155,13 +155,13 @@ final class WriteSetBuilder {
       // Table metadata is expected to be cached by commit time. Surface the unexpected failure
       // loudly rather than silently emitting an unfiltered payload.
       throw new AssertionError(
-          "Failed to retrieve transaction table metadata while building the write set. Operation: "
+          "Failed to retrieve transaction table metadata while encoding the write set. Operation: "
               + mutation,
           e);
     }
   }
 
-  private static Entry toEntry(
+  private static Entry encodeEntry(
       Mutation mutation,
       Entry.EntryType type,
       boolean includeColumns,
@@ -169,8 +169,8 @@ final class WriteSetBuilder {
     Entry.Builder builder = Entry.newBuilder().setEntryType(type);
     mutation.forNamespace().ifPresent(builder::setNamespaceName);
     mutation.forTable().ifPresent(builder::setTableName);
-    builder.setPartitionKey(toProtoKey(mutation.getPartitionKey()));
-    mutation.getClusteringKey().ifPresent(ck -> builder.setClusteringKey(toProtoKey(ck)));
+    builder.setPartitionKey(encodeKey(mutation.getPartitionKey()));
+    mutation.getClusteringKey().ifPresent(ck -> builder.setClusteringKey(encodeKey(ck)));
     if (includeColumns && mutation instanceof Put) {
       for (Column<?> column : ((Put) mutation).getColumns().values()) {
         if (tableMetadata != null
@@ -179,35 +179,36 @@ final class WriteSetBuilder {
           // snapshot may have injected. Only user columns belong in the persisted write set.
           continue;
         }
-        builder.addColumns(toProtoColumn(column));
+        builder.addColumns(encodeColumn(column));
       }
     }
     return builder.build();
   }
 
-  private static com.scalar.db.transaction.consensuscommit.proto.v1.Key toProtoKey(Key key) {
+  private static com.scalar.db.transaction.consensuscommit.proto.v1.Key encodeKey(Key key) {
     com.scalar.db.transaction.consensuscommit.proto.v1.Key.Builder builder =
         com.scalar.db.transaction.consensuscommit.proto.v1.Key.newBuilder();
     for (Column<?> column : key.getColumns()) {
-      builder.addColumns(toProtoColumn(column));
+      builder.addColumns(encodeColumn(column));
     }
     return builder.build();
   }
 
-  private static com.scalar.db.transaction.consensuscommit.proto.v1.Column toProtoColumn(
+  private static com.scalar.db.transaction.consensuscommit.proto.v1.Column encodeColumn(
       Column<?> column) {
     com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder =
         com.scalar.db.transaction.consensuscommit.proto.v1.Column.newBuilder()
             .setName(column.getName());
-    column.accept(new ColumnToProto(builder));
+    column.accept(new ColumnEncodingVisitor(builder));
     return builder.build();
   }
 
   /** Visitor that fills the proto Column builder with the value oneof. */
-  private static final class ColumnToProto implements ColumnVisitor {
+  private static final class ColumnEncodingVisitor implements ColumnVisitor {
     private final com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder;
 
-    ColumnToProto(com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder) {
+    ColumnEncodingVisitor(
+        com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder) {
       this.builder = builder;
     }
 

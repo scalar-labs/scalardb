@@ -991,8 +991,8 @@ public class CoordinatorTest {
   public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
       throws CoordinatorException {
     // Arrange — State with an empty (but non-null) WriteSet that explicitly carries
-    // schema_version, mirroring what CommitHandler#buildSingleGroupWriteSet builds for read-only
-    // commits.
+    // schema_version, mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for
+    // read-only commits.
     WriteSet emptyWriteSet = WriteSet.newBuilder().setSchemaVersion(1).build();
     State state = new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED);
 

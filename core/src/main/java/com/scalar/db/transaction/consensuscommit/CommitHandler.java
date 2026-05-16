@@ -44,7 +44,7 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final MutationsGrouper mutationsGrouper;
-  final WriteSetBuilder writeSetBuilder;
+  final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
 
@@ -64,7 +64,7 @@ public class CommitHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
-    this.writeSetBuilder = new WriteSetBuilder(tableMetadataManager);
+    this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
   }
@@ -362,7 +362,7 @@ public class CommitHandler {
    */
   public void commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateInternal(context, writeSetBuilder.buildSingleGroupWriteSet(context, false));
+    commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
   }
 
   /**
@@ -428,7 +428,7 @@ public class CommitHandler {
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
     return abortStateInternal(
-        context.transactionId, writeSetBuilder.buildSingleGroupWriteSet(context, false));
+        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
   }
 
   /**
