@@ -75,4 +75,53 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
       }
     }
   }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithExistingCoordinatorHavingChildIdsColumnAndGroupCommitDisabled_ShouldPreserveChildIdsColumn()
+          throws Exception {
+    // Arrange: drop the Coordinator created in setUp and recreate it via a separate admin
+    // instance that has group commit explicitly enabled, so the Coordinator table has the
+    // CHILD_IDS column.
+    admin.dropCoordinatorTables();
+
+    Properties propertiesWithGroupCommitEnabled = new Properties();
+    propertiesWithGroupCommitEnabled.putAll(getProperties(TEST_NAME));
+    propertiesWithGroupCommitEnabled.setProperty(
+        ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED, "true");
+    try (DistributedTransactionAdmin adminWithGroupCommitEnabled =
+        TransactionFactory.create(propertiesWithGroupCommitEnabled).getTransactionAdmin()) {
+      waitForDifferentSessionDdl();
+      adminWithGroupCommitEnabled.createCoordinatorTables(getCreationOptions());
+    }
+
+    // Act: repair with group commit disabled. The existing Coordinator has the CHILD_IDS column,
+    // so the repair should preserve it (keep the WITH-CHILD_IDS schema) rather than dropping it,
+    // so that ScalarDB metadata stays aligned with the physical column set.
+    Properties propertiesWithGroupCommitDisabled = new Properties();
+    propertiesWithGroupCommitDisabled.putAll(getProperties(TEST_NAME));
+    propertiesWithGroupCommitDisabled.setProperty(
+        ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED, "false");
+    try (DistributedTransactionAdmin adminWithGroupCommitDisabled =
+        TransactionFactory.create(propertiesWithGroupCommitDisabled).getTransactionAdmin()) {
+      waitForDifferentSessionDdl();
+      adminWithGroupCommitDisabled.repairCoordinatorTables(getCreationOptions());
+
+      // Assert: the column is still present in the post-repair Coordinator metadata. We have to
+      // read the metadata via DistributedStorageAdmin (not via the transaction admin) because
+      // ConsensusCommitAdmin#getTableMetadata returns null for the coordinator namespace by design.
+      waitForDifferentSessionDdl();
+      String coordinatorNamespace =
+          new ConsensusCommitConfig(new DatabaseConfig(propertiesWithGroupCommitDisabled))
+              .getCoordinatorNamespace()
+              .orElse(Coordinator.NAMESPACE);
+      try (DistributedStorageAdmin storageAdmin =
+          StorageFactory.create(propertiesWithGroupCommitDisabled).getStorageAdmin()) {
+        TableMetadata metadata =
+            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+        assertThat(metadata).isNotNull();
+        assertThat(metadata.getColumnNames()).contains(Attribute.CHILD_IDS);
+      }
+    }
+  }
 }
