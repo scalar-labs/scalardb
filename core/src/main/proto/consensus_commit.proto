@@ -150,9 +150,10 @@ message Key {
 //
 // Records the set of records a transaction wrote on commit/abort.
 //
-// For non-group-commit transactions, the WriteSet contains exactly one EntryGroup (with no
-// `child_id`). For group-commit transactions, the parent state row carries one EntryGroup per
-// child that performed writes; read-only children are omitted entirely from `entry_groups`.
+// For non-group-commit transactions that performed at least one write or delete, the WriteSet
+// contains exactly one EntryGroup (with no `child_id`). For group-commit transactions, the
+// parent state row carries one EntryGroup per child that performed writes; read-only children
+// are omitted entirely from `entry_groups`.
 //
 // A WriteSet with an empty `entry_groups` list is meaningful: it represents a read-only commit
 // (or a group commit in which every child was read-only). The reader treats it as "the
@@ -174,8 +175,10 @@ message WriteSet {
   int32 schema_version = 1;
 
   // One EntryGroup per writing transaction within the Coordinator state row. For non-group-
-  // commit, this list contains exactly one element. For group commit, it contains one element
-  // per child that wrote at least one record; read-only children are omitted.
+  // commit, this list contains exactly one element when the transaction performed at least one
+  // write or delete (and is empty otherwise, e.g., for a read-only commit). For group commit, it
+  // contains one element per child that wrote at least one record; read-only children are
+  // omitted.
   repeated EntryGroup entry_groups = 2;
 }
 
