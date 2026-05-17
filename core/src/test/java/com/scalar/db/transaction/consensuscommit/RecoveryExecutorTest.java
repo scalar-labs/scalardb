@@ -839,4 +839,18 @@ public class RecoveryExecutorTest {
     // Verify no recovery attempted
     verify(recovery, never()).recover(any(), any(), any());
   }
+
+  @Test
+  public void executeSynchronously_ShouldDelegateToRecoveryHandler() throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    Optional<Coordinator.State> state =
+        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+
+    // Act
+    executor.executeSynchronously(selection, transactionResult, state);
+
+    // Assert
+    verify(recovery).recover(selection, transactionResult, state);
+  }
 }
