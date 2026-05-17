@@ -431,31 +431,92 @@ public interface DistributedTransactionManager
   /**
    * Returns the state of a given transaction.
    *
+   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
+   * directly — it is intended for advanced use cases. Callers are expected to understand the
+   * underlying transaction lifecycle and the implications of invoking this method directly.
+   *
    * @param txId a transaction ID
    * @return {@link TransactionState}
    * @throws TransactionException if getting the state of a given transaction fails
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     getting a transaction state
    */
   TransactionState getState(String txId) throws TransactionException;
 
   /**
    * Rolls back a given transaction.
    *
+   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
+   * directly — it is intended for advanced use cases. Callers are expected to understand the
+   * underlying transaction lifecycle and the implications of invoking this method directly.
+   *
    * @param txId a transaction ID
    * @return {@link TransactionState}
    * @throws TransactionException if rolling back the given transaction fails
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     rolling back a transaction
    */
   TransactionState rollback(String txId) throws TransactionException;
 
   /**
    * Aborts a given transaction. This method is an alias of {@link #rollback(String)}.
    *
+   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
+   * directly — it is intended for advanced use cases. Callers are expected to understand the
+   * underlying transaction lifecycle and the implications of invoking this method directly.
+   *
    * @param txId a transaction ID
    * @return {@link TransactionState}
    * @throws TransactionException if aborting the given transaction fails
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     aborting a transaction
    */
   default TransactionState abort(String txId) throws TransactionException {
     return rollback(txId);
   }
+
+  /**
+   * Finishes a given terminated transaction by performing any remaining post-termination work and
+   * cleaning up the Coordinator state row. The transaction must already be in a terminal state
+   * ({@code COMMITTED} or {@code ABORTED}); this method completes the per-record work that was
+   * otherwise deferred to lazy recovery — rolling forward {@code PREPARED} records of a committed
+   * transaction, or rolling back {@code PREPARED} records of an aborted one — and then removes the
+   * Coordinator state row.
+   *
+   * <p>This is a best-effort, retryable cleanup API intended to be called after a transaction
+   * terminates so that ScalarDB can complete per-record post-termination work eagerly and reclaim
+   * the Coordinator state row instead of leaving it for lazy recovery.
+   *
+   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
+   * directly — it is intended for advanced use cases. Callers are expected to understand the
+   * underlying transaction lifecycle and the implications of invoking this method directly.
+   *
+   * <p><b>Applicability:</b> only transactions terminated via {@link
+   * DistributedTransaction#commit()} are eligible — they are the ones that persist a write set
+   * alongside the Coordinator state row, regardless of whether the commit succeeded ({@code
+   * COMMITTED}) or failed via a conflict during preparation ({@code ABORTED}). Transactions that
+   * did not go through {@link DistributedTransaction#commit()} (for example, transactions
+   * terminated via {@link #rollback(String)}, transactions aborted by lazy recovery, or
+   * transactions originated from older binaries that pre-date the write-set column) do not carry a
+   * write set, and calling this method on their transaction ID results in a {@link
+   * TransactionException} indicating that no write set is recorded. Those state rows are left for
+   * lazy recovery to handle.
+   *
+   * <p><b>Idempotency:</b> calling this method on a transaction ID whose state row is absent
+   * (already finished, never started, or already cleaned up by a concurrent caller) returns
+   * silently. Callers may safely re-invoke this method on the same transaction ID.
+   *
+   * <p><b>Group commit:</b> when the transaction ID belongs to a child of a group commit, the call
+   * processes the write sets of all sibling children in a single pass and then deletes the shared
+   * parent state row. Subsequent calls with sibling transaction IDs return silently per the
+   * idempotency contract above.
+   *
+   * @param txId a transaction ID
+   * @throws TransactionException if finishing the given transaction fails
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     coordinator-level cleanup
+   */
+  void finishTransaction(String txId) throws TransactionException;
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as

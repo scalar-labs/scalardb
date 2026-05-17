@@ -1787,4 +1787,374 @@ public class ConsensusCommitManagerTest {
     verify(transaction).commit();
     assertThat(actual).isEqualTo(batchResults);
   }
+
+  // ------------------------------------------------------------
+  // finishTransaction
+  // ------------------------------------------------------------
+
+  private static final String ANY_NAMESPACE = "ns";
+  private static final String ANY_TABLE = "tbl";
+
+  private com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet writeSetWithSinglePutEntry() {
+    return com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
+        .setSchemaVersion(1)
+        .addEntryGroups(
+            com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                .addEntries(putEntry("pk-1")))
+        .build();
+  }
+
+  private Result preparedRecord(String txId) {
+    Result record = mock(Result.class);
+    when(record.getText(Attribute.ID)).thenReturn(txId);
+    when(record.isNull(Attribute.STATE)).thenReturn(false);
+    when(record.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    return record;
+  }
+
+  private com.scalar.db.transaction.consensuscommit.proto.v1.Entry putEntry(String pkValue) {
+    return com.scalar.db.transaction.consensuscommit.proto.v1.Entry.newBuilder()
+        .setEntryType(
+            com.scalar.db.transaction.consensuscommit.proto.v1.Entry.EntryType.ENTRY_TYPE_WRITE)
+        .setNamespaceName(ANY_NAMESPACE)
+        .setTableName(ANY_TABLE)
+        .setPartitionKey(
+            com.scalar.db.transaction.consensuscommit.proto.v1.Key.newBuilder()
+                .addColumns(
+                    com.scalar.db.transaction.consensuscommit.proto.v1.Column.newBuilder()
+                        .setName("pk")
+                        .setTextValue(
+                            com.scalar.db.transaction.consensuscommit.proto.v1.Column.TextValue
+                                .newBuilder()
+                                .setValue(pkValue))))
+        .build();
+  }
+
+  @Test
+  public void finishTransaction_CommittedTransactionWithSinglePut_ShouldRecoverAndDeleteState()
+      throws Exception {
+    // Arrange
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(coordinator).getState(ANY_TX_ID);
+    verify(storage).get(any(Get.class));
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_AbortedTransactionWithSinglePut_ShouldRecoverAndDeleteState()
+      throws Exception {
+    // Arrange
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.ABORTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_GroupCommitWithThreeChildren_ShouldRecoverAllAndDeleteParentState()
+      throws Exception {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullChildId1 = keyManipulator.fullKey(parentId, "child-1");
+    com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet writeSet =
+        com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .addEntryGroups(
+                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                    .setChildId("child-1")
+                    .addEntries(putEntry("pk-1a"))
+                    .addEntries(putEntry("pk-1b")))
+            .addEntryGroups(
+                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                    .setChildId("child-2")
+                    .addEntries(putEntry("pk-2a"))
+                    .addEntries(putEntry("pk-2b")))
+            .addEntryGroups(
+                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                    .setChildId("child-3")
+                    .addEntries(putEntry("pk-3a"))
+                    .addEntries(putEntry("pk-3b")))
+            .build();
+    String fullChildId2 = keyManipulator.fullKey(parentId, "child-2");
+    String fullChildId3 = keyManipulator.fullKey(parentId, "child-3");
+    State state = new State(parentId, writeSet, TransactionState.COMMITTED);
+    when(coordinator.getState(fullChildId1)).thenReturn(Optional.of(state));
+    Result r1 = preparedRecord(fullChildId1);
+    Result r2 = preparedRecord(fullChildId2);
+    Result r3 = preparedRecord(fullChildId3);
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(r1))
+        .thenReturn(Optional.of(r1))
+        .thenReturn(Optional.of(r2))
+        .thenReturn(Optional.of(r2))
+        .thenReturn(Optional.of(r3))
+        .thenReturn(Optional.of(r3));
+
+    // Act
+    manager.finishTransaction(fullChildId1);
+
+    // Assert — 6 records recovered (3 children x 2 entries), parent state deleted exactly once.
+    verify(recoveryExecutor, org.mockito.Mockito.times(6))
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+    verify(coordinator).deleteState(parentId);
+  }
+
+  @Test
+  public void finishTransaction_StateRowMissing_ShouldReturnSilently() throws Exception {
+    // Arrange
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void finishTransaction_NoWriteSetRecorded_ShouldThrowTransactionExceptionWithoutCause()
+      throws Exception {
+    // Arrange — State whose tx_write_set is NULL (lazy-recovery abort, pre-feature row, etc.).
+    State state = new State(ANY_TX_ID, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class)
+        .hasMessageContaining("no write set is recorded")
+        .hasNoCause();
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void finishTransaction_NonTerminalState_ShouldThrowAssertionError() throws Exception {
+    // Arrange — A persisted State should never be PREPARED. If it is, that's an internal
+    // invariant violation that finishTransaction must surface loudly.
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.PREPARED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(AssertionError.class);
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void finishTransaction_GetStateFails_ShouldThrowTransactionExceptionWithCause()
+      throws Exception {
+    // Arrange
+    CoordinatorException cause = new CoordinatorException("boom");
+    when(coordinator.getState(ANY_TX_ID)).thenThrow(cause);
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause);
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void finishTransaction_StorageGetFails_ShouldThrowTransactionExceptionWithCause()
+      throws Exception {
+    // Arrange
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    com.scalar.db.exception.storage.ExecutionException cause =
+        new com.scalar.db.exception.storage.ExecutionException("storage down");
+    when(storage.get(any(Get.class))).thenThrow(cause);
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause);
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void finishTransaction_RecordAlreadyGone_ShouldSkipEntryAndDeleteState() throws Exception {
+    // Arrange
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert — record was missing, so recovery is not invoked, but the state row is still cleaned
+    // up because the transaction itself is terminal.
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_ReadOnlyCommit_ShouldSkipRecoveryAndDeleteState() throws Exception {
+    // Arrange — A read-only commit persists a non-null WriteSet with an empty entry_groups list
+    // (when coordinatorWriteOmissionOnReadOnlyEnabled=false). The no-write-set rejection should
+    // not fire, no recovery runs, and the state row is still cleaned up.
+    com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet emptyWriteSet =
+        com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .build();
+    State state = new State(ANY_TX_ID, emptyWriteSet, TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(storage, never()).get(any(Get.class));
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_RecordAlreadyFinalized_ShouldSkipRecoveryAndDeleteState()
+      throws Exception {
+    // Arrange — Record's tx_state is already COMMITTED (someone else recovered it). The recovery
+    // mutation would no-op via NoMutationException, so we filter it out up front.
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result finalizedRecord = mock(Result.class);
+    when(finalizedRecord.getText(Attribute.ID)).thenReturn(ANY_TX_ID);
+    when(finalizedRecord.isNull(Attribute.STATE)).thenReturn(false);
+    when(finalizedRecord.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(finalizedRecord));
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_RecordOverwrittenByUnrelatedTx_ShouldSkipRecoveryAndDeleteState()
+      throws Exception {
+    // Arrange — Record's tx_id no longer matches the transaction we are finishing because an
+    // unrelated transaction has since overwritten it. Recovery would no-op via NoMutationException
+    // on the tx_id mismatch, so we filter it out up front.
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result overwrittenRecord = preparedRecord("some-other-tx-id");
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(overwrittenRecord));
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void
+      finishTransaction_RecoverFailsWithExecutionException_ShouldThrowTransactionExceptionWithCause()
+          throws Exception {
+    // Arrange
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    com.scalar.db.exception.storage.ExecutionException cause =
+        new com.scalar.db.exception.storage.ExecutionException("recovery storage down");
+    doThrow(cause)
+        .when(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause);
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void
+      finishTransaction_DeleteStateFailsWithCoordinatorException_ShouldThrowTransactionExceptionWithCause()
+          throws Exception {
+    // Arrange
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    CoordinatorException cause = new CoordinatorException("delete failed");
+    doThrow(cause).when(coordinator).deleteState(ANY_TX_ID);
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause);
+  }
+
+  @Test
+  public void
+      finishTransaction_CalledTwiceAfterTransientStorageFailure_SecondCallShouldSucceedAndDeleteState()
+          throws Exception {
+    // Arrange — first call fails on storage.get with a transient error; the state row is left
+    // intact. Second call sees the state row again and proceeds to completion.
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    com.scalar.db.exception.storage.ExecutionException firstAttemptCause =
+        new com.scalar.db.exception.storage.ExecutionException("transient storage hiccup");
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenThrow(firstAttemptCause).thenReturn(Optional.of(record));
+
+    // Act + Assert — first call throws
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(firstAttemptCause);
+    verify(coordinator, never()).deleteState(anyString());
+
+    // Second call recovers and deletes the state row
+    manager.finishTransaction(ANY_TX_ID);
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_RecordInDeletedState_ShouldExecuteRecoveryAndDeleteState()
+      throws Exception {
+    // Arrange — shouldRecover allows DELETED records to proceed to executeSynchronously (the
+    // recovery handler rolls them back when the state row is ABORTED, or rolls them forward —
+    // composing a Delete — when it is COMMITTED). This test exercises the DELETED-state branch
+    // of shouldRecover via the happy COMMITTED-state path.
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result deletedRecord = mock(Result.class);
+    when(deletedRecord.getText(Attribute.ID)).thenReturn(ANY_TX_ID);
+    when(deletedRecord.isNull(Attribute.STATE)).thenReturn(false);
+    when(deletedRecord.getInt(Attribute.STATE)).thenReturn(TransactionState.DELETED.get());
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(deletedRecord));
+
+    // Act
+    manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
 }

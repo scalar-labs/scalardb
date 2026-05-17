@@ -223,6 +223,14 @@ dependencies {
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
+// Suppress Error Prone findings in protobuf-generated sources. The proto compiler emits patterns
+// (reference-equality checks against DEFAULT_INSTANCE, unused parameters in builders, deprecated
+// API references) that we can't fix locally and that aren't useful to surface.
+tasks.withType(JavaCompile).configureEach {
+    options.errorprone.disableWarningsInGeneratedCode = true
+    options.errorprone.excludedPaths = ".*/build/generated/sources/proto/.*"
+}
+
 javadoc {
     title = "ScalarDB"
 }
