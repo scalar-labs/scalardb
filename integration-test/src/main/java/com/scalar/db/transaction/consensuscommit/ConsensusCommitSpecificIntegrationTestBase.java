@@ -9296,14 +9296,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Coordinator state row. The already-COMMITTED record is filtered out by shouldRecover and
     // left untouched.
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
-    String txId = ANY_ID_1;
 
     // Drive a real commit so the Coordinator persists a COMMITTED state row with a write set
     // and both records exist at storage in COMMITTED form with BALANCE=NEW_BALANCE.
-    DistributedTransaction transaction = manager.begin(txId);
+    DistributedTransaction transaction = manager.begin();
     transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, NEW_BALANCE));
     transaction.insert(prepareInsert(0, 1, namespace1, TABLE_1, NEW_BALANCE));
     transaction.commit();
+    // In group-commit mode, the actual transaction id and the Coordinator state row key carry a
+    // parent-id prefix. Use the transaction's own id throughout so the test works in both
+    // normal-commit and group-commit configurations.
+    String txId = transaction.getId();
 
     // Simulate the partial-rollforward state by pushing record (0, 1) back to PREPARED.
     pushRecordBackToPrepared(0, 1, txId);
@@ -9408,19 +9411,65 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // set. One sibling's record was rolled forward at storage but the other's is still PREPARED.
     // finishTransaction on any child id must roll the remaining PREPARED record forward and
     // delete the parent state row.
+    //
+    // Two concurrently-driven transactions cannot reliably be bundled into the same group on CI,
+    // so the post-commit storage layout is constructed by hand: a single parent Coordinator state
+    // row referencing two children with a two-EntryGroup write set, plus one record in each of
+    // the COMMITTED and PREPARED storage states.
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
 
-    DistributedTransaction txn1 = manager.begin();
-    DistributedTransaction txn2 = manager.begin();
-    txn1.insert(prepareInsert(0, 0, namespace1, TABLE_1, NEW_BALANCE));
-    txn2.insert(prepareInsert(1, 0, namespace1, TABLE_1, NEW_BALANCE));
-    assertTimeout(Duration.ofSeconds(10), txn1::commit);
-    assertTimeout(Duration.ofSeconds(10), txn2::commit);
-    String fullTxId1 = txn1.getId();
-    String fullTxId2 = txn2.getId();
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId1 = keyManipulator.fullKey(parentId, ANY_ID_1);
+    String fullTxId2 = keyManipulator.fullKey(parentId, ANY_ID_2);
+    long now = System.currentTimeMillis();
 
-    // Simulate the partial-rollforward state by pushing txn2's record back to PREPARED.
-    pushRecordBackToPrepared(1, 0, fullTxId2);
+    // Record (0, 0): txn1 already rolled forward to COMMITTED at storage.
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, fullTxId1)
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, now)
+            .bigIntValue(Attribute.COMMITTED_AT, now)
+            .consistency(Consistency.LINEARIZABLE)
+            .build());
+    // Record (1, 0): txn2's write is still PREPARED — the partial-rollforward state.
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, fullTxId2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, now)
+            .consistency(Consistency.LINEARIZABLE)
+            .build());
+
+    // Parent COMMITTED state row with a multi-EntryGroup write set, one entry group per child.
+    WriteSet writeSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .addEntryGroups(
+                EntryGroup.newBuilder()
+                    .setChildId(ANY_ID_1)
+                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0)))
+            .addEntryGroups(
+                EntryGroup.newBuilder()
+                    .setChildId(ANY_ID_2)
+                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 1, 0)))
+            .build();
+    coordinator.putStateForGroupCommit(
+        parentId, Arrays.asList(fullTxId1, fullTxId2), writeSet, TransactionState.COMMITTED, now);
 
     // Sanity check
     Optional<Coordinator.State> stateBefore = coordinator.getState(fullTxId1);

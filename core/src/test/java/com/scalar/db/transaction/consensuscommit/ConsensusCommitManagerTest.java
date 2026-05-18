@@ -1897,8 +1897,7 @@ public class ConsensusCommitManagerTest {
             .build();
     String fullChildId2 = keyManipulator.fullKey(parentId, "child-2");
     String fullChildId3 = keyManipulator.fullKey(parentId, "child-3");
-    State state =
-        new State(parentId, Collections.emptyList(), writeSet, TransactionState.COMMITTED);
+    State state = new State(parentId, writeSet, TransactionState.COMMITTED);
     when(coordinator.getState(fullChildId1)).thenReturn(Optional.of(state));
     Result r1 = preparedRecord(fullChildId1);
     Result r2 = preparedRecord(fullChildId2);
