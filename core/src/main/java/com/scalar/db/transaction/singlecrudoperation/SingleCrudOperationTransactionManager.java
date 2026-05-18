@@ -443,6 +443,13 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
   }
 
   @Override
+  public void finishTransaction(String txId) {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED
+            .buildMessage());
+  }
+
+  @Override
   public void close() {
     storage.close();
   }

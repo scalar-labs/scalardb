@@ -1077,6 +1077,18 @@ public enum CoreError implements ScalarDbError {
       "All %d Spanner credential slots are already in use. ScalarDB's Spanner adapter supports up to that many distinct sets of Spanner credentials per JVM",
       "",
       ""),
+  JDBC_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0289",
+      "Finishing a transaction is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0290",
+      "Finishing a transaction is not supported in single CRUD operation transactions",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1421,6 +1433,19 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0067",
       "Getting the virtual table information failed. Table: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_FINISHING_TRANSACTION_NOT_APPLICABLE_NO_WRITE_SET(
+      Category.INTERNAL_ERROR,
+      "0068",
+      "Finishing the transaction is not applicable because no write set is recorded for the transaction. "
+          + "This typically means the transaction was not terminated via DistributedTransaction#commit() or was committed by an older version that did not record write sets",
+      "",
+      ""),
+  CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED(
+      Category.INTERNAL_ERROR,
+      "0069",
+      "Finishing the transaction failed. Transaction ID: %s, Details: %s",
       "",
       ""),
 
