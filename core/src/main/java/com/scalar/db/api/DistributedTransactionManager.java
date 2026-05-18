@@ -476,26 +476,31 @@ public interface DistributedTransactionManager
   }
 
   /**
-   * Finishes a given committed transaction by performing any remaining post-commit work and
-   * cleaning up the Coordinator state row.
+   * Finishes a given terminated transaction by performing any remaining post-termination work and
+   * cleaning up the Coordinator state row. The transaction must already be in a terminal state
+   * ({@code COMMITTED} or {@code ABORTED}); this method completes the per-record work that was
+   * otherwise deferred to lazy recovery — rolling forward {@code PREPARED} records of a committed
+   * transaction, or rolling back {@code PREPARED} records of an aborted one — and then removes the
+   * Coordinator state row.
    *
    * <p>This is a best-effort, retryable cleanup API intended to be called after a transaction
-   * commits, so that ScalarDB can complete per-record post-commit work eagerly (e.g., transition
-   * {@code PREPARED} records to {@code COMMITTED}) and reclaim the Coordinator state row instead of
-   * leaving it for lazy recovery.
+   * terminates so that ScalarDB can complete per-record post-termination work eagerly and reclaim
+   * the Coordinator state row instead of leaving it for lazy recovery.
    *
    * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
    * directly — it is intended for advanced use cases. Callers are expected to understand the
    * underlying transaction lifecycle and the implications of invoking this method directly.
    *
-   * <p><b>Applicability:</b> only transactions committed via {@link
+   * <p><b>Applicability:</b> only transactions terminated via {@link
    * DistributedTransaction#commit()} are eligible — they are the ones that persist a write set
-   * alongside the Coordinator state row. Transactions that did not commit through {@link
-   * DistributedTransaction#commit()} (for example, transactions terminated via {@link
-   * #rollback(String)}, transactions aborted by lazy recovery, or transactions originated from
-   * older binaries that pre-date the write-set column) do not carry a write set, and calling this
-   * method on their transaction ID results in a {@link TransactionException} indicating that no
-   * write set is recorded. Those state rows are left for lazy recovery to handle.
+   * alongside the Coordinator state row, regardless of whether the commit succeeded ({@code
+   * COMMITTED}) or failed via a conflict during preparation ({@code ABORTED}). Transactions that
+   * did not go through {@link DistributedTransaction#commit()} (for example, transactions
+   * terminated via {@link #rollback(String)}, transactions aborted by lazy recovery, or
+   * transactions originated from older binaries that pre-date the write-set column) do not carry a
+   * write set, and calling this method on their transaction ID results in a {@link
+   * TransactionException} indicating that no write set is recorded. Those state rows are left for
+   * lazy recovery to handle.
    *
    * <p><b>Idempotency:</b> calling this method on a transaction ID whose state row is absent
    * (already finished, never started, or already cleaned up by a concurrent caller) returns
