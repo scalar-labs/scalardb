@@ -218,6 +218,22 @@ class WriteSetEncoderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
+  void encodeEntryGroup_IntKey_ShouldEncodeIntValue(boolean includeColumns) throws Exception {
+    EntryGroup group = encodeKey(DataType.INT, Key.ofInt("pk", 42), includeColumns);
+    assertThat(group.getEntries(0).getPartitionKey().getColumns(0).getIntValue().getValue())
+        .isEqualTo(42);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void encodeEntryGroup_TextKey_ShouldEncodeTextValue(boolean includeColumns) throws Exception {
+    EntryGroup group = encodeKey(DataType.TEXT, Key.ofText("pk", "hello"), includeColumns);
+    assertThat(group.getEntries(0).getPartitionKey().getColumns(0).getTextValue().getValue())
+        .isEqualTo("hello");
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
   void encodeEntryGroup_BigIntKey_ShouldEncodeBigIntValue(boolean includeColumns) throws Exception {
     EntryGroup group =
         encodeKey(DataType.BIGINT, Key.ofBigInt("pk", 12345678901234L), includeColumns);

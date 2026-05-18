@@ -367,7 +367,7 @@ public class CommitHandler {
 
   /**
    * Writes the COMMITTED state without persisting a {@code tx_write_set}. Intended for callers that
-   * don't want per-transaction write-set logging — currently the two-phase commit path.
+   * don't want per-transaction write-set logging.
    *
    * @param context the transaction context
    * @throws CommitConflictException if another commit attempt has already written a conflicting
@@ -434,7 +434,7 @@ public class CommitHandler {
   /**
    * Writes the ABORTED state without persisting a {@code tx_write_set}. Intended for callers that
    * don't have the originating transaction context (lazy recovery, manager-level rollback) or that
-   * don't want per-transaction write-set logging (two-phase commit).
+   * don't want per-transaction write-set logging.
    *
    * @param id the transaction ID
    * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a

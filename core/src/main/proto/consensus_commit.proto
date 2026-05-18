@@ -184,9 +184,17 @@ message WriteSet {
 
 // A group of write entries belonging to a single transaction.
 message EntryGroup {
-  // The child transaction id within a group commit. Unset for non-group-commit transactions.
-  // For group commit, this is the per-child portion of the full transaction id (i.e., not the
-  // parent id, which is the partition key of the enclosing Coordinator state row).
+  // The child transaction id within a normal group commit. Set only when the enclosing
+  // Coordinator state row's partition key is the parent id and one EntryGroup is emitted per
+  // writing child; in that case, this field carries the per-child portion of the full
+  // transaction id.
+  //
+  // Unset in the two other cases the writer produces:
+  //   1) Non-group-commit transactions, where the enclosing row's partition key is the
+  //      transaction id itself.
+  //   2) Delayed group commits, where the enclosing row's partition key is the full transaction
+  //      id (parent + child). Readers that need the child portion can derive it from the
+  //      partition key in this case.
   optional string child_id = 1;
 
   // The records the transaction wrote, in writer-determined order. The current writer emits

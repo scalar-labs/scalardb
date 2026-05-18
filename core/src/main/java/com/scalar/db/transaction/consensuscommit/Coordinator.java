@@ -438,17 +438,13 @@ public class Coordinator {
       this(id, state, System.currentTimeMillis());
     }
 
-    public State(String id, List<String> childIds, TransactionState state) {
-      this(id, childIds, state, System.currentTimeMillis());
-    }
-
     public State(String id, @Nullable WriteSet writeSet, TransactionState state) {
       this(id, EMPTY_CHILD_IDS, writeSet, state, System.currentTimeMillis());
     }
 
-    public State(
-        String id, List<String> childIds, @Nullable WriteSet writeSet, TransactionState state) {
-      this(id, childIds, writeSet, state, System.currentTimeMillis());
+    @VisibleForTesting
+    State(String id, TransactionState state, long createdAt) {
+      this(id, EMPTY_CHILD_IDS, null, state, createdAt);
     }
 
     @VisibleForTesting
@@ -456,8 +452,7 @@ public class Coordinator {
       this(id, childIds, null, state, createdAt);
     }
 
-    @VisibleForTesting
-    State(
+    private State(
         String id,
         List<String> childIds,
         @Nullable WriteSet writeSet,
@@ -476,11 +471,6 @@ public class Coordinator {
       this.writeSet = writeSet;
       this.state = checkNotNull(state);
       this.createdAt = createdAt;
-    }
-
-    @VisibleForTesting
-    State(String id, TransactionState state, long createdAt) {
-      this(id, EMPTY_CHILD_IDS, null, state, createdAt);
     }
 
     @Nonnull
@@ -564,7 +554,8 @@ public class Coordinator {
       try {
         return WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
       } catch (InvalidProtocolBufferException e) {
-        throw new CoordinatorException("Failed to parse the write set", e);
+        throw new CoordinatorException(
+            "Failed to parse the write set. Transaction ID: " + result.getText(Attribute.ID), e);
       }
     }
 

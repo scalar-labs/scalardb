@@ -387,6 +387,11 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Test
   void emitter_emitNormalGroup_WithMultipleWritingChildren_ShouldAggregatePerChild()
       throws Exception {
+    // The slot reserved by extraInitialize is unused here — these emitter tests bypass the group
+    // committer and drive the Emitter directly — so release it now to keep the @AfterEach
+    // groupCommitter.close() from waiting out the slot-abort timeout.
+    groupCommitter.remove(anyId());
+
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
@@ -433,6 +438,8 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Test
   void emitter_emitNormalGroup_WithReadOnlyChildMixed_ShouldOmitReadOnlyEntryGroups()
       throws Exception {
+    groupCommitter.remove(anyId());
+
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
@@ -475,6 +482,8 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   @Test
   void emitter_emitNormalGroup_WithAllReadOnlyChildren_ShouldStillSetSchemaVersion()
       throws Exception {
+    groupCommitter.remove(anyId());
+
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
@@ -501,6 +510,104 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
             anyLong());
 
     WriteSet captured = writeSetCaptor.getValue();
+    assertThat(captured.getSchemaVersion()).isEqualTo(1);
+    assertThat(captured.getEntryGroupsList()).isEmpty();
+  }
+
+  @Test
+  void emitter_emitNormalGroup_WithEmptyContexts_ShouldNotCallPutStateForGroupCommit()
+      throws Exception {
+    groupCommitter.remove(anyId());
+
+    // Arrange
+    Coordinator coordinatorMock = mock(Coordinator.class);
+    CommitHandlerWithGroupCommit.Emitter emitter =
+        new CommitHandlerWithGroupCommit.Emitter(
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+
+    String parentId = keyManipulator.generateParentKey();
+
+    // Act — all buffered transactions were manually rolled back, so emitNormalGroup is invoked
+    // with an empty context list.
+    emitter.emitNormalGroup(parentId, Collections.emptyList());
+
+    // Assert — putStateForGroupCommit must not be called; otherwise a spurious COMMITTED parent
+    // row would be written.
+    verify(coordinatorMock, never())
+        .putStateForGroupCommit(
+            anyString(), anyList(), any(WriteSet.class), any(TransactionState.class), anyLong());
+  }
+
+  @Test
+  void emitter_emitDelayedGroup_WithWritingContext_ShouldPersistStateWithWriteSet()
+      throws Exception {
+    groupCommitter.remove(anyId());
+
+    // Arrange
+    Coordinator coordinatorMock = mock(Coordinator.class);
+    CommitHandlerWithGroupCommit.Emitter emitter =
+        new CommitHandlerWithGroupCommit.Emitter(
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    TransactionContext context =
+        new TransactionContext(
+            fullTxId, prepareSnapshotWithDifferentPartitionPut(), Isolation.SNAPSHOT, false, false);
+
+    // Act
+    emitter.emitDelayedGroup(fullTxId, context);
+
+    // Assert — putState is called with a State carrying the encoded WriteSet.
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
+
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(fullTxId);
+    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(capturedState.getWriteSet()).isPresent();
+
+    WriteSet captured = capturedState.getWriteSet().get();
+    assertThat(captured.getSchemaVersion()).isEqualTo(1);
+    assertThat(captured.getEntryGroupsList()).hasSize(1);
+    // Delayed group commit emits a single EntryGroup with child_id unset, distinguishing it from
+    // a normal group commit row where each EntryGroup carries the child id.
+    assertThat(captured.getEntryGroups(0).hasChildId()).isFalse();
+    assertThat(captured.getEntryGroups(0).getEntriesList()).isNotEmpty();
+  }
+
+  @Test
+  void emitter_emitDelayedGroup_WithReadOnlyContext_ShouldPersistStateWithEmptyWriteSet()
+      throws Exception {
+    groupCommitter.remove(anyId());
+
+    // Arrange
+    Coordinator coordinatorMock = mock(Coordinator.class);
+    CommitHandlerWithGroupCommit.Emitter emitter =
+        new CommitHandlerWithGroupCommit.Emitter(
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    TransactionContext context =
+        new TransactionContext(
+            fullTxId, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
+
+    // Act
+    emitter.emitDelayedGroup(fullTxId, context);
+
+    // Assert — WriteSet is still non-null with schema_version set, but has no EntryGroups.
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
+
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(fullTxId);
+    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(capturedState.getWriteSet()).isPresent();
+
+    WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
     assertThat(captured.getEntryGroupsList()).isEmpty();
   }
