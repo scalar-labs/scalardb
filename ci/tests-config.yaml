@@ -282,6 +282,10 @@ jdbc:
 
   - label: yugabytedb
     display_name: YugabyteDB 2025.2
+    # enable_object_locking_for_table_locks: Uses table-level locks for DDL to avoid "Restart read
+    # required" errors when concurrent DDL operations conflict with catalog version checks.
+    # ysql_yb_ddl_transaction_block_enabled: Required companion flag — without it,
+    # enable_object_locking_for_table_locks causes YugabyteDB to crash (OOM/exit 137) on startup.
     setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2025.2.2.2-b11 bash -c \"bin/yugabyted start --master_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" --tserver_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" && tail -f /dev/null\""
     db_healthcheck: docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'SELECT 1;'" > /dev/null 2>&1
     create_test_user: |
