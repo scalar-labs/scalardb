@@ -4,6 +4,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Arrays;
@@ -41,6 +42,15 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
       return;
     }
     super.truncateTable(namespace, table);
+  }
+
+  @Override
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, Coordinator.NAMESPACE, Coordinator.TABLE);
+      return;
+    }
+    super.truncateCoordinatorTables();
   }
 
   @Override
