@@ -4,6 +4,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitCrossPartitionScanIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -30,6 +31,15 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
       return;
     }
     super.truncateTable(namespace, table);
+  }
+
+  @Override
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, Coordinator.NAMESPACE, Coordinator.TABLE);
+      return;
+    }
+    super.truncateCoordinatorTables();
   }
 
   @Test

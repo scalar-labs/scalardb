@@ -150,11 +150,15 @@ public abstract class DistributedTransactionIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     truncateTable(namespace, TABLE);
-    admin.truncateCoordinatorTables();
+    truncateCoordinatorTables();
   }
 
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     admin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    admin.truncateCoordinatorTables();
   }
 
   @AfterAll

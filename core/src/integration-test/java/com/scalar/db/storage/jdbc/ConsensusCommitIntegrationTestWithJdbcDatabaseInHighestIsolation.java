@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
 
 public class ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
@@ -33,5 +34,14 @@ public class ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
       return;
     }
     super.truncateTable(namespace, table);
+  }
+
+  @Override
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, Coordinator.NAMESPACE, Coordinator.TABLE);
+      return;
+    }
+    super.truncateCoordinatorTables();
   }
 }
