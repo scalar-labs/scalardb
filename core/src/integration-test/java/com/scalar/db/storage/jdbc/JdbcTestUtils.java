@@ -6,6 +6,7 @@ import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;

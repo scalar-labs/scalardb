@@ -139,9 +139,17 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    consensusCommitAdmin1.truncateTable(namespace1, TABLE_1);
+    truncateTable(namespace1, TABLE_1);
+    truncateCoordinatorTables();
+    truncateTable(namespace2, TABLE_2);
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin1.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     consensusCommitAdmin1.truncateCoordinatorTables();
-    consensusCommitAdmin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
