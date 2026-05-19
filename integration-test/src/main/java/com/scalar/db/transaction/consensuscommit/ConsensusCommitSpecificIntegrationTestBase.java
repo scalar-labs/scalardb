@@ -201,7 +201,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @AfterAll
-  protected void afterAll() throws Exception {
+  void afterAll() throws Exception {
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
