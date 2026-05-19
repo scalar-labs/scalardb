@@ -45,6 +45,16 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
   }
 
   @Override
+  protected void truncateTable() throws ExecutionException {
+    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+      JdbcAdminTestUtils.deleteAllRowsWithSql(
+          rdbEngine, getNamespaceBaseName(), "condition_test_table");
+      return;
+    }
+    super.truncateTable();
+  }
+
+  @Override
   protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
       throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
