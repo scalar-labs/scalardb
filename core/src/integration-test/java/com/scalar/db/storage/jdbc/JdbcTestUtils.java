@@ -1,16 +1,11 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -85,31 +80,6 @@ public final class JdbcTestUtils {
 
   public static boolean isYugabyte(RdbEngineStrategy rdbEngine) {
     return rdbEngine instanceof RdbEngineYugabyte;
-  }
-
-  public static void deleteAllRowsWithSql(
-      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
-    String sql = "DELETE FROM " + rdbEngine.encloseFullTableName(namespace, table);
-    String jdbcUrl = System.getProperty("scalardb.jdbc.url", "jdbc:postgresql://localhost:5432/");
-    String username = System.getProperty("scalardb.jdbc.username", "postgres");
-    String password = System.getProperty("scalardb.jdbc.password", "postgres");
-    try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
-        Statement stmt = conn.createStatement()) {
-      stmt.execute(sql);
-    } catch (SQLException e) {
-      throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
-    }
-  }
-
-  /**
-   * Deletes all rows from the underlying source tables of a virtual table (view). With
-   * metadata-decoupling, a table is a VIEW joining {@code <table>_data} and {@code
-   * <table>_tx_metadata}. DELETE cannot target a multi-table view directly.
-   */
-  public static void deleteAllRowsFromVirtualTableWithSql(
-      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
-    deleteAllRowsWithSql(rdbEngine, namespace, table + "_data");
-    deleteAllRowsWithSql(rdbEngine, namespace, table + "_tx_metadata");
   }
 
   public static boolean isDb2(RdbEngineStrategy rdbEngine) {

@@ -5,13 +5,16 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.withConnection;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.ThrowableFunction;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
@@ -107,6 +110,31 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void dropIndex(String namespace, String table, String indexName) throws SQLException {
     String sql = rdbEngine.dropIndexSql(namespace, table, indexName);
     execute(sql);
+  }
+
+  public static void deleteAllRowsWithSql(
+      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
+    String sql = "DELETE FROM " + rdbEngine.encloseFullTableName(namespace, table);
+    String jdbcUrl = System.getProperty("scalardb.jdbc.url", "jdbc:postgresql://localhost:5432/");
+    String username = System.getProperty("scalardb.jdbc.username", "postgres");
+    String password = System.getProperty("scalardb.jdbc.password", "postgres");
+    try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
+        Statement stmt = conn.createStatement()) {
+      stmt.execute(sql);
+    } catch (SQLException e) {
+      throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
+    }
+  }
+
+  /**
+   * Deletes all rows from the underlying source tables of a virtual table (view). With
+   * metadata-decoupling, a table is a VIEW joining {@code <table>_data} and {@code
+   * <table>_tx_metadata}. DELETE cannot target a multi-table view directly.
+   */
+  public static void deleteAllRowsFromVirtualTableWithSql(
+      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
+    deleteAllRowsWithSql(rdbEngine, namespace, table + "_data");
+    deleteAllRowsWithSql(rdbEngine, namespace, table + "_tx_metadata");
   }
 
   private void execute(String sql) throws SQLException {

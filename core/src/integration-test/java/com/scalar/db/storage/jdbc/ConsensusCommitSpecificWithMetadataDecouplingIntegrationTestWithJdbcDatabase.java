@@ -41,7 +41,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     // With metadata-decoupling, tables are views joining <table>_data and <table>_tx_metadata,
     // so DELETE must target the underlying source tables directly.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcTestUtils.deleteAllRowsFromVirtualTableWithSql(rdbEngine, namespace, table);
+      JdbcAdminTestUtils.deleteAllRowsFromVirtualTableWithSql(rdbEngine, namespace, table);
       return;
     }
     super.truncateTable(namespace, table);

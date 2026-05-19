@@ -37,7 +37,7 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
     if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
+      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
       return;
     }
     super.truncateTable(namespace, table);
