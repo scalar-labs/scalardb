@@ -20,11 +20,13 @@ public class ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
     // Set the isolation level to the highest level
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    // Pre-apply the coordinator suffix the base class will add.
-    Properties utilsProps = new Properties();
-    utilsProps.putAll(properties);
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
-    jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
+    if (JdbcEnv.isYugabyte()) {
+      // Pre-apply the coordinator suffix the base class will add.
+      Properties utilsProps = new Properties();
+      utilsProps.putAll(properties);
+      ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
+    }
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(rdbEngine.getHighestIsolationLevel()).name());
@@ -43,7 +45,7 @@ public class ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsWithSql(namespace, table);
       return;
     }
@@ -52,7 +54,7 @@ public class ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
 
   @Override
   protected void truncateCoordinatorTables() throws ExecutionException {
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
       return;
     }

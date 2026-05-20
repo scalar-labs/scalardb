@@ -25,7 +25,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     return properties;
   }
 
@@ -56,7 +58,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected void truncateTable() throws ExecutionException {
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespaceBaseName(), CONDITION_TEST_TABLE);
       return;
     }
@@ -68,7 +70,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
       throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsWithSql(
           getNamespaceBaseName() + firstColumnType, firstColumnType + "_" + secondColumnType);
       return;
@@ -78,7 +80,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (jdbcAdminTestUtils.isYugabyte() || JdbcEnv.isSpannerEmulator()) {
+    if (JdbcEnv.isYugabyte() || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -92,7 +94,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     if (JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlServer(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
-        || jdbcAdminTestUtils.isYugabyte()) {
+        || JdbcEnv.isYugabyte()) {
       // Oracle, SQLServer, SQLite and YugabyteDB do not support having too many conditions as CNF
       // because it is converted internally to a query with conditions in DNF which can be too large
       // for the storage to process.

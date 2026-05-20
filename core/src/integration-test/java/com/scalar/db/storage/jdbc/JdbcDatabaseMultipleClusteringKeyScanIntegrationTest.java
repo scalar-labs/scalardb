@@ -31,7 +31,9 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     return properties;
   }
 
@@ -59,7 +61,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsWithSql(
           getNamespaceBaseName() + firstClusteringKeyType + "_" + firstClusteringOrder,
           firstClusteringKeyType
@@ -80,7 +82,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (jdbcAdminTestUtils.isYugabyte() || JdbcEnv.isSpannerEmulator()) {
+    if (JdbcEnv.isYugabyte() || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -90,7 +92,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   //       fix is released.
   @SuppressWarnings("unused")
   private boolean isYugabyteDb() {
-    return jdbcAdminTestUtils.isYugabyte();
+    return JdbcEnv.isYugabyte();
   }
 
   @Override

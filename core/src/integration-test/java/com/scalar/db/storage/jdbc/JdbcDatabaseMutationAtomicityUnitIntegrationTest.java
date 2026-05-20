@@ -13,7 +13,9 @@ public class JdbcDatabaseMutationAtomicityUnitIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
-    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     return properties;
   }
 
@@ -28,7 +30,7 @@ public class JdbcDatabaseMutationAtomicityUnitIntegrationTest
   protected void truncateTable() throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace1(), TABLE1);
       jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace1(), TABLE2);
       jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace2(), TABLE1);

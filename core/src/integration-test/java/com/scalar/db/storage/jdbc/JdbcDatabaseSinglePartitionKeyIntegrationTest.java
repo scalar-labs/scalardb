@@ -23,7 +23,9 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     return properties;
   }
 
@@ -38,7 +40,7 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
   protected void truncateTable(DataType partitionKeyType) throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace(), partitionKeyType.toString());
       return;
     }

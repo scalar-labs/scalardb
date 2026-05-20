@@ -28,11 +28,13 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     // Set the isolation level for consistency reads for virtual tables
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    // Pre-apply the coordinator suffix the base class will add.
-    Properties utilsProps = new Properties();
-    utilsProps.putAll(properties);
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
-    jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
+    if (JdbcEnv.isYugabyte()) {
+      // Pre-apply the coordinator suffix the base class will add.
+      Properties utilsProps = new Properties();
+      utilsProps.putAll(properties);
+      ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
+    }
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(
@@ -55,7 +57,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
     // With metadata-decoupling, tables are views joining <table>_data and <table>_tx_metadata,
     // so DELETE must target the underlying source tables directly.
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsFromVirtualTableWithSql(namespace, table);
       return;
     }
@@ -64,7 +66,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
 
   @Override
   protected void truncateCoordinatorTables() throws ExecutionException {
-    if (jdbcAdminTestUtils.isYugabyte()) {
+    if (JdbcEnv.isYugabyte()) {
       jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
       return;
     }
