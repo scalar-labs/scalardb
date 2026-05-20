@@ -94,6 +94,11 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isYugabyte() {
+    return JdbcEnv.isYugabyte();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isSpanner() {
     return JdbcEnv.isSpanner();
   }

@@ -58,6 +58,11 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     return JdbcEnv.isSqlite();
   }
 
+  @SuppressWarnings("unused")
+  private boolean isYugabyte() {
+    return JdbcEnv.isYugabyte();
+  }
+
   @Test
   @Override
   @DisabledIf("isSqlite")
