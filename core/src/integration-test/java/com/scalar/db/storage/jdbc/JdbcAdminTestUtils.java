@@ -6,15 +6,15 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.ThrowableFunction;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Properties;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
@@ -23,14 +23,20 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   private final RdbEngineStrategy rdbEngine;
   private final HikariDataSource dataSource;
   private final boolean requiresExplicitCommit;
+  private final String coordinatorNamespace;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
-    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    DatabaseConfig databaseConfig = new DatabaseConfig(properties);
+    JdbcConfig config = new JdbcConfig(databaseConfig);
     metadataSchema = config.getMetadataSchema();
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
+    coordinatorNamespace =
+        new ConsensusCommitConfig(databaseConfig)
+            .getCoordinatorNamespace()
+            .orElse(Coordinator.NAMESPACE);
   }
 
   @Override
@@ -112,18 +118,17 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     execute(sql);
   }
 
-  public static void deleteAllRowsWithSql(
-      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
+  public void deleteAllRowsWithSql(String namespace, String table) throws ExecutionException {
     String sql = "DELETE FROM " + rdbEngine.encloseFullTableName(namespace, table);
-    String jdbcUrl = System.getProperty("scalardb.jdbc.url", "jdbc:postgresql://localhost:5432/");
-    String username = System.getProperty("scalardb.jdbc.username", "postgres");
-    String password = System.getProperty("scalardb.jdbc.password", "postgres");
-    try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
-        Statement stmt = conn.createStatement()) {
-      stmt.execute(sql);
+    try {
+      execute(sql);
     } catch (SQLException e) {
       throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
     }
+  }
+
+  public void deleteAllRowsFromCoordinatorTableWithSql() throws ExecutionException {
+    deleteAllRowsWithSql(coordinatorNamespace, Coordinator.TABLE);
   }
 
   /**
@@ -131,10 +136,14 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
    * metadata-decoupling, a table is a VIEW joining {@code <table>_data} and {@code
    * <table>_tx_metadata}. DELETE cannot target a multi-table view directly.
    */
-  public static void deleteAllRowsFromVirtualTableWithSql(
-      RdbEngineStrategy rdbEngine, String namespace, String table) throws ExecutionException {
-    deleteAllRowsWithSql(rdbEngine, namespace, table + "_data");
-    deleteAllRowsWithSql(rdbEngine, namespace, table + "_tx_metadata");
+  public void deleteAllRowsFromVirtualTableWithSql(String namespace, String table)
+      throws ExecutionException {
+    deleteAllRowsWithSql(namespace, table + "_data");
+    deleteAllRowsWithSql(namespace, table + "_tx_metadata");
+  }
+
+  public boolean isYugabyte() {
+    return JdbcTestUtils.isYugabyte(rdbEngine);
   }
 
   private void execute(String sql) throws SQLException {

@@ -11,19 +11,29 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.provider.Arguments;
 
 public class JdbcDatabaseCrossPartitionScanIntegrationTest
     extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
   }
 
   @Override
@@ -46,9 +56,8 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected void truncateTable() throws ExecutionException {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(
-          rdbEngine, getNamespaceBaseName(), "condition_test_table");
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespaceBaseName(), CONDITION_TEST_TABLE);
       return;
     }
     super.truncateTable();
@@ -59,11 +68,9 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
       throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(
-          rdbEngine,
-          getNamespaceBaseName() + firstColumnType,
-          firstColumnType + "_" + secondColumnType);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(
+          getNamespaceBaseName() + firstColumnType, firstColumnType + "_" + secondColumnType);
       return;
     }
     super.truncateTable(firstColumnType, secondColumnType);
@@ -71,7 +78,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
+    if (jdbcAdminTestUtils.isYugabyte() || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -85,7 +92,7 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     if (JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlServer(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
-        || JdbcTestUtils.isYugabyte(rdbEngine)) {
+        || jdbcAdminTestUtils.isYugabyte()) {
       // Oracle, SQLServer, SQLite and YugabyteDB do not support having too many conditions as CNF
       // because it is converted internally to a query with conditions in DNF which can be too large
       // for the storage to process.

@@ -1,32 +1,38 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageMutationAtomicityUnitIntegrationTestBase;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterAll;
 
 public class JdbcDatabaseMutationAtomicityUnitIntegrationTest
     extends DistributedStorageMutationAtomicityUnitIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
-    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = RdbEngineFactory.create(config);
+    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
   }
 
   @Override
   protected void truncateTable() throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace1(), TABLE1);
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace1(), TABLE2);
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace2(), TABLE1);
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, getNamespace3(), TABLE1);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace1(), TABLE1);
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace1(), TABLE2);
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace2(), TABLE1);
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace3(), TABLE1);
       return;
     }
     super.truncateTable();

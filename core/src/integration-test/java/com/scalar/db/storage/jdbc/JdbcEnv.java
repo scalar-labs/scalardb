@@ -84,6 +84,10 @@ public final class JdbcEnv {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:cloudspanner:");
   }
 
+  public static boolean isYugabyte() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:yugabytedb:");
+  }
+
   public static boolean isSpannerEmulator() {
     return isSpanner()
         && System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).contains("autoConfigEmulator");

@@ -11,18 +11,28 @@ import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.AfterAll;
 
 public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
     extends DistributedStorageSingleClusteringKeyScanIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
   }
 
   @Override
@@ -30,9 +40,9 @@ public class JdbcDatabaseSingleClusteringKeyScanIntegrationTest
       throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(
-          rdbEngine, getNamespace(), clusteringKeyType + "_" + clusteringOrder);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(
+          getNamespace(), clusteringKeyType + "_" + clusteringOrder);
       return;
     }
     super.truncateTable(clusteringKeyType, clusteringOrder);
