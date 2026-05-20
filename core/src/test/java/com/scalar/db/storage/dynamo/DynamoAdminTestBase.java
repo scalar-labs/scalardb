@@ -290,7 +290,7 @@ public abstract class DynamoAdminTestBase {
     List<CreateTableRequest> actualCreateTableRequests = createTableRequestCaptor.getAllValues();
 
     List<AttributeDefinition> attributeDefinitions =
-        actualCreateTableRequests.get(1).attributeDefinitions();
+        actualCreateTableRequests.get(0).attributeDefinitions();
     assertThat(attributeDefinitions.size()).isEqualTo(3);
     assertThat(attributeDefinitions.get(0).attributeName()).isEqualTo(DynamoAdmin.PARTITION_KEY);
     assertThat(attributeDefinitions.get(0).attributeType()).isEqualTo(ScalarAttributeType.B);
@@ -299,24 +299,24 @@ public abstract class DynamoAdminTestBase {
     assertThat(attributeDefinitions.get(2).attributeName()).isEqualTo("c4");
     assertThat(attributeDefinitions.get(2).attributeType()).isEqualTo(ScalarAttributeType.B);
 
-    assertThat(actualCreateTableRequests.get(1).keySchema().size()).isEqualTo(2);
-    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).attributeName())
+    assertThat(actualCreateTableRequests.get(0).keySchema().size()).isEqualTo(2);
+    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).attributeName())
         .isEqualTo(DynamoAdmin.PARTITION_KEY);
-    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).keyType())
+    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).keyType())
         .isEqualTo(KeyType.HASH);
-    assertThat(actualCreateTableRequests.get(1).keySchema().get(1).attributeName())
+    assertThat(actualCreateTableRequests.get(0).keySchema().get(1).attributeName())
         .isEqualTo(DynamoAdmin.CLUSTERING_KEY);
-    assertThat(actualCreateTableRequests.get(1).keySchema().get(1).keyType())
+    assertThat(actualCreateTableRequests.get(0).keySchema().get(1).keyType())
         .isEqualTo(KeyType.RANGE);
 
-    assertThat(actualCreateTableRequests.get(1).globalSecondaryIndexes().size()).isEqualTo(1);
-    assertThat(actualCreateTableRequests.get(1).globalSecondaryIndexes().get(0).indexName())
+    assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().size()).isEqualTo(1);
+    assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().get(0).indexName())
         .isEqualTo(getFullTableName() + ".global_index.c4");
-    assertThat(actualCreateTableRequests.get(1).globalSecondaryIndexes().get(0).keySchema().size())
+    assertThat(actualCreateTableRequests.get(0).globalSecondaryIndexes().get(0).keySchema().size())
         .isEqualTo(1);
     assertThat(
             actualCreateTableRequests
-                .get(1)
+                .get(0)
                 .globalSecondaryIndexes()
                 .get(0)
                 .keySchema()
@@ -325,7 +325,7 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo("c4");
     assertThat(
             actualCreateTableRequests
-                .get(1)
+                .get(0)
                 .globalSecondaryIndexes()
                 .get(0)
                 .keySchema()
@@ -334,7 +334,7 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo(KeyType.HASH);
     assertThat(
             actualCreateTableRequests
-                .get(1)
+                .get(0)
                 .globalSecondaryIndexes()
                 .get(0)
                 .projection()
@@ -342,7 +342,7 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo(ProjectionType.ALL);
     assertThat(
             actualCreateTableRequests
-                .get(1)
+                .get(0)
                 .globalSecondaryIndexes()
                 .get(0)
                 .provisionedThroughput()
@@ -350,39 +350,39 @@ public abstract class DynamoAdminTestBase {
         .isEqualTo(10);
     assertThat(
             actualCreateTableRequests
-                .get(1)
+                .get(0)
                 .globalSecondaryIndexes()
                 .get(0)
                 .provisionedThroughput()
                 .writeCapacityUnits())
         .isEqualTo(10);
 
-    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().writeCapacityUnits())
+    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().writeCapacityUnits())
         .isEqualTo(10);
-    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().readCapacityUnits())
+    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().readCapacityUnits())
         .isEqualTo(10);
 
-    assertThat(actualCreateTableRequests.get(1).tableName()).isEqualTo(getFullTableName());
+    assertThat(actualCreateTableRequests.get(0).tableName()).isEqualTo(getFullTableName());
 
     // for the table metadata table
-    attributeDefinitions = actualCreateTableRequests.get(0).attributeDefinitions();
+    attributeDefinitions = actualCreateTableRequests.get(1).attributeDefinitions();
     assertThat(attributeDefinitions.size()).isEqualTo(1);
     assertThat(attributeDefinitions.get(0).attributeName())
         .isEqualTo(DynamoAdmin.METADATA_ATTR_TABLE);
     assertThat(attributeDefinitions.get(0).attributeType()).isEqualTo(ScalarAttributeType.S);
 
-    assertThat(actualCreateTableRequests.get(0).keySchema().size()).isEqualTo(1);
-    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).attributeName())
+    assertThat(actualCreateTableRequests.get(1).keySchema().size()).isEqualTo(1);
+    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).attributeName())
         .isEqualTo(DynamoAdmin.METADATA_ATTR_TABLE);
-    assertThat(actualCreateTableRequests.get(0).keySchema().get(0).keyType())
+    assertThat(actualCreateTableRequests.get(1).keySchema().get(0).keyType())
         .isEqualTo(KeyType.HASH);
 
-    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().writeCapacityUnits())
+    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().writeCapacityUnits())
         .isEqualTo(1);
-    assertThat(actualCreateTableRequests.get(0).provisionedThroughput().readCapacityUnits())
+    assertThat(actualCreateTableRequests.get(1).provisionedThroughput().readCapacityUnits())
         .isEqualTo(1);
 
-    assertThat(actualCreateTableRequests.get(0).tableName()).isEqualTo(getFullMetadataTableName());
+    assertThat(actualCreateTableRequests.get(1).tableName()).isEqualTo(getFullMetadataTableName());
 
     ArgumentCaptor<PutItemRequest> putItemRequestCaptor =
         ArgumentCaptor.forClass(PutItemRequest.class);
@@ -436,8 +436,8 @@ public abstract class DynamoAdminTestBase {
     List<UpdateContinuousBackupsRequest> updateContinuousBackupsRequests =
         updateContinuousBackupsRequestCaptor.getAllValues();
     assertThat(updateContinuousBackupsRequests.size()).isEqualTo(2);
-    assertThat(updateContinuousBackupsRequests.get(1).tableName()).isEqualTo(getFullTableName());
-    assertThat(updateContinuousBackupsRequests.get(0).tableName())
+    assertThat(updateContinuousBackupsRequests.get(0).tableName()).isEqualTo(getFullTableName());
+    assertThat(updateContinuousBackupsRequests.get(1).tableName())
         .isEqualTo(getFullMetadataTableName());
   }
 
@@ -1091,54 +1091,32 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
-  public void repairTable_WithNonExistingTableToRepair_shouldThrowIllegalArgumentException() {
-    // Arrange
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of());
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void repairTable_WithNonExistingMetadataForTable_shouldAddMetadataForTable()
+  public void repairTable_WithExistingTableToRepairAndMetadataTables_shouldNotCreateTables()
       throws ExecutionException {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
 
-    // The table to repair exists
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
-    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
-    when(listTablesResponse.tableNames()).thenReturn(ImmutableList.of(getFullTableName()));
+    // Prepare tableIsActiveResponse
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableIsActiveResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
-    // Wait for metadata table creation
-    DescribeTableResponse describeTableResponseMetadataTableCreation =
-        mock(DescribeTableResponse.class);
-    TableDescription tableDescriptionMetadataTableCreation = mock(TableDescription.class);
-    when(describeTableResponseMetadataTableCreation.table())
-        .thenReturn(tableDescriptionMetadataTableCreation);
-    when(tableDescriptionMetadataTableCreation.tableStatus()).thenReturn(TableStatus.ACTIVE);
-
+    // The table to repair and the metadata table both exist
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
     when(client.describeTable(
             DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
-        .thenThrow(ResourceNotFoundException.class)
-        .thenReturn(describeTableResponseMetadataTableCreation);
+        .thenReturn(tableIsActiveResponse);
 
-    // Continuous backup check
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+    // Continuous backup check (already enabled, so update is a no-op semantically)
+    DescribeContinuousBackupsResponse backupIsEnabledResponse =
         mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
+        .thenReturn(backupIsEnabledResponse);
     ContinuousBackupsDescription continuousBackupsDescription =
         mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+    when(backupIsEnabledResponse.continuousBackupsDescription())
         .thenReturn(continuousBackupsDescription);
     when(continuousBackupsDescription.continuousBackupsStatus())
         .thenReturn(ContinuousBackupsStatus.ENABLED);
@@ -1147,20 +1125,7 @@ public abstract class DynamoAdminTestBase {
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
 
     // Assert
-    // Check metadata table creation
-    ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
-        ArgumentCaptor.forClass(CreateTableRequest.class);
-    verify(client).createTable(createTableRequestArgumentCaptor.capture());
-    CreateTableRequest actualCreateTableRequest = createTableRequestArgumentCaptor.getValue();
-    assertThat(actualCreateTableRequest.tableName()).isEqualTo(getFullMetadataTableName());
-
-    // Check continuous backup
-    ArgumentCaptor<UpdateContinuousBackupsRequest> updateContinuousBackupsRequestCaptor =
-        ArgumentCaptor.forClass(UpdateContinuousBackupsRequest.class);
-    verify(client).updateContinuousBackups(updateContinuousBackupsRequestCaptor.capture());
-    UpdateContinuousBackupsRequest updateContinuousBackupsRequest =
-        updateContinuousBackupsRequestCaptor.getValue();
-    assertThat(updateContinuousBackupsRequest.tableName()).isEqualTo(getFullMetadataTableName());
+    verify(client, never()).createTable(any(CreateTableRequest.class));
 
     // Check added metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
@@ -1180,6 +1145,56 @@ public abstract class DynamoAdminTestBase {
                 .tableName(getFullMetadataTableName())
                 .item(itemValues)
                 .build());
+  }
+
+  @Test
+  public void repairTable_WithNonExistingTableAndMetadataTables_shouldCreateBothTables()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+
+    // Prepare tableIsActiveResponse
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableIsActiveResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+
+    // The table to repair does not exist initially, then becomes active after creation
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenThrow(ResourceNotFoundException.class)
+        .thenReturn(tableIsActiveResponse);
+
+    // The metadata table does not exist initially, then becomes active after creation
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenThrow(ResourceNotFoundException.class)
+        .thenReturn(tableIsActiveResponse);
+
+    // Continuous backup check
+    DescribeContinuousBackupsResponse backupIsEnabledResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(backupIsEnabledResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert: both the user table and the metadata table are created
+    ArgumentCaptor<CreateTableRequest> createTableRequestArgumentCaptor =
+        ArgumentCaptor.forClass(CreateTableRequest.class);
+    verify(client, times(2)).createTable(createTableRequestArgumentCaptor.capture());
+    CreateTableRequest actualCreateUserTableRequest =
+        createTableRequestArgumentCaptor.getAllValues().get(0);
+    assertThat(actualCreateUserTableRequest.tableName()).isEqualTo(getFullTableName());
+    CreateTableRequest actualCreateMetadataTableRequest =
+        createTableRequestArgumentCaptor.getAllValues().get(1);
+    assertThat(actualCreateMetadataTableRequest.tableName()).isEqualTo(getFullMetadataTableName());
   }
 
   @Test

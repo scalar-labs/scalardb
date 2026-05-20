@@ -16,6 +16,11 @@ public class CassandraAdminTestUtils extends AdminTestUtils {
     clusterManager = new ClusterManager(databaseConfig);
   }
 
+  public CassandraAdminTestUtils(Properties properties, ClusterManager clusterManager) {
+    super(properties);
+    this.clusterManager = clusterManager;
+  }
+
   @Override
   public void dropMetadataTable() {
     // Do nothing
