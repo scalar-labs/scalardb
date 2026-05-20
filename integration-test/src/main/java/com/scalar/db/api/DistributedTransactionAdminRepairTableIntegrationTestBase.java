@@ -1,7 +1,6 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -171,9 +170,8 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   @Test
-  public void
-      repairTableAndCoordinatorTable_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException()
-          throws ExecutionException {
+  public void repairCoordinatorTables_CoordinatorTablesDoNotExist_ShouldCreateCoordinatorTables()
+      throws ExecutionException {
     if (!hasCoordinatorTables()) {
       return;
     }
@@ -181,10 +179,26 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
     // Arrange
     admin.dropCoordinatorTables(true);
 
-    // Act Assert
+    // Act
     waitForDifferentSessionDdl();
-    assertThatThrownBy(() -> admin.repairCoordinatorTables(getCreationOptions()))
-        .isInstanceOf(IllegalArgumentException.class);
+    admin.repairCoordinatorTables(getCreationOptions());
+
+    // Assert
+    waitForDifferentSessionDdl();
+    assertThat(admin.coordinatorTablesExist()).isTrue();
+  }
+
+  @Test
+  public void repairCoordinatorTables_CoordinatorTablesExist_ShouldDoNothing() throws Exception {
+    if (!hasCoordinatorTables()) {
+      return;
+    }
+
+    // Act
+    admin.repairCoordinatorTables(getCreationOptions());
+
+    // Assert
+    assertThat(admin.coordinatorTablesExist()).isTrue();
   }
 
   @Test
@@ -204,15 +218,19 @@ public abstract class DistributedTransactionAdminRepairTableIntegrationTestBase 
   }
 
   @Test
-  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {
+  public void repairTable_ForNonExistingTableButExistingMetadata_ShouldCreateTable()
+      throws Exception {
     // Arrange
+    adminTestUtils.dropTable(getNamespace(), getTable());
 
-    // Act Assert
-    assertThatThrownBy(
-            () ->
-                admin.repairTable(
-                    getNamespace(), "non-existing-table", getTableMetadata(), getCreationOptions()))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Act
+    waitForDifferentSessionDdl();
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
+
+    // Assert
+    waitForDifferentSessionDdl();
+    assertThat(admin.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
   }
 
   protected boolean hasCoordinatorTables() {

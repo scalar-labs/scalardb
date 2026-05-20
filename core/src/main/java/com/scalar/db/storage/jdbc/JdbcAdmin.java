@@ -119,7 +119,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createTableInternal(
+  @VisibleForTesting
+  void createTableInternal(
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
     String createTableStatement = "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
@@ -150,15 +151,16 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, sqls);
   }
 
-  private void createIndex(
-      Connection connection, String schema, String table, TableMetadata metadata)
+  @VisibleForTesting
+  void createIndex(Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
     for (String indexedColumn : metadata.getSecondaryIndexNames()) {
       createIndex(connection, schema, table, indexedColumn);
     }
   }
 
-  private void addTableMetadata(
+  @VisibleForTesting
+  void addTableMetadata(
       Connection connection,
       String namespace,
       String table,
@@ -766,8 +768,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
+        // Create the table if it does not exist
+        createTableInternal(connection, namespace, table, metadata);
+        createIndex(connection, namespace, table, metadata);
       }
 
       if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {

@@ -2676,53 +2676,51 @@ public abstract class JdbcAdminTestBase {
   }
 
   @Test
-  public void repairTable_WithNonExistingTableToRepairForMysql_shouldThrowIllegalArgumentException()
-      throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+  public void repairTable_WithNonExistingTableToRepairForMysql_shouldCreateTableAndAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
         RdbEngine.MYSQL, "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1");
   }
 
   @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForOracle_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+  public void repairTable_WithNonExistingTableToRepairForOracle_shouldCreateTableAndAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
         RdbEngine.ORACLE, "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY");
   }
 
   @Test
   public void
-      repairTable_WithNonExistingTableToRepairForPostgresql_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+      repairTable_WithNonExistingTableToRepairForPostgresql_shouldCreateTableAndAddMetadata()
+          throws SQLException, ExecutionException {
+    repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
         RdbEngine.POSTGRESQL, "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1");
   }
 
   @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForSqlServer_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+  public void repairTable_WithNonExistingTableToRepairForSqlServer_shouldCreateTableAndAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
         RdbEngine.SQL_SERVER, "SELECT TOP 1 1 FROM [my_ns].[foo_table]");
   }
 
   @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForSqlite_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+  public void repairTable_WithNonExistingTableToRepairForSqlite_shouldCreateTableAndAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
         RdbEngine.SQLITE, "SELECT 1 FROM \"my_ns$foo_table\" LIMIT 1");
   }
 
   @Test
-  public void repairTable_WithNonExistingTableToRepairForDb2_shouldThrowIllegalArgumentException()
-      throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
+  public void repairTable_WithNonExistingTableToRepairForDb2_shouldCreateTableAndAddMetadata()
+      throws SQLException, ExecutionException {
+    repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
         RdbEngine.DB2, "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1");
   }
 
-  private void repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
+  private void repairTable_WithNonExistingTableToRepairForX_shouldCreateTableAndAddMetadata(
+      RdbEngine rdbEngine, String expectedCheckTableExistStatement)
+      throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
@@ -2733,17 +2731,24 @@ public abstract class JdbcAdminTestBase {
     when(connection.createStatement()).thenReturn(checkTableExistStatement);
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    // Mock that the table and the metadata table do not exist
     SQLException sqlException = mock(SQLException.class);
     mockUndefinedTableError(rdbEngine, sqlException);
     when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
 
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    doNothing().when(adminSpy).createTableInternal(connection, namespace, table, metadata);
+    doNothing().when(adminSpy).createIndex(connection, namespace, table, metadata);
+    doNothing().when(adminSpy).addTableMetadata(connection, namespace, table, metadata, true);
+
     // Act
-    assertThatThrownBy(() -> admin.repairTable(namespace, table, metadata, new HashMap<>()))
-        .isInstanceOf(IllegalArgumentException.class);
+    adminSpy.repairTable(namespace, table, metadata, new HashMap<>());
 
     // Assert
     verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata);
+    verify(adminSpy).createIndex(connection, namespace, table, metadata);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true);
   }
 
   @Test
