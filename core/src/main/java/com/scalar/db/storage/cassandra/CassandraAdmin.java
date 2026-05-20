@@ -8,6 +8,7 @@ import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
+import com.datastax.driver.core.schemabuilder.CreateIndex;
 import com.datastax.driver.core.schemabuilder.CreateKeyspace;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction;
@@ -92,8 +93,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     // Create the system namespace if it does not exist
     createKeyspace(systemNamespace, true, options);
 
-    createTableInternal(namespace, table, metadata, options);
-    createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), options);
+    createTableInternal(namespace, table, metadata, false, options);
+    createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), false);
   }
 
   @Override
@@ -170,17 +171,29 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void createIndex(
       String namespace, String table, String columnName, Map<String, String> options)
       throws ExecutionException {
+    createIndexInternal(namespace, table, columnName, false);
+  }
+
+  public void createIndexInternal(
+      String namespace, String table, String columnName, boolean ifNotExists)
+      throws ExecutionException {
     String indexName = getIndexName(table, columnName);
-    SchemaStatement createIndex =
-        SchemaBuilder.createIndex(indexName)
+    CreateIndex createIndex = SchemaBuilder.createIndex(indexName);
+    if (ifNotExists) {
+      createIndex = createIndex.ifNotExists();
+    }
+    SchemaStatement createIndexStatement =
+        createIndex
             .onTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
             .andColumn(quoteIfNecessary(columnName));
+
     try {
-      clusterManager.getSession().execute(createIndex.getQueryString());
+      clusterManager.getSession().execute(createIndexStatement.getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
           String.format(
-              "Creating the secondary index for %s.%s.%s failed", namespace, table, columnName),
+              "Creating the secondary index on the %s column of the %s table failed",
+              columnName, getFullTableName(namespace, table)),
           e);
     }
   }
@@ -300,12 +313,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    // We have this check to stay consistent with the behavior of the other admins classes
-    if (!tableExists(namespace, table)) {
-      throw new IllegalArgumentException(
-          "The table " + getFullTableName(namespace, table) + "  does not exist");
+    try {
+      createTableInternal(namespace, table, metadata, true, options);
+      createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), true);
+    } catch (ExecutionException e) {
+      throw new ExecutionException(
+          String.format("Repairing the %s table failed", getFullTableName(namespace, table)), e);
     }
-    // The table metadata are not managed by ScalarDB, so we don't need to do anything here
   }
 
   @Override
@@ -431,10 +445,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   void createTableInternal(
-      String keyspace, String table, TableMetadata metadata, Map<String, String> options)
+      String keyspace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
     Create createTable =
         SchemaBuilder.createTable(quoteIfNecessary(keyspace), quoteIfNecessary(table));
+    if (ifNotExists) {
+      createTable = createTable.ifNotExists();
+    }
     // Add columns
     for (String pk : metadata.getPartitionKeyNames()) {
       createTable =
@@ -487,16 +508,16 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       clusterManager.getSession().execute(createTableWithOptions.getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("Creating the table %s.%s failed", keyspace, table), e);
+          String.format("Creating the %s table failed", getFullTableName(keyspace, table)), e);
     }
   }
 
   @VisibleForTesting
   void createSecondaryIndexes(
-      String keyspace, String table, Set<String> secondaryIndexNames, Map<String, String> options)
+      String keyspace, String table, Set<String> secondaryIndexNames, boolean ifNotExists)
       throws ExecutionException {
     for (String name : secondaryIndexNames) {
-      createIndex(keyspace, table, name, options);
+      createIndexInternal(keyspace, table, name, ifNotExists);
     }
   }
 
