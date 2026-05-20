@@ -35,7 +35,9 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
                 rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
             .name());
 
-    testUtils = new JdbcAdminImportTestUtils(properties);
+    if (testUtils == null) {
+      testUtils = new JdbcAdminImportTestUtils(properties);
+    }
     return properties;
   }
 

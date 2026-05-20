@@ -38,7 +38,9 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    testUtils = new JdbcAdminImportTestUtils(properties);
+    if (testUtils == null) {
+      testUtils = new JdbcAdminImportTestUtils(properties);
+    }
     return properties;
   }
 

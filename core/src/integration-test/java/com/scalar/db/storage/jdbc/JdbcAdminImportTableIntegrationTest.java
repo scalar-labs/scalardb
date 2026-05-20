@@ -27,7 +27,9 @@ public class JdbcAdminImportTableIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
-    testUtils = new JdbcAdminImportTestUtils(properties);
+    if (testUtils == null) {
+      testUtils = new JdbcAdminImportTestUtils(properties);
+    }
     return JdbcEnv.getProperties(testName);
   }
 
