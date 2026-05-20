@@ -39,10 +39,11 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     }
 
     // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
-    // the coordinator namespace to cassandra
+    // the coordinator namespace (with the test-name suffix) to cassandra
+    String coordinatorNamespace = Coordinator.NAMESPACE + "_" + testName;
     properties.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
-        namespace1 + ":cassandra," + namespace2 + ":jdbc," + Coordinator.NAMESPACE + ":cassandra");
+        namespace1 + ":cassandra," + namespace2 + ":jdbc," + coordinatorNamespace + ":cassandra");
 
     // The default storage is cassandra
     properties.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
