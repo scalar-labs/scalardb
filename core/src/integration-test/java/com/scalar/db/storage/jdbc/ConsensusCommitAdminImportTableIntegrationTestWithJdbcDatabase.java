@@ -26,7 +26,7 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     if (testUtils == null) {
       testUtils = new JdbcAdminImportTestUtils(properties);
     }
-    return JdbcEnv.getProperties(testName);
+    return properties;
   }
 
   @AfterAll
