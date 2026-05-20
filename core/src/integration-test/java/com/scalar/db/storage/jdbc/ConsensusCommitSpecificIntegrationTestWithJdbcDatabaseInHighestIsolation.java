@@ -4,7 +4,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Arrays;
@@ -18,7 +17,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
     extends ConsensusCommitSpecificIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
   private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
@@ -27,13 +25,9 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
 
     // Set the isolation level to the highest level
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = RdbEngineFactory.create(config);
+    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(config);
     if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
-      // Pre-apply the coordinator suffix the base class will add.
-      Properties utilsProps = new Properties();
-      utilsProps.putAll(properties);
-      ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
-      jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     }
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,

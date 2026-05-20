@@ -142,10 +142,6 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     deleteAllRowsWithSql(namespace, table + "_tx_metadata");
   }
 
-  public boolean isYugabyte() {
-    return JdbcTestUtils.isYugabyte(rdbEngine);
-  }
-
   private void execute(String sql) throws SQLException {
     withConnection(
         dataSource,

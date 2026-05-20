@@ -3,7 +3,6 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitCrossPartitionScanIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -18,11 +17,7 @@ public class ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
   protected Properties getProps(String testName) {
     Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
     if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
-      // Pre-apply the coordinator suffix the base class will add.
-      Properties utilsProps = new Properties();
-      utilsProps.putAll(properties);
-      ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
-      jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     }
     return properties;
   }
