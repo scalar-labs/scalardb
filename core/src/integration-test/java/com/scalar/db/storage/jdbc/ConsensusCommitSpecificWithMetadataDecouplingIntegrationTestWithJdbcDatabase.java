@@ -4,12 +4,13 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -18,6 +19,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     extends ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -26,6 +28,11 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     // Set the isolation level for consistency reads for virtual tables
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    // Pre-apply the coordinator suffix the base class will add.
+    Properties utilsProps = new Properties();
+    utilsProps.putAll(properties);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
+    jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(
@@ -35,14 +42,21 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     return properties;
   }
 
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
+  }
+
   @Override
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
     // With metadata-decoupling, tables are views joining <table>_data and <table>_tx_metadata,
     // so DELETE must target the underlying source tables directly.
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsFromVirtualTableWithSql(rdbEngine, namespace, table);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsFromVirtualTableWithSql(namespace, table);
       return;
     }
     super.truncateTable(namespace, table);
@@ -50,8 +64,8 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
 
   @Override
   protected void truncateCoordinatorTables() throws ExecutionException {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, Coordinator.NAMESPACE, Coordinator.TABLE);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
       return;
     }
     super.truncateCoordinatorTables();

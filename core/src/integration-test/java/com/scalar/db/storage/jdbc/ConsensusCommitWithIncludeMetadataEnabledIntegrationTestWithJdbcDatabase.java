@@ -1,30 +1,40 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBase;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterAll;
 
 public class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
     extends ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBase {
 
-  private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
-    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    rdbEngine = RdbEngineFactory.create(config);
+    // Pre-apply the coordinator suffix the base class will add.
+    Properties utilsProps = new Properties();
+    utilsProps.putAll(properties);
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(utilsProps, testName);
+    jdbcAdminTestUtils = new JdbcAdminTestUtils(utilsProps);
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
   }
 
   @Override
   protected void truncateTable(String namespace, String table) throws ExecutionException {
     // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
     // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, namespace, table);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(namespace, table);
       return;
     }
     super.truncateTable(namespace, table);
@@ -32,8 +42,8 @@ public class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDat
 
   @Override
   protected void truncateCoordinatorTables() throws ExecutionException {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      JdbcAdminTestUtils.deleteAllRowsWithSql(rdbEngine, Coordinator.NAMESPACE, Coordinator.TABLE);
+    if (jdbcAdminTestUtils.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
       return;
     }
     super.truncateCoordinatorTables();
