@@ -6,6 +6,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminImportTable
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -28,6 +29,7 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
     return JdbcEnv.getProperties(testName);
   }
 
+  @AfterAll
   @Override
   public void afterAll() {
     try {

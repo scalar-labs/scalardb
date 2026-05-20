@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
     return properties;
   }
 
+  @AfterAll
   @Override
   public void afterAll() {
     try {

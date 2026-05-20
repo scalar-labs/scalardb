@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -33,6 +34,7 @@ public class JdbcAdminImportTableIntegrationTest
     return JdbcEnv.getProperties(testName);
   }
 
+  @AfterAll
   @Override
   public void afterAll() {
     try {
