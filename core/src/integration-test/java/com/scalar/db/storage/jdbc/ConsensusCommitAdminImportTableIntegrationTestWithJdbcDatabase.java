@@ -21,9 +21,9 @@ public class ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
 
   @Override
   protected Properties getProps(String testName) {
-    Properties properties = JdbcEnv.getProperties(testName);
+    Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
     testUtils = new JdbcAdminImportTestUtils(properties);
-    return JdbcEnv.getProperties(testName);
+    return properties;
   }
 
   @Override

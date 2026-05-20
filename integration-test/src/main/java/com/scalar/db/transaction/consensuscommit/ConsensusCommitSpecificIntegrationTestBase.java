@@ -127,9 +127,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     Properties properties = getProperties(testName);
 
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);

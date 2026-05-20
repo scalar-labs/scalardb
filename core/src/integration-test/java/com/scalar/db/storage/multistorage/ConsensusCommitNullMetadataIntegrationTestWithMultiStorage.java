@@ -55,6 +55,9 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     // Metadata cache expiration time
     properties.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
 
+    // Add testName as a coordinator namespace suffix
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }
 
