@@ -243,13 +243,18 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       TableMetadata metadata,
       Map<String, String> options)
       throws ExecutionException {
+    createTableInternal(nonPrefixedNamespace, table, metadata, false, options);
+  }
+
+  private void createTableInternal(
+      String nonPrefixedNamespace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
+      throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     checkMetadata(metadata);
-
-    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
-
-    // Create the metadata table first if it does not exist
-    createMetadataTableIfNotExists(noBackup);
 
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
 
@@ -262,22 +267,40 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     requestBuilder.tableName(getFullTableName(namespace, table));
 
     try {
-      client.createTable(requestBuilder.build());
+      if (!(ifNotExists && internalTableExists(namespace, table))) {
+        client.createTable(requestBuilder.build());
+        waitForTableCreation(namespace, table);
+      }
     } catch (Exception e) {
-      throw new ExecutionException("Creating the table failed", e);
+      throw new ExecutionException(
+          "Creating the " + getFullTableName(namespace, table) + " table failed", e);
     }
-    waitForTableCreation(namespace, table);
 
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (!noScaling) {
       enableAutoScaling(namespace, table, metadata.getSecondaryIndexNames(), ru);
     }
 
+    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
     if (!noBackup) {
       enableContinuousBackup(namespace, table);
     }
 
-    putTableMetadata(namespace, table, metadata);
+    createMetadataTableIfNotExists(noBackup);
+    upsertTableMetadata(namespace, table, metadata);
+  }
+
+  private boolean internalTableExists(Namespace namespace, String table) throws ExecutionException {
+    try {
+      client.describeTable(
+          DescribeTableRequest.builder().tableName(getFullTableName(namespace, table)).build());
+      return true;
+    } catch (ResourceNotFoundException e) {
+      return false;
+    } catch (Exception e) {
+      throw new ExecutionException(
+          "Checking the " + getFullTableName(namespace, table) + " table existence failed", e);
+    }
   }
 
   private void checkMetadata(TableMetadata metadata) {
@@ -385,7 +408,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return getFullTableName(namespace, tableName) + "." + GLOBAL_INDEX_NAME_PREFIX + "." + keyName;
   }
 
-  private void putTableMetadata(Namespace namespace, String table, TableMetadata metadata)
+  private void upsertTableMetadata(Namespace namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     // Add metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
@@ -884,10 +907,51 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     // update metadata
     TableMetadata tableMetadata = getTableMetadata(nonPrefixedNamespace, table);
-    putTableMetadata(
+    upsertTableMetadata(
         namespace,
         table,
         TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build());
+  }
+
+  private boolean rawIndexExists(String nonPrefixedNamespace, String table, String indexName)
+      throws ExecutionException {
+    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
+    String globalIndexName =
+        String.join(
+            ".",
+            getFullTableName(namespace, table),
+            DynamoAdmin.GLOBAL_INDEX_NAME_PREFIX,
+            indexName);
+    int retryCount = 0;
+    try {
+      while (true) {
+        DescribeTableResponse response =
+            client.describeTable(
+                DescribeTableRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
+        GlobalSecondaryIndexDescription description =
+            response.table().globalSecondaryIndexes().stream()
+                .filter(d -> d.indexName().equals(globalIndexName))
+                .findFirst()
+                .orElse(null);
+        if (description == null) {
+          return false;
+        }
+        if (description.indexStatus() == IndexStatus.ACTIVE) {
+          return true;
+        }
+        if (retryCount++ >= MAX_RETRY_COUNT) {
+          throw new ExecutionException(
+              String.format(
+                  "Waiting for the secondary index %s on the %s table to be active failed",
+                  indexName, getFullTableName(namespace, table)));
+        }
+        Uninterruptibles.sleepUninterruptibly(waitingDurationSecs, TimeUnit.SECONDS);
+      }
+    } catch (ResourceNotFoundException e) {
+      return false;
+    }
   }
 
   private void waitForIndexCreation(Namespace namespace, String table, String columnName)
@@ -982,7 +1046,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     // update metadata
     TableMetadata tableMetadata = getTableMetadata(nonPrefixedNamespace, table);
-    putTableMetadata(
+    upsertTableMetadata(
         namespace,
         table,
         TableMetadata.newBuilder(tableMetadata).removeSecondaryIndex(columnName).build());
@@ -1203,20 +1267,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       TableMetadata metadata,
       Map<String, String> options)
       throws ExecutionException {
-    Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     try {
-      if (!tableExists(nonPrefixedNamespace, table)) {
-        throw new IllegalArgumentException(
-            "The table " + getFullTableName(namespace, table) + "  does not exist");
+      createTableInternal(nonPrefixedNamespace, table, metadata, true, options);
+      for (String indexColumnName : metadata.getSecondaryIndexNames()) {
+        if (!rawIndexExists(nonPrefixedNamespace, table, indexColumnName)) {
+          createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+        }
       }
-      boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
-      createMetadataTableIfNotExists(noBackup);
-      putTableMetadata(namespace, table, metadata);
-    } catch (IllegalArgumentException e) {
-      throw e;
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("Repairing the table %s.%s failed", namespace, table), e);
+          String.format(
+              "Repairing the %s table failed",
+              getFullTableName(Namespace.of(namespacePrefix, nonPrefixedNamespace), table)),
+          e);
     }
   }
 
@@ -1229,7 +1292,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       TableMetadata updatedTableMetadata =
           TableMetadata.newBuilder(currentTableMetadata).addColumn(columnName, columnType).build();
       Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
-      putTableMetadata(namespace, table, updatedTableMetadata);
+      upsertTableMetadata(namespace, table, updatedTableMetadata);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(

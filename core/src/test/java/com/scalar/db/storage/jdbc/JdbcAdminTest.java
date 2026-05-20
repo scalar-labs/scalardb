@@ -54,7 +54,6 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1483,262 +1482,43 @@ public class JdbcAdminTest {
     verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, false);
   }
 
-  @Test
-  public void repairTable_ForMysql_shouldCreateMetadataTableAndAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.MYSQL,
-        "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1",
-        "CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`",
-        "CREATE TABLE IF NOT EXISTS `"
-            + METADATA_SCHEMA
-            + "`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
-            + "`indexed` BOOLEAN NOT NULL,"
-            + "`ordinal_position` INTEGER NOT NULL,"
-            + "PRIMARY KEY (`full_table_name`, `column_name`))",
-        "DELETE FROM `"
-            + METADATA_SCHEMA
-            + "`.`metadata` WHERE `full_table_name` = 'my_ns.foo_table'",
-        "INSERT INTO `"
-            + METADATA_SCHEMA
-            + "`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  @Test
-  public void repairTable_ForOracle_shouldCreateMetadataTableAndAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.ORACLE,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY",
-        "CREATE USER \"" + METADATA_SCHEMA + "\" IDENTIFIED BY \"Oracle1234!@#$\"",
-        "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS",
-        "CREATE TABLE \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR2(128),"
-            + "\"column_name\" VARCHAR2(128),"
-            + "\"data_type\" VARCHAR2(20) NOT NULL,"
-            + "\"key_type\" VARCHAR2(20),"
-            + "\"clustering_order\" VARCHAR2(10),"
-            + "\"indexed\" NUMBER(1) NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "DELETE FROM \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
-  }
-
-  @Test
-  public void repairTable_ForPosgresql_shouldCreateMetadataTableAndAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.POSTGRESQL,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\"",
-        "CREATE TABLE IF NOT EXISTS \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
-            + "\"indexed\" BOOLEAN NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "DELETE FROM \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  @Test
-  public void repairTable_ForSqlServer_shouldCreateMetadataTableAndAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.SQL_SERVER,
-        "SELECT TOP 1 1 FROM [my_ns].[foo_table]",
-        "CREATE SCHEMA [" + METADATA_SCHEMA + "]",
-        "CREATE TABLE ["
-            + METADATA_SCHEMA
-            + "].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
-            + "[indexed] BIT NOT NULL,"
-            + "[ordinal_position] INTEGER NOT NULL,"
-            + "PRIMARY KEY ([full_table_name], [column_name]))",
-        "DELETE FROM ["
-            + METADATA_SCHEMA
-            + "].[metadata] WHERE [full_table_name] = 'my_ns.foo_table'",
-        "INSERT INTO ["
-            + METADATA_SCHEMA
-            + "].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,0,1)");
-  }
-
-  @Test
-  public void repairTable_ForSqlite_shouldCreateMetadataTableAndAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.SQLITE,
-        "SELECT 1 FROM \"my_ns$foo_table\" LIMIT 1",
-        "CREATE TABLE IF NOT EXISTS \""
-            + METADATA_SCHEMA
-            + "$metadata\"("
-            + "\"full_table_name\" TEXT,"
-            + "\"column_name\" TEXT,"
-            + "\"data_type\" TEXT NOT NULL,"
-            + "\"key_type\" TEXT,"
-            + "\"clustering_order\" TEXT,"
-            + "\"indexed\" BOOLEAN NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "DELETE FROM \""
-            + METADATA_SCHEMA
-            + "$metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + METADATA_SCHEMA
-            + "$metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,FALSE,1)");
-  }
-
-  @Test
-  public void repairTable_ForDb2_shouldCreateMetadataTableAndAddMetadataForTable()
-      throws SQLException, ExecutionException {
-    repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-        RdbEngine.DB2,
-        "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1",
-        "CREATE SCHEMA \"" + METADATA_SCHEMA + "\"",
-        "CREATE TABLE IF NOT EXISTS \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128) NOT NULL,"
-            + "\"column_name\" VARCHAR(128) NOT NULL,"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
-            + "\"indexed\" BOOLEAN NOT NULL,"
-            + "\"ordinal_position\" INTEGER NOT NULL,"
-            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
-        "DELETE FROM \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
-        "INSERT INTO \""
-            + METADATA_SCHEMA
-            + "\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','PARTITION',NULL,false,1)");
-  }
-
-  private void repairTable_ForX_shouldCreateMetadataTableAndAddMetadataForTable(
-      RdbEngine rdbEngine, String... expectedSqlStatements)
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
     TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-
-    List<Statement> mockedStatements = new ArrayList<>();
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      mockedStatements.add(mock(Statement.class));
-    }
-
-    when(connection.createStatement())
-        .thenReturn(
-            mockedStatements.get(0),
-            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c5", Order.ASC)
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addColumn("c8", DataType.DATE)
+            .addColumn("c9", DataType.TIME)
+            .addColumn("c10", DataType.TIMESTAMP)
+            .addColumn("c11", DataType.TIMESTAMPTZ)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c5")
+            .build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
 
     // Act
-    admin.repairTable(namespace, table, metadata, new HashMap<>());
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
 
     // Assert
-    for (int i = 0; i < expectedSqlStatements.length; i++) {
-      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
-    }
-  }
-
-  @Test
-  public void repairTable_WithNonExistingTableToRepairForMysql_shouldThrowIllegalArgumentException()
-      throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.MYSQL, "SELECT 1 FROM `my_ns`.`foo_table` LIMIT 1");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForOracle_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.ORACLE, "SELECT 1 FROM \"my_ns\".\"foo_table\" FETCH FIRST 1 ROWS ONLY");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForPostgresql_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.POSTGRESQL, "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForSqlServer_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.SQL_SERVER, "SELECT TOP 1 1 FROM [my_ns].[foo_table]");
-  }
-
-  @Test
-  public void
-      repairTable_WithNonExistingTableToRepairForSqlite_shouldThrowIllegalArgumentException()
-          throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.SQLITE, "SELECT 1 FROM \"my_ns$foo_table\" LIMIT 1");
-  }
-
-  @Test
-  public void repairTable_WithNonExistingTableToRepairForDb2_shouldThrowIllegalArgumentException()
-      throws SQLException {
-    repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-        RdbEngine.DB2, "SELECT 1 FROM \"my_ns\".\"foo_table\" LIMIT 1");
-  }
-
-  private void repairTable_WithNonExistingTableToRepairForX_shouldThrowIllegalArgumentException(
-      RdbEngine rdbEngine, String expectedCheckTableExistStatement) throws SQLException {
-    // Arrange
-    String namespace = "my_ns";
-    String table = "foo_table";
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
-
-    Statement checkTableExistStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkTableExistStatement);
-    when(dataSource.getConnection()).thenReturn(connection);
-
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
-    SQLException sqlException = mock(SQLException.class);
-    mockUndefinedTableError(rdbEngine, sqlException);
-    when(checkTableExistStatement.execute(any())).thenThrow(sqlException);
-
-    // Act
-    assertThatThrownBy(() -> admin.repairTable(namespace, table, metadata, new HashMap<>()))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    // Assert
-    verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
   }
 
   @Test

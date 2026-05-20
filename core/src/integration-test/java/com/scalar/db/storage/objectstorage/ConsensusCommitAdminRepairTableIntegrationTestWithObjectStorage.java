@@ -3,7 +3,6 @@ package com.scalar.db.storage.objectstorage;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitAdminRepairTableIntegrationTestWithObjectStorage
     extends ConsensusCommitAdminRepairTableIntegrationTestBase {
@@ -17,13 +16,4 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithObjectStorage
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new ObjectStorageAdminTestUtils(getProperties(testName));
   }
-
-  @Override
-  @Disabled("Object Storage recreates missing coordinator tables")
-  public void
-      repairTableAndCoordinatorTable_CoordinatorTablesDoNotExist_ShouldThrowIllegalArgumentException() {}
-
-  @Override
-  @Disabled("Object Storage recreates missing coordinator tables")
-  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {}
 }
