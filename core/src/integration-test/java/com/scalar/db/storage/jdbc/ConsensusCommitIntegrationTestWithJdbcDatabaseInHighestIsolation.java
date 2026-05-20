@@ -20,7 +20,7 @@ public class ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
     // Set the isolation level to the highest level
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    if (JdbcEnv.isYugabyte()) {
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       // Pre-apply the coordinator suffix the base class will add.
       Properties utilsProps = new Properties();
       utilsProps.putAll(properties);

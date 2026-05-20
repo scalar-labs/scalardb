@@ -14,7 +14,7 @@ public class TwoPhaseConsensusCommitIntegrationTestWithJdbcDatabase
   @Override
   protected Properties getProps1(String testName) {
     Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
-    if (JdbcEnv.isYugabyte()) {
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       // Pre-apply the coordinator suffix the base class will add.
       Properties utilsProps = new Properties();
       utilsProps.putAll(properties);

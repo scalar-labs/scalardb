@@ -16,7 +16,7 @@ public class JdbcDatabaseIntegrationTest extends DistributedStorageIntegrationTe
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    if (JdbcEnv.isYugabyte()) {
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     }
     return properties;

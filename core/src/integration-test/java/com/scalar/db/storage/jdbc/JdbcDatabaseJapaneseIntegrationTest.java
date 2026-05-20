@@ -13,7 +13,7 @@ public class JdbcDatabaseJapaneseIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
-    if (JdbcEnv.isYugabyte()) {
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     }
     return properties;

@@ -28,7 +28,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     // Set the isolation level for consistency reads for virtual tables
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    if (JdbcEnv.isYugabyte()) {
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       // Pre-apply the coordinator suffix the base class will add.
       Properties utilsProps = new Properties();
       utilsProps.putAll(properties);
