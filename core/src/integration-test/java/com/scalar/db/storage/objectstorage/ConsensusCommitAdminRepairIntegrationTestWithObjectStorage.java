@@ -9,7 +9,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @EnabledIfSystemProperty(
     named = "scalardb.object_storage.test_group",
-    matches = "consensus_commit_admin")
+    matches = "consensus_commit_admin|all")
 public class ConsensusCommitAdminRepairIntegrationTestWithObjectStorage
     extends ConsensusCommitAdminRepairIntegrationTestBase {
 

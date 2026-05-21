@@ -14,7 +14,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @EnabledIfSystemProperty(
     named = "scalardb.object_storage.test_group",
-    matches = "consensus_commit_specific")
+    matches = "consensus_commit_specific|all")
 public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
     extends ConsensusCommitSpecificIntegrationTestBase {
 

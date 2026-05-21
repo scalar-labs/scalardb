@@ -8,7 +8,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @EnabledIfSystemProperty(
     named = "scalardb.object_storage.test_group",
-    matches = "single_crud_operation_transaction")
+    matches = "single_crud_operation_transaction|all")
 public class SingleCrudOperationTransactionAdminIntegrationTestWithObjectStorage
     extends SingleCrudOperationTransactionAdminIntegrationTestBase {
 

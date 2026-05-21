@@ -2,42 +2,42 @@
   {
     "label": "consensus_commit_default",
     "test_group": "consensus_commit",
-    "tests_filter": "--tests \"**.ConsensusCommitIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage\"",
+    "tests_filter": "--tests \"**.ConsensusCommit*WithObjectStorage\"",
     "bucket_suffix": "consensus-commit",
     "group_commit_enabled": false
   },
   {
     "label": "consensus_commit_with_group_commit",
     "test_group": "consensus_commit",
-    "tests_filter": "--tests \"**.ConsensusCommitIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitNullMetadataIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithObjectStorage\"",
+    "tests_filter": "--tests \"**.ConsensusCommit*WithObjectStorage\"",
     "bucket_suffix": "consensus-commit-gc",
     "group_commit_enabled": true
   },
   {
     "label": "consensus_commit_admin",
     "test_group": "consensus_commit_admin",
-    "tests_filter": "--tests \"**.ConsensusCommitAdminIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage\"",
+    "tests_filter": "--tests \"**.ConsensusCommitAdmin*WithObjectStorage\"",
     "bucket_suffix": "consensus-commit-admin",
     "group_commit_enabled": false
   },
   {
     "label": "consensus_commit_admin_with_group_commit",
     "test_group": "consensus_commit_admin",
-    "tests_filter": "--tests \"**.ConsensusCommitAdminIntegrationTestWithObjectStorage\" --tests \"**.ConsensusCommitAdminRepairIntegrationTestWithObjectStorage\"",
+    "tests_filter": "--tests \"**.ConsensusCommitAdmin*WithObjectStorage\"",
     "bucket_suffix": "consensus-commit-admin-gc",
     "group_commit_enabled": true
   },
   {
     "label": "consensus_commit_specific",
     "test_group": "consensus_commit_specific",
-    "tests_filter": "--tests \"**.ConsensusCommitSpecificIntegrationTestWithObjectStorage\"",
+    "tests_filter": "--tests \"**.ConsensusCommitSpecific*WithObjectStorage\"",
     "bucket_suffix": "consensus-commit-specific",
     "group_commit_enabled": false
   },
   {
     "label": "consensus_commit_specific_with_group_commit",
     "test_group": "consensus_commit_specific",
-    "tests_filter": "--tests \"**.ConsensusCommitSpecificIntegrationTestWithObjectStorage\"",
+    "tests_filter": "--tests \"**.ConsensusCommitSpecific*WithObjectStorage\"",
     "bucket_suffix": "consensus-commit-specific-gc",
     "group_commit_enabled": true
   },

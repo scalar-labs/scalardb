@@ -13,7 +13,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @EnabledIfSystemProperty(
     named = "scalardb.object_storage.test_group",
-    matches = "storage_scan_multiple")
+    matches = "storage_scan_multiple|all")
 public class ObjectStorageMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 

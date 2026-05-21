@@ -11,7 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-@EnabledIfSystemProperty(named = "scalardb.object_storage.test_group", matches = "consensus_commit")
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "consensus_commit|all")
 public class ConsensusCommitIntegrationTestWithObjectStorage
     extends ConsensusCommitIntegrationTestBase {
 

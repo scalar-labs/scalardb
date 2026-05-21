@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-@EnabledIfSystemProperty(named = "scalardb.object_storage.test_group", matches = "consensus_commit")
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "consensus_commit|all")
 public class ConsensusCommitCrossPartitionScanIntegrationTestWithObjectStorage
     extends ConsensusCommitCrossPartitionScanIntegrationTestBase {
 

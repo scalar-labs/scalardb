@@ -13,7 +13,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 @EnabledIfSystemProperty(
     named = "scalardb.object_storage.test_group",
-    matches = "storage_scan_single")
+    matches = "storage_scan_single|all")
 public class ObjectStorageSinglePartitionKeyIntegrationTest
     extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
 

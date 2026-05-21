@@ -4,7 +4,9 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataInte
 import java.util.Properties;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-@EnabledIfSystemProperty(named = "scalardb.object_storage.test_group", matches = "consensus_commit")
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "consensus_commit|all")
 public class ConsensusCommitNullMetadataIntegrationTestWithObjectStorage
     extends ConsensusCommitNullMetadataIntegrationTestBase {
 

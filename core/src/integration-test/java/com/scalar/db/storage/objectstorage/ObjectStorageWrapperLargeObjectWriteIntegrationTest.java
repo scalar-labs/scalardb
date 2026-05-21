@@ -18,7 +18,9 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@EnabledIfSystemProperty(named = "scalardb.object_storage.test_group", matches = "storage_wrapper")
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "storage_wrapper|all")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ObjectStorageWrapperLargeObjectWriteIntegrationTest {
   private static final Logger logger =
