@@ -15,7 +15,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithCassandra
 
   @Override
   protected Properties getProps(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

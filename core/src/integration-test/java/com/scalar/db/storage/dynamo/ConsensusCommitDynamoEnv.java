@@ -9,6 +9,10 @@ public final class ConsensusCommitDynamoEnv {
 
   public static Properties getProperties(String testName) {
     Properties properties = DynamoEnv.getProperties(testName);
+
+    // Add testName as a coordinator schema suffix
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }
 
