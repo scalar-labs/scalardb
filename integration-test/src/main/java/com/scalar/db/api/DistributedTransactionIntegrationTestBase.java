@@ -43,6 +43,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -3148,6 +3149,54 @@ public abstract class DistributedTransactionIntegrationTestBase {
       Optional<Result> deleteResult = get(prepareGet(0, 1));
       assertThat(deleteResult).isEmpty();
     }
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttribute_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    DatabaseOperationAttributes.setCrossPartitionScanEnabled(attributes, false);
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+
+    // Act Assert: the transaction-scoped attribute is propagated to the scan and overrides the
+    // config default, so cross-partition scan must be rejected.
+    DistributedTransaction transaction = manager.begin(attributes);
+    try {
+      assertThatThrownBy(() -> transaction.scan(scanAll))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Cross-partition scan is not enabled");
+    } finally {
+      transaction.rollback();
+    }
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttributeButEnabledByScanAttribute_ShouldScanProperly()
+          throws TransactionException {
+    // Arrange
+    populateRecords();
+    Map<String, String> attributes = new HashMap<>();
+    DatabaseOperationAttributes.setCrossPartitionScanEnabled(attributes, false);
+    // The scan-level attribute is authoritative over the transaction-scoped attribute: fast-path
+    // in the propagating decorator keeps the scan's value of "true".
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .all()
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .build();
+
+    // Act
+    DistributedTransaction transaction = manager.begin(attributes);
+    List<Result> results = transaction.scan(scanAll);
+    transaction.commit();
+
+    // Assert
+    assertThat(results).hasSize(NUM_ACCOUNTS * NUM_TYPES);
   }
 
   protected Optional<Result> get(Get get) throws TransactionException {

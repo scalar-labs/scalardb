@@ -209,7 +209,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public DistributedTransaction begin(String txId, Map<String, String> attributes) {
     return begin(
         txId,
-        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+        ConsensusCommitOperationAttributes.getTransactionIsolation(attributes).orElse(isolation),
         false,
         false);
   }
@@ -218,7 +218,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes) {
     return begin(
         txId,
-        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+        ConsensusCommitOperationAttributes.getTransactionIsolation(attributes).orElse(isolation),
         true,
         false);
   }
@@ -300,7 +300,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     String txId = UUID.randomUUID().toString();
     return begin(
         txId,
-        ConsensusCommitOperationAttributes.getIsolation(attributes).orElse(isolation),
+        ConsensusCommitOperationAttributes.getTransactionIsolation(attributes).orElse(isolation),
         readOnly,
         true);
   }

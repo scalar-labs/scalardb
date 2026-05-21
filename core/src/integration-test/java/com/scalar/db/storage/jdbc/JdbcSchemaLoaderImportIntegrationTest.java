@@ -38,7 +38,21 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   protected void createImportableTable(String namespace, String table) throws Exception {
     String sql;
 
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " VARCHAR(8),"
+              + rdbEngine.enclose("col1")
+              + " VARCHAR(8),"
+              + rdbEngine.enclose("col2")
+              + " TIMESTAMP WITH TIME ZONE,"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + "))";
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       sql =
           "CREATE TABLE "
               + rdbEngine.encloseFullTableName(namespace, table)
@@ -103,7 +117,9 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   protected Map<String, DataType> getImportableTableOverrideColumnsType() {
     // col1 type override confirms overriding with the default data type mapping does not fail
     // col2 really performs a type override
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIME);
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMPTZ);
     } else if (JdbcTestUtils.isOracle(rdbEngine)) {
       return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMP);
@@ -123,7 +139,11 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     metadata.addColumn("pk", DataType.TEXT);
     metadata.addColumn("col1", DataType.TEXT);
 
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return metadata
+          .addColumn("col2", hasTypeOverride ? DataType.TIME : DataType.TIMESTAMPTZ)
+          .build();
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       return metadata
           .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMPTZ : DataType.TIMESTAMP)
           .build();
@@ -146,7 +166,9 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @Override
   protected void createNonImportableTable(String namespace, String table) throws Exception {
     String nonImportableDataType;
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      nonImportableDataType = "NUMERIC";
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       nonImportableDataType = "YEAR";
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       nonImportableDataType = "INTERVAL";
@@ -159,12 +181,15 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     } else {
       throw new AssertionError();
     }
+    String pkType = JdbcTestUtils.isSpanner(rdbEngine) ? "VARCHAR(8) NOT NULL" : "CHAR(8) NOT NULL";
     testUtils.execute(
         "CREATE TABLE "
             + rdbEngine.encloseFullTableName(namespace, table)
             + "("
             + rdbEngine.enclose("pk")
-            + " CHAR(8) NOT NULL,"
+            + " "
+            + pkType
+            + ","
             + rdbEngine.enclose("col")
             + " "
             + nonImportableDataType

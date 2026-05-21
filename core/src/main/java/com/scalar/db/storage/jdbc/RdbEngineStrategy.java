@@ -12,6 +12,7 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import com.zaxxer.hikari.HikariConfig;
 import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
@@ -147,6 +148,9 @@ public interface RdbEngineStrategy {
    * Returns {@code true} if this RDB engine requires an explicit index drop before dropping a
    * column that has a secondary index. Some engines (e.g. SQL Server, SQLite) do not automatically
    * drop the index when the column is dropped.
+   *
+   * @return {@code true} if an explicit index drop is required before dropping a column that has a
+   *     secondary index, {@code false} otherwise
    */
   default boolean requiresExplicitDropIndexBeforeDropColumn() {
     return false;
@@ -380,5 +384,22 @@ public interface RdbEngineStrategy {
    */
   default int getHighestIsolationLevel() {
     return Connection.TRANSACTION_SERIALIZABLE;
+  }
+
+  /**
+   * Configure the credentials
+   *
+   * @param config the JdbcConfig object containing the connection credentials, such as username and
+   *     password
+   * @param connectionConfig the HikariConfig object where the connection credentials will be set
+   */
+  default void setConnectionCredentials(JdbcConfig config, HikariConfig connectionConfig) {
+    config.getUsername().ifPresent(connectionConfig::setUsername);
+    config.getPassword().ifPresent(connectionConfig::setPassword);
+  }
+
+  default String[] dropTableInternalSqlsBeforeDropTable(
+      String schema, String table, TableMetadata metadata) {
+    return new String[] {};
   }
 }

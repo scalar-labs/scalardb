@@ -2111,6 +2111,73 @@ public class OperationCheckerTest {
     assertThatCode(() -> operationChecker.check(scanAll)).doesNotThrowAnyException();
   }
 
+  @Test
+  public void
+      whenCheckingScanAllOperationWithCrossPartitionScanEnabledButAttributeDisabled_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .limit(10)
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "false")
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithOrderingsAndCrossPartitionScanOrderingEnabledButAttributeDisabled_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .ordering(Ordering.desc(COL1))
+            .limit(10)
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ORDERING_ENABLED, "false")
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanOrderingEnabled()).thenReturn(true);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingScanAllOperationWithConjunctionsAndCrossPartitionScanFilteringEnabledButAttributeDisabled_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(COL1).isEqualToInt(10))
+            .projections(Arrays.asList(COL1, COL2, COL3))
+            .limit(10)
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_FILTERING_ENABLED, "false")
+            .build();
+    when(databaseConfig.isCrossPartitionScanEnabled()).thenReturn(true);
+    when(databaseConfig.isCrossPartitionScanFilteringEnabled()).thenReturn(true);
+    operationChecker = new OperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(scanAll))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   @ParameterizedTest
   @EnumSource(StorageInfo.MutationAtomicityUnit.class)
   public void check_MutationsGiven_ForAtomicityUnit_ShouldBehaveCorrectly(

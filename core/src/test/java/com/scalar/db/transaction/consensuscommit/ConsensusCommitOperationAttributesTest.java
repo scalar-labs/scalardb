@@ -194,70 +194,71 @@ public class ConsensusCommitOperationAttributesTest {
   }
 
   @Test
-  public void setIsolation_MapGiven_ShouldAddIsolationToAttributes() {
+  public void setTransactionIsolation_MapGiven_ShouldAddIsolationToAttributes() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
 
     // Act
-    ConsensusCommitOperationAttributes.setIsolation(attributes, Isolation.SERIALIZABLE);
+    ConsensusCommitOperationAttributes.setTransactionIsolation(attributes, Isolation.SERIALIZABLE);
 
     // Assert
     assertThat(attributes)
-        .containsEntry(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE");
+        .containsEntry(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE");
   }
 
   @Test
-  public void clearIsolation_MapGiven_ShouldRemoveIsolationFromAttributes() {
+  public void clearTransactionIsolation_MapGiven_ShouldRemoveIsolationFromAttributes() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "SNAPSHOT");
+    attributes.put(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SNAPSHOT");
 
     // Act
-    ConsensusCommitOperationAttributes.clearIsolation(attributes);
+    ConsensusCommitOperationAttributes.clearTransactionIsolation(attributes);
 
     // Assert
-    assertThat(attributes).doesNotContainKey(ConsensusCommitOperationAttributes.ISOLATION);
+    assertThat(attributes)
+        .doesNotContainKey(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION);
   }
 
   @Test
-  public void getIsolation_IsolationSetInAttributes_ShouldReturnIsolation() {
+  public void getTransactionIsolation_IsolationSetInAttributes_ShouldReturnIsolation() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "SERIALIZABLE");
+    attributes.put(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "SERIALIZABLE");
 
     // Act Assert
-    assertThat(ConsensusCommitOperationAttributes.getIsolation(attributes))
+    assertThat(ConsensusCommitOperationAttributes.getTransactionIsolation(attributes))
         .hasValue(Isolation.SERIALIZABLE);
   }
 
   @Test
-  public void getIsolation_IsolationSetInLowerCaseInAttributes_ShouldReturnIsolation() {
+  public void getTransactionIsolation_IsolationSetInLowerCaseInAttributes_ShouldReturnIsolation() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "snapshot");
+    attributes.put(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "snapshot");
 
     // Act Assert
-    assertThat(ConsensusCommitOperationAttributes.getIsolation(attributes))
+    assertThat(ConsensusCommitOperationAttributes.getTransactionIsolation(attributes))
         .hasValue(Isolation.SNAPSHOT);
   }
 
   @Test
-  public void getIsolation_IsolationNotSetInAttributes_ShouldReturnEmpty() {
+  public void getTransactionIsolation_IsolationNotSetInAttributes_ShouldReturnEmpty() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
 
     // Act Assert
-    assertThat(ConsensusCommitOperationAttributes.getIsolation(attributes)).isEmpty();
+    assertThat(ConsensusCommitOperationAttributes.getTransactionIsolation(attributes)).isEmpty();
   }
 
   @Test
-  public void getIsolation_InvalidIsolationSetInAttributes_ShouldThrowException() {
+  public void getTransactionIsolation_InvalidIsolationSetInAttributes_ShouldThrowException() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    attributes.put(ConsensusCommitOperationAttributes.ISOLATION, "invalid");
+    attributes.put(ConsensusCommitOperationAttributes.TRANSACTION_ISOLATION, "invalid");
 
     // Act Assert
-    assertThatThrownBy(() -> ConsensusCommitOperationAttributes.getIsolation(attributes))
+    assertThatThrownBy(() -> ConsensusCommitOperationAttributes.getTransactionIsolation(attributes))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

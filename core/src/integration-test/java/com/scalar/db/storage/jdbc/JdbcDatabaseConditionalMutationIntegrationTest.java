@@ -7,7 +7,13 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.util.TestUtils;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.condition.DisabledIf;
 
+/**
+ * For the Spanner emulator test, see {@link
+ * JdbcDatabaseConditionalMutationIntegrationTestWithSpanner}
+ */
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
 public class JdbcDatabaseConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
 

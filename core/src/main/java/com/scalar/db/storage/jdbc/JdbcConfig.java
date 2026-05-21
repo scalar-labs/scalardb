@@ -74,6 +74,8 @@ public class JdbcConfig {
       PREFIX + "oracle.time_column.default_date_component";
   public static final String DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "db2.time_column.default_date_component";
+  public static final String SPANNER_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
+      PREFIX + "spanner.time_column.default_date_component";
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
 
@@ -118,6 +120,11 @@ public class JdbcConfig {
   // is 1970-01-01.
   public static final String DEFAULT_DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
 
+  // In Spanner PostgreSQL, there is no native TIME type, so TIME values are stored as TIMESTAMPTZ
+  // with a fixed date component for ease of comparison and sorting. The default date component is
+  // 1970-01-01.
+  public static final String DEFAULT_SPANNER_TIME_COLUMN_DEFAULT_DATE_COMPONENT = "1970-01-01";
+
   private final DatabaseConfig databaseConfig;
 
   private final String jdbcUrl;
@@ -155,6 +162,7 @@ public class JdbcConfig {
 
   private final LocalDate oracleTimeColumnDefaultDateComponent;
   private final LocalDate db2TimeColumnDefaultDateComponent;
+  private final LocalDate spannerTimeColumnDefaultDateComponent;
 
   public JdbcConfig(DatabaseConfig databaseConfig) {
     this.databaseConfig = databaseConfig;
@@ -307,6 +315,15 @@ public class JdbcConfig {
     assert db2TimeColumnDefaultDateComponentString != null;
     db2TimeColumnDefaultDateComponent =
         LocalDate.parse(db2TimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
+    String spannerTimeColumnDefaultDateComponentString =
+        getString(
+            databaseConfig.getProperties(),
+            SPANNER_TIME_COLUMN_DEFAULT_DATE_COMPONENT,
+            DEFAULT_SPANNER_TIME_COLUMN_DEFAULT_DATE_COMPONENT);
+    assert spannerTimeColumnDefaultDateComponentString != null;
+    spannerTimeColumnDefaultDateComponent =
+        LocalDate.parse(
+            spannerTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
@@ -438,5 +455,9 @@ public class JdbcConfig {
 
   public LocalDate getDb2TimeColumnDefaultDateComponent() {
     return db2TimeColumnDefaultDateComponent;
+  }
+
+  public LocalDate getSpannerTimeColumnDefaultDateComponent() {
+    return spannerTimeColumnDefaultDateComponent;
   }
 }

@@ -10,7 +10,13 @@ import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.condition.DisabledIf;
 
+/**
+ * For the Spanner emulator test, see {@link
+ * JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner}
+ */
+@DisabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
@@ -26,7 +32,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected int getThreadNum() {
-    if (JdbcTestUtils.isOracle(rdbEngine)) {
+    if (JdbcTestUtils.isOracle(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return 1;
     }
     return super.getThreadNum();
@@ -34,7 +40,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
 
   @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+    if (JdbcTestUtils.isYugabyte(rdbEngine) || JdbcEnv.isSpannerEmulator()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -95,6 +101,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   protected List<DataType> getDataTypes() {
     // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
     // BLOB type cannot be used as a clustering key in Db2
+    // FLOAT type cannot be used as clustering key column in Spanner
     return JdbcTestUtils.filterDataTypes(
         super.getDataTypes(),
         rdbEngine,
@@ -102,6 +109,8 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
             RdbEngineOracle.class,
             ImmutableList.of(DataType.TIMESTAMPTZ, DataType.BLOB),
             RdbEngineDb2.class,
-            ImmutableList.of(DataType.BLOB)));
+            ImmutableList.of(DataType.BLOB),
+            RdbEngineSpanner.class,
+            ImmutableList.of(DataType.FLOAT)));
   }
 }

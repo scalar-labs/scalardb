@@ -144,8 +144,8 @@ public class OperationChecker {
   }
 
   private void check(ScanAll scanAll) throws ExecutionException {
-    if (!config.isCrossPartitionScanEnabled()
-        && !DatabaseOperationAttributes.isCrossPartitionScanEnabled(scanAll)) {
+    if (!DatabaseOperationAttributes.isCrossPartitionScanEnabled(
+        scanAll, config.isCrossPartitionScanEnabled())) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN.buildMessage(scanAll));
     }
@@ -159,16 +159,16 @@ public class OperationChecker {
           CoreError.OPERATION_CHECK_ERROR_LIMIT.buildMessage(scanAll));
     }
 
-    if (!config.isCrossPartitionScanOrderingEnabled()
-        && !DatabaseOperationAttributes.isCrossPartitionScanOrderingEnabled(scanAll)
+    if (!DatabaseOperationAttributes.isCrossPartitionScanOrderingEnabled(
+            scanAll, config.isCrossPartitionScanOrderingEnabled())
         && !scanAll.getOrderings().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_ORDERING.buildMessage(scanAll));
     }
     checkOrderingsForScanAll(scanAll, metadata);
 
-    if (!config.isCrossPartitionScanFilteringEnabled()
-        && !DatabaseOperationAttributes.isCrossPartitionScanFilteringEnabled(scanAll)
+    if (!DatabaseOperationAttributes.isCrossPartitionScanFilteringEnabled(
+            scanAll, config.isCrossPartitionScanFilteringEnabled())
         && !scanAll.getConjunctions().isEmpty()) {
       throw new IllegalArgumentException(
           CoreError.OPERATION_CHECK_ERROR_CROSS_PARTITION_SCAN_FILTERING.buildMessage(scanAll));

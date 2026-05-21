@@ -345,6 +345,10 @@ public class ResultInterpreterTest {
     Timestamp timestamp =
         Timestamp.valueOf(LocalDateTime.of(LocalDate.of(2024, 1, 1), subMicrosecondTime));
     when(resultSet.getTimestamp(ANY_COLUMN_NAME_1)).thenReturn(timestamp);
+    // SPANNER uses getObject(col, OffsetDateTime.class) since TIME is stored as TIMESTAMPTZ
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, OffsetDateTime.class))
+        .thenReturn(
+            OffsetDateTime.of(LocalDate.of(1970, 1, 1), subMicrosecondTime, ZoneOffset.UTC));
 
     ResultInterpreter interpreter =
         new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
@@ -380,8 +384,12 @@ public class ResultInterpreterTest {
     when(resultSet.wasNull()).thenReturn(false);
 
     LocalDateTime subMillisecondTimestamp = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    // Default engines use getObject(col, LocalDateTime.class)
     when(resultSet.getObject(ANY_COLUMN_NAME_1, LocalDateTime.class))
         .thenReturn(subMillisecondTimestamp);
+    // SPANNER uses getObject(col, OffsetDateTime.class) since TIMESTAMP is stored as TIMESTAMPTZ
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, OffsetDateTime.class))
+        .thenReturn(OffsetDateTime.of(subMillisecondTimestamp, ZoneOffset.UTC));
 
     ResultInterpreter interpreter =
         new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
