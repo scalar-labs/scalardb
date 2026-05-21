@@ -36,16 +36,20 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
     }
 
     // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
-    // the coordinator namespace to cassandra
+    // the coordinator namespace (with the test-name suffix) to cassandra
+    String coordinatorNamespace = Coordinator.NAMESPACE + "_" + testName;
     props.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
-        namespace1 + ":cassandra," + namespace2 + ":jdbc," + Coordinator.NAMESPACE + ":cassandra");
+        namespace1 + ":cassandra," + namespace2 + ":jdbc," + coordinatorNamespace + ":cassandra");
 
     // The default storage is cassandra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Metadata cache expiration time
     props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
+    // Add testName as a coordinator namespace suffix
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(props, testName);
 
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(props);
   }
