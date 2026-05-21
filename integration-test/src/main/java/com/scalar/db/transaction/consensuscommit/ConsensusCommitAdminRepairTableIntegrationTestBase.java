@@ -19,10 +19,6 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
   protected final Properties getProperties(String testName) {
     Properties properties = new Properties();
     properties.putAll(getProps(testName));
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     return properties;
   }
 
