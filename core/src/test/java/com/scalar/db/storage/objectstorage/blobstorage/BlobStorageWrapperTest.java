@@ -31,9 +31,11 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 public class BlobStorageWrapperTest {
   private static final String ANY_OBJECT_KEY = "any_object_key";
   private static final String ANY_PREFIX = "any_prefix/";
@@ -45,9 +47,7 @@ public class BlobStorageWrapperTest {
   private BlobStorageWrapper wrapper;
 
   @BeforeEach
-  public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
-
+  public void setUp() {
     when(config.getRequestTimeoutSecs()).thenReturn(Optional.empty());
     when(config.getParallelUploadBlockSizeBytes()).thenReturn(Optional.empty());
     when(config.getParallelUploadMaxConcurrency()).thenReturn(Optional.empty());

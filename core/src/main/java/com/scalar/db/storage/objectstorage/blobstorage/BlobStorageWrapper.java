@@ -32,24 +32,13 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   private final ParallelTransferOptions parallelTransferOptions;
 
   public BlobStorageWrapper(BlobStorageConfig config) {
-    this.client =
+    this(
+        config,
         new BlobServiceClientBuilder()
             .endpoint(config.getEndpoint())
             .credential(new StorageSharedKeyCredential(config.getUsername(), config.getPassword()))
             .buildClient()
-            .getBlobContainerClient(config.getBucket());
-    this.requestTimeoutSecs = config.getRequestTimeoutSecs().map(Duration::ofSeconds).orElse(null);
-    this.parallelTransferOptions = new ParallelTransferOptions();
-    if (config.getParallelUploadBlockSizeBytes().isPresent()) {
-      parallelTransferOptions.setBlockSizeLong(config.getParallelUploadBlockSizeBytes().get());
-    }
-    if (config.getParallelUploadMaxConcurrency().isPresent()) {
-      parallelTransferOptions.setMaxConcurrency(config.getParallelUploadMaxConcurrency().get());
-    }
-    if (config.getParallelUploadThresholdSizeBytes().isPresent()) {
-      parallelTransferOptions.setMaxSingleUploadSizeLong(
-          config.getParallelUploadThresholdSizeBytes().get());
-    }
+            .getBlobContainerClient(config.getBucket()));
   }
 
   @VisibleForTesting
