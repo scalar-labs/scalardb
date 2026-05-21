@@ -8,6 +8,10 @@ public final class ConsensusCommitCassandraEnv {
 
   public static Properties getProperties(String testName) {
     Properties properties = CassandraEnv.getProperties(testName);
+
+    // Add testName as a coordinator schema suffix
+    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
+
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(properties);
   }
 }
