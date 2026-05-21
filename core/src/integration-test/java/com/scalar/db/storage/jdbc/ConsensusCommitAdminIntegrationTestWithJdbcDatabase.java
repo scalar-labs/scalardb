@@ -41,7 +41,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
 
   @Override
   protected Properties getProps(String testName) {
-    Properties properties = JdbcEnv.getProperties(testName);
+    Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
     rdbEngine = RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
     return properties;
   }
