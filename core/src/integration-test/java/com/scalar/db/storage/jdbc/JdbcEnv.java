@@ -81,7 +81,8 @@ public final class JdbcEnv {
   }
 
   public static boolean isSpanner() {
-    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:cloudspanner:");
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:cloudspanner:")
+        || System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:spanner:");
   }
 
   public static boolean isYugabyte() {

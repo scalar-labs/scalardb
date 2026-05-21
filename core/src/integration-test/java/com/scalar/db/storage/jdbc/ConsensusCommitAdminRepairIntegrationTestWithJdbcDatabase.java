@@ -8,7 +8,7 @@ public class ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
 
   @Override
   protected Properties getProps(String testName) {
-    return JdbcEnv.getProperties(testName);
+    return ConsensusCommitJdbcEnv.getProperties(testName);
   }
 
   @Override
