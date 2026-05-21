@@ -2,6 +2,7 @@ package com.scalar.db.storage.multistorage;
 
 import com.scalar.db.common.ConsensusCommitTestUtils;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestUtils;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Properties;
@@ -36,14 +37,15 @@ public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
     }
 
     // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
-    // the coordinator namespace to cassandra
+    // the coordinator namespace (with the test-name suffix) to cassandra
+    String coordinatorNamespace = Coordinator.NAMESPACE + "_" + testName;
     props.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
         getNamespace1()
             + ":cassandra,"
             + getNamespace2()
             + ":jdbc,"
-            + Coordinator.NAMESPACE
+            + coordinatorNamespace
             + ":cassandra");
 
     // The default storage is cassandra
@@ -51,6 +53,9 @@ public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
 
     // Metadata cache expiration time
     props.setProperty(DatabaseConfig.METADATA_CACHE_EXPIRATION_TIME_SECS, "1");
+
+    // Add testName as a coordinator namespace suffix
+    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(props, testName);
 
     return ConsensusCommitTestUtils.loadConsensusCommitProperties(props);
   }

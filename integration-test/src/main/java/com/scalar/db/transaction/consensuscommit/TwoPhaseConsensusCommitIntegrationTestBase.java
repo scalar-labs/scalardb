@@ -15,10 +15,6 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   protected final Properties getProperties1(String testName) {
     Properties properties = new Properties();
     properties.putAll(getProps1(testName));
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     return properties;
   }
 
@@ -26,10 +22,6 @@ public abstract class TwoPhaseConsensusCommitIntegrationTestBase
   protected final Properties getProperties2(String testName) {
     Properties properties = new Properties();
     properties.putAll(getProps2(testName));
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitIntegrationTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     return properties;
   }
 
