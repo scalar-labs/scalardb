@@ -8,6 +8,7 @@ import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -15,9 +16,42 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
     extends ConsensusCommitSpecificIntegrationTestBase {
 
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
+
   @Override
   protected Properties getProperties(String testName) {
-    return ConsensusCommitJdbcEnv.getProperties(testName);
+    Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
+    return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
+  }
+
+  @Override
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(namespace, table);
+      return;
+    }
+    super.truncateTable(namespace, table);
+  }
+
+  @Override
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
+      return;
+    }
+    super.truncateCoordinatorTables();
   }
 
   @Override
