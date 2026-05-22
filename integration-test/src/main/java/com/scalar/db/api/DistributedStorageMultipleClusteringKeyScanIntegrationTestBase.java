@@ -257,7 +257,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     executeDdls(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
-  private void truncateTable(
+  protected void truncateTable(
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
       DataType secondClusteringKeyType,
