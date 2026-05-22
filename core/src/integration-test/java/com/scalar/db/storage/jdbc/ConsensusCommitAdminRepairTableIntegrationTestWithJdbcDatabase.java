@@ -13,12 +13,6 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithJdbcDatabase
   }
 
   @Override
-  protected void initialize(String testName) throws Exception {
-    super.initialize(testName);
-    adminTestUtils = new JdbcAdminTestUtils(getProperties(testName));
-  }
-
-  @Override
   protected AdminTestUtils getAdminTestUtils(String testName) {
     return new JdbcAdminTestUtils(getProperties(testName));
   }
