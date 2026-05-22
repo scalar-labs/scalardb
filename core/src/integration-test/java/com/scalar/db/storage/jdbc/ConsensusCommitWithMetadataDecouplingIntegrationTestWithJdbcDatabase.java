@@ -1,19 +1,26 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitWithMetadataDecouplingIntegrationTestBase;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterAll;
 
 public class ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitWithMetadataDecouplingIntegrationTestBase {
+
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProps(String testName) {
     Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
 
     // Set the isolation level for consistency reads for virtual tables
-    RdbEngineStrategy rdbEngine =
-        RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(config);
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(
@@ -21,5 +28,34 @@ public class ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabas
             .name());
 
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
+  }
+
+  @Override
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
+    // With metadata-decoupling, tables are views joining <table>_data and <table>_tx_metadata,
+    // so DELETE must target the underlying source tables directly.
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsFromVirtualTableWithSql(namespace, table);
+      return;
+    }
+    super.truncateTable(namespace, table);
+  }
+
+  @Override
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
+      return;
+    }
+    super.truncateCoordinatorTables();
   }
 }

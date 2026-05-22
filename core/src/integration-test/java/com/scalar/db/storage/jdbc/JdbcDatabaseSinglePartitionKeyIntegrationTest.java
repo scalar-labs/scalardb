@@ -4,23 +4,47 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageSinglePartitionKeyIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.AfterAll;
 
 public class JdbcDatabaseSinglePartitionKeyIntegrationTest
     extends DistributedStorageSinglePartitionKeyIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
+  }
+
+  @Override
+  protected void truncateTable(DataType partitionKeyType) throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespace(), partitionKeyType.toString());
+      return;
+    }
+    super.truncateTable(partitionKeyType);
   }
 
   @Override
