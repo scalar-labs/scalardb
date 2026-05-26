@@ -30,7 +30,7 @@ public final class RdbEngineFactory {
       return new RdbEngineMariaDB();
     } else if (jdbcUrl.startsWith("jdbc:db2:")) {
       return new RdbEngineDb2(config);
-    } else if (jdbcUrl.startsWith("jdbc:cloudspanner:")) {
+    } else if (jdbcUrl.startsWith("jdbc:cloudspanner:") || jdbcUrl.startsWith("jdbc:spanner:")) {
       return new RdbEngineSpanner(config);
     } else {
       throw new IllegalArgumentException(
