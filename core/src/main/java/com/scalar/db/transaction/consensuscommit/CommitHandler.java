@@ -355,8 +355,9 @@ public class CommitHandler {
   }
 
   /**
-   * Writes the COMMITTED state with the {@code tx_write_set} populated from the given context's
-   * snapshot.
+   * Writes the COMMITTED state. When coordinator write-set logging is enabled, the {@code
+   * tx_write_set} column is populated from the given context's snapshot; otherwise the column is
+   * omitted.
    *
    * @param context the transaction context
    * @throws CommitConflictException if another commit attempt has already written a conflicting
@@ -427,8 +428,9 @@ public class CommitHandler {
   }
 
   /**
-   * Writes the ABORTED state with the {@code tx_write_set} populated from the given context's
-   * snapshot.
+   * Writes the ABORTED state. When coordinator write-set logging is enabled, the {@code
+   * tx_write_set} column is populated from the given context's snapshot; otherwise the column is
+   * omitted.
    *
    * @param context the transaction context
    * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
