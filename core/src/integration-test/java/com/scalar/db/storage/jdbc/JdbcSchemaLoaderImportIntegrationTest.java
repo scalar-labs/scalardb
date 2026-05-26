@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
@@ -11,7 +10,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
@@ -31,7 +29,9 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     properties.putAll(JdbcEnv.getProperties(testName));
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    testUtils = new JdbcAdminImportTestUtils(properties);
+    if (testUtils == null) {
+      testUtils = new JdbcAdminImportTestUtils(properties);
+    }
     return properties;
   }
 
@@ -199,15 +199,5 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
   @SuppressWarnings("unused")
   private boolean isSqlite() {
     return JdbcEnv.isSqlite();
-  }
-
-  @Override
-  protected void waitForDifferentSessionDdl() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
-      return;
-    }
-    super.waitForDifferentSessionDdl();
   }
 }

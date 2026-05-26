@@ -49,7 +49,7 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_col_val";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
-  private static final String TABLE = "test_table";
+  protected static final String TABLE = "test_table";
   private static final String PARTITION_KEY = "pkey";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
@@ -121,6 +121,10 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   @BeforeEach
   public void setUp() throws Exception {
+    truncateTable();
+  }
+
+  protected void truncateTable() throws ExecutionException {
     admin.truncateTable(namespace, TABLE);
   }
 
