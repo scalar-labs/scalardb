@@ -343,14 +343,14 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     // - The "include if config enabled" half lets an operator upgrade an existing Coordinator
     //   table to a wider schema (adding CHILD_IDS / WRITE_SET) by toggling the corresponding
     //   config and calling repairCoordinatorTables.
-    boolean groupCommitInSchema =
+    boolean hasGroupCommitColumnInSchema =
         (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.CHILD_IDS))
             || config.isCoordinatorGroupCommitEnabled();
-    boolean writeSetLoggingInSchema =
+    boolean hasWriteSetColumnInSchema =
         (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.WRITE_SET))
             || config.isCoordinatorWriteSetLoggingEnabled();
     TableMetadata coordinatorTableMetadata =
-        Coordinator.buildTableMetadata(groupCommitInSchema, writeSetLoggingInSchema);
+        Coordinator.buildTableMetadata(hasGroupCommitColumnInSchema, hasWriteSetColumnInSchema);
 
     // Upgrade the schema (ALTER TABLE ADD COLUMN for any non-key columns the desired schema
     // requires that the existing Coordinator is missing) BEFORE repairTable. addNewColumnToTable
