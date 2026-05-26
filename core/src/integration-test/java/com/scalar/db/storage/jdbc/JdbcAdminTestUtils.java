@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Properties;
+import javax.annotation.Nullable;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
 
@@ -23,7 +24,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   private final RdbEngineStrategy rdbEngine;
   private final HikariDataSource dataSource;
   private final boolean requiresExplicitCommit;
-  private final String coordinatorNamespace;
+  @Nullable private final String coordinatorNamespace;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
@@ -33,10 +34,20 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    coordinatorNamespace =
-        new ConsensusCommitConfig(databaseConfig)
-            .getCoordinatorNamespace()
-            .orElse(Coordinator.NAMESPACE);
+
+    // ConsensusCommitConfig requires scalar.db.transaction_manager to be 'consensus-commit', so
+    // only resolve the coordinator namespace when applicable. For other transaction managers
+    // (e.g., 'jdbc'), leave it null since they have no coordinator table.
+    if (databaseConfig
+        .getTransactionManager()
+        .equals(ConsensusCommitConfig.TRANSACTION_MANAGER_NAME)) {
+      coordinatorNamespace =
+          new ConsensusCommitConfig(databaseConfig)
+              .getCoordinatorNamespace()
+              .orElse(Coordinator.NAMESPACE);
+    } else {
+      coordinatorNamespace = null;
+    }
   }
 
   @Override

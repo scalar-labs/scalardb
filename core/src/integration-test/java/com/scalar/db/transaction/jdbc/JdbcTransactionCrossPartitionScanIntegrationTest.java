@@ -51,15 +51,6 @@ public class JdbcTransactionCrossPartitionScanIntegrationTest
     super.truncateTable(namespace, table);
   }
 
-  @Override
-  protected void truncateCoordinatorTables() throws ExecutionException {
-    if (JdbcEnv.isYugabyte()) {
-      jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
-      return;
-    }
-    super.truncateCoordinatorTables();
-  }
-
   @Test
   @Override
   @DisabledIf("isSpanner")
