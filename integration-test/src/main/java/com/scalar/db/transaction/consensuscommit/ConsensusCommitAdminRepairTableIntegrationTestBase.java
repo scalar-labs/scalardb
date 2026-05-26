@@ -120,4 +120,101 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
       }
     }
   }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithExistingCoordinatorMissingWriteSetColumn_ShouldAddWriteSetColumn()
+          throws Exception {
+    // Arrange: drop the Coordinator created in setUp and recreate it via a separate admin
+    // instance that has write-set logging explicitly disabled, so the Coordinator table has no
+    // WRITE_SET column.
+    admin.dropCoordinatorTables();
+
+    Properties propertiesWithWriteSetLoggingDisabled = new Properties();
+    propertiesWithWriteSetLoggingDisabled.putAll(getProperties(TEST_NAME));
+    propertiesWithWriteSetLoggingDisabled.setProperty(
+        ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "false");
+    try (DistributedTransactionAdmin adminWithWriteSetLoggingDisabled =
+        TransactionFactory.create(propertiesWithWriteSetLoggingDisabled).getTransactionAdmin()) {
+      waitForDifferentSessionDdl();
+      adminWithWriteSetLoggingDisabled.createCoordinatorTables(getCreationOptions());
+    }
+
+    // Act: repair with write-set logging enabled. The existing Coordinator has no WRITE_SET
+    // column, so this should add the column via ALTER TABLE ADD COLUMN.
+    Properties propertiesWithWriteSetLoggingEnabled = new Properties();
+    propertiesWithWriteSetLoggingEnabled.putAll(getProperties(TEST_NAME));
+    propertiesWithWriteSetLoggingEnabled.setProperty(
+        ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "true");
+    try (DistributedTransactionAdmin adminWithWriteSetLoggingEnabled =
+        TransactionFactory.create(propertiesWithWriteSetLoggingEnabled).getTransactionAdmin()) {
+      waitForDifferentSessionDdl();
+      adminWithWriteSetLoggingEnabled.repairCoordinatorTables(getCreationOptions());
+
+      // Assert: the column now exists in the post-repair Coordinator metadata. We have to read the
+      // metadata via DistributedStorageAdmin (not via the transaction admin) because
+      // ConsensusCommitAdmin#getTableMetadata returns null for the coordinator namespace by design.
+      waitForDifferentSessionDdl();
+      String coordinatorNamespace =
+          new ConsensusCommitConfig(new DatabaseConfig(propertiesWithWriteSetLoggingEnabled))
+              .getCoordinatorNamespace()
+              .orElse(Coordinator.NAMESPACE);
+      try (DistributedStorageAdmin storageAdmin =
+          StorageFactory.create(propertiesWithWriteSetLoggingEnabled).getStorageAdmin()) {
+        TableMetadata metadata =
+            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+        assertThat(metadata).isNotNull();
+        assertThat(metadata.getColumnNames()).contains(Attribute.WRITE_SET);
+      }
+    }
+  }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithExistingCoordinatorHavingWriteSetColumnAndWriteSetLoggingDisabled_ShouldPreserveWriteSetColumn()
+          throws Exception {
+    // Arrange: drop the Coordinator created in setUp and recreate it via a separate admin
+    // instance that has write-set logging explicitly enabled, so the Coordinator table has the
+    // WRITE_SET column.
+    admin.dropCoordinatorTables();
+
+    Properties propertiesWithWriteSetLoggingEnabled = new Properties();
+    propertiesWithWriteSetLoggingEnabled.putAll(getProperties(TEST_NAME));
+    propertiesWithWriteSetLoggingEnabled.setProperty(
+        ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "true");
+    try (DistributedTransactionAdmin adminWithWriteSetLoggingEnabled =
+        TransactionFactory.create(propertiesWithWriteSetLoggingEnabled).getTransactionAdmin()) {
+      waitForDifferentSessionDdl();
+      adminWithWriteSetLoggingEnabled.createCoordinatorTables(getCreationOptions());
+    }
+
+    // Act: repair with write-set logging disabled. The existing Coordinator has the WRITE_SET
+    // column, so the repair should preserve it (keep the WITH-WRITE_SET schema) rather than
+    // dropping it, so that ScalarDB metadata stays aligned with the physical column set.
+    Properties propertiesWithWriteSetLoggingDisabled = new Properties();
+    propertiesWithWriteSetLoggingDisabled.putAll(getProperties(TEST_NAME));
+    propertiesWithWriteSetLoggingDisabled.setProperty(
+        ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "false");
+    try (DistributedTransactionAdmin adminWithWriteSetLoggingDisabled =
+        TransactionFactory.create(propertiesWithWriteSetLoggingDisabled).getTransactionAdmin()) {
+      waitForDifferentSessionDdl();
+      adminWithWriteSetLoggingDisabled.repairCoordinatorTables(getCreationOptions());
+
+      // Assert: the column is still present in the post-repair Coordinator metadata. We have to
+      // read the metadata via DistributedStorageAdmin (not via the transaction admin) because
+      // ConsensusCommitAdmin#getTableMetadata returns null for the coordinator namespace by design.
+      waitForDifferentSessionDdl();
+      String coordinatorNamespace =
+          new ConsensusCommitConfig(new DatabaseConfig(propertiesWithWriteSetLoggingDisabled))
+              .getCoordinatorNamespace()
+              .orElse(Coordinator.NAMESPACE);
+      try (DistributedStorageAdmin storageAdmin =
+          StorageFactory.create(propertiesWithWriteSetLoggingDisabled).getStorageAdmin()) {
+        TableMetadata metadata =
+            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+        assertThat(metadata).isNotNull();
+        assertThat(metadata.getColumnNames()).contains(Attribute.WRITE_SET);
+      }
+    }
+  }
 }

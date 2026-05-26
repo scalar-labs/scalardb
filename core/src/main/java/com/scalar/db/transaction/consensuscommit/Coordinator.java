@@ -36,21 +36,22 @@ import org.slf4j.LoggerFactory;
 public class Coordinator {
   public static final String NAMESPACE = "coordinator";
   public static final String TABLE = "state";
-  public static final TableMetadata TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED =
-      TableMetadata.newBuilder()
-          .addColumn(Attribute.ID, DataType.TEXT)
-          .addColumn(Attribute.STATE, DataType.INT)
-          .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
-          .addPartitionKey(Attribute.ID)
-          .build();
-  public static final TableMetadata TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED =
-      TableMetadata.newBuilder()
-          .addColumn(Attribute.ID, DataType.TEXT)
-          .addColumn(Attribute.CHILD_IDS, DataType.TEXT)
-          .addColumn(Attribute.STATE, DataType.INT)
-          .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
-          .addPartitionKey(Attribute.ID)
-          .build();
+
+  public static TableMetadata buildTableMetadata(
+      boolean groupCommitEnabled, boolean writeSetLoggingEnabled) {
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder().addColumn(Attribute.ID, DataType.TEXT);
+    if (groupCommitEnabled) {
+      builder.addColumn(Attribute.CHILD_IDS, DataType.TEXT);
+    }
+    builder
+        .addColumn(Attribute.STATE, DataType.INT)
+        .addColumn(Attribute.CREATED_AT, DataType.BIGINT);
+    if (writeSetLoggingEnabled) {
+      builder.addColumn(Attribute.WRITE_SET, DataType.BLOB);
+    }
+    return builder.addPartitionKey(Attribute.ID).build();
+  }
 
   private static final int MAX_RETRY_COUNT = 5;
   private static final long SLEEP_BASE_MILLIS = 50;

@@ -920,12 +920,8 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
   }
 
   protected void extraCheckOnCoordinatorTable() throws ExecutionException {
-    TableMetadata expectedMetadata;
-    if (isGroupCommitEnabled(getTestName())) {
-      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED;
-    } else {
-      expectedMetadata = Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED;
-    }
+    TableMetadata expectedMetadata =
+        Coordinator.buildTableMetadata(isGroupCommitEnabled(getTestName()), false);
 
     try (DistributedStorageAdmin storageAdmin =
         StorageFactory.create(getProperties(getTestName())).getStorageAdmin()) {
