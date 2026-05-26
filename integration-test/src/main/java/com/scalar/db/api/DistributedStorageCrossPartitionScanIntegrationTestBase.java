@@ -69,7 +69,7 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private static final String TEST_NAME = "storage_cross_part_scan";
   private static final String NAMESPACE_BASE_NAME = "int_test_" + TEST_NAME + "_";
-  private static final String CONDITION_TEST_TABLE = "condition_test_table";
+  protected static final String CONDITION_TEST_TABLE = "condition_test_table";
   private static final String PARTITION_KEY_NAME = "pk";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
@@ -696,11 +696,11 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     truncateTable();
   }
 
-  private void truncateTable() throws ExecutionException {
+  protected void truncateTable() throws ExecutionException {
     admin.truncateTable(getNamespaceName(), CONDITION_TEST_TABLE);
   }
 
-  private void truncateTable(DataType firstColumnType, DataType secondColumnType)
+  protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
       throws ExecutionException {
     admin.truncateTable(
         getNamespaceName(firstColumnType), getTableName(firstColumnType, secondColumnType));

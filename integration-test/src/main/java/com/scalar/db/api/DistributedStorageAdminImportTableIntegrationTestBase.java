@@ -88,6 +88,14 @@ public abstract class DistributedStorageAdminImportTableIntegrationTestBase {
       logger.warn("Failed to close admin", e);
     }
 
+    try {
+      if (storage != null) {
+        storage.close();
+      }
+    } catch (Exception e) {
+      logger.warn("Failed to close storage", e);
+    }
+
     testDataList.clear();
   }
 

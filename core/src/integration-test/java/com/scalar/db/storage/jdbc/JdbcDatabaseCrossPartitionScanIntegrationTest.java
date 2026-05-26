@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
@@ -10,19 +11,31 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.provider.Arguments;
 
 public class JdbcDatabaseCrossPartitionScanIntegrationTest
     extends DistributedStorageCrossPartitionScanIntegrationTestBase {
 
   private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    return JdbcEnv.getProperties(testName);
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
+    return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
   }
 
   @Override
@@ -44,8 +57,30 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
   }
 
   @Override
+  protected void truncateTable() throws ExecutionException {
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(getNamespaceBaseName(), CONDITION_TEST_TABLE);
+      return;
+    }
+    super.truncateTable();
+  }
+
+  @Override
+  protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
+      throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(
+          getNamespaceBaseName() + firstColumnType, firstColumnType + "_" + secondColumnType);
+      return;
+    }
+    super.truncateTable(firstColumnType, secondColumnType);
+  }
+
+  @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+    if (JdbcEnv.isYugabyte()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -56,12 +91,13 @@ public class JdbcDatabaseCrossPartitionScanIntegrationTest
     List<String> allColumnNames =
         prepareNonKeyColumns(0).stream().map(Column::getName).collect(Collectors.toList());
 
-    if ((JdbcTestUtils.isOracle(rdbEngine)
+    if (JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlServer(rdbEngine)
-        || JdbcTestUtils.isSqlite(rdbEngine))) {
-      // Oracle, SQLServer and SQLite do not support having too many conditions as CNF because it
-      // is converted internally to a query with conditions in DNF which can be too large for the
-      // storage to process.
+        || JdbcTestUtils.isSqlite(rdbEngine)
+        || JdbcEnv.isYugabyte()) {
+      // Oracle, SQLServer, SQLite and YugabyteDB do not support having too many conditions as CNF
+      // because it is converted internally to a query with conditions in DNF which can be too large
+      // for the storage to process.
       // So we split the columns into two parts randomly to split the test into two executions
       Collections.shuffle(allColumnNames, random.get());
       return Stream.of(

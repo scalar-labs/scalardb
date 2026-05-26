@@ -135,7 +135,7 @@ public abstract class DistributedStorageSecondaryIndexIntegrationTestBase {
     admin.dropNamespace(namespace);
   }
 
-  private void truncateTable(DataType secondaryIndexType) throws ExecutionException {
+  protected void truncateTable(DataType secondaryIndexType) throws ExecutionException {
     admin.truncateTable(namespace, getTableName(secondaryIndexType));
   }
 

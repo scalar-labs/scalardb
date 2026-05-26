@@ -4,24 +4,38 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import org.junit.jupiter.api.AfterAll;
 
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
     extends DistributedStorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @LazyInit private RdbEngineStrategy rdbEngine;
+  private JdbcAdminTestUtils jdbcAdminTestUtils;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
     return properties;
+  }
+
+  @AfterAll
+  void closeJdbcAdminTestUtils() throws Exception {
+    if (jdbcAdminTestUtils != null) {
+      jdbcAdminTestUtils.close();
+    }
   }
 
   @Override
@@ -33,8 +47,36 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
+  protected void truncateTable(
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder)
+      throws ExecutionException {
+    // Use DML DELETE for YugabyteDB: TRUNCATE is DDL that conflicts with table locking and is slow.
+    // This only affects @BeforeEach cleanup. The actual truncateTable() API is tested in admin ITs.
+    if (JdbcEnv.isYugabyte()) {
+      jdbcAdminTestUtils.deleteAllRowsWithSql(
+          getNamespaceBaseName() + firstClusteringKeyType + "_" + firstClusteringOrder,
+          firstClusteringKeyType
+              + "_"
+              + firstClusteringOrder
+              + "_"
+              + secondClusteringKeyType
+              + "_"
+              + secondClusteringOrder);
+      return;
+    }
+    super.truncateTable(
+        firstClusteringKeyType,
+        firstClusteringOrder,
+        secondClusteringKeyType,
+        secondClusteringOrder);
+  }
+
+  @Override
   protected boolean isParallelDdlSupported() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
+    if (JdbcEnv.isYugabyte()) {
       return false;
     }
     return super.isParallelDdlSupported();
@@ -44,7 +86,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
   //       fix is released.
   @SuppressWarnings("unused")
   private boolean isYugabyteDb() {
-    return JdbcTestUtils.isYugabyte(rdbEngine);
+    return JdbcEnv.isYugabyte();
   }
 
   @Override
