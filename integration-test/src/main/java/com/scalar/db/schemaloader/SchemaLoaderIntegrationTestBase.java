@@ -536,7 +536,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     TableMetadata oldCoordinatorTableMetadata =
         TableMetadata.newBuilder()
             .addColumn(Attribute.ID, DataType.TEXT)
-            // `tx_child_ids` is missing.
+            // `tx_child_ids` and `tx_write_set` are missing.
             .addColumn(Attribute.STATE, DataType.INT)
             .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
             .addPartitionKey(Attribute.ID)

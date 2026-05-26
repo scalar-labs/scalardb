@@ -525,7 +525,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     }
     // These columns were recently added. Therefore, it's possible Coordinator tables created
     // earlier don't have these columns.
-    List<String> potentialMissingColumnNames = ImmutableList.of(Attribute.CHILD_IDS);
+    List<String> potentialMissingColumnNames =
+        ImmutableList.of(Attribute.CHILD_IDS, Attribute.WRITE_SET);
 
     // Verify the potentially missing columns.
     for (String columnName : potentialMissingColumnNames) {
