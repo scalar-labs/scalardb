@@ -178,6 +178,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
           mutationsGrouper,
           true,
           false,
+          false,
           groupCommitter);
     } else {
       return new CommitHandler(
@@ -187,6 +188,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
           parallelExecutor,
           mutationsGrouper,
           true,
+          false,
           false);
     }
   }

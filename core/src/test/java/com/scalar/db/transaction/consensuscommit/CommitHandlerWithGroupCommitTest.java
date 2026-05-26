@@ -77,6 +77,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         parallelExecutor,
         new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        true,
         false,
         groupCommitter);
   }
@@ -90,6 +91,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         tableMetadataManager,
         parallelExecutor,
         mutationsGrouper,
+        true,
         true,
         true,
         groupCommitter);
@@ -385,6 +387,32 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   }
 
   @Test
+  @Override
+  public void
+      commit_ExceptionThrownInPrepareRecords_WhenWriteSetLoggingDisabled_ShouldAbortAndRollbackRecords()
+          throws ExecutionException, CoordinatorException, CrudException {
+    groupCommitter.remove(anyId());
+    super
+        .commit_ExceptionThrownInPrepareRecords_WhenWriteSetLoggingDisabled_ShouldAbortAndRollbackRecords();
+  }
+
+  @Test
+  @Override
+  public void commitState_WhenWriteSetLoggingDisabled_ShouldPutStateWithoutWriteSet()
+      throws Exception {
+    groupCommitter.remove(anyId());
+    super.commitState_WhenWriteSetLoggingDisabled_ShouldPutStateWithoutWriteSet();
+  }
+
+  @Test
+  @Override
+  public void abortState_WhenWriteSetLoggingDisabled_ShouldPutStateWithoutWriteSet()
+      throws Exception {
+    groupCommitter.remove(anyId());
+    super.abortState_WhenWriteSetLoggingDisabled_ShouldPutStateWithoutWriteSet();
+  }
+
+  @Test
   void emitter_emitNormalGroup_WithMultipleWritingChildren_ShouldAggregatePerChild()
       throws Exception {
     // The slot reserved by extraInitialize is unused here — these emitter tests bypass the group
@@ -396,7 +424,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId1 = keyManipulator.fullKey(parentId, "child-1");
@@ -444,7 +472,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxIdWriting = keyManipulator.fullKey(parentId, "writing");
@@ -488,7 +516,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
@@ -523,7 +551,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
 
     String parentId = keyManipulator.generateParentKey();
 
@@ -547,7 +575,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
@@ -586,7 +614,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
@@ -610,5 +638,67 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
     assertThat(captured.getEntryGroupsList()).isEmpty();
+  }
+
+  @Test
+  void emitter_emitNormalGroup_WhenWriteSetLoggingDisabled_ShouldPassNullWriteSet()
+      throws Exception {
+    groupCommitter.remove(anyId());
+
+    // Arrange — emitter constructed with write-set logging disabled.
+    Coordinator coordinatorMock = mock(Coordinator.class);
+    CommitHandlerWithGroupCommit.Emitter emitter =
+        new CommitHandlerWithGroupCommit.Emitter(
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), false);
+
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    TransactionContext context =
+        new TransactionContext(
+            fullTxId, prepareSnapshotWithDifferentPartitionPut(), Isolation.SNAPSHOT, false, false);
+
+    // Act
+    emitter.emitNormalGroup(parentId, Collections.singletonList(context));
+
+    // Assert — putStateForGroupCommit is invoked with a null WriteSet so the BLOB column is
+    // not populated (the column is not part of the Coordinator schema in this configuration).
+    verify(coordinatorMock)
+        .putStateForGroupCommit(
+            eq(parentId),
+            anyList(),
+            (WriteSet) eq(null),
+            eq(TransactionState.COMMITTED),
+            anyLong());
+  }
+
+  @Test
+  void emitter_emitDelayedGroup_WhenWriteSetLoggingDisabled_ShouldPassStateWithoutWriteSet()
+      throws Exception {
+    groupCommitter.remove(anyId());
+
+    // Arrange
+    Coordinator coordinatorMock = mock(Coordinator.class);
+    CommitHandlerWithGroupCommit.Emitter emitter =
+        new CommitHandlerWithGroupCommit.Emitter(
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager), false);
+
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    TransactionContext context =
+        new TransactionContext(
+            fullTxId, prepareSnapshotWithDifferentPartitionPut(), Isolation.SNAPSHOT, false, false);
+
+    // Act
+    emitter.emitDelayedGroup(fullTxId, context);
+
+    // Assert — the persisted State carries no WriteSet.
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
+
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(fullTxId);
+    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(capturedState.getWriteSet()).isEmpty();
   }
 }

@@ -46,6 +46,7 @@ public class CommitHandler {
   private final MutationsGrouper mutationsGrouper;
   final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  protected final boolean coordinatorWriteSetLoggingEnabled;
   private final boolean onePhaseCommitEnabled;
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
@@ -58,6 +59,7 @@ public class CommitHandler {
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean coordinatorWriteSetLoggingEnabled,
       boolean onePhaseCommitEnabled) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
@@ -66,6 +68,7 @@ public class CommitHandler {
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
     this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
+    this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
   }
 
@@ -362,7 +365,15 @@ public class CommitHandler {
    */
   public void commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+    // The tx_write_set column is added only when the opt-in `coordinator.write_set_logging.enabled`
+    // config is enabled. When it's disabled the column is not part of the Coordinator schema, so we
+    // must skip encoding/persisting the WriteSet entirely; the state row is otherwise written
+    // exactly as in the without-write-set path.
+    WriteSet writeSet =
+        coordinatorWriteSetLoggingEnabled
+            ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
+            : null;
+    commitStateInternal(context, writeSet);
   }
 
   /**
@@ -427,8 +438,13 @@ public class CommitHandler {
    */
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
-    return abortStateInternal(
-        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+    // Same opt-in gating as commitState: skip WriteSet encoding when write-set logging is
+    // disabled, since the Coordinator schema does not include the column in that case.
+    WriteSet writeSet =
+        coordinatorWriteSetLoggingEnabled
+            ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
+            : null;
+    return abortStateInternal(context.transactionId, writeSet);
   }
 
   /**

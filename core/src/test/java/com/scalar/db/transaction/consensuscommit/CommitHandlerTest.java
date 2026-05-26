@@ -89,12 +89,32 @@ public class CommitHandlerTest {
         parallelExecutor,
         new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        true,
         false);
   }
 
   protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
     return new CommitHandler(
-        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        mutationsGrouper,
+        true,
+        true,
+        true);
+  }
+
+  protected CommitHandler createCommitHandlerWithoutWriteSetLogging() {
+    return new CommitHandler(
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        new MutationsGrouper(storageInfoProvider),
+        true,
+        false,
+        false);
   }
 
   @BeforeEach
@@ -1456,6 +1476,68 @@ public class CommitHandlerTest {
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     verify(handler).onFailureBeforeCommit(context);
+  }
+
+  @Test
+  public void commitState_WhenWriteSetLoggingDisabled_ShouldPutStateWithoutWriteSet()
+      throws Exception {
+    // Arrange — when the opt-in write-set logging config is disabled, the Coordinator state row
+    // must not carry a WriteSet (the column is not part of the schema).
+    CommitHandler handlerWithoutWriteSetLogging = createCommitHandlerWithoutWriteSetLogging();
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    handlerWithoutWriteSetLogging.commitState(context);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(anyId(), null, TransactionState.COMMITTED));
+  }
+
+  @Test
+  public void abortState_WhenWriteSetLoggingDisabled_ShouldPutStateWithoutWriteSet()
+      throws Exception {
+    // Arrange — same opt-in gating, abort path.
+    CommitHandler handlerWithoutWriteSetLogging = createCommitHandlerWithoutWriteSetLogging();
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    handlerWithoutWriteSetLogging.abortState(context);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(anyId(), null, TransactionState.ABORTED));
+  }
+
+  @Test
+  public void
+      commit_ExceptionThrownInPrepareRecords_WhenWriteSetLoggingDisabled_ShouldAbortAndRollbackRecords()
+          throws ExecutionException, CoordinatorException, CrudException {
+    // Arrange — the full commit() flow's abort-on-exception path must still write the ABORTED
+    // Coordinator state row, but with a null WriteSet when the opt-in write-set logging config is
+    // disabled (the column is not part of the schema in that case).
+    CommitHandler handlerWithoutWriteSetLogging = spy(createCommitHandlerWithoutWriteSetLogging());
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(handlerWithoutWriteSetLogging).rollbackRecords(any(TransactionContext.class));
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    assertThatThrownBy(() -> handlerWithoutWriteSetLogging.commit(context))
+        .isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(anyId(), null, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(anyId(), null, TransactionState.COMMITTED));
+    verify(handlerWithoutWriteSetLogging).rollbackRecords(context);
+    verify(handlerWithoutWriteSetLogging).onFailureBeforeCommit(context);
   }
 
   protected void doThrowExceptionWhenCoordinatorPutState(

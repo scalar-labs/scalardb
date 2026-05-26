@@ -96,6 +96,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             parallelExecutor,
             new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+            false, // 2PC never logs the write set
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -139,6 +140,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             parallelExecutor,
             new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+            false, // 2PC never logs the write set
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());

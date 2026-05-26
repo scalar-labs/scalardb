@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
@@ -32,6 +33,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean coordinatorWriteSetLoggingEnabled,
       boolean onePhaseCommitEnabled,
       CoordinatorGroupCommitter groupCommitter) {
     super(
@@ -41,10 +43,13 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         parallelExecutor,
         mutationsGrouper,
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        coordinatorWriteSetLoggingEnabled,
         onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
-    // The methods of this emitter will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(new Emitter(coordinator, writeSetEncoder));
+    // The methods of this emitter will be called via GroupCommitter.ready(). The emitter respects
+    // the same opt-in write-set logging gate as the non-group-commit path.
+    groupCommitter.setEmitter(
+        new Emitter(coordinator, writeSetEncoder, coordinatorWriteSetLoggingEnabled));
     this.groupCommitter = groupCommitter;
   }
 
@@ -144,10 +149,15 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   static class Emitter implements Emittable<String, String, TransactionContext> {
     private final Coordinator coordinator;
     private final WriteSetEncoder writeSetEncoder;
+    private final boolean coordinatorWriteSetLoggingEnabled;
 
-    public Emitter(Coordinator coordinator, WriteSetEncoder writeSetEncoder) {
+    public Emitter(
+        Coordinator coordinator,
+        WriteSetEncoder writeSetEncoder,
+        boolean coordinatorWriteSetLoggingEnabled) {
       this.coordinator = coordinator;
       this.writeSetEncoder = writeSetEncoder;
+      this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
     }
 
     @Override
@@ -165,10 +175,16 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         transactionIds.add(context.transactionId);
       }
 
+      // Skip WriteSet encoding when write-set logging is disabled — the column is not part of the
+      // Coordinator schema in that case.
+      WriteSet writeSet =
+          coordinatorWriteSetLoggingEnabled
+              ? writeSetEncoder.encodeMultiGroupWriteSet(contexts, false)
+              : null;
       coordinator.putStateForGroupCommit(
           parentId,
           transactionIds,
-          writeSetEncoder.encodeMultiGroupWriteSet(contexts, false),
+          writeSet,
           TransactionState.COMMITTED,
           System.currentTimeMillis());
 
@@ -184,11 +200,12 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       // This transaction is contained in a delayed group that has only a single transaction.
       // Therefore, the transaction state can be committed as if it's a normal commit (not a
       // group commit).
-      coordinator.putState(
-          new State(
-              fullId,
-              writeSetEncoder.encodeSingleGroupWriteSet(context, false),
-              TransactionState.COMMITTED));
+      // Same opt-in gating as emitNormalGroup.
+      WriteSet writeSet =
+          coordinatorWriteSetLoggingEnabled
+              ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
+              : null;
+      coordinator.putState(new State(fullId, writeSet, TransactionState.COMMITTED));
 
       logger.debug(
           "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());

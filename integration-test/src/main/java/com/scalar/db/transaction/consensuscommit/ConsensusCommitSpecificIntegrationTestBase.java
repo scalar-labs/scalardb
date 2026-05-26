@@ -128,6 +128,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     Properties properties = getProperties(testName);
 
+    // Enable the opt-in tx_write_set Coordinator column so createCoordinatorTables() includes
+    // the column and the commit path encodes/persists the WriteSet under integration tests.
+    properties.setProperty(ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "true");
+
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);
@@ -9893,6 +9897,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           parallelExecutor,
           mutationsGrouper,
           true,
+          consensusCommitConfig.isCoordinatorWriteSetLoggingEnabled(),
           false,
           groupCommitter);
     } else {
@@ -9903,6 +9908,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           parallelExecutor,
           mutationsGrouper,
           true,
+          consensusCommitConfig.isCoordinatorWriteSetLoggingEnabled(),
           onePhaseCommitEnabled);
     }
   }

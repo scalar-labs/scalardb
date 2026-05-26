@@ -77,7 +77,6 @@ public class CoordinatorTest {
     when(result.contains(Attribute.CHILD_IDS)).thenReturn(false);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -123,7 +122,6 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(childIdsStr);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -152,7 +150,6 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -235,7 +232,6 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
@@ -315,7 +311,6 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Assuming these states exist:
     //
@@ -373,7 +368,6 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(dummyChildIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(fullId);
@@ -381,7 +375,6 @@ public class CoordinatorTest {
     when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForSingleCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Assuming these states exist:
     //
@@ -434,7 +427,6 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Look up with the same parent ID and a wrong child ID.
     String targetFullId = keyManipulator.fullKey(parentId, UUID.randomUUID().toString());
@@ -490,7 +482,6 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     Result resultForSingleCommitState = mock(Result.class);
     when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(targetFullId);
@@ -498,7 +489,6 @@ public class CoordinatorTest {
     when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(resultForSingleCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForSingleCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Assuming these states exist:
     //
@@ -552,7 +542,6 @@ public class CoordinatorTest {
         .thenReturn(Joiner.on(',').join(childIds));
     when(resultForGroupCommitState.getInt(Attribute.STATE)).thenReturn(transactionState.get());
     when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
 
     // Look up with the same parent ID and a wrong child ID.
     // Also, the full ID doesn't match any single committed state.
@@ -974,6 +963,7 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.contains(Attribute.WRITE_SET)).thenReturn(true);
     when(result.isNull(Attribute.WRITE_SET)).thenReturn(false);
     when(result.getBlobAsBytes(Attribute.WRITE_SET)).thenReturn(serializedBytes);
     State parsedState = new State(result);
@@ -998,6 +988,29 @@ public class CoordinatorTest {
   }
 
   @Test
+  public void state_WriteSetColumnAbsentFromResult_ShouldParseAsNoWriteSet()
+      throws CoordinatorException {
+    // Arrange — when the opt-in write-set logging config is disabled, the Coordinator table schema
+    // does not include the WRITE_SET column at all. Result.contains returns false for the column,
+    // which must be treated as "no info" and reduce to a null WriteSet.
+    Result result = mock(Result.class);
+    when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
+    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.contains(Attribute.WRITE_SET)).thenReturn(false);
+
+    // Act
+    State parsedState = new State(result);
+
+    // Assert
+    assertThat(parsedState.getWriteSet()).isEmpty();
+    // The parser must not have attempted to read the BLOB column when it is absent.
+    verify(result, never()).isNull(Attribute.WRITE_SET);
+    verify(result, never()).getBlobAsBytes(Attribute.WRITE_SET);
+  }
+
+  @Test
   public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
       throws CoordinatorException {
     // Arrange — State with an empty (but non-null) WriteSet that explicitly carries
@@ -1018,6 +1031,7 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.contains(Attribute.WRITE_SET)).thenReturn(true);
     when(result.isNull(Attribute.WRITE_SET)).thenReturn(false);
     when(result.getBlobAsBytes(Attribute.WRITE_SET)).thenReturn(serializedBytes);
     State parsedState = new State(result);
@@ -1036,6 +1050,7 @@ public class CoordinatorTest {
     when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
     when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(result.contains(Attribute.WRITE_SET)).thenReturn(true);
     when(result.isNull(Attribute.WRITE_SET)).thenReturn(false);
     when(result.getBlobAsBytes(Attribute.WRITE_SET))
         .thenReturn(new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff});
