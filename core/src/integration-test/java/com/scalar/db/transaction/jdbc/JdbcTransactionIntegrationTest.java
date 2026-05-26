@@ -49,15 +49,6 @@ public class JdbcTransactionIntegrationTest extends DistributedTransactionIntegr
     super.truncateTable(namespace, table);
   }
 
-  @Override
-  protected void truncateCoordinatorTables() throws ExecutionException {
-    if (JdbcEnv.isYugabyte()) {
-      jdbcAdminTestUtils.deleteAllRowsFromCoordinatorTableWithSql();
-      return;
-    }
-    super.truncateCoordinatorTables();
-  }
-
   @Disabled("JDBC transactions don't support getState()")
   @Override
   @Test
