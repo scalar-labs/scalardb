@@ -159,9 +159,21 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin1.truncateTable(namespace1, TABLE_1);
+    truncateTable1(namespace1, TABLE_1);
+    truncateCoordinatorTables();
+    truncateTable2(namespace2, TABLE_2);
+  }
+
+  protected void truncateTable1(String namespace, String table) throws ExecutionException {
+    admin1.truncateTable(namespace, table);
+  }
+
+  protected void truncateTable2(String namespace, String table) throws ExecutionException {
+    admin2.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin1.truncateCoordinatorTables();
-    admin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll

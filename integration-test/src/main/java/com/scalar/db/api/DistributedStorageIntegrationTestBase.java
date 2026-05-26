@@ -153,7 +153,7 @@ public abstract class DistributedStorageIntegrationTestBase {
     truncateTable();
   }
 
-  private void truncateTable() throws ExecutionException {
+  protected void truncateTable() throws ExecutionException {
     admin.truncateTable(namespace, getTableName());
   }
 

@@ -5,6 +5,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -21,10 +22,13 @@ public class JdbcAdminImportTableIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = JdbcEnv.getProperties(testName);
-    testUtils = new JdbcAdminImportTestUtils(properties);
-    return JdbcEnv.getProperties(testName);
+    if (testUtils == null) {
+      testUtils = new JdbcAdminImportTestUtils(properties);
+    }
+    return properties;
   }
 
+  @AfterAll
   @Override
   public void afterAll() {
     try {

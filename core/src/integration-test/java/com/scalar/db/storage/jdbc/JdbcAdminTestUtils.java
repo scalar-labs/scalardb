@@ -3,6 +3,9 @@ package com.scalar.db.storage.jdbc;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.AdminTestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -11,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
@@ -18,14 +22,30 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
   private final BasicDataSource dataSource;
+  @Nullable private final String coordinatorNamespace;
 
   public JdbcAdminTestUtils(Properties properties) {
     super(properties);
-    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    DatabaseConfig databaseConfig = new DatabaseConfig(properties);
+    JdbcConfig config = new JdbcConfig(databaseConfig);
     metadataSchema =
         config.getTableMetadataSchema().orElse(DatabaseConfig.DEFAULT_SYSTEM_NAMESPACE_NAME);
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
+
+    // ConsensusCommitConfig requires scalar.db.transaction_manager to be 'consensus-commit', so
+    // only resolve the coordinator namespace when applicable. For other transaction managers
+    // (e.g., 'jdbc'), leave it null since they have no coordinator table.
+    if (databaseConfig
+        .getTransactionManager()
+        .equals(ConsensusCommitConfig.TRANSACTION_MANAGER_NAME)) {
+      coordinatorNamespace =
+          new ConsensusCommitConfig(databaseConfig)
+              .getCoordinatorNamespace()
+              .orElse(Coordinator.NAMESPACE);
+    } else {
+      coordinatorNamespace = null;
+    }
   }
 
   @Override
@@ -98,6 +118,19 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   public void dropIndex(String namespace, String table, String indexName) throws SQLException {
     String sql = rdbEngine.dropIndexSql(namespace, table, indexName);
     execute(sql);
+  }
+
+  public void deleteAllRowsWithSql(String namespace, String table) throws ExecutionException {
+    String sql = "DELETE FROM " + rdbEngine.encloseFullTableName(namespace, table);
+    try {
+      execute(sql);
+    } catch (SQLException e) {
+      throw new ExecutionException("Failed to delete all rows from " + namespace + "." + table, e);
+    }
+  }
+
+  public void deleteAllRowsFromCoordinatorTableWithSql() throws ExecutionException {
+    deleteAllRowsWithSql(coordinatorNamespace, Coordinator.TABLE);
   }
 
   private void execute(String sql) throws SQLException {
