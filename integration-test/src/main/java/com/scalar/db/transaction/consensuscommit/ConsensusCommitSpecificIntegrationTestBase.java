@@ -127,9 +127,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     Properties properties = getProperties(testName);
 
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
     databaseConfig = new DatabaseConfig(properties);
@@ -191,8 +188,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
-    consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
+    truncateTable(namespace1, TABLE_1);
+    truncateTable(namespace2, TABLE_2);
+    truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     consensusCommitAdmin.truncateCoordinatorTables();
   }
 

@@ -13,7 +13,7 @@ public class ConsensusCommitAdminRepairIntegrationTestWithCosmos
 
   @Override
   protected Properties getProps(String testName) {
-    return CosmosEnv.getProperties(testName);
+    return ConsensusCommitCosmosEnv.getProperties(testName);
   }
 
   @Override
