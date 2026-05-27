@@ -10,7 +10,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -120,7 +119,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // ORA-01920: user name 'string' conflicts with another user or role name
     return e.getErrorCode() == 1920;
   }
@@ -128,12 +127,6 @@ class RdbEngineOracle extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP USER " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the user failed: " + namespace, e);
   }
 
   @Override
@@ -164,8 +157,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM ALL_TABLES" + " WHERE OWNER = ? AND TABLE_NAME = ?";
   }
 
   @Override
@@ -228,12 +221,6 @@ class RdbEngineOracle extends AbstractRdbEngine {
     }
     // Integrity constraint violation
     return e.getSQLState().equals("23000");
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // ORA-00942: Table or view does not exist
-    return e.getErrorCode() == 942;
   }
 
   @Override

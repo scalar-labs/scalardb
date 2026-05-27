@@ -17,6 +17,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -65,18 +66,6 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
     return ((SQLiteException) e).getResultCode() == SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY
         || ((SQLiteException) e).getResultCode() == SQLiteErrorCode.SQLITE_CONSTRAINT_UNIQUE;
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // Error code: SQLITE_ERROR (1)
-    // Message: SQL error or missing database (no such table: XXX)
-
-    // Error code: SQLITE_SCHEMA (17)
-    // Message: The database schema changed (no such table: XXX)
-
-    return (e.getErrorCode() == 1 || e.getErrorCode() == 17)
-        && e.getMessage().contains("no such table:");
   }
 
   @Override
@@ -245,7 +234,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // Namespace is never created
     return false;
   }
@@ -260,11 +249,6 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   public String truncateTableSql(String namespace, String table) {
     // SQLite does not support TRUNCATE TABLE statement.
     return "DELETE FROM " + encloseFullTableName(namespace, table);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) {
-    throw new AssertionError("DropNamespace never happen in SQLite implementation");
   }
 
   @Override
@@ -297,8 +281,14 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?";
+  }
+
+  @Override
+  public void bindInternalTableExistsCheckParams(
+      PreparedStatement preparedStatement, String schema, String table) throws SQLException {
+    preparedStatement.setString(1, schema + NAMESPACE_SEPARATOR + table);
   }
 
   @Override
