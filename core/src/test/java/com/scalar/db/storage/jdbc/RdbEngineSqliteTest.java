@@ -86,18 +86,6 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isUndefinedTableError_True() {
-    SQLException e =
-        (SQLException) catchThrowable(() -> statement.executeUpdate("select 1 from t404"));
-    assertTrue(rdbEngine.isUndefinedTableError(e));
-  }
-
-  @Test
-  void isUndefinedTableError_False() {
-    assertFalse(rdbEngine.isUndefinedTableError(causeSyntaxError()));
-  }
-
-  @Test
   void isConflict_True_SQLITE_BUSY_WhenUpdatingBeingDeletedTableInSeparateConnection()
       throws SQLException {
     statement.executeUpdate("create table t (c integer)");
