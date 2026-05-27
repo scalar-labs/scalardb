@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
@@ -92,19 +91,13 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     return false;
   }
 
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -155,8 +148,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
   }
 
   @Override
@@ -210,18 +203,6 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // Error number: 1022; Symbol: ER_DUP_KEY; SQLSTATE: 23000
     // Message: Can't write; duplicate key in table '%s'
     return e.getSQLState().equals("23000");
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
-    // Error number: 1049; Symbol: ER_BAD_DB_ERROR; SQLSTATE: 42000
-    // Message: Unknown database '%s'
-
-    // Error number: 1146; Symbol: ER_NO_SUCH_TABLE; SQLSTATE: 42S02
-    // Message: Table '%s.%s' doesn't exist
-
-    return e.getErrorCode() == 1049 || e.getErrorCode() == 1146;
   }
 
   @Override
