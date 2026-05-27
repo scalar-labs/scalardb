@@ -10,7 +10,6 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -232,7 +231,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // SQL error code -601: Name already used
     return e.getErrorCode() == -601;
   }
@@ -240,12 +239,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace) + " RESTRICT";
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -287,8 +280,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM SYSCAT.TABLES" + " WHERE TABSCHEMA = ? AND TABNAME = ? AND TYPE = 'T'";
   }
 
   @Override
@@ -380,12 +373,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     // SPACE indexspace-name CONSTRAINS COLUMNS OF THE TABLE SO NO TWO ROWS CAN CONTAIN DUPLICATE
     // VALUES IN THOSE COLUMNS. RID OF EXISTING ROW IS X record-id
     return e.getErrorCode() == -803;
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // SQL error code -204: name IS AN UNDEFINED NAME
-    return e.getErrorCode() == -204;
   }
 
   @Override

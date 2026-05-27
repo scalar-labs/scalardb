@@ -4,7 +4,6 @@ import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -91,19 +90,13 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     return false;
   }
 
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -137,8 +130,8 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM information_schema.tables" + " WHERE table_schema = ? AND table_name = ?";
   }
 
   @Override
@@ -175,15 +168,6 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     }
     // 23505: unique_violation
     return e.getSQLState().equals("23505");
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    if (e.getSQLState() == null) {
-      return false;
-    }
-    // 42P01: undefined_table
-    return e.getSQLState().equals("42P01");
   }
 
   @Override
