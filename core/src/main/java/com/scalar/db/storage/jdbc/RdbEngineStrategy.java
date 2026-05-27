@@ -4,7 +4,6 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -40,8 +39,6 @@ public interface RdbEngineStrategy {
   boolean isDuplicateTableError(SQLException e);
 
   boolean isDuplicateKeyError(SQLException e);
-
-  boolean isUndefinedTableError(SQLException e);
 
   boolean isConflict(SQLException e);
 
@@ -89,16 +86,13 @@ public interface RdbEngineStrategy {
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
-  boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
+  boolean isDuplicateSchemaError(SQLException e);
 
   String dropNamespaceSql(String namespace);
 
   default String truncateTableSql(String namespace, String table) {
     return "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
   }
-
-  void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException;
 
   String namespaceExistsStatement();
 
@@ -133,7 +127,36 @@ public interface RdbEngineStrategy {
 
   String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
-  String internalTableExistsCheckSql(String fullTableName);
+  /**
+   * Returns a parameterized SQL that checks whether the specified table exists by querying the
+   * database's system catalog. The returned SQL uses {@code ?} placeholders for the schema and
+   * table name; use {@link #bindInternalTableExistsCheckParams(PreparedStatement, String, String)}
+   * to bind them. Unlike a direct {@code SELECT} against the target table, the returned SQL
+   * succeeds (returning zero rows) when the table does not exist, so it avoids the noisy
+   * server-side error log that the underlying driver/database emits for an undefined-table error.
+   *
+   * @return a SQL string with {@code ?} placeholders whose result set is non-empty iff the table
+   *     exists
+   */
+  String internalTableExistsCheckSql();
+
+  /**
+   * Binds the schema and table parameters of the SQL returned by {@link
+   * #internalTableExistsCheckSql()}. The default binds {@code schema} to parameter 1 and {@code
+   * table} to parameter 2. Engines whose SQL has a different parameter shape (e.g., SQLite, which
+   * keys on a composite {@code schema$table} name) override this.
+   *
+   * @param preparedStatement the prepared statement built from {@link
+   *     #internalTableExistsCheckSql()}
+   * @param schema the schema (namespace) name
+   * @param table the table name
+   * @throws SQLException if a database access error occurs while binding parameters
+   */
+  default void bindInternalTableExistsCheckParams(
+      PreparedStatement preparedStatement, String schema, String table) throws SQLException {
+    preparedStatement.setString(1, schema);
+    preparedStatement.setString(2, table);
+  }
 
   default String createIndexSql(
       String schema, String table, String indexName, String indexedColumn) {

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -80,7 +79,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // 2714: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
   }
@@ -88,12 +87,6 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -144,8 +137,8 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT TOP 1 1 FROM " + fullTableName;
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
   }
 
   @Override
@@ -188,13 +181,6 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     // SQL state: 23000
     // Message: Integrity constraint violation
     return e.getSQLState().equals("23000");
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // Error code: 208
-    // Message: Invalid object name '%.*ls'.
-    return e.getErrorCode() == 208;
   }
 
   @Override

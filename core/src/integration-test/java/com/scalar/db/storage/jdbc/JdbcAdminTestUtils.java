@@ -189,17 +189,15 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
 
   @Override
   public boolean tableExists(String namespace, String table) throws Exception {
-    String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
-    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
     try {
-      execute(sql);
-      return true;
+      return withConnection(
+          dataSource,
+          requiresExplicitCommit,
+          (ThrowableFunction<Connection, Boolean, SQLException>)
+              connection ->
+                  JdbcAdmin.internalTableExists(
+                      connection, rdbEngine, namespace, table, requiresExplicitCommit));
     } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
       throw new Exception(
           String.format(
               "Checking if the %s table exists failed", getFullTableName(namespace, table)),
