@@ -333,7 +333,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             execute(connection, rdbEngine.dropNamespaceSql(namespace), requiresExplicitCommit);
           });
     } catch (SQLException e) {
-      rdbEngine.dropNamespaceTranslateSQLException(e, namespace);
+      throw new ExecutionException("Dropping the " + namespace + " schema failed", e);
     }
   }
 
@@ -1444,18 +1444,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private boolean internalTableExists(Connection connection, String namespace, String table)
       throws SQLException {
-    String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
-    try {
-      execute(connection, sql, requiresExplicitCommit);
-      return true;
-    } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
-      throw e;
-    }
+    return internalTableExists(connection, rdbEngine, namespace, table, requiresExplicitCommit);
+  }
+
+  public static boolean internalTableExists(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String schema,
+      String table,
+      boolean requiresExplicitCommit)
+      throws SQLException {
+    return executeQuery(
+        connection,
+        rdbEngine.internalTableExistsCheckSql(),
+        requiresExplicitCommit,
+        ps -> rdbEngine.bindInternalTableExistsCheckParams(ps, schema, table),
+        ResultSet::next);
   }
 
   private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
@@ -1464,7 +1468,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       execute(connection, sqls, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
-      if (!rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)) {
+      if (!rdbEngine.isDuplicateSchemaError(e)) {
         throw e;
       }
     }
