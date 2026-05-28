@@ -757,7 +757,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_DB2_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0229",
-      "With Db2, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "With Db2, setting an ordering on a BLOB column when using a cross-partition scan operation is not supported. Ordering: %s",
       "",
       ""),
   CASSANDRA_RENAME_TABLE_NOT_SUPPORTED(
@@ -840,7 +840,7 @@ public enum CoreError implements ScalarDbError {
   JDBC_ORACLE_CROSS_PARTITION_SCAN_ORDERING_ON_BLOB_COLUMN_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0247",
-      "With Oracle, setting an ordering on a BLOB column when using a cross partition scan operation is not supported. Ordering: %s",
+      "With Oracle, setting an ordering on a BLOB column when using a cross-partition scan operation is not supported. Ordering: %s",
       "",
       ""),
   JDBC_ORACLE_SELECTION_CONDITION_ON_BLOB_COLUMN_NOT_SUPPORTED(
