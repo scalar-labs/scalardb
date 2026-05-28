@@ -931,6 +931,73 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void addTableMetadata_WhenAutoCommitIsFalse_ShouldCommitWithoutTogglingAutoCommit()
+      throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.getAutoCommit()).thenReturn(false);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.addTableMetadata(connection, namespace, table, metadata, false, true);
+
+    // Assert
+    verify(connection, never()).setAutoCommit(anyBoolean());
+    verify(connection).commit();
+  }
+
+  @Test
+  public void addTableMetadata_WhenInsertFails_ShouldRollback() throws Exception {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .build();
+
+    Statement deleteStatement = mock(Statement.class);
+    Statement insertStatement1 = mock(Statement.class);
+    Statement insertStatement2 = mock(Statement.class);
+    when(connection.createStatement())
+        .thenReturn(deleteStatement, insertStatement1, insertStatement2);
+    when(insertStatement2.execute(anyString())).thenThrow(new SQLException("insert failed"));
+    when(connection.getAutoCommit()).thenReturn(true);
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act & Assert
+    assertThatThrownBy(
+            () -> admin.addTableMetadata(connection, namespace, table, metadata, false, true))
+        .isInstanceOf(SQLException.class)
+        .hasMessage("insert failed");
+    verify(connection).rollback();
+    verify(connection, never()).commit();
+    verify(connection).setAutoCommit(true);
+  }
+
+  @Test
   public void addTableMetadata_OverwriteMetadataForMysql_ShouldWorkProperly() throws Exception {
     addTableMetadata_overwriteMetadataForX_ShouldWorkProperly(
         RdbEngine.MYSQL,
@@ -1041,6 +1108,7 @@ public class JdbcAdminTest {
         .thenReturn(
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.getAutoCommit()).thenReturn(true);
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -1052,6 +1120,9 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).setAutoCommit(false);
+    verify(connection).commit();
+    verify(connection).setAutoCommit(true);
   }
 
   @Test
@@ -1229,6 +1300,7 @@ public class JdbcAdminTest {
         .thenReturn(
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.getAutoCommit()).thenReturn(true);
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -1240,6 +1312,9 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).setAutoCommit(false);
+    verify(connection).commit();
+    verify(connection).setAutoCommit(true);
   }
 
   @Test
@@ -1526,6 +1601,7 @@ public class JdbcAdminTest {
         .thenReturn(
             mockedStatements.get(0),
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(connection.getAutoCommit()).thenReturn(true);
     when(dataSource.getConnection()).thenReturn(connection);
 
     JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
@@ -1537,6 +1613,9 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+    verify(connection).setAutoCommit(false);
+    verify(connection).commit();
+    verify(connection).setAutoCommit(true);
   }
 
   @ParameterizedTest
