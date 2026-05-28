@@ -1,6 +1,7 @@
 plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.google.protobuf' version "${protobufPluginVersion}"
     id 'maven-publish'
     id 'base'
 }
@@ -200,6 +201,7 @@ dependencies {
     }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -383,6 +385,12 @@ task spotbugsIntegrationTest(type: SpotBugsTask) {
 check.dependsOn += spotbugsMain
 check.dependsOn += spotbugsTest
 check.dependsOn += spotbugsIntegrationTest
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+}
 
 base {
     archivesName = "scalardb"

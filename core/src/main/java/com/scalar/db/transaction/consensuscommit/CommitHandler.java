@@ -21,6 +21,7 @@ import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,6 +44,7 @@ public class CommitHandler {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final MutationsGrouper mutationsGrouper;
+  final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
 
@@ -62,6 +64,7 @@ public class CommitHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
+    this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
   }
@@ -91,7 +94,7 @@ public class CommitHandler {
       return Optional.of(beforePreparationHook.handle(tableMetadataManager, context));
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
-      abortState(context.transactionId);
+      abortState(context);
       rollbackRecords(context);
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
@@ -112,7 +115,7 @@ public class CommitHandler {
       beforePreparationHookFuture.get();
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
-      abortState(context.transactionId);
+      abortState(context);
       rollbackRecords(context);
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
@@ -144,7 +147,7 @@ public class CommitHandler {
         prepareRecords(context);
       } catch (PreparationException e) {
         safelyCallOnFailureBeforeCommit(context);
-        abortState(context.transactionId);
+        abortState(context);
         rollbackRecords(context);
         if (e instanceof PreparationConflictException) {
           throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
@@ -164,7 +167,7 @@ public class CommitHandler {
       // If the transaction has no writes and deletes, we don't need to abort-state and
       // rollback-records since there are no changes to be made.
       if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-        abortState(context.transactionId);
+        abortState(context);
       }
       if (hasWritesOrDeletesInSnapshot) {
         rollbackRecords(context);
@@ -348,11 +351,39 @@ public class CommitHandler {
     }
   }
 
+  /**
+   * Writes the COMMITTED state with the {@code tx_write_set} populated from the given context's
+   * snapshot.
+   *
+   * @param context the transaction context
+   * @throws CommitConflictException if another commit attempt has already written a conflicting
+   *     coordinator state
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
   public void commitState(TransactionContext context)
+      throws CommitConflictException, UnknownTransactionStatusException {
+    commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+  }
+
+  /**
+   * Writes the COMMITTED state without persisting a {@code tx_write_set}. Intended for callers that
+   * don't want per-transaction write-set logging.
+   *
+   * @param context the transaction context
+   * @throws CommitConflictException if another commit attempt has already written a conflicting
+   *     coordinator state
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
+  public void commitStateWithoutWriteSet(TransactionContext context)
+      throws CommitConflictException, UnknownTransactionStatusException {
+    commitStateInternal(context, null);
+  }
+
+  private void commitStateInternal(TransactionContext context, @Nullable WriteSet writeSet)
       throws CommitConflictException, UnknownTransactionStatusException {
     String id = context.transactionId;
     try {
-      Coordinator.State state = new Coordinator.State(id, TransactionState.COMMITTED);
+      Coordinator.State state = new Coordinator.State(id, writeSet, TransactionState.COMMITTED);
       coordinator.putState(state);
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
@@ -384,9 +415,42 @@ public class CommitHandler {
     }
   }
 
-  public TransactionState abortState(String id) throws UnknownTransactionStatusException {
+  /**
+   * Writes the ABORTED state with the {@code tx_write_set} populated from the given context's
+   * snapshot.
+   *
+   * @param context the transaction context
+   * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
+   *     concurrent writer beat us, whatever state ({@link TransactionState#COMMITTED} or {@link
+   *     TransactionState#ABORTED}) is already persisted
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
+  public TransactionState abortState(TransactionContext context)
+      throws UnknownTransactionStatusException {
+    return abortStateInternal(
+        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+  }
+
+  /**
+   * Writes the ABORTED state without persisting a {@code tx_write_set}. Intended for callers that
+   * don't have the originating transaction context (lazy recovery, manager-level rollback) or that
+   * don't want per-transaction write-set logging.
+   *
+   * @param id the transaction ID
+   * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
+   *     concurrent writer beat us, whatever state ({@link TransactionState#COMMITTED} or {@link
+   *     TransactionState#ABORTED}) is already persisted
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
+  public TransactionState abortStateWithoutWriteSet(String id)
+      throws UnknownTransactionStatusException {
+    return abortStateInternal(id, null);
+  }
+
+  private TransactionState abortStateInternal(String id, @Nullable WriteSet writeSet)
+      throws UnknownTransactionStatusException {
     try {
-      Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
+      Coordinator.State state = new Coordinator.State(id, writeSet, TransactionState.ABORTED);
       coordinator.putState(state);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
