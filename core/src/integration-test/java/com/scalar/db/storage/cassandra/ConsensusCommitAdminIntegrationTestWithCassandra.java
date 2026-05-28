@@ -16,7 +16,7 @@ public class ConsensusCommitAdminIntegrationTestWithCassandra
     extends ConsensusCommitAdminIntegrationTestBase {
   @Override
   protected Properties getProps(String testName) {
-    return CassandraEnv.getProperties(testName);
+    return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 
   @Override

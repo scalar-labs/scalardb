@@ -108,7 +108,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // Since the "IF NOT EXISTS" syntax is used to create a schema, we always return false
     return false;
   }
@@ -116,11 +116,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public boolean isDuplicateKeyError(SQLException e) {
     return e.getErrorCode() == Code.ALREADY_EXISTS_VALUE;
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    return e.getErrorCode() == Code.INVALID_ARGUMENT_VALUE;
   }
 
   @Override

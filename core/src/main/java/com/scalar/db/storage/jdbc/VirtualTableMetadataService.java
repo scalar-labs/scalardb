@@ -315,18 +315,8 @@ public class VirtualTableMetadataService {
 
   private boolean internalTableExists(Connection connection, String namespace, String table)
       throws SQLException {
-    String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
-    try {
-      execute(connection, sql, requiresExplicitCommit);
-      return true;
-    } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
-      throw e;
-    }
+    return JdbcAdmin.internalTableExists(
+        connection, rdbEngine, namespace, table, requiresExplicitCommit);
   }
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {

@@ -24,7 +24,7 @@ public class ConsensusCommitAdminIntegrationTestWithDynamo
 
   @Override
   protected Properties getProps(String testName) {
-    return DynamoEnv.getProperties(testName);
+    return ConsensusCommitDynamoEnv.getProperties(testName);
   }
 
   @Override

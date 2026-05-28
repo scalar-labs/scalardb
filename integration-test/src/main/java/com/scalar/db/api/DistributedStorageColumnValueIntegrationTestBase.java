@@ -124,6 +124,10 @@ public abstract class DistributedStorageColumnValueIntegrationTestBase {
 
   @BeforeEach
   public void setUp() throws Exception {
+    truncateTable();
+  }
+
+  protected void truncateTable() throws ExecutionException {
     admin.truncateTable(namespace, TABLE);
   }
 

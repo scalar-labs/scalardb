@@ -59,9 +59,6 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
     initialize(TEST_NAME);
     Properties properties = getProperties(TEST_NAME);
 
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
-
     // Enable to include metadata
     properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
 
@@ -93,7 +90,15 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
+    truncateTable(namespace, TABLE);
+    truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin.truncateCoordinatorTables();
   }
 

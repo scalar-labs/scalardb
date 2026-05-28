@@ -69,12 +69,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize();
     Properties properties1 = getProperties1(TEST_NAME);
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties1, TEST_NAME);
-
     Properties properties2 = getProperties2(TEST_NAME);
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties2, TEST_NAME);
 
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -139,9 +134,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    consensusCommitAdmin1.truncateTable(namespace1, TABLE_1);
+    truncateTable1(namespace1, TABLE_1);
+    truncateCoordinatorTables();
+    truncateTable2(namespace2, TABLE_2);
+  }
+
+  protected void truncateTable1(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin1.truncateTable(namespace, table);
+  }
+
+  protected void truncateTable2(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin2.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     consensusCommitAdmin1.truncateCoordinatorTables();
-    consensusCommitAdmin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll

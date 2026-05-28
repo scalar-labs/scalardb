@@ -40,6 +40,7 @@ public class Coordinator {
       TableMetadata.newBuilder()
           .addColumn(Attribute.ID, DataType.TEXT)
           .addColumn(Attribute.CHILD_IDS, DataType.TEXT)
+          .addColumn(Attribute.WRITE_SET, DataType.BLOB)
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
           .addPartitionKey(Attribute.ID)
