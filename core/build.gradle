@@ -275,7 +275,17 @@ task integrationTestJdbc(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    systemProperty 'junit.jupiter.execution.timeout.default', '3h'
     maxHeapSize = "4g"
+    maxParallelForks = 8
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        exceptionFormat "full"
+        showStandardStreams = true
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+    }
 }
 
 task integrationTestObjectStorage(type: Test) {

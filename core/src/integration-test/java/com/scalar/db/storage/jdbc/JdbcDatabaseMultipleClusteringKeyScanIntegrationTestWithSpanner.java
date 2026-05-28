@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
  * each executor thread to its own Spanner database (test-db-1..test-db-N).
  */
 @EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
+@Order(1)
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
     extends JdbcDatabaseMultipleClusteringKeyScanIntegrationTest {
 
@@ -38,7 +40,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
   @Override
   protected int getThreadNum() {
     // Optimized for a standard Github action runner
-    return 4;
+    return 8;
   }
 
   @Override
@@ -51,7 +53,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
       // Each thread gets assigned its own database: test-db-1..test-db-N.
       //  The Spanner emulator automatically creates database when the JDBC property
       //  `autoConfigEmulator=true`is set, so we don't need to create the database explicitly
-      String threadUrl = baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + (i + 1));
+      String threadUrl = baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-mul-ck-" + (i + 1));
       logger.info("Thread {}: {}", i, threadUrl);
       Properties props = JdbcEnv.getProperties(testName);
       props.setProperty(DatabaseConfig.CONTACT_POINTS, threadUrl);

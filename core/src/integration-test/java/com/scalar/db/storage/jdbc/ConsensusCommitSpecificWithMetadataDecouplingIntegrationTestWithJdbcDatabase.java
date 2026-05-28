@@ -9,10 +9,12 @@ import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@Order(1)
 public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
     extends ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase {
 
