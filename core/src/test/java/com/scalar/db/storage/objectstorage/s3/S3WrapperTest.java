@@ -305,6 +305,19 @@ public class S3WrapperTest {
   }
 
   @Test
+  public void update_S3ExceptionWith404Thrown_ShouldThrowPreconditionFailedException() {
+    // Arrange
+    CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
+    failedFuture.completeExceptionally(S3Exception.builder().statusCode(404).build());
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture);
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isInstanceOf(PreconditionFailedException.class);
+  }
+
+  @Test
   public void update_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
@@ -357,6 +370,18 @@ public class S3WrapperTest {
     // Act & Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY))
         .isInstanceOf(PreconditionFailedException.class);
+  }
+
+  @Test
+  public void delete_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
+    // Arrange
+    CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
+    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY))
+        .isInstanceOf(ConflictOccurredException.class);
   }
 
   @Test
