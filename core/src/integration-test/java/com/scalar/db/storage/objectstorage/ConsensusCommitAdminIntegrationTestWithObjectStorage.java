@@ -38,6 +38,12 @@ public class ConsensusCommitAdminIntegrationTestWithObjectStorage
   }
 
   @Override
+  protected boolean isGroupCommitEnabled(String testName) {
+    return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
+        .isCoordinatorGroupCommitEnabled();
+  }
+
+  @Override
   @Disabled("Object Storage does not support index-related operations")
   public void createIndex_ForAllDataTypesWithExistingData_ShouldCreateIndexesCorrectly() {}
 
