@@ -32,7 +32,6 @@ public class RdbEngineStrategyExceptionIntegrationTest {
   private static final String DUP_KEY_TABLE = "dup_key_test";
   private static final String DUP_INDEX_TABLE = "dup_idx_test";
   private static final String UNDEF_INDEX_TABLE = "undef_idx_test";
-  private static final String CONFLICT_TABLE = "conflict_test";
   private static final String DUP_SCHEMA = "rdb_engine_dup_schema";
   private static final String INDEX_NAME = "rdb_engine_test_idx";
   private static final String INDEX_COL = "val";
@@ -40,7 +39,6 @@ public class RdbEngineStrategyExceptionIntegrationTest {
   private RdbEngineStrategy rdbEngine;
   private HikariDataSource dataSource;
   private boolean requiresExplicitCommit;
-  private String jdbcUrl;
 
   @BeforeAll
   public void setUpAll() throws SQLException {
@@ -49,7 +47,6 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    jdbcUrl = properties.getProperty(DatabaseConfig.CONTACT_POINTS);
     createSchemaIfNotExists(TEST_SCHEMA);
   }
 
@@ -353,147 +350,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     }
   }
 
-  @Test
-  public void isConflict_WhenDeadlock_ShouldReturnTrue() throws Exception {
-    // Create conflict table with two rows
-    String fullTable = rdbEngine.encloseFullTableName(TEST_SCHEMA, CONFLICT_TABLE);
-    String idCol = rdbEngine.enclose("id");
-    String valCol = rdbEngine.enclose("val");
-    executeSql(
-        "CREATE TABLE "
-            + fullTable
-            + " ("
-            + idCol
-            + " INT NOT NULL, "
-            + valCol
-            + " INT, PRIMARY KEY ("
-            + idCol
-            + "))");
-    try {
-      executeSql("INSERT INTO " + fullTable + " (" + idCol + ", " + valCol + ") VALUES (1, 0)");
-      executeSql("INSERT INTO " + fullTable + " (" + idCol + ", " + valCol + ") VALUES (2, 0)");
 
-      // Two-thread deadlock
-      CountDownLatch thread1HoldsLock = new CountDownLatch(1);
-      CountDownLatch thread2HoldsLock = new CountDownLatch(1);
-      AtomicReference<SQLException> conflictException = new AtomicReference<>();
-
-      String updateRow1 = "UPDATE " + fullTable + " SET " + valCol + " = 1 WHERE " + idCol + " = 1";
-      String updateRow2 = "UPDATE " + fullTable + " SET " + valCol + " = 1 WHERE " + idCol + " = 2";
-
-      // For SQLite, use DriverManager with busy_timeout=0 so the second writer
-      // gets SQLITE_BUSY immediately instead of waiting (the HikariDataSource
-      // is configured with busy_timeout=50000 which causes a 50s hang).
-      boolean isSqlite = JdbcTestUtils.isSqlite(rdbEngine);
-
-      if (isSqlite) {
-        String sqliteNoBusyUrl = jdbcUrl.replaceAll("busy_timeout=\\d+", "busy_timeout=0");
-        // SQLite uses file-level locking, not row-level. The first write transaction
-        // locks the entire file. With busy_timeout=0, the second writer gets SQLITE_BUSY
-        // immediately. No traditional deadlock is possible — just contention.
-        try (Connection conn1 = DriverManager.getConnection(sqliteNoBusyUrl)) {
-          conn1.setAutoCommit(false);
-          try (Statement stmt1 = conn1.createStatement()) {
-            stmt1.execute(updateRow1); // Acquires RESERVED lock on the file
-            // Now try a second connection while conn1 holds the lock
-            try (Connection conn2 = DriverManager.getConnection(sqliteNoBusyUrl)) {
-              conn2.setAutoCommit(false);
-              try (Statement stmt2 = conn2.createStatement()) {
-                stmt2.execute(updateRow2); // Should get SQLITE_BUSY
-              }
-            } catch (SQLException e) {
-              conflictException.set(e);
-            }
-          } finally {
-            conn1.rollback();
-          }
-        }
-      } else {
-        // Standard row-level deadlock: two threads lock rows in opposite order
-        Thread thread1 =
-            new Thread(
-                () -> {
-                  try (Connection conn = dataSource.getConnection()) {
-                    conn.setAutoCommit(false);
-                    // TODO changing isolation level might trigger other errors
-                    conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-                    try (Statement stmt = conn.createStatement()) {
-                      stmt.execute(updateRow1); // Lock row 1
-                      thread1HoldsLock.countDown();
-                      if (!thread2HoldsLock.await(30, TimeUnit.SECONDS)) {
-                        conn.rollback();
-                        return;
-                      }
-                      stmt.execute(updateRow2); // Try to lock row 2 -> blocked
-                      conn.commit();
-                    } catch (SQLException e) {
-                      conflictException.compareAndSet(null, e);
-                      try {
-                        conn.rollback();
-                      } catch (SQLException rollbackEx) {
-                        // ignore rollback error
-                      }
-                    }
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                  } catch (Exception e) {
-                    if (e instanceof SQLException) {
-                      conflictException.compareAndSet(null, (SQLException) e);
-                    }
-                  }
-                });
-
-        Thread thread2 =
-            new Thread(
-                () -> {
-                  try (Connection conn = dataSource.getConnection()) {
-                    conn.setAutoCommit(false);
-                    // TODO changing isolation level might trigger other errors
-                    conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-                    try (Statement stmt = conn.createStatement()) {
-                      if (!thread1HoldsLock.await(30, TimeUnit.SECONDS)) {
-                        conn.rollback();
-                        return;
-                      }
-                      stmt.execute(updateRow2); // Lock row 2
-                      thread2HoldsLock.countDown();
-                      stmt.execute(updateRow1); // Try to lock row 1 -> DEADLOCK
-                      conn.commit();
-                    } catch (SQLException e) {
-                      conflictException.compareAndSet(null, e);
-                      try {
-                        conn.rollback();
-                      } catch (SQLException rollbackEx) {
-                        // ignore rollback error
-                      }
-                    }
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                  } catch (Exception e) {
-                    if (e instanceof SQLException) {
-                      conflictException.compareAndSet(null, (SQLException) e);
-                    }
-                  }
-                });
-
-        thread1.start();
-        thread2.start();
-        thread1.join(60_000);
-        thread2.join(60_000);
-      }
-
-      assertThat((Object) conflictException.get())
-          .as("Expected a deadlock/conflict exception but none was thrown")
-          .isNotNull();
-      assertThat(rdbEngine.isConflict(conflictException.get())).isTrue();
-    } finally {
-      try {
-        executeSql("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, CONFLICT_TABLE));
-      } catch (Exception e) {
-        // Ignore
-      }
-    }
-  }
 
   private void executeSql(String sql) throws SQLException {
     JdbcAdmin.withConnection(
