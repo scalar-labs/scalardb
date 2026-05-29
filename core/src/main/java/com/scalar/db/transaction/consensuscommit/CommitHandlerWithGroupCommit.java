@@ -2,18 +2,20 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean coordinatorWriteSetLoggingEnabled,
       boolean onePhaseCommitEnabled,
       CoordinatorGroupCommitter groupCommitter) {
     super(
@@ -40,10 +43,13 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         parallelExecutor,
         mutationsGrouper,
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        coordinatorWriteSetLoggingEnabled,
         onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
-    // The methods of this emitter will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(new Emitter(coordinator));
+    // The methods of this emitter will be called via GroupCommitter.ready(). The emitter respects
+    // the same opt-in write-set logging gate as the non-group-commit path.
+    groupCommitter.setEmitter(
+        new Emitter(coordinator, writeSetEncoder, coordinatorWriteSetLoggingEnabled));
     this.groupCommitter = groupCommitter;
   }
 
@@ -126,16 +132,32 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  public TransactionState abortState(String id) throws UnknownTransactionStatusException {
+  public TransactionState abortStateWithoutWriteSet(String id)
+      throws UnknownTransactionStatusException {
     cancelGroupCommitIfNeeded(id);
-    return super.abortState(id);
+    return super.abortStateWithoutWriteSet(id);
   }
 
-  private static class Emitter implements Emittable<String, String, TransactionContext> {
-    private final Coordinator coordinator;
+  @Override
+  public TransactionState abortState(TransactionContext context)
+      throws UnknownTransactionStatusException {
+    cancelGroupCommitIfNeeded(context.transactionId);
+    return super.abortState(context);
+  }
 
-    public Emitter(Coordinator coordinator) {
+  @VisibleForTesting
+  static class Emitter implements Emittable<String, String, TransactionContext> {
+    private final Coordinator coordinator;
+    private final WriteSetEncoder writeSetEncoder;
+    private final boolean coordinatorWriteSetLoggingEnabled;
+
+    public Emitter(
+        Coordinator coordinator,
+        WriteSetEncoder writeSetEncoder,
+        boolean coordinatorWriteSetLoggingEnabled) {
       this.coordinator = coordinator;
+      this.writeSetEncoder = writeSetEncoder;
+      this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
     }
 
     @Override
@@ -148,11 +170,23 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
 
       // These transactions are contained in a normal group that has multiple transactions.
       // Therefore, the transaction states should be put together in Coordinator.State.
-      List<String> transactionIds =
-          contexts.stream().map(c -> c.transactionId).collect(Collectors.toList());
+      List<String> transactionIds = new ArrayList<>(contexts.size());
+      for (TransactionContext context : contexts) {
+        transactionIds.add(context.transactionId);
+      }
 
+      // Skip WriteSet encoding when write-set logging is disabled — the column is not part of the
+      // Coordinator schema in that case.
+      WriteSet writeSet =
+          coordinatorWriteSetLoggingEnabled
+              ? writeSetEncoder.encodeMultiGroupWriteSet(contexts, false)
+              : null;
       coordinator.putStateForGroupCommit(
-          parentId, transactionIds, TransactionState.COMMITTED, System.currentTimeMillis());
+          parentId,
+          transactionIds,
+          writeSet,
+          TransactionState.COMMITTED,
+          System.currentTimeMillis());
 
       logger.debug(
           "Transaction {} (parent ID) is committed successfully at {}",
@@ -166,7 +200,12 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       // This transaction is contained in a delayed group that has only a single transaction.
       // Therefore, the transaction state can be committed as if it's a normal commit (not a
       // group commit).
-      coordinator.putState(new State(fullId, TransactionState.COMMITTED));
+      // Same opt-in gating as emitNormalGroup.
+      WriteSet writeSet =
+          coordinatorWriteSetLoggingEnabled
+              ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
+              : null;
+      coordinator.putState(new State(fullId, writeSet, TransactionState.COMMITTED));
 
       logger.debug(
           "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());

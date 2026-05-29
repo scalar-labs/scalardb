@@ -40,4 +40,9 @@
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     <Package name="~com.scalar.db.dataloader.core.*"/>
   </Match>
+  <!-- Ignore mutable object exposure warnings for Protocol Buffers generated classes -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,MS_EXPOSE_REP"/>
+    <Package name="~com.scalar.db.transaction.consensuscommit.proto.*"/>
+  </Match>
 </FindBugsFilter>
