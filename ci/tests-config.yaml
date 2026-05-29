@@ -108,7 +108,7 @@ jdbc:
     db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
     # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
     create_test_user: # Do nothing
-    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password="
 
 #  - label: spanner_large_arm
 #    display_name: Spanner large ARM
@@ -121,4 +121,4 @@ jdbc:
 #    db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
 #    # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
 #    create_test_user: # Do nothing
-#    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
+#    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password="
