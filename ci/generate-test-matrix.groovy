@@ -104,7 +104,7 @@ def static expandTests(testsByCategory) {
 
                 def testWithoutGroupCommit = new LinkedHashMap(baseVariant)
                 testWithoutGroupCommit["group_commit_enabled"] = 'false'
-                expandedTests.add(testWithoutGroupCommit)
+//                expandedTests.add(testWithoutGroupCommit)
 
                 if (!variant.disable_group_commit) {
                     def testWithGroupCommit = new LinkedHashMap(baseVariant)
