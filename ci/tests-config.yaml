@@ -98,7 +98,8 @@ dynamo:
 
 jdbc:
   - label: spanner_large
-    display_name: Spanner large
+    display_name: Spanner large X86
+    runner: ubuntu-latest-l
     # Use the binary emulator instead of Docker image for a slight performance gain
     setup: |
       echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" \
@@ -114,7 +115,52 @@ jdbc:
         --http_port 9020 \
         --grpc_binary ${EMULATOR_DIR}/emulator_main \
         &
-    runner: ubuntu-latest-l
+    db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
+    # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
+    create_test_user: # Do nothing
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password="
+
+  - label: spanner_standard
+    display_name: Spanner standard
+    runner: ubuntu-latest
+    # Use the binary emulator instead of Docker image for a slight performance gain
+    setup: |
+      echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" \
+        | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
+      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+        | sudo tee /usr/share/keyrings/cloud.google.asc > /dev/null
+      sudo apt-get update -qq
+      sudo apt-get install -y -qq google-cloud-cli-spanner-emulator
+      EMULATOR_DIR=/usr/lib/google-cloud-sdk/bin/cloud_spanner_emulator
+      ${EMULATOR_DIR}/gateway_main \
+        --hostname 0.0.0.0 \
+        --grpc_port 9010 \
+        --http_port 9020 \
+        --grpc_binary ${EMULATOR_DIR}/emulator_main \
+        &
+    db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
+    # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
+    create_test_user: # Do nothing
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password="
+
+  - label: spanner_large_arm
+    display_name: Spanner large ARM
+    runner: ubuntu-latest-l-arm
+    # Use the binary emulator instead of Docker image for a slight performance gain
+    setup: |
+      echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" \
+        | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
+      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+        | sudo tee /usr/share/keyrings/cloud.google.asc > /dev/null
+      sudo apt-get update -qq
+      sudo apt-get install -y -qq google-cloud-cli-spanner-emulator
+      EMULATOR_DIR=/usr/lib/google-cloud-sdk/bin/cloud_spanner_emulator
+      ${EMULATOR_DIR}/gateway_main \
+        --hostname 0.0.0.0 \
+        --grpc_port 9010 \
+        --http_port 9020 \
+        --grpc_binary ${EMULATOR_DIR}/emulator_main \
+        &
     db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
     # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
     create_test_user: # Do nothing
