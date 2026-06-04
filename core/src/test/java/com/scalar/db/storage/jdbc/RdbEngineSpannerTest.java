@@ -181,11 +181,11 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void isCreateMetadataSchemaDuplicateSchemaError_ShouldAlwaysReturnFalse() {
+  void isDuplicateSchemaError_ShouldAlwaysReturnFalse() {
     SQLException e = mock(SQLException.class);
     when(e.getErrorCode()).thenReturn(Code.ALREADY_EXISTS_VALUE);
 
-    assertThat(rdbEngine.isCreateMetadataSchemaDuplicateSchemaError(e)).isFalse();
+    assertThat(rdbEngine.isDuplicateSchemaError(e)).isFalse();
   }
 
   @Test
@@ -202,22 +202,6 @@ public class RdbEngineSpannerTest {
     when(e.getErrorCode()).thenReturn(Code.NOT_FOUND_VALUE);
 
     assertThat(rdbEngine.isDuplicateKeyError(e)).isFalse();
-  }
-
-  @Test
-  void isUndefinedTableError_InvalidArgumentCode_ShouldReturnTrue() {
-    SQLException e = mock(SQLException.class);
-    when(e.getErrorCode()).thenReturn(Code.INVALID_ARGUMENT_VALUE);
-
-    assertThat(rdbEngine.isUndefinedTableError(e)).isTrue();
-  }
-
-  @Test
-  void isUndefinedTableError_OtherCode_ShouldReturnFalse() {
-    SQLException e = mock(SQLException.class);
-    when(e.getErrorCode()).thenReturn(Code.NOT_FOUND_VALUE);
-
-    assertThat(rdbEngine.isUndefinedTableError(e)).isFalse();
   }
 
   @Test
