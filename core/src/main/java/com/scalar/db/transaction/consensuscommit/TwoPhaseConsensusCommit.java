@@ -233,7 +233,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      commit.commitState(context);
+      commit.commitStateWithoutWriteSet(context);
     } catch (CommitConflictException | UnknownTransactionStatusException e) {
       // no need to rollback because the transaction has already been rolled back
       needRollback = false;
@@ -257,7 +257,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      TransactionState state = commit.abortState(getId());
+      TransactionState state = commit.abortStateWithoutWriteSet(getId());
       if (state == TransactionState.COMMITTED) {
         throw new RollbackException(
             CoreError.CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED

@@ -191,6 +191,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           parallelExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+          config.isCoordinatorWriteSetLoggingEnabled(),
           config.isOnePhaseCommitEnabled(),
           groupCommitter);
     } else {
@@ -201,6 +202,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           parallelExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+          config.isCoordinatorWriteSetLoggingEnabled(),
           config.isOnePhaseCommitEnabled());
     }
   }
@@ -555,7 +557,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abortState(txId);
+      return commit.abortStateWithoutWriteSet(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }
