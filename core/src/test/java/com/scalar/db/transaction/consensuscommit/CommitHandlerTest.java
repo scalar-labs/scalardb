@@ -1493,7 +1493,8 @@ public class CommitHandlerTest {
     handlerWithoutWriteSetLogging.commitState(context);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(anyId(), null, TransactionState.COMMITTED));
+    verify(coordinator)
+        .putState(new Coordinator.State(anyId(), (WriteSet) null, TransactionState.COMMITTED));
   }
 
   @Test
@@ -1510,7 +1511,8 @@ public class CommitHandlerTest {
     handlerWithoutWriteSetLogging.abortState(context);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(anyId(), null, TransactionState.ABORTED));
+    verify(coordinator)
+        .putState(new Coordinator.State(anyId(), (WriteSet) null, TransactionState.ABORTED));
   }
 
   @Test
@@ -1533,9 +1535,10 @@ public class CommitHandlerTest {
         .isInstanceOf(CommitException.class);
 
     // Assert
-    verify(coordinator).putState(new Coordinator.State(anyId(), null, TransactionState.ABORTED));
+    verify(coordinator)
+        .putState(new Coordinator.State(anyId(), (WriteSet) null, TransactionState.ABORTED));
     verify(coordinator, never())
-        .putState(new Coordinator.State(anyId(), null, TransactionState.COMMITTED));
+        .putState(new Coordinator.State(anyId(), (WriteSet) null, TransactionState.COMMITTED));
     verify(handlerWithoutWriteSetLogging).rollbackRecords(context);
     verify(handlerWithoutWriteSetLogging).onFailureBeforeCommit(context);
   }
