@@ -988,6 +988,21 @@ public class CoordinatorTest {
   }
 
   @Test
+  public void state_WithChildIds_ShouldHoldChildIdsAndNoWriteSet() {
+    // Arrange
+    List<String> childIds = Arrays.asList("child-1", "child-2");
+
+    // Act
+    State state = new State(ANY_ID_1, childIds, TransactionState.COMMITTED);
+
+    // Assert
+    assertThat(state.getId()).isEqualTo(ANY_ID_1);
+    assertThat(state.getChildIds()).containsExactlyElementsOf(childIds);
+    assertThat(state.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(state.getWriteSet()).isEmpty();
+  }
+
+  @Test
   public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
       throws CoordinatorException {
     // Arrange — State with an empty (but non-null) WriteSet that explicitly carries
