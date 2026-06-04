@@ -988,7 +988,7 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void state_WithChildIds_ShouldHoldChildIdsAndEmptyWriteSet() {
+  public void state_WithChildIds_ShouldHoldChildIdsAndNoWriteSet() {
     // Arrange
     List<String> childIds = Arrays.asList("child-1", "child-2");
 
