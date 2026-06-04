@@ -438,6 +438,10 @@ public class Coordinator {
       this(id, state, System.currentTimeMillis());
     }
 
+    public State(String id, List<String> childIds, TransactionState state) {
+      this(id, childIds, null, state, System.currentTimeMillis());
+    }
+
     public State(String id, @Nullable WriteSet writeSet, TransactionState state) {
       this(id, EMPTY_CHILD_IDS, writeSet, state, System.currentTimeMillis());
     }
