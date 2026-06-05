@@ -7,7 +7,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
-import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -45,7 +44,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -778,18 +776,7 @@ public class Snapshot {
     // If this transaction or another transaction inserts records into the index range,
     // the Get with index operation may retrieve multiple records, which would result in
     // an IllegalArgumentException. Therefore, we use Scan with index instead.
-    Scan scanWithIndex =
-        Scan.newBuilder()
-            .namespace(get.forNamespace().get())
-            .table(get.forTable().get())
-            .indexKey(get.getPartitionKey())
-            .whereOr(
-                get.getConjunctions().stream()
-                    .map(c -> ConditionSetBuilder.andConditionSet(c.getConditions()).build())
-                    .collect(Collectors.toSet()))
-            .consistency(get.getConsistency())
-            .attributes(get.getAttributes())
-            .build();
+    Scan scanWithIndex = ConsensusCommitUtils.createScanWithIndexFromGet(get);
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
     originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
