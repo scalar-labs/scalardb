@@ -47,10 +47,14 @@ public class RdbEngineStrategyExceptionIntegrationTest {
 
   @AfterAll
   public void tearDownAll() throws SQLException {
-    executeSql(rdbEngine.dropNamespaceSql(TEST_SCHEMA));
-
-    if (dataSource != null) {
-      dataSource.close();
+    try {
+      if (dataSource != null) {
+        executeSql(rdbEngine.dropNamespaceSql(TEST_SCHEMA));
+      }
+    } finally {
+      if (dataSource != null) {
+        dataSource.close();
+      }
     }
   }
 
@@ -137,12 +141,9 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     }
   }
 
-
-
   @Test
   @DisabledIf("isCreateSchemaIfNotExistsSyntaxSupported")
-  public void isDuplicateSchemaError_WhenDuplicateSchema_ShouldReturnTrue()
-      throws SQLException {
+  public void isDuplicateSchemaError_WhenDuplicateSchema_ShouldReturnTrue() throws SQLException {
     // Arrange: create the schema once
     executeSqls(rdbEngine.createSchemaSqls(DUP_SCHEMA));
     try {
@@ -309,8 +310,6 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     }
   }
 
-
-
   private void executeSql(String sql) throws SQLException {
     JdbcAdmin.withConnection(
         dataSource,
@@ -332,12 +331,8 @@ public class RdbEngineStrategyExceptionIntegrationTest {
   }
 
   private void createSchemaIfNotExists(String schema) throws SQLException {
-    String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
     try {
-      try (Connection connection = dataSource.getConnection(); ) {
-        execute(connection, sqls, requiresExplicitCommit);
-      }
-
+      executeSqls(rdbEngine.createSchemaIfNotExistsSqls(schema));
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
       if (!rdbEngine.isDuplicateSchemaError(e)) {
