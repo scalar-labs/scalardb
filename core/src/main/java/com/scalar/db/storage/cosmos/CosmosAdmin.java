@@ -49,10 +49,15 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class CosmosAdmin implements DistributedStorageAdmin {
+  private static final Logger logger = LoggerFactory.getLogger(CosmosAdmin.class);
+
   public static final String REQUEST_UNIT = "ru";
   public static final String DEFAULT_REQUEST_UNIT = "400";
   public static final String NO_SCALING = "no-scaling";
@@ -454,6 +459,22 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private void updateIndexingPolicy(
       String databaseName, String containerName, TableMetadata newTableMetadata)
       throws ExecutionException {
+    updateIndexingPolicy(databaseName, containerName, newTableMetadata, false);
+  }
+
+  /**
+   * Updates the container's indexing policy to match the given metadata. When {@code
+   * skipWhenAlreadyUpToDate} is true (the repair path), the container's actual indexing policy is
+   * compared against the desired one first and the (RU-consuming) container replace is skipped when
+   * it already matches. The comparison is against the actual physical state -- not the ScalarDB
+   * metadata -- because repair must fix the indexing policy even when the metadata already matches.
+   */
+  private void updateIndexingPolicy(
+      String databaseName,
+      String containerName,
+      TableMetadata newTableMetadata,
+      boolean skipWhenAlreadyUpToDate)
+      throws ExecutionException {
     CosmosDatabase database = client.getDatabase(databaseName);
     try {
       // get the existing container properties
@@ -461,8 +482,17 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           database.createContainerIfNotExists(containerName, PARTITION_KEY_PATH);
       CosmosContainerProperties properties = response.getProperties();
 
+      IndexingPolicy newIndexingPolicy = computeIndexingPolicy(newTableMetadata);
+      if (skipWhenAlreadyUpToDate
+          && indexingPolicyUpToDate(properties.getIndexingPolicy(), newIndexingPolicy)) {
+        logger.debug(
+            "The indexing policy for the {} container is already up to date; skipping the indexing policy update",
+            getFullTableName(databaseName, containerName));
+        return;
+      }
+
       // set the new index policy to the container properties
-      properties.setIndexingPolicy(computeIndexingPolicy(newTableMetadata));
+      properties.setIndexingPolicy(newIndexingPolicy);
 
       // update the container properties
       database.getContainer(containerName).replace(properties);
@@ -473,6 +503,41 @@ public class CosmosAdmin implements DistributedStorageAdmin {
               getFullTableName(databaseName, containerName)),
           e);
     }
+  }
+
+  /**
+   * Returns whether the container's current indexing policy already matches the desired one on the
+   * attributes ScalarDB controls: the set of included paths (the partition-key path and the
+   * secondary-index paths) and the composite indexes (derived from the clustering keys). The
+   * excluded paths are not compared because Cosmos adds its own (e.g. for the etag), which would
+   * cause spurious mismatches. A {@code null} current policy is treated as not up to date.
+   */
+  private static boolean indexingPolicyUpToDate(
+      @Nullable IndexingPolicy current, IndexingPolicy desired) {
+    return includedPaths(current).equals(includedPaths(desired))
+        && compositeIndexes(current).equals(compositeIndexes(desired));
+  }
+
+  private static Set<String> includedPaths(@Nullable IndexingPolicy policy) {
+    if (policy == null || policy.getIncludedPaths() == null) {
+      return Collections.emptySet();
+    }
+    return policy.getIncludedPaths().stream()
+        .map(IncludedPath::getPath)
+        .collect(Collectors.toSet());
+  }
+
+  private static List<List<String>> compositeIndexes(@Nullable IndexingPolicy policy) {
+    if (policy == null || policy.getCompositeIndexes() == null) {
+      return Collections.emptyList();
+    }
+    return policy.getCompositeIndexes().stream()
+        .map(
+            paths ->
+                paths.stream()
+                    .map(path -> path.getPath() + " " + path.getOrder())
+                    .collect(Collectors.toList()))
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -599,14 +664,44 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
-      createTableInternal(namespace, table, metadata, true);
-      updateIndexingPolicy(namespace, table, metadata);
+      checkMetadata(metadata);
+      // Always run the physical container repair. The metadata write is guarded by comparing the
+      // stored ScalarDB metadata, while the indexing-policy update is guarded by comparing the
+      // container's actual indexing policy (inside updateIndexingPolicy) -- repair must fix the
+      // physical indexing policy even when the ScalarDB metadata already matches.
+      createContainer(namespace, table, metadata, true);
+      if (tableMetadataAlreadyUpToDate(namespace, table, metadata)) {
+        logger.debug(
+            "The metadata for the {} container is already up to date; skipping the metadata update",
+            getFullTableName(namespace, table));
+      } else {
+        upsertTableMetadata(namespace, table, metadata);
+      }
+      updateIndexingPolicy(namespace, table, metadata, true);
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (Exception e) {
       throw new ExecutionException(
           String.format("Repairing the %s container failed", getFullTableName(namespace, table)),
           e);
+    }
+  }
+
+  /**
+   * Returns whether the stored table metadata already equals the desired metadata. Fails open: if
+   * reading the current metadata throws (e.g. the metadata is corrupt and cannot be parsed), this
+   * returns {@code false} so the caller rewrites the metadata rather than skipping the repair.
+   */
+  private boolean tableMetadataAlreadyUpToDate(
+      String namespace, String table, TableMetadata metadata) {
+    try {
+      return metadata.equals(getTableMetadata(namespace, table));
+    } catch (Exception e) {
+      logger.debug(
+          "Failed to read the stored metadata for the {} container; proceeding with the metadata update",
+          getFullTableName(namespace, table),
+          e);
+      return false;
     }
   }
 

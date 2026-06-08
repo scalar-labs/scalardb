@@ -23,6 +23,7 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
+import com.azure.cosmos.models.CompositePath;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosContainerResponse;
@@ -30,6 +31,7 @@ import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
+import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
@@ -40,6 +42,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -65,6 +68,9 @@ public class CosmosAdminTest {
   @Mock private CosmosContainer container;
   @Mock private CosmosException notFoundException;
   private CosmosAdmin admin;
+  // The container properties mock returned by setUpRepairTableMocks, for stubbing the current
+  // indexing policy in indexing-policy repair tests.
+  private CosmosContainerProperties repairContainerProperties;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -951,6 +957,8 @@ public class CosmosAdminTest {
     verify(metadataDatabase).createContainerIfNotExists(any());
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
+    // The stored procedure already exists, so it must not be created again
+    verify(scripts, never()).createStoredProcedure(any());
   }
 
   @Test
@@ -1085,6 +1093,341 @@ public class CosmosAdminTest {
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
     verify(scripts).createStoredProcedure(any());
+  }
+
+  private CosmosContainer setUpRepairTableMocks(String namespace, String table) {
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+
+    // Missing stored procedure so the physical container repair path runs fully
+    CosmosScripts scripts = mock(CosmosScripts.class);
+    when(container.getScripts()).thenReturn(scripts);
+    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
+    CosmosException cosmosException = mock(CosmosException.class);
+    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
+        .thenReturn(storedProcedure);
+    when(cosmosException.getStatusCode()).thenReturn(404);
+    when(storedProcedure.read()).thenThrow(cosmosException);
+
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+    repairContainerProperties = properties;
+
+    return metadataContainer;
+  }
+
+  @SuppressWarnings("unchecked")
+  private void stubStoredTableMetadata(
+      CosmosContainer metadataContainer, CosmosTableMetadata stored) {
+    CosmosItemResponse<CosmosTableMetadata> metadataResponse = mock(CosmosItemResponse.class);
+    when(metadataContainer.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(metadataResponse);
+    when(metadataResponse.getItem()).thenReturn(stored);
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataEqualsDesired_ShouldNotUpsertMetadata()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .secondaryIndexNames(ImmutableSet.of("c3"))
+            .build());
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: physical container repair still runs, but the metadata upsert is skipped
+    verify(database).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verify(metadataContainer, never()).upsertItem(any());
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataDiffersFromDesired_ShouldUpsertMetadata()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    // Stored metadata is missing the secondary index, so it differs from the desired metadata
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build());
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(metadataContainer).upsertItem(any(CosmosTableMetadata.class));
+  }
+
+  @Test
+  public void repairTable_WhenIndexingPolicyAlreadyUpToDate_ShouldNotReplaceContainer()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .secondaryIndexNames(ImmutableSet.of("c3"))
+            .build());
+    // The container's actual indexing policy already matches the desired one
+    IndexingPolicy currentPolicy = new IndexingPolicy();
+    currentPolicy.setIncludedPaths(
+        Arrays.asList(
+            new IncludedPath("/concatenatedPartitionKey/?"), new IncludedPath("/values/c3/?")));
+    when(repairContainerProperties.getIndexingPolicy()).thenReturn(currentPolicy);
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: the indexing policy is already correct, so the container is not replaced
+    verify(container, never()).replace(any(CosmosContainerProperties.class));
+  }
+
+  @Test
+  public void repairTable_WhenIndexingPolicyDiffers_ShouldReplaceContainer()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .secondaryIndexNames(ImmutableSet.of("c3"))
+            .build());
+    // The container's actual indexing policy is missing the c3 secondary index path
+    IndexingPolicy currentPolicy = new IndexingPolicy();
+    currentPolicy.setIncludedPaths(
+        Collections.singletonList(new IncludedPath("/concatenatedPartitionKey/?")));
+    when(repairContainerProperties.getIndexingPolicy()).thenReturn(currentPolicy);
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: the indexing policy is stale, so the container is replaced to fix it
+    verify(container).replace(any(CosmosContainerProperties.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void repairTable_WhenReadingStoredMetadataThrows_ShouldFailOpenAndUpsertMetadata()
+      throws ExecutionException {
+    // Arrange: reading the current metadata throws (e.g. a corrupt record); the guard must fail
+    // open and write rather than skip the metadata update
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    when(metadataContainer.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenThrow(new RuntimeException("corrupted"));
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: no exception propagates and the metadata is rewritten
+    verify(metadataContainer).upsertItem(any(CosmosTableMetadata.class));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void repairTable_WhenStoredMetadataAbsent_ShouldUpsertMetadata()
+      throws ExecutionException {
+    // Arrange: no stored metadata (read returns null); the guard must write
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addSecondaryIndex("c3")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    CosmosItemResponse<CosmosTableMetadata> metadataResponse = mock(CosmosItemResponse.class);
+    when(metadataContainer.readItem(
+            anyString(),
+            any(PartitionKey.class),
+            ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
+        .thenReturn(metadataResponse);
+    when(metadataResponse.getItem()).thenReturn(null);
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(metadataContainer).upsertItem(any(CosmosTableMetadata.class));
+  }
+
+  @Test
+  public void repairTable_WhenCompositeIndexUpToDate_ShouldNotReplaceContainer()
+      throws ExecutionException {
+    // Arrange: a table with a clustering key, so the desired indexing policy has a composite index
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addColumn("c4", DataType.INT)
+            .addPartitionKey("c1")
+            .addClusteringKey("c2", Order.ASC)
+            .addSecondaryIndex("c4")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .clusteringKeyNames(Sets.newLinkedHashSet("c2"))
+            .clusteringOrders(ImmutableMap.of("c2", "ASC"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint", "c4", "int"))
+            .secondaryIndexNames(ImmutableSet.of("c4"))
+            .build());
+    // The container's actual indexing policy already matches the desired one, including the
+    // composite index derived from the clustering key
+    IndexingPolicy currentPolicy = new IndexingPolicy();
+    currentPolicy.setIncludedPaths(Collections.singletonList(new IncludedPath("/values/c4/?")));
+    currentPolicy.setCompositeIndexes(
+        Collections.singletonList(
+            Arrays.asList(
+                compositePath("/concatenatedPartitionKey", CompositePathSortOrder.ASCENDING),
+                compositePath("/clusteringKey/c2", CompositePathSortOrder.ASCENDING))));
+    when(repairContainerProperties.getIndexingPolicy()).thenReturn(currentPolicy);
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: the composite index already matches, so the container is not replaced
+    verify(container, never()).replace(any(CosmosContainerProperties.class));
+  }
+
+  @Test
+  public void repairTable_WhenCompositeIndexDiffers_ShouldReplaceContainer()
+      throws ExecutionException {
+    // Arrange: a table with a clustering key, so the desired indexing policy has a composite index
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addColumn("c4", DataType.INT)
+            .addPartitionKey("c1")
+            .addClusteringKey("c2", Order.ASC)
+            .addSecondaryIndex("c4")
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .clusteringKeyNames(Sets.newLinkedHashSet("c2"))
+            .clusteringOrders(ImmutableMap.of("c2", "ASC"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint", "c4", "int"))
+            .secondaryIndexNames(ImmutableSet.of("c4"))
+            .build());
+    // The included paths match, but the composite index is missing the clustering-key path, so the
+    // policy differs only on the composite-index dimension
+    IndexingPolicy currentPolicy = new IndexingPolicy();
+    currentPolicy.setIncludedPaths(Collections.singletonList(new IncludedPath("/values/c4/?")));
+    currentPolicy.setCompositeIndexes(
+        Collections.singletonList(
+            Collections.singletonList(
+                compositePath("/concatenatedPartitionKey", CompositePathSortOrder.ASCENDING))));
+    when(repairContainerProperties.getIndexingPolicy()).thenReturn(currentPolicy);
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: the composite index is stale, so the container is replaced to fix it
+    verify(container).replace(any(CosmosContainerProperties.class));
+  }
+
+  private static CompositePath compositePath(String path, CompositePathSortOrder order) {
+    CompositePath compositePath = new CompositePath();
+    compositePath.setPath(path);
+    compositePath.setOrder(order);
+    return compositePath;
   }
 
   @Test

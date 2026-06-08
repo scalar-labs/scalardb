@@ -1647,6 +1647,95 @@ public class JdbcAdminTest {
     verify(adminSpy).createIndex(connection, namespace, table, "c4", true);
   }
 
+  private static TableMetadata sampleTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addPartitionKey("c1")
+        .addColumn("c1", DataType.INT)
+        .addColumn("c2", DataType.TEXT)
+        .build();
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataEqualsDesired_ShouldNotAddTableMetadata()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata = sampleTableMetadata();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(tableMetadataService.getTableMetadata(connection, namespace, table)).thenReturn(metadata);
+    JdbcAdmin adminSpy = spy(createJdbcAdmin());
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert: physical repair still runs, but the metadata write is skipped
+    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, true);
+    verify(adminSpy, never()).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataDiffersFromDesired_ShouldAddTableMetadata()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata desired = sampleTableMetadata();
+    TableMetadata stored =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.INT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(tableMetadataService.getTableMetadata(connection, namespace, table)).thenReturn(stored);
+    JdbcAdmin adminSpy = spy(createJdbcAdmin());
+
+    // Act
+    adminSpy.repairTable(namespace, table, desired, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).addTableMetadata(connection, namespace, table, desired, true, true);
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataAbsent_ShouldAddTableMetadata()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata = sampleTableMetadata();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(tableMetadataService.getTableMetadata(connection, namespace, table)).thenReturn(null);
+    JdbcAdmin adminSpy = spy(createJdbcAdmin());
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
+  @Test
+  public void repairTable_WhenReadingStoredMetadataThrowsRuntimeException_ShouldFailOpenAndWrite()
+      throws SQLException, ExecutionException {
+    // Arrange: a corrupt metadata row makes the read throw a RuntimeException (not a SQLException),
+    // e.g. DataType.valueOf on a corrupted value. The guard must fail open and write.
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata = sampleTableMetadata();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(tableMetadataService.getTableMetadata(connection, namespace, table))
+        .thenThrow(new IllegalArgumentException("corrupted"));
+    JdbcAdmin adminSpy = spy(createJdbcAdmin());
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert: no exception propagates and the metadata is rewritten
+    verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, true);
+  }
+
   @Test
   public void
       createMetadataTableIfNotExists_WithInternalDbError_forMysql_shouldThrowInternalDbError()
