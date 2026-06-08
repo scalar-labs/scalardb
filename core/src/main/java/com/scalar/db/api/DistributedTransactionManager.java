@@ -479,9 +479,9 @@ public interface DistributedTransactionManager
    * Finishes a given terminated transaction by performing any remaining post-termination work and
    * cleaning up the Coordinator state row. The transaction must already be in a terminal state
    * ({@code COMMITTED} or {@code ABORTED}); this method completes the per-record work that was
-   * otherwise deferred to lazy recovery — rolling forward {@code PREPARED} records of a committed
-   * transaction, or rolling back {@code PREPARED} records of an aborted one — and then removes the
-   * Coordinator state row.
+   * otherwise deferred to lazy recovery — rolling forward {@code PREPARED} or {@code DELETED}
+   * records of a committed transaction, or rolling back {@code PREPARED} or {@code DELETED} records
+   * of an aborted one — and then removes the Coordinator state row.
    *
    * <p>This is a best-effort, retryable cleanup API intended to be called after a transaction
    * terminates so that ScalarDB can complete per-record post-termination work eagerly and reclaim
