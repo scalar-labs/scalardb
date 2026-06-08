@@ -363,13 +363,14 @@ public interface Admin {
   }
 
   /**
-   * Repairs a table which may be in an unknown state.
+   * Repairs a table that may be in an unknown state, such as the table exists in the underlying
+   * storage but not its ScalarDB metadata or vice versa. This will re-create the table, its
+   * secondary indexes, and their metadata if necessary.
    *
-   * @param namespace an existing namespace
-   * @param table an existing table
+   * @param namespace a namespace
+   * @param table a table
    * @param metadata the metadata associated to the table to repair
    * @param options options to repair
-   * @throws IllegalArgumentException if the table does not exist
    * @throws ExecutionException if the operation fails
    */
   void repairTable(

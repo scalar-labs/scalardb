@@ -809,6 +809,7 @@ public abstract class ConsensusCommitAdminTestBase {
     admin.repairCoordinatorTables(options);
 
     // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
@@ -831,12 +832,75 @@ public abstract class ConsensusCommitAdminTestBase {
     adminWithGroupCommit.repairCoordinatorTables(options);
 
     // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
             Coordinator.TABLE,
             Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
             options);
+  }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithGroupCommitEnabledAndExistingTableMissingChildIdsColumn_ShouldAddChildIdsColumn()
+          throws ExecutionException {
+    // Arrange
+    when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithGroupCommit =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // The existing Coordinator table was created with group commit disabled, so it does not have
+    // the CHILD_IDS column.
+    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_DISABLED);
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    adminWithGroupCommit.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            options);
+    verify(distributedStorageAdmin)
+        .addNewColumnToTable(
+            coordinatorNamespaceName, Coordinator.TABLE, Attribute.CHILD_IDS, DataType.TEXT);
+  }
+
+  @Test
+  public void
+      repairCoordinatorTables_WithGroupCommitDisabledAndExistingTableHavingChildIdsColumn_ShouldPreserveWithChildIdsSchemaAndNotAlterTable()
+          throws ExecutionException {
+    // Arrange
+    // The existing Coordinator table was created with group commit enabled, so it already has the
+    // CHILD_IDS column. We are now repairing with group commit disabled. The ScalarDB-side
+    // metadata must stay aligned with the physical column set (still WITH child_ids); the runtime
+    // group commit config independently decides whether to use that column. So repair should
+    // upsert the WITH_GROUP_COMMIT_ENABLED metadata, NOT the disabled variant, and should not
+    // attempt any column ALTER.
+    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
+        .thenReturn(Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED);
+
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    admin.repairCoordinatorTables(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, true, options);
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.TABLE,
+            Coordinator.TABLE_METADATA_WITH_GROUP_COMMIT_ENABLED,
+            options);
+    verify(distributedStorageAdmin, never()).addNewColumnToTable(any(), any(), any(), any());
   }
 
   @Test
