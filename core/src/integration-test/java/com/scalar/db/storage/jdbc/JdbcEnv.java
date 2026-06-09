@@ -19,7 +19,12 @@ public final class JdbcEnv {
   private JdbcEnv() {}
 
   public static Properties getProperties(String testName) {
-    String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
+    // Consult the Testcontainers-provisioned emulator URL first (set per-thread by
+    // SpannerEmulatorExtension when the opt-in flag is active); otherwise fall back to the
+    // externally-provided system property — byte-for-byte today's behavior when no container.
+    String activeUrl = SpannerEmulatorContainerSupport.getActiveUrl();
+    String jdbcUrl =
+        (activeUrl != null) ? activeUrl : System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
 
