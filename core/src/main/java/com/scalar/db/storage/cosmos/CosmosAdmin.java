@@ -102,7 +102,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createMetadataDatabaseAndNamespaceContainerIfNotExists();
-      createTableInternal(namespace, table, metadata, false);
+      createTableInternal(namespace, table, metadata);
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (Exception e) {
@@ -111,11 +111,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createTableInternal(
-      String namespace, String table, TableMetadata metadata, boolean ifNotExists)
+  private void createTableInternal(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     checkMetadata(metadata);
-    createContainer(namespace, table, metadata, ifNotExists);
+    createContainer(namespace, table, metadata, false);
     upsertTableMetadata(namespace, table, metadata);
   }
 
