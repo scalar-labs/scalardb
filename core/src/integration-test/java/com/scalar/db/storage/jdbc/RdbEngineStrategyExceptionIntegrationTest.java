@@ -18,9 +18,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class RdbEngineStrategyExceptionIntegrationTest {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(RdbEngineStrategyExceptionIntegrationTest.class);
 
   private static final String TEST_SCHEMA = "rdb_engine_exc_test";
   private static final String DUP_TABLE = "dup_table_test";
@@ -85,14 +90,11 @@ public class RdbEngineStrategyExceptionIntegrationTest {
       assertThat((Object) caught).isNotNull();
       assertThat(rdbEngine.isDuplicateTableError(caught)).isTrue();
     } finally {
-      try {
-        executeSql("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_TABLE));
-      } catch (Exception e) {
-        // Ignore
-      }
+      executeIgnoringError("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_TABLE));
     }
   }
 
+  @SuppressWarnings("unused")
   private boolean isCreateTableIfNotExistsSyntaxSupported() {
     return JdbcTestUtils.isMysql(rdbEngine)
         || JdbcTestUtils.isPostgresql(rdbEngine)
@@ -133,11 +135,8 @@ public class RdbEngineStrategyExceptionIntegrationTest {
       assertThat((Object) caught).isNotNull();
       assertThat(rdbEngine.isDuplicateKeyError(caught)).isTrue();
     } finally {
-      try {
-        executeSql("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_KEY_TABLE));
-      } catch (Exception e) {
-        // Ignore
-      }
+      executeIgnoringError(
+          "DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_KEY_TABLE));
     }
   }
 
@@ -159,14 +158,11 @@ public class RdbEngineStrategyExceptionIntegrationTest {
       assertThat((Object) caught).isNotNull();
       assertThat(rdbEngine.isDuplicateSchemaError(caught)).isTrue();
     } finally {
-      try {
-        executeSql(rdbEngine.dropNamespaceSql(DUP_SCHEMA));
-      } catch (Exception e) {
-        // Ignore
-      }
+      executeIgnoringError(rdbEngine.dropNamespaceSql(DUP_SCHEMA));
     }
   }
 
+  @SuppressWarnings("unused")
   private boolean isCreateSchemaIfNotExistsSyntaxSupported() {
     return JdbcTestUtils.isMysql(rdbEngine)
         || JdbcTestUtils.isPostgresql(rdbEngine)
@@ -205,14 +201,12 @@ public class RdbEngineStrategyExceptionIntegrationTest {
       assertThat((Object) caught).isNotNull();
       assertThat(rdbEngine.isDuplicateIndexError(caught)).isTrue();
     } finally {
-      try {
-        executeSql("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_INDEX_TABLE));
-      } catch (Exception e) {
-        // Ignore
-      }
+      executeIgnoringError(
+          "DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_INDEX_TABLE));
     }
   }
 
+  @SuppressWarnings("unused")
   private boolean isCreateIndexIfNotExistsSyntaxSupported() {
     return JdbcTestUtils.isDb2(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
@@ -266,11 +260,8 @@ public class RdbEngineStrategyExceptionIntegrationTest {
           .as("Expected throwIfDuplicatedIndexWarning to throw for DB2 warning code 605")
           .isNotNull();
     } finally {
-      try {
-        executeSql("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_INDEX_TABLE));
-      } catch (Exception e) {
-        // Ignore
-      }
+      executeIgnoringError(
+          "DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_INDEX_TABLE));
     }
   }
 
@@ -302,11 +293,8 @@ public class RdbEngineStrategyExceptionIntegrationTest {
       assertThat((Object) caught).isNotNull();
       assertThat(rdbEngine.isUndefinedIndexError(caught)).isTrue();
     } finally {
-      try {
-        executeSql("DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, UNDEF_INDEX_TABLE));
-      } catch (Exception e) {
-        // Ignore
-      }
+      executeIgnoringError(
+          "DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, UNDEF_INDEX_TABLE));
     }
   }
 
@@ -316,6 +304,14 @@ public class RdbEngineStrategyExceptionIntegrationTest {
         requiresExplicitCommit,
         (ThrowableConsumer<Connection, SQLException>)
             conn -> execute(conn, sql, requiresExplicitCommit));
+  }
+
+  private void executeIgnoringError(String sql) {
+    try {
+      executeSql(sql);
+    } catch (Exception e) {
+      logger.warn("Failed to execute cleanup SQL: {}", sql, e);
+    }
   }
 
   private void executeSqls(String[] sqls) throws SQLException {
@@ -341,6 +337,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     }
   }
 
+  @SuppressWarnings("unused")
   private boolean isDb2() {
     return JdbcTestUtils.isDb2(rdbEngine);
   }
