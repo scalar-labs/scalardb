@@ -49,7 +49,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -510,27 +509,20 @@ public class CosmosAdmin implements DistributedStorageAdmin {
    * attributes ScalarDB controls: the set of included paths (the partition-key path and the
    * secondary-index paths) and the composite indexes (derived from the clustering keys). The
    * excluded paths are not compared because Cosmos adds its own (e.g. for the etag), which would
-   * cause spurious mismatches. A {@code null} current policy is treated as not up to date.
+   * cause spurious mismatches.
    */
-  private static boolean indexingPolicyUpToDate(
-      @Nullable IndexingPolicy current, IndexingPolicy desired) {
+  private static boolean indexingPolicyUpToDate(IndexingPolicy current, IndexingPolicy desired) {
     return includedPaths(current).equals(includedPaths(desired))
         && compositeIndexes(current).equals(compositeIndexes(desired));
   }
 
-  private static Set<String> includedPaths(@Nullable IndexingPolicy policy) {
-    if (policy == null || policy.getIncludedPaths() == null) {
-      return Collections.emptySet();
-    }
+  private static Set<String> includedPaths(IndexingPolicy policy) {
     return policy.getIncludedPaths().stream()
         .map(IncludedPath::getPath)
         .collect(Collectors.toSet());
   }
 
-  private static List<List<String>> compositeIndexes(@Nullable IndexingPolicy policy) {
-    if (policy == null || policy.getCompositeIndexes() == null) {
-      return Collections.emptyList();
-    }
+  private static List<List<String>> compositeIndexes(IndexingPolicy policy) {
     return policy.getCompositeIndexes().stream()
         .map(
             paths ->

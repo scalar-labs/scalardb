@@ -947,6 +947,7 @@ public class CosmosAdminTest {
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
 
     // Act Assert
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
@@ -1006,6 +1007,7 @@ public class CosmosAdminTest {
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
 
     // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
@@ -1066,6 +1068,7 @@ public class CosmosAdminTest {
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
 
     // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
@@ -1120,6 +1123,9 @@ public class CosmosAdminTest {
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
+    // A real container always has an indexing policy; default to an empty one so it does not match
+    // the desired policy (tests that exercise the up-to-date path override this).
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
     repairContainerProperties = properties;
 
     return metadataContainer;
@@ -1274,7 +1280,6 @@ public class CosmosAdminTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void repairTable_WhenReadingStoredMetadataThrows_ShouldFailOpenAndUpsertMetadata()
       throws ExecutionException {
     // Arrange: reading the current metadata throws (e.g. a corrupt record); the guard must fail
@@ -1464,6 +1469,7 @@ public class CosmosAdminTest {
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
 
     // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
