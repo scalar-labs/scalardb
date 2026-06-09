@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -868,9 +869,14 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void rollback_WithGroupCommitter_InReadOnlyMode_ShouldNotRemoveTxFromGroupCommitter()
-      throws CrudException, UnknownTransactionStatusException {
+  public void
+      rollback_WithGroupCommitter_InReadOnlyModeWithoutReservedSlot_ShouldNotRemoveTxFromGroupCommitter()
+          throws CrudException, UnknownTransactionStatusException {
     // Arrange
+    // A read-only transaction whose ID is a bare (non-full) key never reserved a group commit slot
+    // (this is the coordinator-write-omission-enabled case, where begin() skips the reservation),
+    // so
+    // rollback() must not call remove().
     context = spy(new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, true, false));
     CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
     ConsensusCommit consensusWithGroupCommit =
@@ -882,6 +888,34 @@ public class ConsensusCommitTest {
     // Assert
     verify(context).closeScanners();
     verify(groupCommitter, never()).remove(anyString());
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
+    verify(commit, never()).abortStateWithoutWriteSet(anyString());
+  }
+
+  @Test
+  public void
+      rollback_WithGroupCommitter_InReadOnlyModeWithReservedSlot_ShouldRemoveTxFromGroupCommitter()
+          throws CrudException, UnknownTransactionStatusException {
+    // Arrange
+    // A read-only transaction with coordinator write omission disabled writes a coordinator state
+    // row, so begin() reserves a group commit slot and its ID is a full key. rollback() must
+    // release
+    // that slot; otherwise it leaks and stalls co-batched transactions until the group commit
+    // timeout reclaims it.
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String fullKey = keyManipulator.fullKey(keyManipulator.generateParentKey(), ANY_ID);
+    context = spy(new TransactionContext(fullKey, snapshot, Isolation.SNAPSHOT, true, false));
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
+
+    // Act
+    consensusWithGroupCommit.rollback();
+
+    // Assert
+    verify(context).closeScanners();
+    verify(groupCommitter).remove(fullKey);
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
     verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }

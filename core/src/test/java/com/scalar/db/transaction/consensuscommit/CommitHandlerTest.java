@@ -1165,6 +1165,162 @@ public class CommitHandlerTest {
   }
 
   @Test
+  public void
+      commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords()
+          throws ExecutionException, CoordinatorException, CrudException,
+              UnknownTransactionStatusException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    doThrow(new RuntimeException("Something is wrong"))
+        .when(beforePreparationHook)
+        .handle(any(), any());
+    handler.setBeforePreparationHook(beforePreparationHook);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    // Assert
+    // With coordinator write omission enabled, a read-only transaction must not write any
+    // coordinator row even when the before-preparation hook fails.
+    verify(storage, never()).mutate(anyList());
+    verify(coordinator, never()).putState(any());
+    verify(handler, never()).abortState(any());
+    verify(handler, never()).rollbackRecords(any());
+    verify(handler).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void
+      commit_FailingBeforePreparationHookFutureGiven_InReadOnlyModeWithWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords()
+          throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
+              InterruptedException, UnknownTransactionStatusException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
+    setBeforePreparationHookIfNeeded(true);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    // Assert
+    verify(coordinator, never()).putState(any());
+    verify(handler, never()).abortState(any());
+    verify(handler, never()).rollbackRecords(any());
+    verify(handler).onFailureBeforeCommit(context);
+  }
+
+  @Test
+  public void
+      commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionDisabled_ShouldAbortStateButNotRollbackRecords()
+          throws ExecutionException, CoordinatorException, CrudException {
+    // Arrange
+    handler = spy(createCommitHandler(false));
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    doThrow(new RuntimeException("Something is wrong"))
+        .when(beforePreparationHook)
+        .handle(any(), any());
+    handler.setBeforePreparationHook(beforePreparationHook);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    // Assert
+    // With coordinator write omission disabled, the ABORTED state is written even for a read-only
+    // transaction, but record rollback is still skipped since there are no writes.
+    verify(storage, never()).mutate(anyList());
+    verify(coordinator)
+        .putState(
+            new Coordinator.State(
+                anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.ABORTED));
+    verify(handler, never()).rollbackRecords(any());
+    verify(handler).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void
+      commit_FailingBeforePreparationHookFutureGiven_InReadOnlyModeWithWriteOmissionDisabled_ShouldAbortStateButNotRollbackRecords()
+          throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
+              InterruptedException, UnknownTransactionStatusException {
+    // Arrange
+    handler = spy(createCommitHandler(false));
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
+    setBeforePreparationHookIfNeeded(true);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    // Assert
+    // With coordinator write omission disabled, the ABORTED state is written even for a read-only
+    // transaction, but record rollback is still skipped since there are no writes.
+    verify(storage, never()).mutate(anyList());
+    verify(coordinator)
+        .putState(
+            new Coordinator.State(
+                anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.ABORTED));
+    verify(handler, never()).rollbackRecords(any());
+    verify(handler).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void
+      commit_FailingBeforePreparationHookGiven_InNonReadOnlyModeWithoutWritesAndWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords()
+          throws ExecutionException, CoordinatorException, UnknownTransactionStatusException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    doThrow(new RuntimeException("Something is wrong"))
+        .when(beforePreparationHook)
+        .handle(any(), any());
+    handler.setBeforePreparationHook(beforePreparationHook);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    // Assert
+    // A non-read-only transaction without writes and deletes writes no coordinator row when
+    // coordinator write omission is enabled, so the before-preparation hook failure must not abort
+    // the state. There are also no records to roll back.
+    verify(storage, never()).mutate(anyList());
+    verify(coordinator, never()).putState(any());
+    verify(handler, never()).abortState(any());
+    verify(handler, never()).rollbackRecords(any());
+    verify(handler).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void
+      commit_FailingBeforePreparationHookFutureGiven_InNonReadOnlyModeWithoutWritesAndWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords()
+          throws CoordinatorException, java.util.concurrent.ExecutionException,
+              InterruptedException, UnknownTransactionStatusException {
+    // Arrange
+    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
+    doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
+    setBeforePreparationHookIfNeeded(true);
+    TransactionContext context =
+        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    // Assert
+    // Same as above for the before-preparation hook future failure path.
+    verify(coordinator, never()).putState(any());
+    verify(handler, never()).abortState(any());
+    verify(handler, never()).rollbackRecords(any());
+    verify(handler).onFailureBeforeCommit(context);
+  }
+
+  @Test
   public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() throws Exception {
     // Arrange
     Snapshot snapshot = prepareSnapshot();

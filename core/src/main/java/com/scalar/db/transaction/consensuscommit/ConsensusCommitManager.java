@@ -63,6 +63,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final Isolation isolation;
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
+  private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -80,6 +81,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    coordinatorWriteOmissionOnReadOnlyEnabled =
+        config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
     crud =
         new CrudHandler(
             storage,
@@ -118,6 +121,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    coordinatorWriteOmissionOnReadOnlyEnabled =
+        config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
     crud =
         new CrudHandler(
             storage,
@@ -167,6 +172,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.crud = crud;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
+    this.coordinatorWriteOmissionOnReadOnlyEnabled =
+        config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
     this.isolation = isolation;
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -278,7 +285,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    if (!readOnly && isGroupCommitEnabled()) {
+    // Reserve a group commit slot whenever the transaction will write a coordinator state row. A
+    // read-only transaction writes one only when coordinator write omission is disabled, so it must
+    // also reserve a slot in that case; otherwise its state would be committed via the
+    // non-group-commit path with a bare (unreserved) transaction ID.
+    if (isGroupCommitEnabled() && (!readOnly || !coordinatorWriteOmissionOnReadOnlyEnabled)) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
     }

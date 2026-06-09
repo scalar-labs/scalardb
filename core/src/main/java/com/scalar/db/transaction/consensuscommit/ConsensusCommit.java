@@ -22,6 +22,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -47,6 +48,8 @@ import org.slf4j.LoggerFactory;
 @NotThreadSafe
 public class ConsensusCommit extends AbstractDistributedTransaction {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommit.class);
+  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
+      new CoordinatorGroupCommitKeyManipulator();
   private final TransactionContext context;
   private final CrudHandler crud;
   private final CommitHandler commit;
@@ -226,7 +229,12 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
     }
 
-    if (groupCommitter != null && !context.readOnly) {
+    // Release the reserved group commit slot if one was reserved. ConsensusCommitManager.begin()
+    // reserves a slot for any transaction that writes a coordinator state row — every non-read-only
+    // transaction, plus read-only transactions when coordinator write omission is disabled. In the
+    // latter case the reserved transaction ID is a group commit full key, so isFullKey() reliably
+    // distinguishes a read-only transaction that holds a slot from one that does not.
+    if (groupCommitter != null && (!context.readOnly || KEY_MANIPULATOR.isFullKey(getId()))) {
       groupCommitter.remove(getId());
     }
   }

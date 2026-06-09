@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
@@ -23,6 +24,8 @@ import org.slf4j.LoggerFactory;
 public class CommitHandlerWithGroupCommit extends CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandlerWithGroupCommit.class);
   private final CoordinatorGroupCommitter groupCommitter;
+  private final CoordinatorGroupCommitKeyManipulator keyManipulator =
+      new CoordinatorGroupCommitKeyManipulator();
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandlerWithGroupCommit(
@@ -112,11 +115,19 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   private void cancelGroupCommitIfNeeded(String id) {
+    // A transaction that never reserved a group commit slot has a bare transaction ID rather than a
+    // group commit full key (e.g., a read-only transaction when coordinator write omission is
+    // enabled). There is no slot to release in that case, and passing a bare ID to remove() would
+    // fail key parsing, so skip it.
+    if (!keyManipulator.isFullKey(id)) {
+      return;
+    }
+
     try {
       groupCommitter.remove(id);
     } catch (Exception e) {
       logger.warn(
-          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}", id);
+          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}", id, e);
     }
   }
 
