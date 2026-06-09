@@ -283,6 +283,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // the full-key anyId() override instead). When the before-preparation hook fails, commit() must
     // still fail with CommitException, write no coordinator row, and leave the group committer
     // untouched: cancelGroupCommitIfNeeded skips remove() for the bare (non-full-key) ID.
+    // Release the slot reserved by extraInitialize(); it is unrelated to this test's bare
+    // transaction ID, and leaving it outstanding would make groupCommitter.close() block on it
+    // during teardown. clearInvocations() then lets the remove() assertion count only the act
+    // phase.
+    groupCommitter.remove(anyId());
+    clearInvocations(groupCommitter);
     String bareId = UUID.randomUUID().toString();
     CommitHandler handler = spy(createCommitHandler(true));
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());

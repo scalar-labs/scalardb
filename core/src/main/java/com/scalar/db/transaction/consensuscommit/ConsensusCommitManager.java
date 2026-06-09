@@ -285,10 +285,12 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    // Reserve a group commit slot whenever the transaction will write a coordinator state row. A
-    // read-only transaction writes one only when coordinator write omission is disabled, so it must
-    // also reserve a slot in that case; otherwise its state would be committed via the
-    // non-group-commit path with a bare (unreserved) transaction ID.
+    // Reserve a group commit slot for every non-read-only transaction, and for a read-only
+    // transaction only when coordinator write omission is disabled. Such a read-only transaction
+    // writes a coordinator state row, so without a slot it would reach the group commit path with a
+    // bare (unreserved) transaction ID and fail. A non-read-only transaction that turns out to be
+    // write-less under write omission still reserves a slot here but cancels it later on the commit
+    // path.
     if (isGroupCommitEnabled() && (!readOnly || !coordinatorWriteOmissionOnReadOnlyEnabled)) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);

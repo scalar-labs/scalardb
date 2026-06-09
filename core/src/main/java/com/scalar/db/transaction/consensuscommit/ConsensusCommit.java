@@ -229,13 +229,22 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
     }
 
-    // Release the reserved group commit slot if one was reserved. ConsensusCommitManager.begin()
-    // reserves a slot for any transaction that writes a coordinator state row — every non-read-only
-    // transaction, plus read-only transactions when coordinator write omission is disabled. In the
-    // latter case the reserved transaction ID is a group commit full key, so isFullKey() reliably
-    // distinguishes a read-only transaction that holds a slot from one that does not.
+    // Release the reserved group commit slot if this transaction holds one.
+    // ConsensusCommitManager.begin() reserves a slot for every non-read-only transaction, and for a
+    // read-only transaction only when coordinator write omission is disabled. A read-only
+    // transaction that reserved a slot has a group commit full key, so isFullKey() tells whether
+    // this read-only transaction holds one.
     if (groupCommitter != null && (!context.readOnly || KEY_MANIPULATOR.isFullKey(getId()))) {
-      groupCommitter.remove(getId());
+      // This is best-effort cleanup; never let a failure here mask the rollback or propagate out of
+      // this cleanup path.
+      try {
+        groupCommitter.remove(getId());
+      } catch (Exception e) {
+        logger.warn(
+            "Failed to remove the transaction ID from the group committer. Transaction ID: {}",
+            getId(),
+            e);
+      }
     }
   }
 
