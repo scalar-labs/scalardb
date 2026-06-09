@@ -47,7 +47,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     rdbEngine = RdbEngineFactory.create(config);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    createSchemaIfNotExists(TEST_SCHEMA);
+    createSchemaIfNotExists();
   }
 
   @AfterAll
@@ -326,9 +326,9 @@ public class RdbEngineStrategyExceptionIntegrationTest {
             });
   }
 
-  private void createSchemaIfNotExists(String schema) throws SQLException {
+  private void createSchemaIfNotExists() throws SQLException {
     try {
-      executeSqls(rdbEngine.createSchemaIfNotExistsSqls(schema));
+      executeSqls(rdbEngine.createSchemaIfNotExistsSqls(TEST_SCHEMA));
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
       if (!rdbEngine.isDuplicateSchemaError(e)) {
