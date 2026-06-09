@@ -1222,6 +1222,73 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void repairTable_WhenMetadataIsInvalid_ShouldThrowIllegalArgumentException() {
+    // Arrange: a BOOLEAN secondary index is rejected by checkMetadata with an
+    // IllegalArgumentException, which repairTable must let propagate (not wrap in
+    // ExecutionException), consistent with the other storage admins.
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BOOLEAN)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      repairTable_WhenExistingTableHasSecondaryIndex_ShouldNotRegisterAutoScalingForThatIndex()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.TEXT)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // The table exists and already has the c2 global secondary index (ACTIVE).
+    // The index name format is "<fullTableName>.global_index.<column>".
+    String globalIndexName = getFullTableName() + ".global_index.c2";
+    GlobalSecondaryIndexDescription gsiDescription =
+        GlobalSecondaryIndexDescription.builder()
+            .indexName(globalIndexName)
+            .indexStatus(IndexStatus.ACTIVE)
+            .build();
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(tableDescription.globalSecondaryIndexes()).thenReturn(ImmutableList.of(gsiDescription));
+    DescribeTableResponse tableResponse = mock(DescribeTableResponse.class);
+    when(tableResponse.table()).thenReturn(tableDescription);
+
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableResponse);
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert: auto scaling is registered only for the table, never for the existing index's GSI.
+    // (Before the fix, createTableInternal registered scaling for the index even though the table
+    // already existed, which would fail against a real DynamoDB for a not-yet-created index.)
+    ArgumentCaptor<RegisterScalableTargetRequest> captor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2)).registerScalableTarget(captor.capture());
+    assertThat(captor.getAllValues())
+        .allSatisfy(
+            request -> assertThat(request.resourceId()).isEqualTo("table/" + getFullTableName()));
+  }
+
+  @Test
   public void repairTable_WithNonExistingTableAndMetadataTables_shouldCreateBothTables()
       throws ExecutionException {
     // Arrange
