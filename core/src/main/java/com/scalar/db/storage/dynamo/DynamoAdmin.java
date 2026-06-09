@@ -281,7 +281,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
       createNamespacesTableIfNotExists(noBackup);
-      createTableInternal(nonPrefixedNamespace, table, metadata, false, options);
+      createTableInternal(nonPrefixedNamespace, table, metadata, options);
     } catch (ExecutionException e) {
       throw new ExecutionException(
           String.format(
@@ -295,10 +295,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       String nonPrefixedNamespace,
       String table,
       TableMetadata metadata,
-      boolean ifNotExists,
       Map<String, String> options)
       throws ExecutionException {
-    createTableInternal(nonPrefixedNamespace, table, metadata, ifNotExists, options, false);
+    createTableInternal(nonPrefixedNamespace, table, metadata, false, options, false);
   }
 
   private void createTableInternal(
