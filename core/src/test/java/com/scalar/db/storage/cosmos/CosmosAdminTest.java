@@ -1428,6 +1428,39 @@ public class CosmosAdminTest {
     verify(container).replace(any(CosmosContainerProperties.class));
   }
 
+  @Test
+  public void repairTable_WhenClusteringKeyButNoSecondaryIndex_ShouldNotThrow()
+      throws ExecutionException {
+    // Arrange: a table with a clustering key and no secondary index. computeIndexingPolicy then
+    // sets compositeIndexes but never calls setIncludedPaths, so the desired policy's included
+    // paths come straight from the SDK getter. This verifies that comparison does not throw (the
+    // SDK lazily initializes getIncludedPaths()/getCompositeIndexes() to empty lists, never null).
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .addClusteringKey("c2", Order.ASC)
+            .build();
+    CosmosContainer metadataContainer = setUpRepairTableMocks(namespace, table);
+    stubStoredTableMetadata(
+        metadataContainer,
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .clusteringKeyNames(Sets.newLinkedHashSet("c2"))
+            .clusteringOrders(ImmutableMap.of("c2", "ASC"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap()))
+        .doesNotThrowAnyException();
+  }
+
   private static CompositePath compositePath(String path, CompositePathSortOrder order) {
     CompositePath compositePath = new CompositePath();
     compositePath.setPath(path);

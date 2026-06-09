@@ -505,10 +505,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   /**
    * Returns whether the container's current indexing policy already matches the desired one on the
-   * attributes ScalarDB controls: the set of included paths (the partition-key path and the
-   * secondary-index paths) and the composite indexes (derived from the clustering keys). The
-   * excluded paths are not compared because Cosmos adds its own (e.g. for the etag), which would
-   * cause spurious mismatches.
+   * attributes ScalarDB controls: the set of included paths and the composite indexes. The included
+   * paths cover the secondary indexes, plus the partition-key path when the table has no clustering
+   * keys; the composite indexes cover the partition key and clustering keys when the table has
+   * clustering keys. The excluded paths are not compared because Cosmos adds its own (e.g. for the
+   * etag), which would cause spurious mismatches.
    */
   private static boolean indexingPolicyUpToDate(IndexingPolicy current, IndexingPolicy desired) {
     return includedPaths(current).equals(includedPaths(desired))
