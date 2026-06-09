@@ -307,14 +307,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
     requestBuilder.tableName(getFullTableName(namespace, table));
 
-    boolean tableCreated;
+    boolean tableCreated = false;
     try {
       if (!(ifNotExists && internalTableExists(namespace, table))) {
         client.createTable(requestBuilder.build());
         waitForTableCreation(namespace, table);
         tableCreated = true;
-      } else {
-        tableCreated = false;
       }
     } catch (Exception e) {
       throw new ExecutionException(
@@ -323,11 +321,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (!noScaling) {
-      // Only enable auto scaling for the secondary indexes when the table is newly created. When an
-      // existing table is repaired, its existing indexes already have auto scaling, and any missing
-      // index gets its auto scaling when it is created by createIndex. Registering a scalable
-      // target
-      // for a not-yet-created index would otherwise fail.
+      // Enable auto scaling for the secondary indexes only when the table is newly created. For an
+      // existing table being repaired, its indexes already have auto scaling, and any missing index
+      // gets its auto scaling when createIndex creates it. Enabling it here for a missing index
+      // would fail because its scaling target does not exist yet.
       Set<String> secondaryIndexesToScale =
           tableCreated ? metadata.getSecondaryIndexNames() : Collections.emptySet();
       enableAutoScaling(namespace, table, secondaryIndexesToScale, ru);
