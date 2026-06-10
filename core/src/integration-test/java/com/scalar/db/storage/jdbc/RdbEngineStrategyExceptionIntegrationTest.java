@@ -51,15 +51,10 @@ public class RdbEngineStrategyExceptionIntegrationTest {
   }
 
   @AfterAll
-  public void tearDownAll() throws SQLException {
-    try {
-      if (dataSource != null) {
-        executeSql(rdbEngine.dropNamespaceSql(TEST_SCHEMA));
-      }
-    } finally {
-      if (dataSource != null) {
-        dataSource.close();
-      }
+  public void tearDownAll() {
+    if (dataSource != null) {
+      executeIgnoringError(rdbEngine.dropNamespaceSql(TEST_SCHEMA));
+      dataSource.close();
     }
   }
 
@@ -330,7 +325,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     try {
       executeSqls(rdbEngine.createSchemaIfNotExistsSqls(TEST_SCHEMA));
     } catch (SQLException e) {
-      // Suppress exceptions indicating the duplicate metadata schema
+      // Suppress the error if the test schema already exists
       if (!rdbEngine.isDuplicateSchemaError(e)) {
         throw e;
       }
