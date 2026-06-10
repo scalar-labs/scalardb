@@ -431,9 +431,10 @@ public interface DistributedTransactionManager
   /**
    * Returns the state of a given transaction.
    *
-   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
-   * directly — it is intended for advanced use cases. Callers are expected to understand the
-   * underlying transaction lifecycle and the implications of invoking this method directly.
+   * <p><b>Note:</b> This is a low-level operational API specific to the Consensus Commit
+   * transaction manager. Most applications should not call it directly — it is intended for
+   * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
+   * the implications of invoking this method directly.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
@@ -446,9 +447,10 @@ public interface DistributedTransactionManager
   /**
    * Rolls back a given transaction.
    *
-   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
-   * directly — it is intended for advanced use cases. Callers are expected to understand the
-   * underlying transaction lifecycle and the implications of invoking this method directly.
+   * <p><b>Note:</b> This is a low-level operational API specific to the Consensus Commit
+   * transaction manager. Most applications should not call it directly — it is intended for
+   * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
+   * the implications of invoking this method directly.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
@@ -461,9 +463,10 @@ public interface DistributedTransactionManager
   /**
    * Aborts a given transaction. This method is an alias of {@link #rollback(String)}.
    *
-   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
-   * directly — it is intended for advanced use cases. Callers are expected to understand the
-   * underlying transaction lifecycle and the implications of invoking this method directly.
+   * <p><b>Note:</b> This is a low-level operational API specific to the Consensus Commit
+   * transaction manager. Most applications should not call it directly — it is intended for
+   * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
+   * the implications of invoking this method directly.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
@@ -487,9 +490,10 @@ public interface DistributedTransactionManager
    * terminates so that ScalarDB can complete per-record post-termination work eagerly and reclaim
    * the Coordinator state row instead of leaving it for lazy recovery.
    *
-   * <p><b>Note:</b> This is a low-level operational API. Most applications should not call it
-   * directly — it is intended for advanced use cases. Callers are expected to understand the
-   * underlying transaction lifecycle and the implications of invoking this method directly.
+   * <p><b>Note:</b> This is a low-level operational API specific to the Consensus Commit
+   * transaction manager. Most applications should not call it directly — it is intended for
+   * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
+   * the implications of invoking this method directly.
    *
    * <p><b>Applicability:</b> only transactions terminated via {@link
    * DistributedTransaction#commit()} are eligible — they are the ones that persist a write set
