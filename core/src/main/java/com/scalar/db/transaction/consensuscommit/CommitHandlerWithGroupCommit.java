@@ -23,9 +23,9 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class CommitHandlerWithGroupCommit extends CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandlerWithGroupCommit.class);
-  private final CoordinatorGroupCommitter groupCommitter;
-  private final CoordinatorGroupCommitKeyManipulator keyManipulator =
+  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
       new CoordinatorGroupCommitKeyManipulator();
+  private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandlerWithGroupCommit(
@@ -119,7 +119,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     // group commit full key (e.g., a read-only transaction when coordinator write omission is
     // enabled). There is no slot to release in that case, and passing a bare ID to remove() would
     // fail key parsing, so skip it.
-    if (!keyManipulator.isFullKey(id)) {
+    if (!KEY_MANIPULATOR.isFullKey(id)) {
       return;
     }
 

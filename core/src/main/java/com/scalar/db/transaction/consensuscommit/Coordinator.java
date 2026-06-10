@@ -52,9 +52,11 @@ public class Coordinator {
   private static final int MAX_RETRY_COUNT = 5;
   private static final long SLEEP_BASE_MILLIS = 50;
   private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
+  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
+      new CoordinatorGroupCommitKeyManipulator();
+
   private final DistributedStorage storage;
   private final String coordinatorNamespace;
-  private final CoordinatorGroupCommitKeyManipulator keyManipulator;
 
   /**
    * @param storage a storage
@@ -65,14 +67,12 @@ public class Coordinator {
   public Coordinator(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
-    keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
-    keyManipulator = new CoordinatorGroupCommitKeyManipulator();
   }
 
   /**
@@ -85,7 +85,7 @@ public class Coordinator {
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
   public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
-    if (keyManipulator.isFullKey(id)) {
+    if (KEY_MANIPULATOR.isFullKey(id)) {
       return getStateForGroupCommit(id);
     }
 
@@ -104,7 +104,7 @@ public class Coordinator {
   @VisibleForTesting
   Optional<Coordinator.State> getStateForGroupCommit(String fullId) throws CoordinatorException {
     // Scan with the parent ID for a normal group that contains multiple transactions.
-    Keys<String, String, String> idForGroupCommit = keyManipulator.keysFromFullKey(fullId);
+    Keys<String, String, String> idForGroupCommit = KEY_MANIPULATOR.keysFromFullKey(fullId);
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
@@ -181,7 +181,7 @@ public class Coordinator {
       long createdAt)
       throws CoordinatorException {
 
-    if (keyManipulator.isFullKey(parentId)) {
+    if (KEY_MANIPULATOR.isFullKey(parentId)) {
       throw new AssertionError(
           "This method is only for normal group commits that use a parent ID as the key");
     }
@@ -189,7 +189,7 @@ public class Coordinator {
     // Put the state that contains a parent ID as the key and multiple child transaction IDs.
     List<String> childIds = new ArrayList<>(fullIds.size());
     for (String fullId : fullIds) {
-      Keys<String, String, String> keys = keyManipulator.keysFromFullKey(fullId);
+      Keys<String, String, String> keys = KEY_MANIPULATOR.keysFromFullKey(fullId);
       childIds.add(keys.childKey);
     }
     State state = new State(parentId, childIds, writeSet, transactionState, createdAt);
@@ -199,7 +199,7 @@ public class Coordinator {
   }
 
   public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
-    if (keyManipulator.isFullKey(id)) {
+    if (KEY_MANIPULATOR.isFullKey(id)) {
       putStateForLazyRecoveryRollbackForGroupCommit(id);
       return;
     }
@@ -265,7 +265,7 @@ public class Coordinator {
     // - `lazy-recovery-abort-with-full-id` succeeds
     // - The original commit with `tx_id: <full tx ID>` fails
     // - The transaction is treated as aborted because of `lazy-recovery-abort-with-full-id`
-    Keys<String, String, String> keys = keyManipulator.keysFromFullKey(id);
+    Keys<String, String, String> keys = KEY_MANIPULATOR.keysFromFullKey(id);
     try {
       // This record is to prevent a group commit that has the same parent ID considering case #a
       // regardless if the transaction is actually in a group commit (case #a) or a delayed commit
