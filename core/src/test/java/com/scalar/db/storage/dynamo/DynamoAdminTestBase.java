@@ -78,6 +78,8 @@ public abstract class DynamoAdminTestBase {
   @Mock private DynamoDbClient client;
   @Mock private ApplicationAutoScalingClient applicationAutoScalingClient;
   @Mock private DescribeTableResponse tableIsActiveResponse;
+  @Mock private DescribeContinuousBackupsResponse backupIsEnabledResponse;
+  @Mock private ContinuousBackupsDescription continuousBackupsDescription;
   private DynamoAdmin admin;
 
   @BeforeEach
@@ -85,6 +87,10 @@ public abstract class DynamoAdminTestBase {
     MockitoAnnotations.openMocks(this).close();
     when(config.getNamespacePrefix()).thenReturn(getNamespacePrefixConfig());
     when(config.getTableMetadataNamespace()).thenReturn(getTableMetadataNamespaceConfig());
+    when(backupIsEnabledResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
   }
@@ -259,16 +265,8 @@ public abstract class DynamoAdminTestBase {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     // for the table metadata table
     describeTableResponse = mock(DescribeTableResponse.class);
@@ -470,16 +468,8 @@ public abstract class DynamoAdminTestBase {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     Map<String, String> options = new HashMap<>();
     options.put(DynamoAdmin.REQUEST_UNIT, "100");
@@ -664,17 +654,8 @@ public abstract class DynamoAdminTestBase {
     when(tableIsActiveResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
     when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(tableIsActiveResponse);
-    // prepare backupIsEnabledResponse
-    DescribeContinuousBackupsResponse backupIsEnabledResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
         .thenReturn(backupIsEnabledResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(backupIsEnabledResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
     when(client.putItem(any(PutItemRequest.class))).thenThrow(ResourceNotFoundException.class);
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -1110,16 +1091,8 @@ public abstract class DynamoAdminTestBase {
         .thenReturn(tableIsActiveResponse);
 
     // Continuous backup check (already enabled, so update is a no-op semantically)
-    DescribeContinuousBackupsResponse backupIsEnabledResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
         .thenReturn(backupIsEnabledResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(backupIsEnabledResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     // Act
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
@@ -1238,16 +1211,8 @@ public abstract class DynamoAdminTestBase {
         .thenReturn(tableIsActiveResponse);
 
     // Continuous backup check
-    DescribeContinuousBackupsResponse backupIsEnabledResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
         .thenReturn(backupIsEnabledResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(backupIsEnabledResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     // Act
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
