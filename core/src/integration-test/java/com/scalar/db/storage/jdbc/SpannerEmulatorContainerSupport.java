@@ -22,6 +22,18 @@ public final class SpannerEmulatorContainerSupport {
   // Pattern matches the host:port segment in: jdbc:cloudspanner://HOST:PORT/...
   private static final Pattern HOST_PATTERN = Pattern.compile("(jdbc:cloudspanner://)([^/]+)(/.*)");
 
+  // Canonical project/instance/database names used in the normalized container URL.
+  // autoConfigEmulator=true creates these automatically; the values do not need to pre-exist.
+  private static final String CANONICAL_PROJECT = "test-project";
+
+  private static final String CANONICAL_INSTANCE = "test-instance";
+
+  private static final String CANONICAL_DATABASE = "test-db";
+
+  // Matches /projects/{p}/instances/{i}/databases/{d} followed by optional ;params
+  private static final Pattern PATH_PATTERN =
+      Pattern.compile("(/projects/)[^/]+(/instances/)[^/]+(/databases/)[^;/]+(;.*)?");
+
   /** Per-thread active emulator JDBC URL. Null when no container is registered for this thread. */
   private static final ThreadLocal<String> ACTIVE_URL = new ThreadLocal<>();
 
@@ -81,9 +93,36 @@ public final class SpannerEmulatorContainerSupport {
   static String buildContainerUrl(String baseUrl, String grpcEndpoint) {
     Matcher m = HOST_PATTERN.matcher(baseUrl);
     if (m.matches()) {
-      return m.group(1) + grpcEndpoint + m.group(3);
+      String normalizedPath = normalizePath(m.group(3));
+      return m.group(1) + grpcEndpoint + normalizedPath;
     }
     // Fallback: append endpoint property (single-slash URL format, no embedded host)
     return baseUrl + ";endpoint=" + grpcEndpoint;
+  }
+
+  /**
+   * Rewrites the {@code /projects/.../instances/.../databases/...} path segment to canonical fixed
+   * values, preserving any {@code ;params} suffix verbatim.
+   *
+   * <p>Using canonical names ensures every test class connects to the same logical database name
+   * regardless of the developer-supplied base URL. {@code autoConfigEmulator=true} auto-creates the
+   * project/instance/database on first connection, so the values do not need to pre-exist.
+   *
+   * <p>If the path does not match the expected shape, it is returned verbatim (defensive fallback).
+   */
+  private static String normalizePath(String pathAndParams) {
+    Matcher p = PATH_PATTERN.matcher(pathAndParams);
+    if (p.matches()) {
+      String params = (p.group(4) != null) ? p.group(4) : "";
+      return "/projects/"
+          + CANONICAL_PROJECT
+          + "/instances/"
+          + CANONICAL_INSTANCE
+          + "/databases/"
+          + CANONICAL_DATABASE
+          + params;
+    }
+    // Path does not match expected shape — return verbatim (defensive fallback)
+    return pathAndParams;
   }
 }
