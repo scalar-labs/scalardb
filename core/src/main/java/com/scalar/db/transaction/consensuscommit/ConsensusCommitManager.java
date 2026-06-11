@@ -570,7 +570,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public void finishTransaction(String txId) throws TransactionException {
+  public boolean finishTransaction(String txId) throws TransactionException {
     checkArgument(!Strings.isNullOrEmpty(txId));
 
     // Read the Coordinator state row for this transaction.
@@ -587,9 +587,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     // The state row is absent — the transaction is already finished, was never started, or was
     // cleaned up by a concurrent caller. finishTransaction is idempotent on that boundary, so
-    // return silently.
+    // report success.
     if (!stateOpt.isPresent()) {
-      return;
+      return true;
     }
 
     State state = stateOpt.get();
@@ -607,13 +607,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
               + txId);
     }
 
-    // The transaction did not commit through DistributedTransaction#commit() (e.g., it was rolled
-    // back, lazy-recovered, or originated from a pre-feature binary) and so carries no write set.
+    // The transaction did not commit through DistributedTransaction#commit() (e.g., it was
+    // terminated via DistributedTransactionManager#rollback()/abort(), aborted by lazy recovery, or
+    // originated from a pre-feature binary) and so carries no write set. Note that a commit() that
+    // failed during preparation is ABORTED but still carries a write set, so it is not in this
+    // category. This is not an error: the transaction is simply not applicable to finishTransaction
+    // (retrying with the same txId would never succeed), so report it via the return value and
+    // leave the state row for lazy recovery.
     if (!state.getWriteSet().isPresent()) {
-      throw new TransactionException(
-          CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_NOT_APPLICABLE_NO_WRITE_SET
-              .buildMessage(),
-          txId);
+      return false;
     }
 
     // Walk every EntryGroup and run per-record recovery. The decoder rebuilds a Get for each entry;
@@ -674,6 +676,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           e,
           txId);
     }
+
+    return true;
   }
 
   /**

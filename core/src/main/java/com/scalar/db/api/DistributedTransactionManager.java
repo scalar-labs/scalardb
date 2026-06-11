@@ -495,32 +495,36 @@ public interface DistributedTransactionManager
    * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
    * the implications of invoking this method directly.
    *
-   * <p><b>Applicability:</b> only transactions terminated via {@link
+   * <p><b>Applicability and return value:</b> only transactions terminated via {@link
    * DistributedTransaction#commit()} are eligible — they are the ones that persist a write set
    * alongside the Coordinator state row, regardless of whether the commit succeeded ({@code
-   * COMMITTED}) or failed via a conflict during preparation ({@code ABORTED}). Transactions that
-   * did not go through {@link DistributedTransaction#commit()} (for example, transactions
-   * terminated via {@link #rollback(String)}, transactions aborted by lazy recovery, or
-   * transactions originated from older binaries that pre-date the write-set column) do not carry a
-   * write set, and calling this method on their transaction ID results in a {@link
-   * TransactionException} indicating that no write set is recorded. Those state rows are left for
+   * COMMITTED}) or failed via a conflict during preparation ({@code ABORTED}). For an eligible
+   * transaction, this method completes the cleanup and returns {@code true}. Transactions that did
+   * not go through {@link DistributedTransaction#commit()} (for example, transactions terminated
+   * via {@link #rollback(String)} or {@link #abort(String)}, transactions aborted by lazy recovery,
+   * or transactions originated from older binaries that pre-date the write-set column) do not carry
+   * a write set; they are not applicable to this method, and calling it on their transaction ID
+   * returns {@code false} without doing any work. This is an expected outcome rather than an error
+   * — retrying with the same transaction ID would never succeed — and those state rows are left for
    * lazy recovery to handle.
    *
    * <p><b>Idempotency:</b> calling this method on a transaction ID whose state row is absent
-   * (already finished, never started, or already cleaned up by a concurrent caller) returns
-   * silently. Callers may safely re-invoke this method on the same transaction ID.
+   * (already finished, never started, or already cleaned up by a concurrent caller) returns {@code
+   * true}. Callers may safely re-invoke this method on the same transaction ID.
    *
    * <p><b>Group commit:</b> when the transaction ID belongs to a child of a group commit, the call
    * processes the write sets of all sibling children in a single pass and then deletes the shared
-   * parent state row. Subsequent calls with sibling transaction IDs return silently per the
+   * parent state row. Subsequent calls with sibling transaction IDs return {@code true} per the
    * idempotency contract above.
    *
    * @param txId a transaction ID
+   * @return {@code true} if the transaction was finished (or was already finished), or {@code
+   *     false} if the transaction is not applicable because it carries no write set
    * @throws TransactionException if finishing the given transaction fails
    * @throws UnsupportedOperationException if the underlying transaction manager does not support
    *     coordinator-level cleanup
    */
-  void finishTransaction(String txId) throws TransactionException;
+  boolean finishTransaction(String txId) throws TransactionException;
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as

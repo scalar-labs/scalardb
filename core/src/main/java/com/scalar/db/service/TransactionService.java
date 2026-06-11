@@ -226,8 +226,8 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
-  public void finishTransaction(String txId) throws TransactionException {
-    manager.finishTransaction(txId);
+  public boolean finishTransaction(String txId) throws TransactionException {
+    return manager.finishTransaction(txId);
   }
 
   @Override

@@ -9333,10 +9333,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(raw01Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
 
     // Act
-    manager.finishTransaction(txId);
+    boolean finished = manager.finishTransaction(txId);
 
     // Assert — both records are COMMITTED with BALANCE=NEW_BALANCE preserved, Coordinator state
     // row is gone.
+    assertThat(finished).isTrue();
     assertThat(coordinator.getState(txId)).isEmpty();
     Optional<Result> raw00After = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(raw00After).isPresent();
@@ -9393,11 +9394,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1))).isEmpty();
 
     // Act
-    manager.finishTransaction(txId);
+    boolean finished = manager.finishTransaction(txId);
 
     // Assert — record (0, 0) is restored to the before-image (tx_id=ANY_ID_1, tx_state=COMMITTED,
     // balance=INITIAL_BALANCE), record (0, 1) remains absent at storage, and the Coordinator
     // state row is gone.
+    assertThat(finished).isTrue();
     assertThat(coordinator.getState(txId)).isEmpty();
     Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
     assertThat(raw).isPresent();
@@ -9493,10 +9495,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(raw10Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
 
     // Act — finishing the transaction via either child id is equivalent.
-    manager.finishTransaction(fullTxId1);
+    boolean finished = manager.finishTransaction(fullTxId1);
 
     // Assert — both records COMMITTED with BALANCE=NEW_BALANCE preserved, the parent state row
     // is gone, and the sibling's state is also "absent" (idempotency).
+    assertThat(finished).isTrue();
     assertThat(coordinator.getState(fullTxId1)).isEmpty();
     assertThat(coordinator.getState(fullTxId2)).isEmpty();
     Optional<Result> raw00After = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -9509,6 +9512,37 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(raw10After.get().getInt(Attribute.STATE))
         .isEqualTo(TransactionState.COMMITTED.get());
     assertThat(raw10After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void finishTransaction_TransactionTerminatedWithoutWriteSet_ShouldReturnFalseAndLeaveState()
+      throws Exception {
+    // Scenario 4: a transaction that did not go through DistributedTransaction#commit() — here it
+    // was terminated via DistributedTransactionManager#rollback() — leaves a Coordinator ABORTED
+    // state row that carries no write set. finishTransaction is not applicable to such a
+    // transaction: it must report that by returning false without doing any work and leave the
+    // state row in place for lazy recovery to handle.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    String txId = UUID.randomUUID().toString();
+    // rollback writes an ABORTED Coordinator state row without a write set.
+    manager.rollback(txId);
+
+    // Sanity check — the state row is present, ABORTED, and carries no write set.
+    Optional<Coordinator.State> stateBefore = coordinator.getState(txId);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(stateBefore.get().getWriteSet()).isNotPresent();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — not applicable (no write set), so it returns false and leaves the state row intact.
+    assertThat(finished).isFalse();
+    Optional<Coordinator.State> stateAfter = coordinator.getState(txId);
+    assertThat(stateAfter).isPresent();
+    assertThat(stateAfter.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(stateAfter.get().getWriteSet()).isNotPresent();
   }
 
   private void pushRecordBackToPrepared(int accountId, int accountType, String txId)

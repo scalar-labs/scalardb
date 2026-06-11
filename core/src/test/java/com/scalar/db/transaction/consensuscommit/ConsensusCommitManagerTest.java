@@ -1840,9 +1840,10 @@ public class ConsensusCommitManagerTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert
+    assertThat(finished).isTrue();
     verify(coordinator).getState(ANY_TX_ID);
     verify(storage).get(any(Get.class));
     verify(recoveryExecutor)
@@ -1860,9 +1861,10 @@ public class ConsensusCommitManagerTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert
+    assertThat(finished).isTrue();
     verify(recoveryExecutor)
         .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
     verify(coordinator).deleteState(ANY_TX_ID);
@@ -1911,39 +1913,45 @@ public class ConsensusCommitManagerTest {
         .thenReturn(Optional.of(r3));
 
     // Act
-    manager.finishTransaction(fullChildId1);
+    boolean finished = manager.finishTransaction(fullChildId1);
 
     // Assert — 6 records recovered (3 children x 2 entries), parent state deleted exactly once.
+    assertThat(finished).isTrue();
     verify(recoveryExecutor, org.mockito.Mockito.times(6))
         .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
     verify(coordinator).deleteState(parentId);
   }
 
   @Test
-  public void finishTransaction_StateRowMissing_ShouldReturnSilently() throws Exception {
+  public void finishTransaction_StateRowMissing_ShouldReturnTrue() throws Exception {
     // Arrange
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
-    // Assert
+    // Assert — the state row is already gone, so finishing is a no-op that reports success.
+    assertThat(finished).isTrue();
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
     verify(coordinator, never()).deleteState(anyString());
   }
 
   @Test
-  public void finishTransaction_NoWriteSetRecorded_ShouldThrowTransactionExceptionWithoutCause()
+  public void finishTransaction_NoWriteSetRecorded_ShouldReturnFalseWithoutThrowing()
       throws Exception {
-    // Arrange — State whose tx_write_set is NULL (lazy-recovery abort, pre-feature row, etc.).
+    // Arrange — State whose tx_write_set is NULL (terminated via
+    // DistributedTransactionManager#rollback()/abort(), lazy-recovery abort, pre-feature row,
+    // etc.).
     State state = new State(ANY_TX_ID, TransactionState.ABORTED);
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
 
-    // Act + Assert
-    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
-        .isInstanceOf(TransactionException.class)
-        .hasMessageContaining("no write set is recorded")
-        .hasNoCause();
+    // Act
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
+
+    // Assert — the transaction is not applicable (no write set), so the call reports false and
+    // leaves the state row for lazy recovery instead of throwing.
+    assertThat(finished).isFalse();
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
     verify(coordinator, never()).deleteState(anyString());
   }
 
@@ -1999,10 +2007,11 @@ public class ConsensusCommitManagerTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert — record was missing, so recovery is not invoked, but the state row is still cleaned
     // up because the transaction itself is terminal.
+    assertThat(finished).isTrue();
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
     verify(coordinator).deleteState(ANY_TX_ID);
   }
@@ -2020,9 +2029,10 @@ public class ConsensusCommitManagerTest {
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert
+    assertThat(finished).isTrue();
     verify(storage, never()).get(any(Get.class));
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
     verify(coordinator).deleteState(ANY_TX_ID);
@@ -2042,9 +2052,10 @@ public class ConsensusCommitManagerTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(finalizedRecord));
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert
+    assertThat(finished).isTrue();
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
     verify(coordinator).deleteState(ANY_TX_ID);
   }
@@ -2061,9 +2072,10 @@ public class ConsensusCommitManagerTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(overwrittenRecord));
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert
+    assertThat(finished).isTrue();
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
     verify(coordinator).deleteState(ANY_TX_ID);
   }
@@ -2128,7 +2140,8 @@ public class ConsensusCommitManagerTest {
     verify(coordinator, never()).deleteState(anyString());
 
     // Second call recovers and deletes the state row
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
+    assertThat(finished).isTrue();
     verify(recoveryExecutor)
         .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
     verify(coordinator).deleteState(ANY_TX_ID);
@@ -2150,9 +2163,37 @@ public class ConsensusCommitManagerTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(deletedRecord));
 
     // Act
-    manager.finishTransaction(ANY_TX_ID);
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
 
     // Assert
+    assertThat(finished).isTrue();
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
+    verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void
+      finishTransaction_RecordInDeletedStateWithAbortedCoordinator_ShouldExecuteRecoveryAndDeleteState()
+          throws Exception {
+    // Arrange — the rollback counterpart of the previous test: an in-flight Delete left the record
+    // in DELETED state while the Coordinator row says ABORTED. shouldRecover passes the DELETED
+    // record through to executeSynchronously, where the recovery handler rolls it back to its
+    // before-image. This exercises the DELETED-state branch of shouldRecover via the ABORTED-state
+    // path.
+    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.ABORTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    Result deletedRecord = mock(Result.class);
+    when(deletedRecord.getText(Attribute.ID)).thenReturn(ANY_TX_ID);
+    when(deletedRecord.isNull(Attribute.STATE)).thenReturn(false);
+    when(deletedRecord.getInt(Attribute.STATE)).thenReturn(TransactionState.DELETED.get());
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(deletedRecord));
+
+    // Act
+    boolean finished = manager.finishTransaction(ANY_TX_ID);
+
+    // Assert
+    assertThat(finished).isTrue();
     verify(recoveryExecutor)
         .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
     verify(coordinator).deleteState(ANY_TX_ID);

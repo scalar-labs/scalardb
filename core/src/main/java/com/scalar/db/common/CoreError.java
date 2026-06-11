@@ -1435,16 +1435,9 @@ public enum CoreError implements ScalarDbError {
       "Getting the virtual table information failed. Table: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_FINISHING_TRANSACTION_NOT_APPLICABLE_NO_WRITE_SET(
-      Category.INTERNAL_ERROR,
-      "0068",
-      "Finishing the transaction is not applicable because no write set is recorded for the transaction. "
-          + "This typically means the transaction was not terminated via DistributedTransaction#commit() or was committed by an older version that did not record write sets",
-      "",
-      ""),
   CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR,
-      "0069",
+      "0068",
       "Finishing the transaction failed. Transaction ID: %s, Details: %s",
       "",
       ""),

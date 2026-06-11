@@ -432,7 +432,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public void finishTransaction(String txId) {
+  public boolean finishTransaction(String txId) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED.buildMessage());
   }

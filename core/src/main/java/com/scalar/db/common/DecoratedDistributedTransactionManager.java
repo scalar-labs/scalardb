@@ -298,8 +298,8 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
-  public void finishTransaction(String txId) throws TransactionException {
-    transactionManager.finishTransaction(txId);
+  public boolean finishTransaction(String txId) throws TransactionException {
+    return transactionManager.finishTransaction(txId);
   }
 
   @Override
