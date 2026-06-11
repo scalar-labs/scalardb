@@ -14,6 +14,10 @@ sourceSets {
             srcDir file('src/integration-test/java')
         }
         resources.srcDir file('src/integration-test/resources')
+        // Spanner emulator extension registration — only for sourcesets that compile
+        // SpannerEmulatorExtension; sharing it with all sourcesets breaks JUnit startup
+        // with ServiceConfigurationError on classpaths that lack the class.
+        resources.srcDir file('src/integration-test/resources-spanner-emulator')
     }
     integrationTestCassandra {
         java {
@@ -64,6 +68,8 @@ sourceSets {
             exclude '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
+        // Spanner emulator extension registration (see integrationTestAll note).
+        resources.srcDir file('src/integration-test/resources-spanner-emulator')
     }
     integrationTestObjectStorage {
         java {
@@ -124,6 +130,9 @@ sourceSets {
             include '**/com/scalar/db/storage/jdbc/JdbcAdminTestUtils.java'
             include '**/com/scalar/db/storage/jdbc/JdbcTestUtils.java'
             include '**/com/scalar/db/storage/jdbc/JdbcEnv.java'
+            // JdbcEnv consults the Spanner emulator container registry, so the support
+            // class (and the testcontainers:gcloud dependency) must be on this sourceset.
+            include '**/com/scalar/db/storage/jdbc/SpannerEmulatorContainerSupport.java'
             include '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
             include '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'
         }
@@ -216,6 +225,7 @@ dependencies {
 
     integrationTestJdbcImplementation "org.testcontainers:gcloud:${testcontainersVersion}"
     integrationTestAllImplementation "org.testcontainers:gcloud:${testcontainersVersion}"
+    integrationTestJdbcPermissionImplementation "org.testcontainers:gcloud:${testcontainersVersion}"
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
