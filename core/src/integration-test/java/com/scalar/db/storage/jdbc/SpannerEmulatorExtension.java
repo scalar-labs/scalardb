@@ -34,6 +34,12 @@ public class SpannerEmulatorExtension implements BeforeAllCallback, AfterAllCall
     if (!isEnabled()) {
       return;
     }
+    if (context.getRequiredTestClass().isAnnotationPresent(SpannerPerThreadContainers.class)) {
+      logger.info(
+          "SpannerPerThreadContainers detected for class: {} — skipping per-class container",
+          context.getRequiredTestClass().getSimpleName());
+      return; // per-thread class: initialize() handles container provisioning
+    }
     String baseUrl = System.getProperty("scalardb.jdbc.url");
     logger.info(
         "Starting Spanner emulator container for class: {}",
@@ -47,6 +53,13 @@ public class SpannerEmulatorExtension implements BeforeAllCallback, AfterAllCall
   @Override
   public void afterAll(ExtensionContext context) {
     if (!isEnabled()) {
+      return;
+    }
+    if (context.getRequiredTestClass().isAnnotationPresent(SpannerPerThreadContainers.class)) {
+      logger.info(
+          "Stopping per-thread containers for class: {}",
+          context.getRequiredTestClass().getSimpleName());
+      SpannerEmulatorContainerSupport.stopRegisteredContainers();
       return;
     }
     SpannerEmulatorContainer container =

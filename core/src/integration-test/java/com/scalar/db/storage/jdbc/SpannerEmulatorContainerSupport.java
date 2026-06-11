@@ -1,9 +1,16 @@
 package com.scalar.db.storage.jdbc;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.SpannerEmulatorContainer;
+import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -14,6 +21,9 @@ import org.testcontainers.utility.DockerImageName;
  * test thread.
  */
 public final class SpannerEmulatorContainerSupport {
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(SpannerEmulatorContainerSupport.class);
 
   /** Default Spanner emulator Docker image (bundled with testcontainers:gcloud). */
   static final DockerImageName DEFAULT_IMAGE =
@@ -39,6 +49,13 @@ public final class SpannerEmulatorContainerSupport {
 
   /** Counts the total number of container starts — used to assert smoke-test isolation. */
   private static final AtomicInteger START_COUNT = new AtomicInteger(0);
+
+  /**
+   * Registry of containers started via {@link #startContainers(String, int)} for extension-driven
+   * teardown.
+   */
+  private static final List<SpannerEmulatorContainer> REGISTERED_CONTAINERS =
+      new CopyOnWriteArrayList<>();
 
   private SpannerEmulatorContainerSupport() {}
 
@@ -81,6 +98,43 @@ public final class SpannerEmulatorContainerSupport {
     if (container != null) {
       container.stop();
     }
+  }
+
+  /**
+   * Starts {@code n} Spanner emulator containers in parallel, registers them for extension-driven
+   * teardown, and returns a list of {@code n} JDBC URLs (one per container, in creation order).
+   *
+   * <p>Does NOT set {@link #ACTIVE_URL} — URLs flow explicitly as the returned list.
+   *
+   * @param baseJdbcUrl the system-property JDBC URL used as a URL template (host:port replaced)
+   * @param n the number of containers to start
+   * @return an unmodifiable list of n JDBC URLs, index i corresponding to thread i
+   */
+  public static List<String> startContainers(String baseJdbcUrl, int n) {
+    logger.info("Starting {} Spanner emulator containers for per-thread class", n);
+    List<SpannerEmulatorContainer> containers = new ArrayList<>(n);
+    for (int i = 0; i < n; i++) {
+      containers.add(new SpannerEmulatorContainer(DEFAULT_IMAGE));
+    }
+    Startables.deepStart(containers).join();
+    START_COUNT.addAndGet(n);
+    REGISTERED_CONTAINERS.addAll(containers);
+    List<String> urls = new ArrayList<>(n);
+    for (SpannerEmulatorContainer c : containers) {
+      urls.add(buildContainerUrl(baseJdbcUrl, c.getEmulatorGrpcEndpoint()));
+    }
+    return Collections.unmodifiableList(urls);
+  }
+
+  /**
+   * Stops all containers registered via {@link #startContainers(String, int)} and clears the
+   * registry. Called by {@link SpannerEmulatorExtension#afterAll} for per-thread classes.
+   */
+  public static void stopRegisteredContainers() {
+    for (SpannerEmulatorContainer c : REGISTERED_CONTAINERS) {
+      c.stop();
+    }
+    REGISTERED_CONTAINERS.clear();
   }
 
   /**
