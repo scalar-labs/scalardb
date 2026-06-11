@@ -281,6 +281,11 @@ task integrationTestJdbc(type: Test) {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
     maxHeapSize = "4g"
+    // docker-java 3.4.2 defaults to API version 1.32 when no version is configured.
+    // Docker Desktop 4.68+ rejects v1.32 requests with HTTP 400. Pinning to v1.41 ensures
+    // Testcontainers (used by Spanner emulator tests) can connect to the local Docker daemon.
+    // This property is ignored for non-Testcontainers test runs.
+    jvmArgs "-Dapi.version=1.41"
 }
 
 task integrationTestObjectStorage(type: Test) {
