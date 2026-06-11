@@ -1292,12 +1292,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       if (readOnly) {
         // In read-only mode, recovery should not occur
         verify(recovery, never())
-            .recover(any(Selection.class), any(TransactionResult.class), any());
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery, never())
             .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
       } else {
         // In read-write mode, recovery should occur
-        verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
       }
     } else {
@@ -1310,7 +1310,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(result.getCommittedAt()).isGreaterThan(0);
 
       // Recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -1414,11 +1414,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In other cases, recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -1549,7 +1550,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all cases, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(coordinator, never()).putState(any(Coordinator.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
@@ -1655,23 +1656,25 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator, never()).putState(any(Coordinator.State.class));
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else if (isolation == Isolation.READ_COMMITTED) {
       // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
-      // via recover()
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      // via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
-      // record is rolled back in the background. recover() is not used on this path.
+      // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -1790,12 +1793,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       if (readOnly) {
         // In read-only mode, recovery should not occur
         verify(recovery, never())
-            .recover(any(Selection.class), any(TransactionResult.class), any());
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery, never())
             .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
       } else {
         // In read-write mode, recovery should occur
-        verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
       }
     } else {
@@ -1805,7 +1808,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(result).isNull();
 
       // Recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -1909,11 +1912,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In other cases, recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -2044,7 +2048,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all cases, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(coordinator, never()).putState(any(Coordinator.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
@@ -2151,22 +2155,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else if (isolation == Isolation.READ_COMMITTED) {
       // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
-      // via recover()
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      // via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
-      // record is rolled back in the background. recover() is not used on this path.
+      // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -2255,7 +2261,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-forward)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2292,7 +2298,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2331,12 +2337,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
     // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
-    // before the result is returned, then the record is rolled back in the background. recover() is
+    // before the result is returned, then the record is rolled back in the background. tryRecover()
+    // is
     // not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @ParameterizedTest
@@ -2365,7 +2372,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.rollback();
 
     // Recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(coordinator, never()).putState(any(Coordinator.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
@@ -2402,7 +2409,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-forward = delete committed)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2437,7 +2444,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2476,7 +2483,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2548,7 +2555,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur for both transient rows (DELETED old + PREPARED new) and roll them
     // FORWARD (writer committed); nothing is rolled back.
-    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(2))
+        .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, times(2))
         .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
@@ -2608,7 +2616,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur for both transient rows (DELETED old + PREPARED new) and roll them BACK
     // (writer aborted); nothing is rolled forward.
-    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(2))
+        .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
@@ -2663,7 +2672,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur once for the aborted in-flight record and roll it BACK; nothing is
     // rolled forward (the surviving record is genuinely committed and needs no recovery).
-    verify(recovery, times(1)).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(1))
+        .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, times(1)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
@@ -2749,7 +2759,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2861,7 +2871,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-forward)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2951,7 +2961,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3041,12 +3051,13 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
     // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
-    // before the records are returned, then the record is rolled back in the background. recover()
+    // before the records are returned, then the record is rolled back in the background.
+    // tryRecover()
     // is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @ParameterizedTest
@@ -3122,7 +3133,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.rollback();
 
     // Recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(coordinator, never()).putState(any(Coordinator.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
@@ -3216,7 +3227,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-forward = delete committed)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3305,7 +3316,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     waitForRecoveryCompletion(transaction);
 
     // Recovery should occur (roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3455,7 +3466,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
 
       verify(recovery, never()).tryAbortExpiredTransaction(anyString());
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     } else {
       // SNAPSHOT/SERIALIZABLE use RETURN_LATEST_RESULT_AND_RECOVER. The lazy-recovery rollback
       // loses the race, so the read resolves from the winner's COMMITTED outcome. The after-image
@@ -3466,7 +3477,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
 
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     }
@@ -3697,7 +3708,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3753,7 +3764,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3799,7 +3810,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all isolations, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
@@ -3851,18 +3862,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
     if (isolation == Isolation.READ_COMMITTED) {
-      // In READ_COMMITTED isolation, the record is recovered in the background via recover()
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      // In READ_COMMITTED isolation, the record is recovered in the background via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
-      // record is rolled back in the background. recover() is not used on this path.
+      // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -3925,7 +3937,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3981,7 +3993,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -4027,7 +4039,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all isolations, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
@@ -4079,18 +4091,19 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
     if (isolation == Isolation.READ_COMMITTED) {
-      // In READ_COMMITTED isolation, the record is recovered in the background via recover()
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      // In READ_COMMITTED isolation, the record is recovered in the background via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
-      // record is rolled back in the background. recover() is not used on this path.
+      // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -9743,6 +9756,41 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      rollback_forOngoingGroupCommitTransactionWhenNormalGroupCommitInFlight_ShouldRollbackCorrectly()
+          throws Exception {
+    // Rolling back an in-flight, group-committed transaction by ID must win against the in-flight
+    // normal group commit, which writes the COMMITTED state under the parent ID. The race is made
+    // deterministic by rolling the transaction back by ID just before the group commit writes its
+    // COMMITTED state under the parent ID, so the two writes genuinely conflict.
+
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    String ongoingTxId = transaction.getId();
+    String parentId =
+        new CoordinatorGroupCommitKeyManipulator().keysFromFullKey(ongoingTxId).parentKey;
+
+    doAnswer(
+            invocation -> {
+              // The rollback writes the parent-ID ABORTED marker (not a COMMITTED state), so it
+              // does not match this stub and runs against the real coordinator.
+              manager.rollback(ongoingTxId);
+              return invocation.callRealMethod();
+            })
+        .when(coordinator)
+        .putStateForGroupCommit(
+            eq(parentId), anyList(), any(), eq(TransactionState.COMMITTED), anyLong());
+
+    // Act Assert
+    assertThatCode(transaction::commit).isInstanceOf(CommitConflictException.class);
+    assertThat(manager.getState(ongoingTxId)).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
   void finishTransaction_CommittedWithSomeRecordsStillPrepared_ShouldRollForwardAndDeleteState()
       throws Exception {
     // Scenario 1: a transaction wrote two records, the Coordinator state row says COMMITTED, but
@@ -10036,38 +10084,268 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
+  void recoverRecord_PreparedRecordWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnTrue()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED at storage but its writer committed.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            TransactionState.COMMITTED,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — rolled forward to the after-image; the Coordinator state row is NOT deleted (unlike
+    // finishTransaction).
+    assertThat(recovered).isTrue();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    assertThat(coordinator.getState(txId)).isPresent();
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWhenCoordinatorStateAborted_ShouldRollBackAndReturnTrue()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED at storage but its writer aborted.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            TransactionState.ABORTED,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — rolled back to the before-image; the Coordinator state row is NOT deleted.
+    assertThat(recovered).isTrue();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(coordinator.getState(txId)).isPresent();
+  }
+
+  @Test
+  void recoverRecord_DeletedRecordWhenCoordinatorStateCommitted_ShouldRollForwardRemovingRecord()
+      throws Exception {
+    // Arrange — record (0,0) is DELETED at storage and its writer committed; rolling forward must
+    // physically remove the record.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    populatePreparedRecordAndCoordinatorStateRecord(
+        originalStorage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        System.currentTimeMillis(),
+        TransactionState.COMMITTED,
+        CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the call reports the record recovered and the record is physically gone.
+    assertThat(recovered).isTrue();
+    assertThat(originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWithNoCoordinatorStateAndExpired_ShouldAbortAndReturnTrue()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED with no Coordinator state and the writer has expired.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            1, // a long-past prepared-at, so the writer is considered expired
+            null,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the writer is aborted and the record rolled back to the before-image.
+    assertThat(recovered).isTrue();
+    Optional<Coordinator.State> state = coordinator.getState(txId);
+    assertThat(state).isPresent();
+    assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWithNoCoordinatorStateAndNotExpired_ShouldReturnFalse()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED with no Coordinator state and the writer is NOT expired,
+    // so it may still be in flight and must not be aborted.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            null,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — no recovery performed; the record is untouched and no Coordinator state was written.
+    assertThat(recovered).isFalse();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(txId);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.PREPARED.get());
+  }
+
+  @Test
   @EnabledIf("isGroupCommitEnabled")
   void
-      rollback_forOngoingGroupCommitTransactionWhenNormalGroupCommitInFlight_ShouldRollbackCorrectly()
+      recoverRecord_PreparedGroupCommitRecordWithNoCoordinatorStateAndNotExpired_ShouldNotAbortLiveGroupAndReturnFalse()
           throws Exception {
-    // Rolling back an in-flight, group-committed transaction by ID must win against the in-flight
-    // normal group commit, which writes the COMMITTED state under the parent ID. The race is made
-    // deterministic by rolling the transaction back by ID just before the group commit writes its
-    // COMMITTED state under the parent ID, so the two writes genuinely conflict.
+    // Arrange — record (0,0) is PREPARED by a group-commit transaction (its tx_id is a full
+    // group-commit key) with no Coordinator state and a recent prepared-at. This represents a
+    // healthy, in-flight group whose parent Coordinator row has not been written yet. recoverRecord
+    // must not abort it (which would write a conflicting ABORTED row and take down the whole live
+    // group); it reuses the exact abortIfExpired path that lazy recovery uses, so the expiration
+    // guard protects the live group identically.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            null,
+            CommitType.GROUP_COMMIT);
 
-    // Arrange
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the live group is left untouched: no recovery performed, no Coordinator state (not
+    // even the lazy-recovery-abort-with-parent-id row) was written, and the record is unchanged.
+    assertThat(recovered).isFalse();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(txId);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.PREPARED.get());
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      recoverRecord_PreparedGroupCommitRecordWithNoCoordinatorStateAndExpired_ShouldAbortViaGroupCommitPathAndReturnTrue()
+          throws Exception {
+    // Arrange — record (0,0) is PREPARED by a group-commit transaction (its tx_id is a full
+    // group-commit key) with no Coordinator state and an expired prepared-at. This is an abandoned
+    // group-commit writer (the group never reached commit). recoverRecord must abort it through the
+    // group-commit-aware path (Coordinator.putStateForLazyRecoveryRollbackForGroupCommit), which
+    // writes both the lazy-recovery-abort-with-parent-id row and the full-id ABORTED row — the same
+    // rows that conflict-protect against a racing real group commit. This is the expired
+    // counterpart
+    // of the not-expired test above and confirms recoverRecord drives the no-state group-commit
+    // branch identically to lazy recovery.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            1, // a long-past prepared-at, so the writer is considered expired
+            null,
+            CommitType.GROUP_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the writer is aborted via the group-commit path and the record rolled back to the
+    // before-image. getState on the full key resolves to ABORTED (it falls through to the full-id
+    // ABORTED row written by the group-commit abort path).
+    assertThat(recovered).isTrue();
+    Optional<Coordinator.State> state = coordinator.getState(txId);
+    assertThat(state).isPresent();
+    assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  void recoverRecord_AlreadyCommittedRecord_ShouldBeNoOpAndReturnTrue() throws Exception {
+    // Arrange — a normally committed record.
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
     DistributedTransaction transaction = manager.begin();
-    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
-    String ongoingTxId = transaction.getId();
-    String parentId =
-        new CoordinatorGroupCommitKeyManipulator().keysFromFullKey(ongoingTxId).parentKey;
+    transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, NEW_BALANCE));
+    transaction.commit();
 
-    doAnswer(
-            invocation -> {
-              // The rollback writes the parent-ID ABORTED marker (not a COMMITTED state), so it
-              // does not match this stub and runs against the real coordinator.
-              manager.rollback(ongoingTxId);
-              return invocation.callRealMethod();
-            })
-        .when(coordinator)
-        .putStateForGroupCommit(
-            eq(parentId), anyList(), any(), eq(TransactionState.COMMITTED), anyLong());
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
 
-    // Act Assert
-    assertThatCode(transaction::commit).isInstanceOf(CommitConflictException.class);
-    assertThat(manager.getState(ongoingTxId)).isEqualTo(TransactionState.ABORTED);
+    // Assert — no-op; the record stays COMMITTED.
+    assertThat(recovered).isTrue();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void recoverRecord_AbsentRecord_ShouldBeNoOpAndReturnTrue() throws Exception {
+    // Arrange — no record at (0,0).
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    assertThat(originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    assertThat(originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
   }
 
   private DistributedTransaction prepareTransfer(

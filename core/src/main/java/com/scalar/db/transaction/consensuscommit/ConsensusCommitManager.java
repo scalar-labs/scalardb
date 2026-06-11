@@ -6,11 +6,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
@@ -36,12 +38,14 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
@@ -610,19 +614,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     State state = stateOpt.get();
 
-    // Only COMMITTED or ABORTED states are expected here. Anything else indicates an internal
-    // invariant violation, not a runtime condition. This is checked before the write-set presence
-    // check so that a persisted non-terminal state (which should never exist) always surfaces as
-    // the invariant violation rather than being misreported as a missing write set.
-    TransactionState txState = state.getState();
-    if (txState != TransactionState.COMMITTED && txState != TransactionState.ABORTED) {
-      throw new AssertionError(
-          "Unexpected non-terminal transaction state at finishTransaction. State: "
-              + txState
-              + ", Transaction ID: "
-              + txId);
-    }
-
     // The transaction did not commit through DistributedTransaction#commit() (e.g., it was
     // terminated via DistributedTransactionManager#rollback()/abort(), aborted by lazy recovery, or
     // originated from a pre-feature binary) and so carries no write set. Note that a commit() that
@@ -679,9 +670,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       }
     }
 
-    // Delete the state row. state.getId() is the parent ID for group-commit rows because
-    // Coordinator#getState(fullChildId) routes through getStateForGroupCommit() and returns the
-    // parent row, so the delete targets the right row in both single and group cases.
+    // Perform the Coordinator state cleanup (delete the state row). state.getId() is the parent ID
+    // for group-commit rows because Coordinator#getState(fullChildId) routes through
+    // getStateForGroupCommit() and returns the parent row, so the delete targets the right row in
+    // both single and group cases.
     // Coordinator#deleteState is unconditional and benign on a concurrent delete.
     try {
       coordinator.deleteState(state.getId());
@@ -716,6 +708,95 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       return false;
     }
     return expectedTxId.equals(result.getId());
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException {
+    checkArgument(!Strings.isNullOrEmpty(namespace));
+    checkArgument(!Strings.isNullOrEmpty(table));
+    checkNotNull(partitionKey);
+
+    // Read the current physical state of the record.
+    Get get = buildRecordGet(namespace, table, partitionKey, clusteringKey);
+    Optional<Result> resultOpt;
+    try {
+      resultOpt = storage.get(get);
+    } catch (ExecutionException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              partitionKey,
+              clusteringKey,
+              e.getMessage()),
+          e,
+          null);
+    }
+
+    // Nothing to recover if the record does not exist or is already committed. isCommitted() also
+    // covers a record with no transaction metadata (tx_state absent), which is deemed as committed.
+    // The record is already resolved in both cases, so report it as recovered.
+    if (!resultOpt.isPresent()) {
+      return true;
+    }
+    TransactionResult txResult = new TransactionResult(resultOpt.get());
+    if (txResult.isCommitted()) {
+      return true;
+    }
+
+    // The record is uncommitted (PREPARED or DELETED). A record written by ScalarDB always carries
+    // both tx_id and tx_state together, so tx_id is non-null here; the isCommitted() check above
+    // already handled the no-metadata case where tx_state — and thus tx_id — is absent.
+    String txId = txResult.getId();
+    assert txId != null;
+
+    Optional<State> stateOpt;
+    try {
+      stateOpt = coordinator.getState(txId);
+    } catch (CoordinatorException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              partitionKey,
+              clusteringKey,
+              e.getMessage()),
+          e,
+          txId);
+    }
+
+    // Recover the single record and report whether it was resolved. The Coordinator state cleanup
+    // is deliberately not performed: the writer may span other records that still need the state
+    // row, and the transaction-wide ABORTED row written for the no-state case keeps those records
+    // consistent via lazy recovery.
+    try {
+      return recoveryExecutor.executeSynchronously(get, txResult, stateOpt);
+    } catch (ExecutionException | CoordinatorException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              partitionKey,
+              clusteringKey,
+              e.getMessage()),
+          e,
+          txId);
+    }
+  }
+
+  private static Get buildRecordGet(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    // Read all columns (no projections) with linearizable consistency so the before-image and the
+    // transaction metadata needed for recovery are available.
+    GetBuilder.BuildableGetWithPartitionKey builder =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .consistency(Consistency.LINEARIZABLE);
+    if (clusteringKey != null) {
+      builder.clusteringKey(clusteringKey);
+    }
+    return builder.build();
   }
 
   @VisibleForTesting

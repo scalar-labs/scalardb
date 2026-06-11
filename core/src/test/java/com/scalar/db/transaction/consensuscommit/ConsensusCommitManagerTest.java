@@ -13,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -54,6 +55,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -1982,7 +1984,7 @@ public class ConsensusCommitManagerTest {
 
     // Assert — the state row is already gone, so finishing is a no-op that reports success.
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator, never()).deleteState(anyString());
   }
 
@@ -2001,20 +2003,7 @@ public class ConsensusCommitManagerTest {
     // Assert — the transaction is not applicable (no write set), so the call reports false and
     // leaves the state row for lazy recovery instead of throwing.
     assertThat(finished).isFalse();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
-    verify(coordinator, never()).deleteState(anyString());
-  }
-
-  @Test
-  public void finishTransaction_NonTerminalState_ShouldThrowAssertionError() throws Exception {
-    // Arrange — A persisted State should never be PREPARED. If it is, that's an internal
-    // invariant violation that finishTransaction must surface loudly.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.PREPARED);
-    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
-
-    // Act + Assert
-    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
-        .isInstanceOf(AssertionError.class);
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator, never()).deleteState(anyString());
   }
 
@@ -2062,7 +2051,7 @@ public class ConsensusCommitManagerTest {
     // Assert — record was missing, so recovery is not invoked, but the state row is still cleaned
     // up because the transaction itself is terminal.
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2084,7 +2073,7 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(finished).isTrue();
     verify(storage, never()).get(any(Get.class));
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2106,7 +2095,7 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2126,7 +2115,7 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2189,7 +2178,7 @@ public class ConsensusCommitManagerTest {
         .hasCause(firstAttemptCause);
     verify(coordinator, never()).deleteState(anyString());
 
-    // Second call recovers and deletes the state row
+    // Second call recovers and cleans up the state row
     boolean finished = manager.finishTransaction(ANY_TX_ID);
     assertThat(finished).isTrue();
     verify(recoveryExecutor)
@@ -2247,5 +2236,256 @@ public class ConsensusCommitManagerTest {
     verify(recoveryExecutor)
         .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
     verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  // ------------------------------------------------------------
+  // recoverRecord
+  // ------------------------------------------------------------
+
+  // Key-shape and table-existence validation is delegated to the storage-layer OperationChecker
+  // invoked by storage.get, so it is not re-tested here (covered by OperationChecker's own tests
+  // and the integration tests).
+
+  private Result committedRecord(String txId) {
+    Result record = mock(Result.class);
+    when(record.getText(Attribute.ID)).thenReturn(txId);
+    when(record.isNull(Attribute.STATE)).thenReturn(false);
+    when(record.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    return record;
+  }
+
+  @Test
+  public void recoverRecord_UncommittedRecordGiven_ShouldRecoverWithStateAndReturnTrue()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    State state = new State(ANY_TX_ID, TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    when(recoveryExecutor.executeSynchronously(
+            any(Get.class), any(TransactionResult.class), eq(Optional.of(state))))
+        .thenReturn(true);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator).getState(ANY_TX_ID);
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.of(state)));
+    // recoverRecord must never perform Coordinator state cleanup (delete the state row).
+    verify(coordinator, never()).deleteState(anyString());
+
+    // The Get is built with linearizable consistency and the supplied keys (no projections).
+    ArgumentCaptor<Get> getCaptor = ArgumentCaptor.forClass(Get.class);
+    verify(storage).get(getCaptor.capture());
+    Get get = getCaptor.getValue();
+    assertThat(get.forNamespace()).hasValue(ANY_NAMESPACE);
+    assertThat(get.forTable()).hasValue(ANY_TABLE);
+    assertThat((Object) get.getPartitionKey()).isEqualTo(Key.ofText("pk", "pv"));
+    assertThat(get.getClusteringKey()).hasValue(Key.ofText("ck", "cv"));
+    assertThat(get.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
+    assertThat(get.getProjections()).isEmpty();
+  }
+
+  @Test
+  public void recoverRecord_PartitionKeyOnly_ShouldBuildGetWithoutClusteringKey() throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    State state = new State(ANY_TX_ID, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    when(recoveryExecutor.executeSynchronously(
+            any(Get.class), any(TransactionResult.class), eq(Optional.of(state))))
+        .thenReturn(true);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), null);
+
+    // Assert
+    assertThat(recovered).isTrue();
+    ArgumentCaptor<Get> getCaptor = ArgumentCaptor.forClass(Get.class);
+    verify(storage).get(getCaptor.capture());
+    Get get = getCaptor.getValue();
+    assertThat((Object) get.getPartitionKey()).isEqualTo(Key.ofText("pk", "pv"));
+    assertThat(get.getClusteringKey()).isEmpty();
+    assertThat(get.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
+  }
+
+  @Test
+  public void recoverRecord_StateAbsent_ShouldDelegateWithEmptyStateAndReturnResult()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
+    when(recoveryExecutor.executeSynchronously(
+            any(Get.class), any(TransactionResult.class), eq(Optional.empty())))
+        .thenReturn(true);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.empty()));
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void recoverRecord_RecordAbsent_ShouldReturnTrueWithoutRecovery() throws Exception {
+    // Arrange
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+  }
+
+  @Test
+  public void recoverRecord_AlreadyCommittedRecord_ShouldReturnTrueWithoutRecovery()
+      throws Exception {
+    // Arrange
+    Result record = committedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+  }
+
+  @Test
+  public void recoverRecord_DeemedAsCommittedRecord_ShouldReturnTrueWithoutRecovery()
+      throws Exception {
+    // Arrange — an imported-table row with no transaction metadata (tx_state is null). getState()
+    // deems such a record COMMITTED, so recoverRecord must no-op without consulting the
+    // coordinator.
+    Result record = mock(Result.class);
+    when(record.isNull(Attribute.STATE)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+  }
+
+  @Test
+  public void recoverRecord_CoordinatorGetStateFails_ShouldThrowTransactionException()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    CoordinatorException toThrow = mock(CoordinatorException.class);
+    when(toThrow.getMessage()).thenReturn("coordinator down");
+    doThrow(toThrow).when(coordinator).getState(ANY_TX_ID);
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void recoverRecord_StorageGetFails_ShouldThrowTransactionException() throws Exception {
+    // Arrange
+    com.scalar.db.exception.storage.ExecutionException cause =
+        new com.scalar.db.exception.storage.ExecutionException("storage down");
+    when(storage.get(any(Get.class))).thenThrow(cause);
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    // The record could not be read, so neither the coordinator nor the recovery executor is
+    // touched.
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void recoverRecord_RecoveryExecutorFails_ShouldThrowTransactionException()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    State state = new State(ANY_TX_ID, TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    com.scalar.db.exception.storage.ExecutionException cause =
+        new com.scalar.db.exception.storage.ExecutionException("recovery storage down");
+    doThrow(cause)
+        .when(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.of(state)));
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    // recoverRecord must never perform Coordinator state cleanup, even on failure.
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void
+      recoverRecord_RecoveryExecutorThrowsCoordinatorException_ShouldThrowTransactionException()
+          throws Exception {
+    // Arrange — no coordinator state, and the no-state recovery path throws CoordinatorException
+    // (the second arm of recoverRecord's ExecutionException | CoordinatorException multicatch).
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
+    CoordinatorException cause = mock(CoordinatorException.class);
+    when(cause.getMessage()).thenReturn("coordinator down");
+    doThrow(cause)
+        .when(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.empty()));
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    // recoverRecord must never perform Coordinator state cleanup, even on failure.
+    verify(coordinator, never()).deleteState(anyString());
   }
 }
