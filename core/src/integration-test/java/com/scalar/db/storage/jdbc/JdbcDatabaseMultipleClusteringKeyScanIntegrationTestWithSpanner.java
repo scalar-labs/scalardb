@@ -7,6 +7,7 @@ import com.scalar.db.service.StorageFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
  * each executor thread to its own Spanner database (test-db-1..test-db-N).
  */
 @EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isSpannerEmulator")
+@SpannerPerThreadContainers
 public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
     extends JdbcDatabaseMultipleClusteringKeyScanIntegrationTest {
 
@@ -46,12 +48,23 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
     threadId = ThreadLocal.withInitial(() -> threadIndex.getAndIncrement() % getThreadNum());
 
     String baseUrl = System.getProperty("scalardb.jdbc.url");
+    boolean useContainers =
+        Boolean.getBoolean(SpannerEmulatorExtension.PROP_FLAG) && JdbcEnv.isSpannerEmulator();
+    List<String> containerUrls =
+        useContainers
+            ? SpannerEmulatorContainerSupport.startContainers(baseUrl, getThreadNum())
+            : Collections.emptyList();
+
     logger.info("Initializing {} per-thread Spanner databases", getThreadNum());
     for (int i = 0; i < getThreadNum(); i++) {
-      // Each thread gets assigned its own database: test-db-1..test-db-N.
-      //  The Spanner emulator automatically creates database when the JDBC property
-      //  `autoConfigEmulator=true`is set, so we don't need to create the database explicitly
-      String threadUrl = baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + (i + 1));
+      // When containers are active, each thread points to its own isolated emulator.
+      // When flag is unset, preserve original behavior: test-db-(i+1) rewrite of external URL.
+      // Note: JdbcEnv.getProperties() below is called for non-URL properties only;
+      // CONTACT_POINTS is immediately overridden on the next line.
+      String threadUrl =
+          useContainers
+              ? containerUrls.get(i)
+              : baseUrl.replaceFirst("/databases/[^;/]+", "/databases/test-db-" + (i + 1));
       logger.info("Thread {}: {}", i, threadUrl);
       Properties props = JdbcEnv.getProperties(testName);
       props.setProperty(DatabaseConfig.CONTACT_POINTS, threadUrl);
