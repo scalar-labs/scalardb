@@ -505,7 +505,11 @@ public interface DistributedTransactionManager
    * or transactions originated from older binaries that pre-date the write-set column) do not carry
    * a write set; they are not applicable to this method, and calling it on their transaction ID
    * returns {@code false} without doing any work. This is an expected outcome rather than an error
-   * — retrying with the same transaction ID would never succeed.
+   * — retrying with the same transaction ID would never succeed. Note that, on this branch,
+   * persisting the write set is opt-in and disabled by default: even a transaction terminated via
+   * {@link DistributedTransaction#commit()} carries a write set only when {@code
+   * scalar.db.consensus_commit.coordinator.write_set_logging.enabled} is set to {@code true}, so
+   * with the default configuration this method always returns {@code false}.
    *
    * <p><b>Idempotency:</b> calling this method on a transaction ID whose state row is absent
    * (already finished, never started, or already cleaned up by a concurrent caller) returns {@code
