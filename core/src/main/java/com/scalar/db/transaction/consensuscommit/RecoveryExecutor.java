@@ -315,6 +315,35 @@ public class RecoveryExecutor implements AutoCloseable {
     }
   }
 
+  /**
+   * Recovers a single record synchronously by delegating to the underlying {@link RecoveryHandler}.
+   * The synchronous counterpart of {@link #execute(Snapshot.Key, Selection, TransactionResult,
+   * String, RecoveryType)}; callers that already know the coordinator state and want the recovery
+   * to complete inline (e.g., {@code finishTransaction}) use this entry point without leaking the
+   * {@code RecoveryHandler} dependency itself.
+   *
+   * <p>Rollforward vs. rollback is decided by the supplied coordinator state, and the underlying
+   * composers absorb {@link com.scalar.db.exception.storage.NoMutationException} when the record
+   * has already been recovered by a concurrent actor.
+   *
+   * @param selection the selection that identifies the user record
+   * @param result the latest known TransactionResult for the record
+   * @param state the coordinator state for the transaction that wrote the record
+   * @throws ExecutionException if the underlying storage read or mutation fails
+   */
+  void executeSynchronously(Selection selection, TransactionResult result, Coordinator.State state)
+      throws ExecutionException {
+    try {
+      recovery.recover(selection, result, Optional.of(state));
+    } catch (CoordinatorException e) {
+      // recover only throws CoordinatorException via abortIfExpired, which runs solely when the
+      // coordinator state is empty. This entry point requires a non-null state, so the branch is
+      // unreachable.
+      throw new AssertionError(
+          "CoordinatorException from recover with a present state should be impossible", e);
+    }
+  }
+
   @Override
   public void close() {
     executorService.shutdown();
