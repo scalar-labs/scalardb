@@ -1589,4 +1589,12 @@ public class JdbcTransactionManagerTest {
     verify(transaction).commit();
     assertThat(actual).isEqualTo(batchResults);
   }
+
+  @Test
+  public void finishTransaction_ShouldThrowUnsupportedOperationException() {
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_ID))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageStartingWith("DB-CORE-10289:");
+  }
 }

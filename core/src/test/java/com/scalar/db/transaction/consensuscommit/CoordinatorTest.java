@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.base.Joiner;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -27,7 +28,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -83,6 +83,7 @@ public class CoordinatorTest {
     Optional<Coordinator.State> state = coordinator.getState(ANY_ID_1);
 
     // Assert
+    assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
     assertThat(state.get().getChildIds()).isEmpty();
     assertThat(state.get().getChildIdsAsString()).isEmpty();
@@ -94,12 +95,12 @@ public class CoordinatorTest {
   public void getState_TransactionIdGivenAndExceptionThrownInGet_ShouldThrowCoordinatorException()
       throws ExecutionException {
     // Arrange
-    String id = ANY_ID_1;
     ExecutionException toThrow = mock(ExecutionException.class);
     when(storage.get(any(Get.class))).thenThrow(toThrow);
 
     // Act Assert
-    assertThatThrownBy(() -> coordinator.getState(id)).isInstanceOf(CoordinatorException.class);
+    assertThatThrownBy(() -> coordinator.getState(ANY_ID_1))
+        .isInstanceOf(CoordinatorException.class);
   }
 
   @Test
@@ -128,6 +129,7 @@ public class CoordinatorTest {
     Optional<Coordinator.State> state = coordinator.getStateByParentId(parentId);
 
     // Assert
+    assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(parentId);
     assertThat(state.get().getChildIds()).isEqualTo(Arrays.asList(childIdsStr.split(",")));
     assertThat(state.get().getChildIdsAsString()).isEqualTo(childIdsStr);
@@ -156,6 +158,7 @@ public class CoordinatorTest {
     Optional<Coordinator.State> state = coordinator.getStateByFullId(fullId);
 
     // Assert
+    assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(fullId);
     assertThat(state.get().getChildIds()).isEmpty();
     assertThat(state.get().getChildIdsAsString()).isEmpty();
@@ -197,9 +200,10 @@ public class CoordinatorTest {
     assertThat(put.getColumns().get(Attribute.CREATED_AT))
         .isEqualTo(BigIntColumn.of(Attribute.CREATED_AT, current));
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
+    assertThat(put.getCondition()).isPresent();
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
-    assertThat(put.forNamespace().get()).isEqualTo(Coordinator.NAMESPACE);
-    assertThat(put.forTable().get()).isEqualTo(Coordinator.TABLE);
+    assertThat(put.forNamespace()).hasValue(Coordinator.NAMESPACE);
+    assertThat(put.forTable()).hasValue(Coordinator.TABLE);
   }
 
   @Test
@@ -240,9 +244,10 @@ public class CoordinatorTest {
     // Assert
     ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
     verify(storage).get(captor.capture());
-    assertThat(captor.getValue().forNamespace().get()).isEqualTo("changed_coordinator");
-    assertThat(captor.getValue().forTable().get()).isEqualTo(Coordinator.TABLE);
+    assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
+    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
 
+    assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
     assertThat(state.get().getChildIds()).isEmpty();
     assertThat(state.get().getChildIdsAsString()).isEmpty();
@@ -269,8 +274,8 @@ public class CoordinatorTest {
 
     ArgumentCaptor<Put> captor = ArgumentCaptor.forClass(Put.class);
     verify(storage).put(captor.capture());
-    assertThat(captor.getValue().forNamespace().get()).isEqualTo("changed_coordinator");
-    assertThat(captor.getValue().forTable().get()).isEqualTo(Coordinator.TABLE);
+    assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
+    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
   }
 
   // For group commit
@@ -331,6 +336,7 @@ public class CoordinatorTest {
 
     // Assert
     assertThat(state1).isEqualTo(state2);
+    assertThat(state1).isPresent();
     assertThat(state1.get().getId()).isEqualTo(parentId);
     assertThat(state1.get().getChildIds()).isEqualTo(childIds);
     assertThat(state1.get().getChildIdsAsString()).isEqualTo(String.join(",", childIds));
@@ -395,6 +401,7 @@ public class CoordinatorTest {
     Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
 
     // Assert
+    assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(fullId);
     assertThat(state.get().getChildIds()).isEqualTo(childIds);
     assertThat(state.get().getChildIdsAsString()).isEqualTo(String.join(",", childIds));
@@ -510,6 +517,7 @@ public class CoordinatorTest {
     Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
+    assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(targetFullId);
     assertThat(state.get().getChildIds()).isEmpty();
     assertThat(state.get().getChildIdsAsString()).isEmpty();
@@ -657,7 +665,7 @@ public class CoordinatorTest {
       value = TransactionState.class,
       names = {"COMMITTED", "ABORTED"})
   public void putStateForGroupCommit_FullIdGiven_ShouldThrowAssertionError(
-      TransactionState transactionState) throws ExecutionException, CoordinatorException {
+      TransactionState transactionState) throws ExecutionException {
     // Arrange
     Coordinator spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -953,8 +961,7 @@ public class CoordinatorTest {
 
     // Serialize via createPutWith
     Put put = coordinator.createPutWith(state);
-    byte[] serializedBytes =
-        ((BlobColumn) put.getColumns().get(Attribute.WRITE_SET)).getBlobValueAsBytes();
+    byte[] serializedBytes = put.getColumns().get(Attribute.WRITE_SET).getBlobValueAsBytes();
     assertThat(serializedBytes).isNotNull();
 
     // Deserialize via State(Result)
@@ -1036,8 +1043,7 @@ public class CoordinatorTest {
 
     // Serialize
     Put put = coordinator.createPutWith(state);
-    byte[] serializedBytes =
-        ((BlobColumn) put.getColumns().get(Attribute.WRITE_SET)).getBlobValueAsBytes();
+    byte[] serializedBytes = put.getColumns().get(Attribute.WRITE_SET).getBlobValueAsBytes();
     assertThat(serializedBytes).isNotEmpty();
 
     // Deserialize
@@ -1093,5 +1099,57 @@ public class CoordinatorTest {
     assertThat(stateWithWriteSet1).isNotEqualTo(stateWithWriteSet2);
     assertThat(stateWithWriteSet1).isEqualTo(stateWithWriteSet1Again);
     assertThat(stateWithWriteSet1.hashCode()).isEqualTo(stateWithWriteSet1Again.hashCode());
+  }
+
+  @Test
+  public void deleteState_IdGiven_ShouldDeleteWithCorrectValues()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    doNothing().when(storage).delete(any(Delete.class));
+
+    // Act
+    coordinator.deleteState(ANY_ID_1);
+
+    // Assert
+    ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
+    verify(storage).delete(captor.capture());
+    Delete delete = captor.getValue();
+    assertThat(delete.forNamespace()).hasValue(Coordinator.NAMESPACE);
+    assertThat(delete.forTable()).hasValue(Coordinator.TABLE);
+    assertThat(delete.getPartitionKey().getColumnName(0)).isEqualTo(Attribute.ID);
+    assertThat(delete.getPartitionKey().getTextValue(0)).isEqualTo(ANY_ID_1);
+    assertThat(delete.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
+    assertThat(delete.getCondition()).isEmpty();
+  }
+
+  @Test
+  public void deleteState_WithCoordinatorNamespaceChanged_ShouldDeleteWithChangedNamespace()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
+    coordinator = new Coordinator(storage, config);
+    doNothing().when(storage).delete(any(Delete.class));
+
+    // Act
+    coordinator.deleteState(ANY_ID_1);
+
+    // Assert
+    ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
+    verify(storage).delete(captor.capture());
+    assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
+    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+  }
+
+  @Test
+  public void deleteState_ExecutionExceptionThrown_ShouldThrowCoordinatorException()
+      throws ExecutionException {
+    // Arrange
+    ExecutionException toThrow = mock(ExecutionException.class);
+    doThrow(toThrow).when(storage).delete(any(Delete.class));
+
+    // Act + Assert
+    assertThatThrownBy(() -> coordinator.deleteState(ANY_ID_1))
+        .isInstanceOf(CoordinatorException.class)
+        .hasCauseInstanceOf(ExecutionException.class);
   }
 }
