@@ -505,8 +505,7 @@ public interface DistributedTransactionManager
    * or transactions originated from older binaries that pre-date the write-set column) do not carry
    * a write set; they are not applicable to this method, and calling it on their transaction ID
    * returns {@code false} without doing any work. This is an expected outcome rather than an error
-   * — retrying with the same transaction ID would never succeed — and those state rows are left for
-   * lazy recovery to handle.
+   * — retrying with the same transaction ID would never succeed.
    *
    * <p><b>Idempotency:</b> calling this method on a transaction ID whose state row is absent
    * (already finished, never started, or already cleaned up by a concurrent caller) returns {@code
