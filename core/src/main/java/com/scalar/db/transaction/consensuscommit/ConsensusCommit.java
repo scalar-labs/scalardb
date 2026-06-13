@@ -22,7 +22,6 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
-import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -48,8 +47,6 @@ import org.slf4j.LoggerFactory;
 @NotThreadSafe
 public class ConsensusCommit extends AbstractDistributedTransaction {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommit.class);
-  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
-      new CoordinatorGroupCommitKeyManipulator();
   private final TransactionContext context;
   private final CrudHandler crud;
   private final CommitHandler commit;
@@ -230,11 +227,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     }
 
     // Release the reserved group commit slot if this transaction holds one.
-    // ConsensusCommitManager.begin() reserves a slot for every non-read-only transaction, and for a
-    // read-only transaction only when coordinator write omission is disabled. A read-only
-    // transaction that reserved a slot has a group commit full key, so isFullKey() tells whether
-    // this read-only transaction holds one.
-    if (groupCommitter != null && (!context.readOnly || KEY_MANIPULATOR.isFullKey(getId()))) {
+    if (groupCommitter != null && context.groupCommitSlotReserved) {
       // This is best-effort cleanup; never let a failure here mask the rollback or propagate out of
       // this cleanup path.
       try {

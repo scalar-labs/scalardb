@@ -158,6 +158,7 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler()).isEqualTo(crud);
     assertThat(transaction.getCommitHandler()).isEqualTo(commit);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    assertThat(transaction.getTransactionContext().groupCommitSlotReserved).isTrue();
     verify(groupCommitter).reserve(ANY_TX_ID);
   }
 
@@ -199,6 +200,7 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler()).isEqualTo(crud);
     assertThat(transaction.getCommitHandler()).isEqualTo(commit);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isFalse();
+    assertThat(transaction.getTransactionContext().groupCommitSlotReserved).isFalse();
     verify(groupCommitter, never()).reserve(ANY_TX_ID);
   }
 
@@ -243,6 +245,7 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
     assertThat(transaction.getTransactionContext().readOnly).isTrue();
     assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    assertThat(transaction.getTransactionContext().groupCommitSlotReserved).isTrue();
     verify(groupCommitter).reserve(ANY_TX_ID);
   }
 

@@ -9,7 +9,6 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
-import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
@@ -23,8 +22,6 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class CommitHandlerWithGroupCommit extends CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandlerWithGroupCommit.class);
-  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
-      new CoordinatorGroupCommitKeyManipulator();
   private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -57,7 +54,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     if (!context.readOnly
         && !context.snapshot.hasWritesOrDeletes()
         && coordinatorWriteOmissionOnReadOnlyEnabled) {
-      cancelGroupCommitIfNeeded(context.transactionId);
+      cancelGroupCommitIfNeeded(context);
     }
 
     super.commit(context);
@@ -68,7 +65,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     try {
       return super.canOnePhaseCommit(context);
     } catch (CommitException e) {
-      cancelGroupCommitIfNeeded(context.transactionId);
+      cancelGroupCommitIfNeeded(context);
       throw e;
     }
   }
@@ -76,13 +73,13 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @Override
   void onePhaseCommitRecords(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    cancelGroupCommitIfNeeded(context.transactionId);
+    cancelGroupCommitIfNeeded(context);
     super.onePhaseCommitRecords(context);
   }
 
   @Override
   protected void onFailureBeforeCommit(TransactionContext context) {
-    cancelGroupCommitIfNeeded(context.transactionId);
+    cancelGroupCommitIfNeeded(context);
   }
 
   private void commitStateViaGroupCommit(TransactionContext context)
@@ -94,11 +91,11 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
     } catch (GroupCommitConflictException e) {
-      cancelGroupCommitIfNeeded(id);
+      cancelGroupCommitIfNeeded(context);
       // Throw a proper exception from this method if needed.
       handleCommitConflict(context, e);
     } catch (GroupCommitException e) {
-      cancelGroupCommitIfNeeded(id);
+      cancelGroupCommitIfNeeded(context);
       Throwable cause = e.getCause();
       if (cause instanceof CoordinatorConflictException) {
         // Throw a proper exception from this method if needed.
@@ -109,25 +106,36 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       }
     } catch (Exception e) {
       // This is an unexpected exception, but clean up resources just in case.
-      cancelGroupCommitIfNeeded(id);
+      cancelGroupCommitIfNeeded(context);
       throw new AssertionError("Group commit unexpectedly failed. TransactionID: " + id, e);
     }
   }
 
-  private void cancelGroupCommitIfNeeded(String id) {
-    // A transaction that never reserved a group commit slot has a bare transaction ID rather than a
-    // group commit full key (e.g., a read-only transaction when coordinator write omission is
-    // enabled). There is no slot to release in that case, and passing a bare ID to remove() would
-    // fail key parsing, so skip it.
-    if (!KEY_MANIPULATOR.isFullKey(id)) {
+  private void cancelGroupCommitIfNeeded(TransactionContext context) {
+    // A transaction only holds a group commit slot when one was reserved at begin time (e.g., a
+    // read-only transaction does not reserve a slot when coordinator write omission is enabled).
+    // When no slot was reserved there is nothing to release.
+    if (!context.groupCommitSlotReserved) {
       return;
     }
 
+    // FIXME: When a slot was reserved (so the early return above did not fire), this can run more
+    // than once on a single failure path, because several cleanup callbacks each release the slot:
+    //   - onFailureBeforeCommit() runs on every failure path (via safelyCallOnFailureBeforeCommit);
+    //   - abortState() additionally runs from abortStateAndRollbackRecordsIfNeeded() when the
+    //     transaction has writes/deletes, or coordinator write omission on read-only is disabled;
+    //   - onePhaseCommitRecords() pre-cancels the slot before its body, so a one-phase-commit
+    //     failure followed by onFailureBeforeCommit() also cancels twice.
+    // It is currently safe only because groupCommitter.remove() is idempotent. The cleanup paths
+    // should be reworked so the slot is released exactly once instead of relying on that
+    // idempotency.
     try {
-      groupCommitter.remove(id);
+      groupCommitter.remove(context.transactionId);
     } catch (Exception e) {
       logger.warn(
-          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}", id, e);
+          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}",
+          context.transactionId,
+          e);
     }
   }
 
@@ -138,16 +146,9 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  public TransactionState abortStateWithoutWriteSet(String id)
-      throws UnknownTransactionStatusException {
-    cancelGroupCommitIfNeeded(id);
-    return super.abortStateWithoutWriteSet(id);
-  }
-
-  @Override
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
-    cancelGroupCommitIfNeeded(context.transactionId);
+    cancelGroupCommitIfNeeded(context);
     return super.abortState(context);
   }
 

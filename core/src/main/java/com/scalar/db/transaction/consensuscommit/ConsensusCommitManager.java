@@ -291,13 +291,16 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     // bare (unreserved) transaction ID and fail. A non-read-only transaction that turns out to be
     // write-less under write omission still reserves a slot here but cancels it later on the commit
     // path.
+    boolean groupCommitSlotReserved = false;
     if (isGroupCommitEnabled() && (!readOnly || !coordinatorWriteOmissionOnReadOnlyEnabled)) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
+      groupCommitSlotReserved = true;
     }
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
-        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
+        new TransactionContext(
+            txId, snapshot, isolation, readOnly, oneOperation, groupCommitSlotReserved);
     DistributedTransaction transaction =
         new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
     if (readOnly) {

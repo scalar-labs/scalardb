@@ -58,6 +58,16 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   }
 
   @Override
+  protected TransactionContext createTransactionContext(
+      String id, Snapshot snapshot, Isolation isolation, boolean readOnly, boolean oneOperation) {
+    // In the group commit tests a slot is reserved for the transaction (extraInitialize() and the
+    // per-test reserve() calls), so mark the context as holding a reserved slot. Tests that
+    // intentionally model an unreserved transaction build the context with the raw constructor.
+    return new TransactionContext(
+        id, snapshot, isolation, readOnly, oneOperation, /* groupCommitSlotReserved= */ true);
+  }
+
+  @Override
   protected void extraCleanup() {
     groupCommitter.close();
   }
@@ -230,7 +240,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
     doNothingWhenCoordinatorPutState();
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     handler.commit(context);
@@ -278,11 +288,12 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
           throws ExecutionException, CoordinatorException, UnknownTransactionStatusException {
     // Arrange
     // With coordinator write omission enabled, ConsensusCommitManager.begin() does not reserve a
-    // group commit slot for a read-only transaction, so its transaction ID stays a bare UUID rather
-    // than a group commit full key. This reproduces that production case (the inherited tests use
-    // the full-key anyId() override instead). When the before-preparation hook fails, commit() must
-    // still fail with CommitException, write no coordinator row, and leave the group committer
-    // untouched: cancelGroupCommitIfNeeded skips remove() for the bare (non-full-key) ID.
+    // group commit slot for a read-only transaction, so the context's groupCommitSlotReserved stays
+    // false. This reproduces that production case (the inherited tests use
+    // createTransactionContext()
+    // which marks the slot as reserved instead). When the before-preparation hook fails, commit()
+    // must still fail with CommitException, write no coordinator row, and leave the group committer
+    // untouched: cancelGroupCommitIfNeeded skips remove() because no slot was reserved.
     // Release the slot reserved by extraInitialize(); it is unrelated to this test's bare
     // transaction ID, and leaving it outstanding would make groupCommitter.close() block on it
     // during teardown. clearInvocations() then lets the remove() assertion count only the act
@@ -296,6 +307,9 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         .when(beforePreparationHook)
         .handle(any(), any());
     handler.setBeforePreparationHook(beforePreparationHook);
+    // This context deliberately did not reserve a group commit slot (groupCommitSlotReserved stays
+    // false), so it is built with the raw constructor rather than the createTransactionContext()
+    // helper that marks the slot as reserved.
     TransactionContext context =
         new TransactionContext(bareId, snapshot, Isolation.SNAPSHOT, true, false);
 
@@ -531,14 +545,14 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     String fullTxId2 = keyManipulator.fullKey(parentId, "child-2");
 
     TransactionContext context1 =
-        new TransactionContext(
+        createTransactionContext(
             fullTxId1,
             prepareSnapshotWithDifferentPartitionPut(),
             Isolation.SNAPSHOT,
             false,
             false);
     TransactionContext context2 =
-        new TransactionContext(
+        createTransactionContext(
             fullTxId2, prepareSnapshotWithSamePartitionPut(), Isolation.SNAPSHOT, false, false);
 
     // Act
@@ -579,14 +593,14 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     String fullTxIdReadOnly = keyManipulator.fullKey(parentId, "read-only");
 
     TransactionContext writingContext =
-        new TransactionContext(
+        createTransactionContext(
             fullTxIdWriting,
             prepareSnapshotWithDifferentPartitionPut(),
             Isolation.SNAPSHOT,
             false,
             false);
     TransactionContext readOnlyContext =
-        new TransactionContext(
+        createTransactionContext(
             fullTxIdReadOnly, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
 
     // Act
@@ -621,7 +635,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
     TransactionContext context =
-        new TransactionContext(
+        createTransactionContext(
             fullTxId, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
 
     // Act
@@ -680,7 +694,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
     TransactionContext context =
-        new TransactionContext(
+        createTransactionContext(
             fullTxId, prepareSnapshotWithDifferentPartitionPut(), Isolation.SNAPSHOT, false, false);
 
     // Act
@@ -719,7 +733,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
     TransactionContext context =
-        new TransactionContext(
+        createTransactionContext(
             fullTxId, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
 
     // Act

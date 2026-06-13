@@ -77,6 +77,13 @@ public class CommitHandlerTest {
     return ANY_ID;
   }
 
+  // Creates a TransactionContext for tests. Overridden by the group commit test to mark the context
+  // as holding a reserved group commit slot, mirroring what ConsensusCommitManager.begin() does.
+  protected TransactionContext createTransactionContext(
+      String id, Snapshot snapshot, Isolation isolation, boolean readOnly, boolean oneOperation) {
+    return new TransactionContext(id, snapshot, isolation, readOnly, oneOperation);
+  }
+
   protected void extraInitialize() {}
 
   protected void extraCleanup() {}
@@ -233,7 +240,7 @@ public class CommitHandlerTest {
   private com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet expectedSingleGroupWriteSet(
       Snapshot snapshot) {
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
     return handler.writeSetEncoder.encodeSingleGroupWriteSet(context, false);
   }
 
@@ -249,7 +256,7 @@ public class CommitHandlerTest {
     doNothingWhenCoordinatorPutState();
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
@@ -274,7 +281,7 @@ public class CommitHandlerTest {
     doNothingWhenCoordinatorPutState();
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
@@ -297,7 +304,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     handler.commit(context);
@@ -321,7 +328,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
@@ -346,7 +353,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
@@ -370,7 +377,7 @@ public class CommitHandlerTest {
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -395,7 +402,7 @@ public class CommitHandlerTest {
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     doThrow(ValidationConflictException.class).when(snapshot).toSerializable(storage);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -420,7 +427,7 @@ public class CommitHandlerTest {
     doNothingWhenCoordinatorPutState();
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
@@ -447,7 +454,7 @@ public class CommitHandlerTest {
     doNothingWhenCoordinatorPutState();
     setBeforePreparationHookIfNeeded(withBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     handler.commit(context);
@@ -468,7 +475,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = spy(prepareSnapshotWithDifferentPartitionPut());
     // With SNAPSHOT isolation, validation is not required
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.validateRecords(context);
@@ -485,7 +492,7 @@ public class CommitHandlerTest {
     doNothing().when(snapshot).toSerializable(storage);
     // With SERIALIZABLE isolation, validation is required when there are reads
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     handler.validateRecords(context);
@@ -503,7 +510,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -533,7 +540,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
@@ -563,7 +570,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -604,7 +611,7 @@ public class CommitHandlerTest {
         .getState(anyId());
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -640,7 +647,7 @@ public class CommitHandlerTest {
                 anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.ABORTED));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -677,7 +684,7 @@ public class CommitHandlerTest {
                 anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.ABORTED));
     doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -713,7 +720,7 @@ public class CommitHandlerTest {
             new Coordinator.State(
                 anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.ABORTED));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -745,7 +752,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -776,7 +783,7 @@ public class CommitHandlerTest {
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -815,7 +822,7 @@ public class CommitHandlerTest {
         .getState(anyId());
     doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -848,7 +855,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), writeSet, TransactionState.ABORTED));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -882,7 +889,7 @@ public class CommitHandlerTest {
         .putState(new Coordinator.State(anyId(), writeSet, TransactionState.ABORTED));
     doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -915,7 +922,7 @@ public class CommitHandlerTest {
         .when(coordinator)
         .putState(new Coordinator.State(anyId(), writeSet, TransactionState.ABORTED));
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -950,7 +957,7 @@ public class CommitHandlerTest {
         .when(coordinator)
         .getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
@@ -979,7 +986,7 @@ public class CommitHandlerTest {
         .when(coordinator)
         .getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1003,7 +1010,7 @@ public class CommitHandlerTest {
         TransactionState.COMMITTED, CoordinatorConflictException.class, snapshot);
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -1028,7 +1035,7 @@ public class CommitHandlerTest {
         TransactionState.COMMITTED, CoordinatorConflictException.class, snapshot);
     doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -1051,7 +1058,7 @@ public class CommitHandlerTest {
     doThrowExceptionWhenCoordinatorPutState(
         TransactionState.COMMITTED, CoordinatorException.class, snapshot);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
@@ -1087,7 +1094,7 @@ public class CommitHandlerTest {
             });
     handler.setBeforePreparationHook(delayedBeforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     Instant start = Instant.now();
@@ -1116,7 +1123,7 @@ public class CommitHandlerTest {
         .handle(any(), any());
     handler.setBeforePreparationHook(beforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1145,7 +1152,7 @@ public class CommitHandlerTest {
     doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
     setBeforePreparationHookIfNeeded(true);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1176,7 +1183,7 @@ public class CommitHandlerTest {
         .handle(any(), any());
     handler.setBeforePreparationHook(beforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1201,7 +1208,7 @@ public class CommitHandlerTest {
     doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
     setBeforePreparationHookIfNeeded(true);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1225,7 +1232,7 @@ public class CommitHandlerTest {
         .handle(any(), any());
     handler.setBeforePreparationHook(beforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1253,7 +1260,7 @@ public class CommitHandlerTest {
     doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
     setBeforePreparationHookIfNeeded(true);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1281,7 +1288,7 @@ public class CommitHandlerTest {
         .handle(any(), any());
     handler.setBeforePreparationHook(beforePreparationHook);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1307,7 +1314,7 @@ public class CommitHandlerTest {
     doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHookFuture).get();
     setBeforePreparationHookIfNeeded(true);
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
@@ -1325,7 +1332,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshot();
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1352,7 +1359,7 @@ public class CommitHandlerTest {
     snapshot.putIntoGetSet(get, Optional.empty());
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1382,7 +1389,7 @@ public class CommitHandlerTest {
     doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1399,7 +1406,7 @@ public class CommitHandlerTest {
     CommitHandler handler = createCommitHandlerWithOnePhaseCommit();
     Snapshot snapshot = prepareSnapshotWithoutWrites();
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1422,7 +1429,7 @@ public class CommitHandlerTest {
     snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.empty());
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1446,7 +1453,7 @@ public class CommitHandlerTest {
     doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1470,7 +1477,7 @@ public class CommitHandlerTest {
     doReturn(false).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     boolean actual = handler.canOnePhaseCommit(context);
@@ -1496,7 +1503,7 @@ public class CommitHandlerTest {
     doThrow(ExecutionException.class).when(mutationsGrouper).canBeGroupedAltogether(anyList());
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.canOnePhaseCommit(context))
@@ -1512,7 +1519,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = spy(prepareSnapshotWithSamePartitionPut());
     doNothing().when(storage).mutate(anyList());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.onePhaseCommitRecords(context);
@@ -1530,7 +1537,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(NoMutationException.class).when(storage).mutate(anyList());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
@@ -1546,7 +1553,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(RetriableExecutionException.class).when(storage).mutate(anyList());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
@@ -1562,7 +1569,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
@@ -1581,7 +1588,7 @@ public class CommitHandlerTest {
     doNothing().when(handler).onePhaseCommitRecords(any(TransactionContext.class));
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act
     handler.commit(context);
@@ -1605,7 +1612,7 @@ public class CommitHandlerTest {
         .onePhaseCommitRecords(any(TransactionContext.class));
 
     TransactionContext context =
-        new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context))
