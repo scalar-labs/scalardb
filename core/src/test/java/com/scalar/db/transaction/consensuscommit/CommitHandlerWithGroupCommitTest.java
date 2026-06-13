@@ -311,7 +311,13 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // false), so it is built with the raw constructor rather than the createTransactionContext()
     // helper that marks the slot as reserved.
     TransactionContext context =
-        new TransactionContext(bareId, snapshot, Isolation.SNAPSHOT, true, false);
+        new TransactionContext(
+            bareId,
+            snapshot,
+            Isolation.SNAPSHOT,
+            true,
+            false,
+            /* groupCommitSlotReserved= */ false);
 
     // Act
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
