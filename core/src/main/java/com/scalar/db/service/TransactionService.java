@@ -226,6 +226,11 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public boolean finishTransaction(String txId) throws TransactionException {
+    return manager.finishTransaction(txId);
+  }
+
+  @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
     return manager.get(get);
   }
