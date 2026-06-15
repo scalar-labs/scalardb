@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -183,6 +184,40 @@ public class CrudHandlerTest {
 
   private Scan toScanForStorageFrom(Scan scan) {
     return Scan.newBuilder(scan).clearProjections().consistency(Consistency.LINEARIZABLE).build();
+  }
+
+  // The Scan that CrudHandler issues to storage when reading a Get with index: the Scan with index
+  // built from the Get (shared with production via ConsensusCommitUtils), then prepared for
+  // storage.
+  private Scan toIndexScanForStorageFrom(Get getWithIndex) {
+    return ConsensusCommitUtils.prepareScanForStorage(
+        ConsensusCommitUtils.createScanWithIndexFromGet(getWithIndex), TABLE_METADATA);
+  }
+
+  // A Scanner over the given results. iterator() yields a fresh iterator on every call, so the same
+  // scanner can be reused across read retries that re-issue the same scan. Implemented as a real
+  // object (not a Mockito mock) so it is safe to construct inline inside when(...).thenReturn(...).
+  private Scanner scannerOf(Result... results) {
+    List<Result> list = Arrays.asList(results);
+    return new Scanner() {
+      @Override
+      public Optional<Result> one() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public List<Result> all() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Iterator<Result> iterator() {
+        return list.iterator();
+      }
+
+      @Override
+      public void close() {}
+    };
   }
 
   private TransactionResult prepareResult(TransactionState state) {
@@ -2534,9 +2569,8 @@ public class CrudHandlerTest {
             .table(ANY_TABLE_NAME)
             .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
             .build();
-    Get getForStorage = toGetForStorageFrom(getWithIndex);
     when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
-    when(storage.get(getForStorage)).thenReturn(Optional.empty());
+    // The index Get is read via a Scan with index; the default scanner is empty.
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -2544,7 +2578,8 @@ public class CrudHandlerTest {
     handler.readUnread(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
-    verify(storage).get(getForStorage);
+    verify(storage).scan(toIndexScanForStorageFrom(getWithIndex));
+    verify(storage, never()).get(any(Get.class));
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
   }
@@ -2566,9 +2601,8 @@ public class CrudHandlerTest {
             .table(ANY_TABLE_NAME)
             .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
             .build();
-    Get getForStorage = toGetForStorageFrom(getWithIndex);
     when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(storage.scan(toIndexScanForStorageFrom(getWithIndex))).thenReturn(scannerOf(result));
 
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -2577,7 +2611,7 @@ public class CrudHandlerTest {
     handler.readUnread(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
-    verify(storage).get(getForStorage);
+    verify(storage).scan(toIndexScanForStorageFrom(getWithIndex));
     verify(snapshot)
         .putIntoReadSet(
             new Snapshot.Key(getWithIndex, result, TABLE_METADATA),
@@ -2602,9 +2636,8 @@ public class CrudHandlerTest {
             .table(ANY_TABLE_NAME)
             .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
             .build();
-    Get getForStorage = toGetForStorageFrom(getWithIndex);
     when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    when(storage.scan(toIndexScanForStorageFrom(getWithIndex))).thenReturn(scannerOf(result));
 
     Snapshot.Key key = new Snapshot.Key(getWithIndex, result, TABLE_METADATA);
 
@@ -2628,7 +2661,7 @@ public class CrudHandlerTest {
     handler.readUnread(key, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
-    verify(storage).get(getForStorage);
+    verify(storage).scan(toIndexScanForStorageFrom(getWithIndex));
     verify(recoveryExecutor)
         .execute(
             key,
@@ -2638,6 +2671,65 @@ public class CrudHandlerTest {
             RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(recoveredResult));
+  }
+
+  @Test
+  void read_GetWithIndexAndUncommittedRecordInReadCommitted_ShouldRecoverWithReturnCommittedResult()
+      throws Exception {
+    // Arrange: an index Get in READ_COMMITTED read-write mode resolves each scanned row through the
+    // same recovery routine as SNAPSHOT/SERIALIZABLE, but selects
+    // RETURN_COMMITTED_RESULT_AND_RECOVER (returns the committed before-image while still
+    // recovering) instead of RETURN_LATEST_RESULT_AND_RECOVER. This pins the isolation-driven
+    // recovery-type branch on the new resolveIndexGet path.
+    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
+    when(result.getColumns())
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1),
+                ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2)));
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, ANY_TEXT_1))
+            .build();
+    when(storage.scan(toIndexScanForStorageFrom(getWithIndex))).thenReturn(scannerOf(result));
+
+    Snapshot.Key key = new Snapshot.Key(getWithIndex, result, TABLE_METADATA);
+
+    TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_1);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+
+    when(recoveryExecutor.execute(
+            key,
+            getWithIndex,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, false));
+
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.READ_COMMITTED, false, false);
+
+    // Act
+    Optional<TransactionResult> actual =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(actual).hasValue(recoveredResult);
+    verify(storage).scan(toIndexScanForStorageFrom(getWithIndex));
+    verify(recoveryExecutor)
+        .execute(
+            key,
+            getWithIndex,
+            new TransactionResult(result),
+            ANY_ID_1,
+            RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    // READ_COMMITTED requires neither validation nor snapshot reads, so the get set is not used.
+    verify(snapshot, never()).putIntoGetSet(any(), any());
   }
 
   @Test
@@ -3058,18 +3150,14 @@ public class CrudHandlerTest {
       throws Exception {
     // Arrange
     Get getWithIndex = prepareGetWithIndex();
-    Get getForStorage =
-        Get.newBuilder(getWithIndex)
-            .clearProjections()
-            .consistency(Consistency.LINEARIZABLE)
-            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
     Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // First get returns a committed result
     TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(committedResult));
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(committedResult));
 
     // Before-index scan: first call finds a rolled-back record, second call finds nothing
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
@@ -3102,7 +3190,7 @@ public class CrudHandlerTest {
     handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
-    verify(storage, times(2)).get(getForStorage);
+    verify(storage, times(2)).scan(mainIndexScan);
     verify(storage, times(2)).scan(expectedBeforeIndexScan);
     verify(recoveryExecutor)
         .execute(
@@ -3119,18 +3207,14 @@ public class CrudHandlerTest {
       throws Exception {
     // Arrange
     Get getWithIndex = prepareGetWithIndex();
-    Get getForStorage =
-        Get.newBuilder(getWithIndex)
-            .clearProjections()
-            .consistency(Consistency.LINEARIZABLE)
-            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
     Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Get returns a committed result
     TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(committedResult));
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(committedResult));
 
     // Before-index scan finds a rolled-forward record
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
@@ -3159,7 +3243,7 @@ public class CrudHandlerTest {
     handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
     // Assert
-    verify(storage, times(1)).get(getForStorage);
+    verify(storage, times(1)).scan(mainIndexScan);
     verify(storage, times(1)).scan(expectedBeforeIndexScan);
     verify(recoveryFuture, never()).get();
   }
@@ -3169,17 +3253,13 @@ public class CrudHandlerTest {
       throws Exception {
     // Arrange
     Get getWithIndex = prepareGetWithIndex();
-    Get getForStorage =
-        Get.newBuilder(getWithIndex)
-            .clearProjections()
-            .consistency(Consistency.LINEARIZABLE)
-            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
     Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(committedResult));
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(committedResult));
 
     // Before-index scan always finds a rolled-back record
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
@@ -3217,7 +3297,7 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
         .isInstanceOf(CrudConflictException.class);
 
-    verify(storage, times(3)).get(getForStorage);
+    verify(storage, times(3)).scan(mainIndexScan);
     verify(storage, times(3)).scan(expectedBeforeIndexScan);
     verify(recoveryExecutor, times(3))
         .execute(
@@ -3235,20 +3315,20 @@ public class CrudHandlerTest {
           throws Exception {
     // Arrange
     Get getWithIndex = prepareGetWithIndex();
-    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
     Scan expectedBeforeIndexScan = prepareExpectedBeforeIndexScan();
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
-    // First get returns a committed result with partition key "text1"
+    // First read returns a committed result with partition key "text1"
     TransactionResult committedResult1 =
         prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
-    // Second get returns a different committed result with partition key "text4"
+    // Second read returns a different committed result with partition key "text4"
     TransactionResult committedResult2 =
         prepareResult(ANY_TEXT_4, ANY_TEXT_5, TransactionState.COMMITTED);
-    when(storage.get(getForStorage))
-        .thenReturn(Optional.of(committedResult1))
-        .thenReturn(Optional.of(committedResult2));
+    when(storage.scan(mainIndexScan))
+        .thenReturn(scannerOf(committedResult1))
+        .thenReturn(scannerOf(committedResult2));
 
     // Before-index scan: first call finds a rolled-back record, second call finds nothing
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
@@ -3605,13 +3685,13 @@ public class CrudHandlerTest {
     // Arrange
     // Query: col_idx = ANY_TEXT_3, but after rollback the record has col_idx = ANY_TEXT_4
     Get getWithIndex = prepareGetWithIndex(); // indexKey = ANY_NAME_3:ANY_TEXT_3
-    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Storage returns an uncommitted (PREPARED) record
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(preparedResult));
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
 
     // After rollback, the recovered result has a different index column value
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_4);
@@ -3644,13 +3724,13 @@ public class CrudHandlerTest {
       throws Exception {
     // Arrange
     Get getWithIndex = prepareGetWithIndex(); // indexKey = ANY_NAME_3:ANY_TEXT_3
-    Get getForStorage = toGetForStorageFrom(getWithIndex);
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
 
     // Storage returns an uncommitted (PREPARED) record
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
-    when(storage.get(getForStorage)).thenReturn(Optional.of(preparedResult));
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
 
     // After rollback, the recovered result still has the matching index column value
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_3);
@@ -3673,6 +3753,263 @@ public class CrudHandlerTest {
     // Assert
     assertThat(result).isPresent();
     assertThat(result.get()).isEqualTo(recoveredResult);
+  }
+
+  @Test
+  void read_GetWithIndexMatchingDeletedAndPreparedRecords_ShouldResolveToSingleRecord()
+      throws Exception {
+    // Arrange: a delete + insert on two records that have different primary keys but the same index
+    // value leave two uncommitted physical rows - a DELETED record (the deleted one) and a PREPARED
+    // record (the inserted one). Lazy recovery (writer committed) rolls the deleted one forward to
+    // deleted (empty) and the inserted one forward to committed, so exactly one record survives -
+    // no exception.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult deletedOld = prepareResult(ANY_TEXT_1, ANY_TEXT_5, TransactionState.DELETED);
+    TransactionResult preparedNew =
+        prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.PREPARED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(deletedOld, preparedNew));
+
+    Snapshot.Key keyOld = new Snapshot.Key(getWithIndex, deletedOld, TABLE_METADATA);
+    Snapshot.Key keyNew = new Snapshot.Key(getWithIndex, preparedNew, TABLE_METADATA);
+    TransactionResult recoveredNew =
+        prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    // Old record rolls forward to deleted -> empty
+    when(recoveryExecutor.execute(
+            eq(keyOld),
+            eq(getWithIndex),
+            eq(new TransactionResult(deletedOld)),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(new RecoveryExecutor.Result(keyOld, Optional.empty(), recoveryFuture, false));
+    // New record rolls forward to committed
+    when(recoveryExecutor.execute(
+            eq(keyNew),
+            eq(getWithIndex),
+            eq(new TransactionResult(preparedNew)),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(keyNew, Optional.of(recoveredNew), recoveryFuture, false));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(recoveredNew);
+    verify(snapshot).putIntoReadSet(keyNew, Optional.of(recoveredNew));
+    // The old record rolled forward to deleted (empty), so it must not be cached as a result.
+    verify(snapshot, never()).putIntoReadSet(eq(keyOld), any());
+    // An index Get is resolved like read() (not scan()), so it must never run overlap verification.
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+  }
+
+  @Test
+  void read_GetWithIndexMatchingMultipleCommittedRecords_ShouldThrowIllegalArgumentException()
+      throws Exception {
+    // Arrange: two genuinely committed records share the index value. No recovery is needed and
+    // both survive, so the Get-with-index exact-match contract cannot hold; the same "use scan()"
+    // error is raised - now from CrudHandler (after recovery) instead of the storage layer.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult committed1 =
+        prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
+    TransactionResult committed2 =
+        prepareResult(ANY_TEXT_4, ANY_TEXT_5, TransactionState.COMMITTED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(committed1, committed2));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Please use scan() for non-exact match selection");
+    verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any());
+  }
+
+  @Test
+  void read_GetWithIndexAndConjunctionNotMatchingCurrentColumns_ShouldFilterOutResult()
+      throws Exception {
+    // Arrange: the index scan returns a committed row that matches the index value but whose
+    // current column value (ANY_NAME_4 = ANY_INT_1) does not satisfy the Get's conjunction
+    // (ANY_NAME_4 = ANY_INT_2). resolveIndexGet must apply the conjunction filter and drop the row,
+    // returning empty. This pins the conjunction-filter branch on the new index-Get path
+    // (previously exercised only for non-index Get and Scan).
+    Get getWithIndex =
+        Get.newBuilder(prepareGetWithIndex())
+            .where(column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(committedResult));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isNotPresent();
+    verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    // The row was dropped by the conjunction (not the index-key) filter, so the absent result is
+    // still cached as empty in the get set.
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
+  }
+
+  @Test
+  void read_GetWithIndexAndInflightRecord_ShouldPropagateUncommittedRecordException()
+      throws Exception {
+    // Arrange: the index scan returns a single uncommitted (PREPARED) row whose writer is still
+    // in-flight and not expired. Lazy recovery surfaces UncommittedRecordException (a retriable
+    // conflict). resolveIndexGet must propagate it unchanged - it must NOT be swallowed or turned
+    // into the exact-match IllegalArgumentException.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
+
+    Snapshot.Key key = new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(new TransactionResult(preparedResult)),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenThrow(
+            new UncommittedRecordException(
+                getWithIndex, preparedResult, "Record is uncommitted", ANY_ID_1));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isInstanceOf(UncommittedRecordException.class);
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      read_GetWithIndexAndRuntimeExceptionWithExecutionExceptionCauseThrownByScanner_ShouldThrowCrudException()
+          throws ExecutionException, IOException {
+    // Arrange: the index scan iteration fails with a RuntimeException whose cause is an
+    // ExecutionException (how DistributedStorage surfaces a scan failure through the Iterator).
+    // resolveIndexGet must unwrap it into a CrudException and still close the scanner. A dedicated
+    // index scanner is used so it does not collide with the default before-index scanner from
+    // setUp.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    Scanner indexScanner = mock(Scanner.class);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    RuntimeException runtimeException = new RuntimeException(executionException);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(indexScanner.iterator()).thenReturn(iterator);
+    when(storage.scan(mainIndexScan)).thenReturn(indexScanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+    verify(indexScanner).close();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      read_GetWithIndexAndRuntimeExceptionWithoutExecutionExceptionCauseThrownByScanner_ShouldThrowRuntimeException()
+          throws ExecutionException, IOException {
+    // Arrange: a RuntimeException with no ExecutionException cause must be rethrown as-is, not
+    // turned into a CrudException. This pins the catch ordering and the bare `throw e` fallthrough
+    // in the RuntimeException branch of resolveIndexGet.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    Scanner indexScanner = mock(Scanner.class);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(indexScanner.iterator()).thenReturn(iterator);
+    when(storage.scan(mainIndexScan)).thenReturn(indexScanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isSameAs(runtimeException);
+    verify(indexScanner).close();
+  }
+
+  @Test
+  public void read_GetWithIndexAndScannerCloseThrowsIOException_ShouldSwallowAndReturnResult()
+      throws ExecutionException, IOException, CrudException {
+    // Arrange: the index scan returns a single committed record, but closing the scanner throws an
+    // IOException. resolveIndexGet must swallow the close failure (only logging it) and still
+    // return the resolved record. A dedicated index scanner is used so it does not collide with the
+    // default before-index scanner from setUp.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
+    Scanner indexScanner = mock(Scanner.class);
+    when(indexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(committedResult).iterator());
+    doThrow(new IOException("Failed to close")).when(indexScanner).close();
+    when(storage.scan(mainIndexScan)).thenReturn(indexScanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(committedResult);
+    verify(indexScanner).close();
+  }
+
+  @Test
+  public void get_GetWithIndexExistsInGetSet_ShouldReturnFromSnapshotAndNotScanStorage()
+      throws Exception {
+    // Arrange: a repeated same-transaction index Get whose key is already in the get set must
+    // short-circuit on containsKeyInGetSet and must NOT issue a second storage scan. This
+    // short-circuit lives upstream of read() and is unchanged by the index-Get scan resolution, so
+    // this is pre-existing behavior kept under regression coverage.
+    Get getWithIndex = prepareGetWithIndex();
+    Optional<TransactionResult> cached = Optional.of(prepareResult(TransactionState.COMMITTED));
+    when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(true);
+    when(snapshot.getResult(null, getWithIndex)).thenReturn(cached);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    Optional<Result> actual = handler.get(getWithIndex, context);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(cached.get(), Collections.emptyList(), TABLE_METADATA, false)));
+    verify(storage, never()).scan(any(Scan.class));
+    verify(storage, never()).get(any(Get.class));
   }
 
   @ParameterizedTest

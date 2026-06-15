@@ -296,7 +296,9 @@ public class RecoveryExecutor implements AutoCloseable {
       return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
     } catch (ExecutionException e) {
       throw new CrudException(
-          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(), e, transactionId);
+          CoreError.GETTING_TABLE_METADATA_FAILED.buildMessage(operation.forFullTableName().get()),
+          e,
+          transactionId);
     }
   }
 

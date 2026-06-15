@@ -144,42 +144,32 @@ public class CrudHandler {
 
     for (int i = 0; ; i++) {
       @Nullable Snapshot.Key key = originalKey;
-      boolean indexKeyFilteredOut = false;
+      Optional<TransactionResult> result;
+      boolean indexKeyFilteredOut;
 
-      Optional<TransactionResult> result = getFromStorage(get, metadata, context.transactionId);
-      if (result.isPresent() && !result.get().isCommitted()) {
-        // Lazy recovery
-
-        if (key == null) {
-          // Only for a Get with index, the argument `key` is null. In that case, create a key from
-          // the result
-          key = new Snapshot.Key(get, result.get(), metadata);
-        }
-
-        RecoveryExecutor.Result recoveryResult = executeRecovery(key, get, result.get(), context);
-        context.recoveryResults.add(recoveryResult);
-
-        // After recovery (e.g., rollback), the index column value may have changed back to its
-        // original value, which might not match the queried index key. Filter out such results.
-        if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
-          Optional<TransactionResult> unfiltered = recoveryResult.recoveredResult;
-          result = unfiltered.filter(r -> resultMatchesIndexKey(get, r));
-          if (unfiltered.isPresent() && !result.isPresent()) {
-            indexKeyFilteredOut = true;
-          }
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
+        // For a Get with index, we read with a Scan with index instead of a single-row Get. A
+        // delete + insert on two records that have different primary keys but the same index value
+        // can momentarily leave two physical rows (a DELETED record and a PREPARED record). A
+        // single-row storage Get rejects that with GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION
+        // before lazy recovery can resolve the transient state. Reading with a Scan lets us run
+        // lazy recovery per row and then assert that at most one record survives.
+        IndexGetResolution resolution = resolveIndexGet(get, context, metadata);
+        result = resolution.result;
+        key = resolution.key;
+        indexKeyFilteredOut = resolution.indexKeyFilteredOut;
+      } else {
+        Optional<TransactionResult> fromStorage =
+            getFromStorage(get, metadata, context.transactionId);
+        if (fromStorage.isPresent()) {
+          RecoveredResult recovered =
+              recoverAndFilter(key, get, fromStorage.get(), context, metadata);
+          result = recovered.result;
+          indexKeyFilteredOut = recovered.indexKeyFilteredOut;
         } else {
-          result = recoveryResult.recoveredResult;
+          result = Optional.empty();
+          indexKeyFilteredOut = false;
         }
-      }
-
-      // Because we also get records whose before images match the conjunctions, we need to check if
-      // the current status of the records actually match the conjunctions.
-      if (!get.getConjunctions().isEmpty()) {
-        result =
-            result.filter(
-                r ->
-                    ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                        r.getColumns(), get.getConjunctions()));
       }
 
       // Check if there are PREPARED/DELETED records whose committed (before-image) values match
@@ -232,6 +222,158 @@ public class CrudHandler {
     }
   }
 
+  /**
+   * Reads a Get with index by issuing a Scan with index and resolving each matched row through lazy
+   * recovery, then asserts that at most one record survives. This is necessary because a single-row
+   * storage Get throws {@code GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION} as soon as the
+   * index matches more than one physical row, which happens transiently while a delete + insert
+   * that share the index value are mid-commit (a DELETED and a PREPARED record coexist). Running
+   * recovery per row resolves the transient duplicate; if more than one genuinely committed record
+   * still matches, the same exact-match error is raised here so callers are still told to use a
+   * Scan.
+   *
+   * <p>Unlike {@link #scan}, this does not apply {@code verifyNoOverlap}, so a same-transaction
+   * write followed by an index Get behaves exactly as a non-index {@link #read} does.
+   *
+   * @param get the Get with index to resolve
+   * @param context the current transaction context
+   * @param metadata the table metadata
+   * @return the single surviving record (if any), its resolved snapshot key, and whether a result
+   *     was dropped by the post-rollback index-key filter
+   * @throws CrudException if scanning or recovery fails
+   * @throws IllegalArgumentException if more than one genuinely committed record matches the index
+   *     value (the Get-with-index exact-match contract cannot be satisfied)
+   */
+  private IndexGetResolution resolveIndexGet(
+      Get get, TransactionContext context, TableMetadata metadata) throws CrudException {
+    Scan indexScan = ConsensusCommitUtils.createScanWithIndexFromGet(get);
+
+    Optional<TransactionResult> survivor = Optional.empty();
+    @Nullable Snapshot.Key survivorKey = null;
+    boolean indexKeyFilteredOut = false;
+
+    try (Scanner scanner = scanFromStorage(indexScan, metadata, context.transactionId)) {
+      for (Result r : scanner) {
+        TransactionResult result = new TransactionResult(r);
+        Snapshot.Key key = new Snapshot.Key(get, r, metadata);
+        RecoveredResult recovered = recoverAndFilter(key, get, result, context, metadata);
+        if (recovered.indexKeyFilteredOut) {
+          indexKeyFilteredOut = true;
+        }
+        if (recovered.result.isPresent()) {
+          if (survivor.isPresent()) {
+            // More than one record survives recovery for this index value, so the Get-with-index
+            // exact-match contract cannot be satisfied. Raise the same error the storage layer
+            // raises for a single-row Get matching multiple rows, but only after lazy recovery has
+            // resolved any transient duplicates.
+            throw new IllegalArgumentException(
+                CoreError.GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION.buildMessage(get));
+          }
+          survivor = recovered.result;
+          survivorKey = key;
+        }
+      }
+    } catch (IllegalArgumentException e) {
+      // The >1-survivor exact-match contract violation thrown above is a RuntimeException too;
+      // rethrow it explicitly so it is not handled by the ExecutionException-unwrapping branch
+      // below.
+      throw e;
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        ExecutionException cause = (ExecutionException) e.getCause();
+        throw new CrudException(
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
+            cause,
+            context.transactionId);
+      }
+      throw e;
+    } catch (IOException e) {
+      logger.warn("Failed to close the scanner. Transaction ID: {}", context.transactionId, e);
+    }
+
+    return new IndexGetResolution(survivor, survivorKey, indexKeyFilteredOut);
+  }
+
+  /**
+   * Runs lazy recovery on a single uncommitted storage result and applies the post-rollback
+   * index-key filter and conjunction filter, without caching anything into the snapshot. A
+   * committed result is returned as-is (still subject to conjunction filtering). Shared by the
+   * single-row read path ({@link #read}), the index-Get resolution ({@link #resolveIndexGet}), and
+   * the scan path ({@link #processScanResult}); each caller is responsible for its own snapshot
+   * caching.
+   *
+   * @param key the snapshot key of the record
+   * @param selection the original selection (Get or Scan); used to choose the recovery type, to
+   *     decide whether the post-rollback index-key filter applies, and to read the conjunctions
+   * @param result the storage result to recover and filter
+   * @param context the current transaction context
+   * @param metadata the table metadata
+   * @return the recovered and filtered result, together with whether a present result was dropped
+   *     by the post-rollback index-key filter
+   * @throws CrudException if recovery fails
+   */
+  private RecoveredResult recoverAndFilter(
+      Snapshot.Key key,
+      Selection selection,
+      TransactionResult result,
+      TransactionContext context,
+      TableMetadata metadata)
+      throws CrudException {
+    Optional<TransactionResult> ret;
+    boolean indexKeyFilteredOut = false;
+    if (!result.isCommitted()) {
+      // Lazy recovery
+      RecoveryExecutor.Result recoveryResult = executeRecovery(key, selection, result, context);
+
+      // After recovery (e.g., rollback), the index column value may have changed back to its
+      // original value, which might not match the queried index key. Filter out such results.
+      if (recoveryResult.rolledBack
+          && ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata)) {
+        Optional<TransactionResult> unfiltered = recoveryResult.recoveredResult;
+        ret = unfiltered.filter(r -> resultMatchesIndexKey(selection, r));
+        if (unfiltered.isPresent() && !ret.isPresent()) {
+          indexKeyFilteredOut = true;
+        }
+      } else {
+        ret = recoveryResult.recoveredResult;
+      }
+    } else {
+      ret = Optional.of(result);
+    }
+
+    // Because we also get records whose before images match the conjunctions, we need to check if
+    // the current status of the records actually match the conjunctions.
+    if (!selection.getConjunctions().isEmpty()) {
+      ret =
+          ret.filter(
+              r ->
+                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                      r.getColumns(), selection.getConjunctions()));
+    }
+
+    return new RecoveredResult(ret, indexKeyFilteredOut);
+  }
+
+  /**
+   * Executes lazy recovery for a single uncommitted record and registers the recovery's future in
+   * the transaction context so its completion can be awaited later. The future is registered
+   * unconditionally, regardless of whether the record was rolled back or forward. The recovery type
+   * is chosen from the isolation level and read-only mode: in READ_COMMITTED the committed
+   * (before-image) result is returned (and recovered too, unless the transaction is read-only),
+   * while in SNAPSHOT and SERIALIZABLE the record is recovered and the latest result is returned.
+   *
+   * <p>The before-index recovery path ({@link #checkAndRecoverBeforeIndexRecords}) deliberately
+   * does not use this method: it must force {@code RETURN_LATEST_RESULT_AND_RECOVER} regardless of
+   * isolation and must distinguish rolled-back records (which trigger a retry) from rolled-forward
+   * ones (which are registered for async completion).
+   *
+   * @param key the snapshot key of the record
+   * @param selection the original selection (Get or Scan) that read the record
+   * @param result the uncommitted storage result to recover
+   * @param context the current transaction context
+   * @return the recovery result (the recovered record and whether it was rolled back)
+   * @throws CrudException if recovery fails
+   */
   private RecoveryExecutor.Result executeRecovery(
       Snapshot.Key key, Selection selection, TransactionResult result, TransactionContext context)
       throws CrudException {
@@ -253,7 +395,10 @@ public class CrudHandler {
       recoveryType = RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER;
     }
 
-    return recoveryExecutor.execute(key, selection, result, context.transactionId, recoveryType);
+    RecoveryExecutor.Result recoveryResult =
+        recoveryExecutor.execute(key, selection, result, context.transactionId, recoveryType);
+    context.recoveryResults.add(recoveryResult);
+    return recoveryResult;
   }
 
   public List<Result> scan(Scan scan, TransactionContext context) throws CrudException {
@@ -337,36 +482,14 @@ public class CrudHandler {
       TransactionContext context,
       TableMetadata metadata)
       throws CrudException {
-    Optional<TransactionResult> ret;
-    if (!result.isCommitted()) {
-      // Lazy recovery
-      RecoveryExecutor.Result recoveryResult = executeRecovery(key, scan, result, context);
-      context.recoveryResults.add(recoveryResult);
-
-      // After recovery (e.g., rollback), the index column value may have changed back to its
-      // original value, which might not match the queried index key. Filter out such results.
-      if (recoveryResult.rolledBack && ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
-        ret = recoveryResult.recoveredResult.filter(r -> resultMatchesIndexKey(scan, r));
-      } else {
-        ret = recoveryResult.recoveredResult;
-      }
-    } else {
-      ret = Optional.of(result);
-    }
-
-    // Because we also get records whose before images match the conjunctions, we need to check if
-    // the current status of the records actually match the conjunctions.
-    if (!scan.getConjunctions().isEmpty()) {
-      ret =
-          ret.filter(
-              r ->
-                  ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), scan.getConjunctions()));
-    }
+    // RecoveredResult.indexKeyFilteredOut is intentionally ignored here. It only matters on the Get
+    // path (read/resolveIndexGet), where it guards caching Optional.empty() for a single key. A
+    // scan returns each surviving row independently and never caches an absent result, so the flag
+    // has no effect on the scan path.
+    Optional<TransactionResult> ret = recoverAndFilter(key, scan, result, context, metadata).result;
     if (ret.isPresent()) {
       putIntoReadSetInSnapshot(key, ret, context);
     }
-
     return ret;
   }
 
@@ -749,9 +872,11 @@ public class CrudHandler {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
           Snapshot.Key key = new Snapshot.Key(beforeIndexScan, r, metadata.getTableMetadata());
-          // Always use RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation level because
-          // recovery must actually execute; otherwise, the PREPARED/DELETED record remains in
-          // storage and retrying would be useless
+          // This intentionally bypasses executeRecovery(): it always uses
+          // RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation level (recovery must actually
+          // execute; otherwise the PREPARED/DELETED record remains in storage and retrying would be
+          // useless) and registers only rolled-forward futures below, treating rolled-back records
+          // as a retry signal instead.
           RecoveryExecutor.Result recoveryResult =
               recoveryExecutor.execute(
                   key,
@@ -1004,6 +1129,31 @@ public class CrudHandler {
     @Override
     public boolean isClosed() {
       return closed;
+    }
+  }
+
+  private static final class RecoveredResult {
+    final Optional<TransactionResult> result;
+    final boolean indexKeyFilteredOut;
+
+    RecoveredResult(Optional<TransactionResult> result, boolean indexKeyFilteredOut) {
+      this.result = result;
+      this.indexKeyFilteredOut = indexKeyFilteredOut;
+    }
+  }
+
+  private static final class IndexGetResolution {
+    final Optional<TransactionResult> result;
+    @Nullable final Snapshot.Key key;
+    final boolean indexKeyFilteredOut;
+
+    IndexGetResolution(
+        Optional<TransactionResult> result,
+        @Nullable Snapshot.Key key,
+        boolean indexKeyFilteredOut) {
+      this.result = result;
+      this.key = key;
+      this.indexKeyFilteredOut = indexKeyFilteredOut;
     }
   }
 }
