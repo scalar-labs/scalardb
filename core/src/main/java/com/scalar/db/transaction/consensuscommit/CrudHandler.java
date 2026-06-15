@@ -282,8 +282,7 @@ public class CrudHandler {
       if (e.getCause() instanceof ExecutionException) {
         ExecutionException cause = (ExecutionException) e.getCause();
         throw new CrudException(
-            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(
-                cause.getMessage()),
+            CoreError.CONSENSUS_COMMIT_SCANNING_RECORDS_FROM_STORAGE_FAILED.buildMessage(),
             cause,
             context.transactionId);
       }
