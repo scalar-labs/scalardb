@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -2681,10 +2682,9 @@ public class CrudHandlerTest {
       throws Exception {
     // Arrange: an index Get in READ_COMMITTED read-write mode resolves each scanned row through the
     // same recovery routine as SNAPSHOT/SERIALIZABLE, but selects
-    // RETURN_COMMITTED_RESULT_AND_RECOVER
-    // (returns the committed before-image while still recovering) instead of
-    // RETURN_LATEST_RESULT_AND_RECOVER. This pins the isolation-driven recovery-type branch on the
-    // new resolveIndexGet path.
+    // RETURN_COMMITTED_RESULT_AND_RECOVER (returns the committed before-image while still
+    // recovering) instead of RETURN_LATEST_RESULT_AND_RECOVER. This pins the isolation-driven
+    // recovery-type branch on the new resolveIndexGet path.
     when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.PREPARED.get());
     when(result.getColumns())
         .thenReturn(
@@ -3845,12 +3845,10 @@ public class CrudHandlerTest {
   void read_GetWithIndexAndConjunctionNotMatchingCurrentColumns_ShouldFilterOutResult()
       throws Exception {
     // Arrange: the index scan returns a committed row that matches the index value but whose
-    // current
-    // column value (ANY_NAME_4 = ANY_INT_1) does not satisfy the Get's conjunction
+    // current column value (ANY_NAME_4 = ANY_INT_1) does not satisfy the Get's conjunction
     // (ANY_NAME_4 = ANY_INT_2). resolveIndexGet must apply the conjunction filter and drop the row,
     // returning empty. This pins the conjunction-filter branch on the new index-Get path
-    // (previously
-    // exercised only for non-index Get and Scan).
+    // (previously exercised only for non-index Get and Scan).
     Get getWithIndex =
         Get.newBuilder(prepareGetWithIndex())
             .where(column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
@@ -3906,6 +3904,90 @@ public class CrudHandlerTest {
         .isInstanceOf(UncommittedRecordException.class);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      read_GetWithIndexAndRuntimeExceptionWithExecutionExceptionCauseThrownByScanner_ShouldThrowCrudException()
+          throws ExecutionException, IOException {
+    // Arrange: the index scan iteration fails with a RuntimeException whose cause is an
+    // ExecutionException (how DistributedStorage surfaces a scan failure through the Iterator).
+    // resolveIndexGet must unwrap it into a CrudException and still close the scanner. A dedicated
+    // index scanner is used so it does not collide with the default before-index scanner from
+    // setUp.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    Scanner indexScanner = mock(Scanner.class);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    ExecutionException executionException = mock(ExecutionException.class);
+    RuntimeException runtimeException = new RuntimeException(executionException);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(indexScanner.iterator()).thenReturn(iterator);
+    when(storage.scan(mainIndexScan)).thenReturn(indexScanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isInstanceOf(CrudException.class)
+        .hasCause(executionException);
+    verify(indexScanner).close();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
+  }
+
+  @Test
+  public void
+      read_GetWithIndexAndRuntimeExceptionWithoutExecutionExceptionCauseThrownByScanner_ShouldThrowRuntimeException()
+          throws ExecutionException, IOException {
+    // Arrange: a RuntimeException with no ExecutionException cause must be rethrown as-is, not
+    // turned into a CrudException. This pins the catch ordering and the bare `throw e` fallthrough
+    // in the RuntimeException branch of resolveIndexGet.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    Scanner indexScanner = mock(Scanner.class);
+    @SuppressWarnings("unchecked")
+    Iterator<Result> iterator = mock(Iterator.class);
+    RuntimeException runtimeException = mock(RuntimeException.class);
+    when(iterator.hasNext()).thenThrow(runtimeException);
+    when(indexScanner.iterator()).thenReturn(iterator);
+    when(storage.scan(mainIndexScan)).thenReturn(indexScanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA))
+        .isSameAs(runtimeException);
+    verify(indexScanner).close();
+  }
+
+  @Test
+  public void read_GetWithIndexAndScannerCloseThrowsIOException_ShouldSwallowAndReturnResult()
+      throws ExecutionException, IOException, CrudException {
+    // Arrange: the index scan returns a single committed record, but closing the scanner throws an
+    // IOException. resolveIndexGet must swallow the close failure (only logging it) and still
+    // return the resolved record. A dedicated index scanner is used so it does not collide with the
+    // default before-index scanner from setUp.
+    Get getWithIndex = prepareGetWithIndex();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionResult committedResult = prepareResult(TransactionState.COMMITTED);
+    Scanner indexScanner = mock(Scanner.class);
+    when(indexScanner.iterator())
+        .thenReturn(Collections.<Result>singletonList(committedResult).iterator());
+    doThrow(new IOException("Failed to close")).when(indexScanner).close();
+    when(storage.scan(mainIndexScan)).thenReturn(indexScanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(committedResult);
+    verify(indexScanner).close();
   }
 
   @Test
