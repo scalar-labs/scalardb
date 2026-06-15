@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -90,6 +92,8 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
  */
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
+  private static final Logger logger = LoggerFactory.getLogger(DynamoAdmin.class);
+
   public static final String NO_SCALING = "no-scaling";
   public static final String NO_BACKUP = "no-backup";
   public static final String REQUEST_UNIT = "ru";
@@ -238,7 +242,16 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       TableMetadata metadata,
       Map<String, String> options)
       throws ExecutionException {
-    createTableInternal(nonPrefixedNamespace, table, metadata, false, options);
+    createTableInternal(nonPrefixedNamespace, table, metadata, options);
+  }
+
+  private void createTableInternal(
+      String nonPrefixedNamespace,
+      String table,
+      TableMetadata metadata,
+      Map<String, String> options)
+      throws ExecutionException {
+    createTableInternal(nonPrefixedNamespace, table, metadata, false, options, false);
   }
 
   private void createTableInternal(
@@ -246,7 +259,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       String table,
       TableMetadata metadata,
       boolean ifNotExists,
-      Map<String, String> options)
+      Map<String, String> options,
+      boolean skipMetadataWriteWhenAlreadyUpToDate)
       throws ExecutionException {
     Namespace namespace = Namespace.of(namespacePrefix, nonPrefixedNamespace);
     checkMetadata(metadata);
@@ -290,7 +304,32 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     createMetadataTableIfNotExists(noBackup);
-    upsertTableMetadata(namespace, table, metadata);
+    if (skipMetadataWriteWhenAlreadyUpToDate
+        && tableMetadataAlreadyUpToDate(nonPrefixedNamespace, table, metadata)) {
+      logger.debug(
+          "The metadata for the {} table is already up to date; skipping the metadata update",
+          getFullTableName(namespace, table));
+    } else {
+      upsertTableMetadata(namespace, table, metadata);
+    }
+  }
+
+  /**
+   * Returns whether the stored table metadata already equals the desired metadata. Fails open: if
+   * reading the current metadata throws (e.g. the metadata is corrupt and cannot be parsed), this
+   * returns {@code false} so the caller rewrites the metadata rather than skipping the repair.
+   */
+  private boolean tableMetadataAlreadyUpToDate(
+      String nonPrefixedNamespace, String table, TableMetadata metadata) {
+    try {
+      return metadata.equals(getTableMetadata(nonPrefixedNamespace, table));
+    } catch (Exception e) {
+      logger.debug(
+          "Failed to read the stored metadata for the {} table; proceeding with the metadata update",
+          getFullTableName(Namespace.of(namespacePrefix, nonPrefixedNamespace), table),
+          e);
+      return false;
+    }
   }
 
   private boolean internalTableExists(Namespace namespace, String table) throws ExecutionException {
@@ -1277,7 +1316,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       Map<String, String> options)
       throws ExecutionException {
     try {
-      createTableInternal(nonPrefixedNamespace, table, metadata, true, options);
+      createTableInternal(nonPrefixedNamespace, table, metadata, true, options, true);
       for (String indexColumnName : metadata.getSecondaryIndexNames()) {
         if (!rawIndexExists(nonPrefixedNamespace, table, indexColumnName)) {
           createIndex(nonPrefixedNamespace, table, indexColumnName, options);

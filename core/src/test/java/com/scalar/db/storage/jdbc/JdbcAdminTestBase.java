@@ -19,6 +19,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -2780,6 +2782,96 @@ public abstract class JdbcAdminTestBase {
     verify(adminSpy, never()).createTableInternal(connection, namespace, table, metadata);
     verify(adminSpy).createIndex(connection, namespace, table, "c3", true);
     verify(adminSpy).createIndex(connection, namespace, table, "c4", true);
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataEqualsDesired_ShouldNotAddTableMetadata()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(RdbEngine.MYSQL));
+    // The stored metadata already matches the desired metadata
+    doReturn(metadata).when(adminSpy).getTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert: the metadata write is skipped
+    verify(adminSpy, never()).addTableMetadata(any(), any(), any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataDiffersFromDesired_ShouldAddTableMetadata()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata desired =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    TableMetadata stored =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.INT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(RdbEngine.MYSQL));
+    doReturn(stored).when(adminSpy).getTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, desired, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy)
+        .addTableMetadata(eq(connection), eq(namespace), eq(table), eq(desired), anyBoolean());
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataAbsent_ShouldAddTableMetadata()
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(RdbEngine.MYSQL));
+    // No stored metadata
+    doReturn(null).when(adminSpy).getTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    verify(adminSpy)
+        .addTableMetadata(eq(connection), eq(namespace), eq(table), eq(metadata), anyBoolean());
+  }
+
+  @Test
+  public void repairTable_WhenReadingStoredMetadataThrowsRuntimeException_ShouldFailOpenAndWrite()
+      throws SQLException, ExecutionException {
+    // Arrange: reading the stored metadata throws (e.g. a corrupted value); the guard must fail
+    // open and rewrite the metadata rather than propagating the error.
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(RdbEngine.MYSQL));
+    doThrow(new IllegalArgumentException("corrupted"))
+        .when(adminSpy)
+        .getTableMetadata(namespace, table);
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert: no exception propagates and the metadata is rewritten
+    verify(adminSpy)
+        .addTableMetadata(eq(connection), eq(namespace), eq(table), eq(metadata), anyBoolean());
   }
 
   @Test
