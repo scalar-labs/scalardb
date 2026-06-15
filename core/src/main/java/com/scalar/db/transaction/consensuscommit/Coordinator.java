@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -16,6 +17,7 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -391,6 +393,31 @@ public class Coordinator {
 
         exponentialBackoff(counter++);
       }
+    }
+  }
+
+  /**
+   * Deletes the coordinator state row for the given transaction id. The delete is unconditional —
+   * if the row was already removed (e.g., by a concurrent {@code finishTransaction} call), this is
+   * a benign no-op at the storage layer and no exception is propagated. Storage errors surface as
+   * {@link CoordinatorException}; the caller (typically {@code finishTransaction}) is itself a
+   * retryable API, so no internal retry is performed here.
+   *
+   * @param id the transaction id whose state row should be deleted
+   * @throws CoordinatorException if the storage layer fails to delete the row
+   */
+  public void deleteState(String id) throws CoordinatorException {
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(TABLE)
+            .partitionKey(Key.ofText(Attribute.ID, id))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    try {
+      storage.delete(delete);
+    } catch (ExecutionException e) {
+      throw new CoordinatorException("Couldn't delete coordinator state", e);
     }
   }
 
