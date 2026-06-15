@@ -55,6 +55,10 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -8290,7 +8294,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
           return;
         }
         verify(coordinator).putState(any(Coordinator.State.class));
@@ -8313,7 +8321,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8396,7 +8408,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
         } else {
           verify(coordinator).putState(any(Coordinator.State.class));
         }
@@ -8418,7 +8434,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8501,7 +8521,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
       } else {
         verify(coordinator).putState(any(Coordinator.State.class));
       }
@@ -8519,7 +8544,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8539,7 +8568,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             if (isGroupCommitEnabled()) {
               verify(coordinator)
                   .putStateForGroupCommit(
-                      anyString(), anyList(), any(TransactionState.class), anyLong());
+                      anyString(),
+                      anyList(),
+                      any(WriteSet.class),
+                      any(TransactionState.class),
+                      anyLong());
             } else {
               verify(coordinator).putState(any(Coordinator.State.class));
             }
@@ -8644,7 +8677,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
           return;
         }
         verify(coordinator).putState(any(Coordinator.State.class));
@@ -8667,7 +8704,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8772,7 +8813,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         if (isGroupCommitEnabled()) {
           verify(coordinator)
               .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+                  anyString(),
+                  anyList(),
+                  any(WriteSet.class),
+                  any(TransactionState.class),
+                  anyLong());
         } else {
           verify(coordinator).putState(any(Coordinator.State.class));
         }
@@ -8794,7 +8839,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8899,7 +8948,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
       } else {
         verify(coordinator).putState(any(Coordinator.State.class));
       }
@@ -8917,7 +8971,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           if (isGroupCommitEnabled()) {
             verify(coordinator)
                 .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+                    anyString(),
+                    anyList(),
+                    any(WriteSet.class),
+                    any(TransactionState.class),
+                    anyLong());
           } else {
             verify(coordinator).putState(any(Coordinator.State.class));
           }
@@ -8937,7 +8995,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             if (isGroupCommitEnabled()) {
               verify(coordinator)
                   .putStateForGroupCommit(
-                      anyString(), anyList(), any(TransactionState.class), anyLong());
+                      anyString(),
+                      anyList(),
+                      any(WriteSet.class),
+                      any(TransactionState.class),
+                      anyLong());
             } else {
               verify(coordinator).putState(any(Coordinator.State.class));
             }
@@ -9036,7 +9098,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
         return;
       }
       verify(coordinator).putState(any(Coordinator.State.class));
@@ -9059,7 +9126,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // commit-state should occur
       if (isGroupCommitEnabled()) {
         verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+            .putStateForGroupCommit(
+                anyString(),
+                anyList(),
+                any(WriteSet.class),
+                any(TransactionState.class),
+                anyLong());
       } else {
         verify(coordinator).putState(any(Coordinator.State.class));
       }
@@ -9445,6 +9517,329 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
   }
 
+  @Test
+  void commit_WithMultipleWrites_ShouldPersistWriteSetReadableFromCoordinator()
+      throws TransactionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Act — write two records and commit. This exercises the full encode + storage put + read
+    // back path against the real backend, so any BLOB encoding/round-trip regression in the
+    // storage adapter (e.g., truncation, byte-array semantics) will surface here.
+    DistributedTransaction transaction = manager.begin();
+    String txId = transaction.getId();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1));
+    transaction.commit();
+
+    // Assert — the persisted tx_write_set BLOB can be read back and parsed as a valid WriteSet
+    // carrying both writes (the exact EntryGroup partitioning depends on group commit; we only
+    // assert the total entry count).
+    Optional<Coordinator.State> state = coordinator.getState(txId);
+    assertThat(state).isPresent();
+    assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(state.get().getWriteSet()).isPresent();
+
+    WriteSet writeSet = state.get().getWriteSet().get();
+    assertThat(writeSet.getSchemaVersion()).isEqualTo(1);
+    int totalEntries =
+        writeSet.getEntryGroupsList().stream().mapToInt(g -> g.getEntriesCount()).sum();
+    assertThat(totalEntries).isEqualTo(2);
+  }
+
+  @Test
+  void finishTransaction_CommittedWithSomeRecordsStillPrepared_ShouldRollForwardAndDeleteState()
+      throws Exception {
+    // Scenario 1: a transaction wrote two records, the Coordinator state row says COMMITTED, but
+    // only one record was rolled forward to COMMITTED at storage — the other is still PREPARED.
+    // This simulates the typical crash window between commitState and commitRecords.
+    // finishTransaction must roll the remaining PREPARED record forward and delete the
+    // Coordinator state row. The already-COMMITTED record is filtered out by shouldRecover and
+    // left untouched.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Drive a real commit so the Coordinator persists a COMMITTED state row with a write set
+    // and both records exist at storage in COMMITTED form with BALANCE=NEW_BALANCE.
+    DistributedTransaction transaction = manager.begin();
+    transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, NEW_BALANCE));
+    transaction.insert(prepareInsert(0, 1, namespace1, TABLE_1, NEW_BALANCE));
+    transaction.commit();
+    // In group-commit mode, the actual transaction id and the Coordinator state row key carry a
+    // parent-id prefix. Use the transaction's own id throughout so the test works in both
+    // normal-commit and group-commit configurations.
+    String txId = transaction.getId();
+
+    // Simulate the partial-rollforward state by pushing record (0, 1) back to PREPARED.
+    pushRecordBackToPrepared(0, 1, txId);
+
+    // Sanity check
+    Optional<Coordinator.State> stateBefore = coordinator.getState(txId);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    Optional<Result> raw00Before = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00Before).isPresent();
+    assertThat(raw00Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw01Before = originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1));
+    assertThat(raw01Before).isPresent();
+    assertThat(raw01Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.PREPARED.get());
+    assertThat(raw01Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — both records are COMMITTED with BALANCE=NEW_BALANCE preserved, Coordinator state
+    // row is gone.
+    assertThat(finished).isTrue();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw00After = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00After).isPresent();
+    assertThat(raw00After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw01After = originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1));
+    assertThat(raw01After).isPresent();
+    assertThat(raw01After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw01After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void finishTransaction_AbortedWithSomeRecordsPartiallyPrepared_ShouldRollBackAndDeleteState()
+      throws Exception {
+    // Scenario 2: a transaction tried to prepare two records, succeeded for one and failed for
+    // the other. The CommitHandler caught the PreparationException and wrote ABORTED to the
+    // Coordinator with the original write set, but the crash happened before rollbackRecords
+    // could finish. finishTransaction must roll the prepared record back to its before-image
+    // and delete the Coordinator state row.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Set up record (0, 0) as PREPARED at storage with a complete before-image (tx_id=ANY_ID_2,
+    // before tx_id=ANY_ID_1, before balance=INITIAL_BALANCE) so the rollback path has the data it
+    // needs to restore the previously committed state. Record (0, 1) is never written here — its
+    // prepare failed before the storage put happened. We pass null for coordinatorState because
+    // we want to write the Coordinator state row ourselves below with a custom write set.
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            null,
+            CommitType.NORMAL_COMMIT);
+
+    // Write a Coordinator ABORTED state row carrying a write set that lists both records.
+    WriteSet writeSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .addEntryGroups(
+                EntryGroup.newBuilder()
+                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0))
+                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 1)))
+            .build();
+    coordinator.putState(new Coordinator.State(txId, writeSet, TransactionState.ABORTED));
+
+    // Sanity check
+    Optional<Result> rawBefore = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(rawBefore).isPresent();
+    assertThat(rawBefore.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.PREPARED.get());
+    assertThat(originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1))).isEmpty();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — record (0, 0) is restored to the before-image (tx_id=ANY_ID_1, tx_state=COMMITTED,
+    // balance=INITIAL_BALANCE), record (0, 1) remains absent at storage, and the Coordinator
+    // state row is gone.
+    assertThat(finished).isTrue();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1))).isEmpty();
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      finishTransaction_GroupCommittedWithSomeRecordsStillPrepared_ShouldRollForwardAndDeleteParentState()
+          throws Exception {
+    // Scenario 3: the group-commit version of scenario 1. Two sibling transactions commit
+    // together; the parent Coordinator state row says COMMITTED with a multi-EntryGroup write
+    // set. One sibling's record was rolled forward at storage but the other's is still PREPARED.
+    // finishTransaction on any child id must roll the remaining PREPARED record forward and
+    // delete the parent state row.
+    //
+    // Two concurrently-driven transactions cannot reliably be bundled into the same group on CI,
+    // so the post-commit storage layout is constructed by hand: a single parent Coordinator state
+    // row referencing two children with a two-EntryGroup write set, plus one record in each of
+    // the COMMITTED and PREPARED storage states.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId1 = keyManipulator.fullKey(parentId, ANY_ID_1);
+    String fullTxId2 = keyManipulator.fullKey(parentId, ANY_ID_2);
+    long now = System.currentTimeMillis();
+
+    // Record (0, 0): txn1 already rolled forward to COMMITTED at storage.
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, fullTxId1)
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, now)
+            .bigIntValue(Attribute.COMMITTED_AT, now)
+            .consistency(Consistency.LINEARIZABLE)
+            .build());
+    // Record (1, 0): txn2's write is still PREPARED — the partial-rollforward state.
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, fullTxId2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, now)
+            .consistency(Consistency.LINEARIZABLE)
+            .build());
+
+    // Parent COMMITTED state row with a multi-EntryGroup write set, one entry group per child.
+    WriteSet writeSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .addEntryGroups(
+                EntryGroup.newBuilder()
+                    .setChildId(ANY_ID_1)
+                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0)))
+            .addEntryGroups(
+                EntryGroup.newBuilder()
+                    .setChildId(ANY_ID_2)
+                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 1, 0)))
+            .build();
+    coordinator.putStateForGroupCommit(
+        parentId, Arrays.asList(fullTxId1, fullTxId2), writeSet, TransactionState.COMMITTED, now);
+
+    // Sanity check
+    Optional<Coordinator.State> stateBefore = coordinator.getState(fullTxId1);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    Optional<Result> raw00Before = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00Before).isPresent();
+    assertThat(raw00Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw10Before = originalStorage.get(prepareGet(1, 0, namespace1, TABLE_1));
+    assertThat(raw10Before).isPresent();
+    assertThat(raw10Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.PREPARED.get());
+    assertThat(raw10Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    // Act — finishing the transaction via either child id is equivalent.
+    boolean finished = manager.finishTransaction(fullTxId1);
+
+    // Assert — both records COMMITTED with BALANCE=NEW_BALANCE preserved, the parent state row
+    // is gone, and the sibling's state is also "absent" (idempotency).
+    assertThat(finished).isTrue();
+    assertThat(coordinator.getState(fullTxId1)).isEmpty();
+    assertThat(coordinator.getState(fullTxId2)).isEmpty();
+    Optional<Result> raw00After = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00After).isPresent();
+    assertThat(raw00After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw10After = originalStorage.get(prepareGet(1, 0, namespace1, TABLE_1));
+    assertThat(raw10After).isPresent();
+    assertThat(raw10After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw10After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void finishTransaction_TransactionTerminatedWithoutWriteSet_ShouldReturnFalseAndLeaveState()
+      throws Exception {
+    // Scenario 4: a transaction that did not go through DistributedTransaction#commit() — here it
+    // was terminated via DistributedTransactionManager#rollback() — leaves a Coordinator ABORTED
+    // state row that carries no write set. finishTransaction is not applicable to such a
+    // transaction: it must report that by returning false without doing any work and leave the
+    // state row in place for lazy recovery to handle.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    String txId = UUID.randomUUID().toString();
+    // rollback writes an ABORTED Coordinator state row without a write set.
+    manager.rollback(txId);
+
+    // Sanity check — the state row is present, ABORTED, and carries no write set.
+    Optional<Coordinator.State> stateBefore = coordinator.getState(txId);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(stateBefore.get().getWriteSet()).isNotPresent();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — not applicable (no write set), so it returns false and leaves the state row intact.
+    assertThat(finished).isFalse();
+    Optional<Coordinator.State> stateAfter = coordinator.getState(txId);
+    assertThat(stateAfter).isPresent();
+    assertThat(stateAfter.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(stateAfter.get().getWriteSet()).isNotPresent();
+  }
+
+  private void pushRecordBackToPrepared(int accountId, int accountType, String txId)
+      throws ExecutionException {
+    // Overwrite the existing COMMITTED record's tx_state and tx_id columns. ScalarDB storage
+    // Put performs a column-wise upsert, so the other columns (balance, version, before-image
+    // columns from any prior prepare, etc.) are kept intact. That's enough for the rollforward
+    // path, which only checks `tx_id = id && tx_state = PREPARED`.
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, accountId))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+            .textValue(Attribute.ID, txId)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    originalStorage.put(put);
+  }
+
+  private static Entry intKeyWriteEntry(
+      String namespace, String table, int partitionKeyValue, int clusteringKeyValue) {
+    return Entry.newBuilder()
+        .setEntryType(Entry.EntryType.ENTRY_TYPE_WRITE)
+        .setNamespaceName(namespace)
+        .setTableName(table)
+        .setPartitionKey(
+            com.scalar.db.transaction.consensuscommit.proto.v1.Key.newBuilder()
+                .addColumns(
+                    Column.newBuilder()
+                        .setName(ACCOUNT_ID)
+                        .setIntValue(Column.IntValue.newBuilder().setValue(partitionKeyValue))))
+        .setClusteringKey(
+            com.scalar.db.transaction.consensuscommit.proto.v1.Key.newBuilder()
+                .addColumns(
+                    Column.newBuilder()
+                        .setName(ACCOUNT_TYPE)
+                        .setIntValue(Column.IntValue.newBuilder().setValue(clusteringKeyValue))))
+        .build();
+  }
+
   private DistributedTransaction prepareTransfer(
       ConsensusCommitManager manager,
       int fromId,
@@ -9721,6 +10116,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(j -> puts.add(preparePut(i, j, namespace, table))));
     return puts;
+  }
+
+  private Insert prepareInsert(
+      int accountId, int accountType, String namespace, String table, int balance) {
+    return Insert.newBuilder()
+        .namespace(namespace)
+        .table(table)
+        .partitionKey(Key.ofInt(ACCOUNT_ID, accountId))
+        .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+        .intValue(BALANCE, balance)
+        .build();
   }
 
   private Delete prepareDelete(int id, int type, String namespace, String table) {

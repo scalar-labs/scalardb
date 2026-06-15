@@ -24,10 +24,12 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransactionManager;
 import com.scalar.db.common.AbstractTransactionManagerCrudOperableScanner;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -36,6 +38,10 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
@@ -52,6 +58,8 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class ConsensusCommitManager extends AbstractDistributedTransactionManager {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitManager.class);
+  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
+      new CoordinatorGroupCommitKeyManipulator();
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
   private final TransactionTableMetadataManager tableMetadataManager;
@@ -555,10 +563,143 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abortState(txId);
+      return commit.abortStateWithoutWriteSet(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }
+  }
+
+  @Override
+  public boolean finishTransaction(String txId) throws TransactionException {
+    checkArgument(!Strings.isNullOrEmpty(txId));
+
+    // Read the Coordinator state row for this transaction.
+    Optional<State> stateOpt;
+    try {
+      stateOpt = coordinator.getState(txId);
+    } catch (CoordinatorException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED.buildMessage(
+              txId, e.getMessage()),
+          e,
+          txId);
+    }
+
+    // The state row is absent — the transaction is already finished, was never started, or was
+    // cleaned up by a concurrent caller. finishTransaction is idempotent on that boundary, so
+    // report success.
+    if (!stateOpt.isPresent()) {
+      return true;
+    }
+
+    State state = stateOpt.get();
+
+    // Only COMMITTED or ABORTED states are expected here. Anything else indicates an internal
+    // invariant violation, not a runtime condition. This is checked before the write-set presence
+    // check so that a persisted non-terminal state (which should never exist) always surfaces as
+    // the invariant violation rather than being misreported as a missing write set.
+    TransactionState txState = state.getState();
+    if (txState != TransactionState.COMMITTED && txState != TransactionState.ABORTED) {
+      throw new AssertionError(
+          "Unexpected non-terminal transaction state at finishTransaction. State: "
+              + txState
+              + ", Transaction ID: "
+              + txId);
+    }
+
+    // The transaction did not commit through DistributedTransaction#commit() (e.g., it was
+    // terminated via DistributedTransactionManager#rollback()/abort(), aborted by lazy recovery, or
+    // originated from a pre-feature binary) and so carries no write set. Note that a commit() that
+    // failed during preparation is ABORTED but still carries a write set, so it is not in this
+    // category. This is not an error: the transaction is simply not applicable to finishTransaction
+    // (retrying with the same txId would never succeed), so report it via the return value and
+    // leave the state row for lazy recovery.
+    if (!state.getWriteSet().isPresent()) {
+      return false;
+    }
+
+    // Walk every EntryGroup and run per-record recovery. The decoder rebuilds a Get for each entry;
+    // the recovery executor decides rollforward vs. rollback based on the parent state. Records
+    // that are already terminal or belong to a different transaction are filtered out up front. The
+    // composer-level NoMutationException absorption still acts as the safety net for races against
+    // concurrent recovery.
+    WriteSet writeSet = state.getWriteSet().get();
+    for (EntryGroup entryGroup : writeSet.getEntryGroupsList()) {
+      String expectedTxId =
+          entryGroup.hasChildId()
+              ? KEY_MANIPULATOR.fullKey(state.getId(), entryGroup.getChildId())
+              : state.getId();
+      for (Entry entry : entryGroup.getEntriesList()) {
+        Get get = WriteSetDecoder.toGet(entry);
+        Optional<Result> resultOpt;
+        try {
+          resultOpt = storage.get(get);
+        } catch (ExecutionException e) {
+          throw new TransactionException(
+              CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED.buildMessage(
+                  txId, e.getMessage()),
+              e,
+              txId);
+        }
+        if (!resultOpt.isPresent()) {
+          // Record is gone (concurrently deleted, or it was a Delete entry whose target had not yet
+          // been written). Nothing to recover.
+          continue;
+        }
+        TransactionResult txResult = new TransactionResult(resultOpt.get());
+        if (!shouldRecover(txResult, expectedTxId)) {
+          // Already finalized, or overwritten by an unrelated transaction. Recovery would no-op.
+          continue;
+        }
+        try {
+          recoveryExecutor.executeSynchronously(get, txResult, state);
+        } catch (ExecutionException e) {
+          throw new TransactionException(
+              CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED.buildMessage(
+                  txId, e.getMessage()),
+              e,
+              txId);
+        }
+      }
+    }
+
+    // Delete the state row. state.getId() is the parent ID for group-commit rows because
+    // Coordinator#getState(fullChildId) routes through getStateForGroupCommit() and returns the
+    // parent row, so the delete targets the right row in both single and group cases.
+    // Coordinator#deleteState is unconditional and benign on a concurrent delete.
+    try {
+      coordinator.deleteState(state.getId());
+    } catch (CoordinatorException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED.buildMessage(
+              txId, e.getMessage()),
+          e,
+          txId);
+    }
+
+    return true;
+  }
+
+  /**
+   * Returns {@code true} when the record needs recovery as part of finishing the given transaction:
+   * it must still be in a non-terminal state ({@code PREPARED} or {@code DELETED}) <em>and</em>
+   * carry the transaction id we are finishing. If either condition fails, the record has either
+   * been finalized already or has been overwritten by an unrelated transaction, and the recovery
+   * mutation would no-op via {@code NoMutationException} anyway.
+   *
+   * @param result the storage-layer result for the record
+   * @param expectedTxId the transaction id whose write set is being finished. For non-group-commit
+   *     this is the transaction id itself; for group-commit it is the full id formed from the
+   *     parent id and the entry group's child id
+   * @return {@code true} if {@code recoveryExecutor.executeSynchronously} should be invoked for
+   *     this record
+   */
+  private static boolean shouldRecover(TransactionResult result, String expectedTxId) {
+    TransactionState recordState = result.getState();
+    if (recordState != TransactionState.PREPARED && recordState != TransactionState.DELETED) {
+      return false;
+    }
+    return expectedTxId.equals(result.getId());
   }
 
   @VisibleForTesting

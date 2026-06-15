@@ -298,6 +298,11 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
+  public boolean finishTransaction(String txId) throws TransactionException {
+    return transactionManager.finishTransaction(txId);
+  }
+
+  @Override
   public void close() {
     transactionManager.close();
   }

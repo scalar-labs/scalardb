@@ -1,6 +1,7 @@
 plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.google.protobuf' version "${protobufPluginVersion}"
     id 'maven-publish'
     id 'base'
 }
@@ -200,6 +201,7 @@ dependencies {
     }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -219,6 +221,14 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+// Suppress Error Prone findings in protobuf-generated sources. The proto compiler emits patterns
+// (reference-equality checks against DEFAULT_INSTANCE, unused parameters in builders, deprecated
+// API references) that we can't fix locally and that aren't useful to surface.
+tasks.withType(JavaCompile).configureEach {
+    options.errorprone.disableWarningsInGeneratedCode = true
+    options.errorprone.excludedPaths = ".*/build/generated/sources/proto/.*"
 }
 
 javadoc {
@@ -383,6 +393,12 @@ task spotbugsIntegrationTest(type: SpotBugsTask) {
 check.dependsOn += spotbugsMain
 check.dependsOn += spotbugsTest
 check.dependsOn += spotbugsIntegrationTest
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+}
 
 base {
     archivesName = "scalardb"
