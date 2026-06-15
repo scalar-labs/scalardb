@@ -415,8 +415,10 @@ public final class ConsensusCommitUtils {
         Scan.newBuilder(scan).clearProjections().consistency(Consistency.LINEARIZABLE);
 
     if (scan.getLimit() > 0) {
-      // Since the recovery process and the conjunction processing may exclude some records from
-      // the scan result, it is necessary to perform the scan without a limit.
+      // Since the recovery process and the conjunction processing may exclude some records from the
+      // scan result -- and a record's survival is only known after per-row recovery -- the scan
+      // must run without a limit; truncating storage-side could drop a genuinely surviving record.
+      // The limit is instead applied in the app layer after recovery/filtering.
       builder.limit(0);
     }
 
@@ -567,6 +569,35 @@ public final class ConsensusCommitUtils {
     }
 
     return ConditionSetBuilder.andConditionSet(conditions).build();
+  }
+
+  /**
+   * Converts a Get with index into an equivalent Scan with index (same index key, conjunctions,
+   * consistency, and attributes, with no limit).
+   *
+   * <p>A Get with index requires an exact (single-record) match and fails when the index matches
+   * multiple physical rows, which can happen transiently while uncommitted records exist. Reading
+   * with the equivalent Scan lets the caller run lazy recovery per matched row and resolve the
+   * transient state. This conversion is shared by the transaction read path ({@code
+   * CrudHandler#read}) and the Serializable validation path ({@code
+   * Snapshot#validateGetWithIndexResult}).
+   *
+   * @param get the Get with index to convert
+   * @return an equivalent Scan with index
+   */
+  static Scan createScanWithIndexFromGet(Get get) {
+    assert get.forNamespace().isPresent() && get.forTable().isPresent();
+    return Scan.newBuilder()
+        .namespace(get.forNamespace().get())
+        .table(get.forTable().get())
+        .indexKey(get.getPartitionKey())
+        .whereOr(
+            get.getConjunctions().stream()
+                .map(c -> ConditionSetBuilder.andConditionSet(c.getConditions()).build())
+                .collect(Collectors.toSet()))
+        .consistency(get.getConsistency())
+        .attributes(get.getAttributes())
+        .build();
   }
 
   /**
