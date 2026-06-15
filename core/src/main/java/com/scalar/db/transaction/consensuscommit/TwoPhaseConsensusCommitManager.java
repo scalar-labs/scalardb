@@ -78,7 +78,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     crud =
         new CrudHandler(
             storage,
@@ -121,7 +121,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     crud =
         new CrudHandler(
             storage,

@@ -1246,6 +1246,12 @@ public enum CoreError implements ScalarDbError {
       "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_RESOLVING_UNCOMMITTED_RECORD_RETRY_LIMIT_EXCEEDED(
+      Category.CONCURRENCY_ERROR,
+      "0030",
+      "Resolving an uncommitted record exceeded the retry limit during recovery. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category

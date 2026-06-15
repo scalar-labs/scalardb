@@ -19,15 +19,19 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -122,6 +126,7 @@ public class RecoveryExecutorTest {
               .addClusteringKey(ANY_NAME_2)
               .build());
 
+  @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
   @Mock private RecoveryHandler recovery;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
@@ -134,7 +139,7 @@ public class RecoveryExecutorTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    executor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    executor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(selection))
@@ -147,6 +152,10 @@ public class RecoveryExecutorTest {
   }
 
   private TransactionResult prepareResult(TransactionState state) {
+    return prepareResult(state, ANY_ID_2);
+  }
+
+  private TransactionResult prepareResult(TransactionState state, String id) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
@@ -162,7 +171,7 @@ public class RecoveryExecutorTest {
             .put(ANY_NAME_11, TimeColumn.of(ANY_NAME_11, ANY_TIME_2))
             .put(ANY_NAME_12, TimestampColumn.of(ANY_NAME_12, ANY_TIMESTAMP_2))
             .put(ANY_NAME_13, TimestampTZColumn.of(ANY_NAME_13, ANY_TIMESTAMPTZ_2))
-            .put(ID, TextColumn.of(ID, ANY_ID_2))
+            .put(ID, TextColumn.of(ID, id))
             .put(PREPARED_AT, BigIntColumn.of(PREPARED_AT, ANY_TIME_MILLIS_3))
             .put(STATE, IntColumn.of(STATE, state.get()))
             .put(VERSION, IntColumn.of(VERSION, 1))
@@ -375,6 +384,7 @@ public class RecoveryExecutorTest {
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
@@ -405,6 +415,7 @@ public class RecoveryExecutorTest {
         prepareResultWithoutBeforeImage(TransactionState.PREPARED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
@@ -435,6 +446,7 @@ public class RecoveryExecutorTest {
     Coordinator.State committedState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(committedState));
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
 
     executor = spy(executor);
@@ -466,6 +478,7 @@ public class RecoveryExecutorTest {
     Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(abortedState));
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
 
     // Act
@@ -493,6 +506,7 @@ public class RecoveryExecutorTest {
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenThrow(CoordinatorException.class);
 
     // Act Assert
@@ -509,6 +523,377 @@ public class RecoveryExecutorTest {
     // Verify no recovery attempted
     verify(recovery, never()).rollbackRecord(any(), any());
     verify(recovery, never()).tryRecover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordReReadCommitted_ShouldReturnCommittedValue()
+          throws Exception {
+    // Arrange: the coordinator state was cleaned up after the transaction committed; re-reading the
+    // record shows it is now committed.
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    TransactionResult committedRecord = prepareResult(TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(committedRecord));
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: the committed value is returned (not a stale before-image), and nothing is recovered
+    assertThat(result.recoveredResult).hasValue(committedRecord);
+    assertThat(result.rolledBack).isFalse();
+    verify(recovery, never()).tryAbortExpiredTransaction(any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
+    verify(recovery, never()).rollbackRecord(any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordReReadAbsent_ShouldReturnEmpty()
+          throws Exception {
+    // Arrange: the record is gone (a committed delete or a rolled-back insert).
+    TransactionResult transactionResult = prepareResult(TransactionState.DELETED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: a committed delete returns empty, never a stale before-image
+    assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
+    verify(recovery, never()).tryAbortExpiredTransaction(any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
+    verify(recovery, never()).rollbackRecord(any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerWrittenButRecordCommitted_ShouldReturnCommittedValue()
+          throws Exception {
+    // Arrange: the pre-abort re-read still sees the record PREPARED by the same writer, so the
+    // ABORTED state is written. But the writer actually committed and was cleaned up in the race,
+    // so the post-abort re-read sees the record committed. The committed value is returned, not a
+    // stale before-image.
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    TransactionResult committedRecord = prepareResult(TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    // First (pre-abort) re-read sees PREPARED; second (post-abort) re-read sees committed.
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(transactionResult), Optional.of(committedRecord));
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: the committed value is returned and the record is not rolled back
+    assertThat(result.recoveredResult).hasValue(committedRecord);
+    assertThat(result.rolledBack).isFalse();
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_2);
+    verify(recovery, never()).rollbackRecord(any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerWrittenButRecordAbsent_ShouldReturnEmpty()
+          throws Exception {
+    // Arrange: the pre-abort re-read sees the record PREPARED by the same writer, so the ABORTED
+    // state is written. But the writer's delete committed and was cleaned up in the race, so the
+    // post-abort re-read finds the record gone. Empty is returned, not a stale before-image.
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    // First (pre-abort) re-read sees PREPARED; second (post-abort) re-read finds the record gone.
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult), Optional.empty());
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: empty is returned and the record is not rolled back
+    assertThat(result.recoveredResult).isEmpty();
+    assertThat(result.rolledBack).isTrue();
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_2);
+    verify(recovery, never()).rollbackRecord(any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerWrittenButRecordRePreparedByDifferentTransaction_ShouldReResolveAgainstIt()
+          throws Exception {
+    // Arrange: the pre-abort re-read sees the record PREPARED by the same writer, so the ABORTED
+    // state is written for it. In the race the writer is rolled back and a DIFFERENT transaction
+    // re-prepares the record, so the post-abort re-read sees a different writer. Because an
+    // intervening commit may have advanced the latest committed value, the loop must NOT return the
+    // original writer's (now stale) before-image -- it must re-resolve against the new writer. The
+    // new writer's coordinator state is ABORTED, so the record is resolved (rolled back) for it.
+    TransactionResult original = prepareResult(TransactionState.PREPARED);
+    TransactionResult rePrepared = prepareResult(TransactionState.PREPARED, ANY_ID_1);
+    Coordinator.State abortedState = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.of(abortedState));
+    when(recovery.isTransactionExpired(original)).thenReturn(true);
+    // First (pre-abort) re-read sees the same writer PREPARED; second (post-abort) re-read sees a
+    // different writer's PREPARED record.
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(original), Optional.of(rePrepared));
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            original,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: resolved against the re-preparing transaction (ANY_ID_1), not by returning the
+    // original writer's before-image. The original writer was aborted, but the new writer is the
+    // one the record is recovered for.
+    assertThat(result.rolledBack).isTrue();
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_2);
+    verify(recovery, never()).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).getState(ANY_ID_1);
+    verify(recovery).tryRecover(eq(selection), eq(rePrepared), eq(Optional.of(abortedState)));
+    verify(recovery, never()).rollbackRecord(any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortKeepsConflicting_ShouldThrowCrudConflictExceptionAfterRetryLimit()
+          throws Exception {
+    // Arrange: the coordinator state stays absent and every abort attempt conflicts (a concurrent
+    // actor keeps racing), so the re-resolution loop spins until MAX_RESOLUTION_ATTEMPTS is reached
+    // and a CrudConflictException is thrown.
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    transactionResult,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .isInstanceOf(CrudConflictException.class);
+
+    // The loop runs exactly MAX_RESOLUTION_ATTEMPTS passes, attempting the abort on each.
+    verify(recovery, times(RecoveryExecutor.MAX_RESOLUTION_ATTEMPTS))
+        .tryAbortExpiredTransaction(ANY_ID_2);
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordRePreparedByDifferentTransaction_ShouldReResolveAgainstIt()
+          throws Exception {
+    // Arrange: the original writer's coordinator state is absent and it has expired; the re-read
+    // shows a DIFFERENT transaction re-prepared the record. The loop re-resolves against that
+    // transaction, whose coordinator state is ABORTED, so the record is rolled back for it.
+    TransactionResult original = prepareResult(TransactionState.PREPARED);
+    TransactionResult rePrepared = prepareResult(TransactionState.PREPARED, ANY_ID_1);
+    Coordinator.State abortedState = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.of(abortedState));
+    when(recovery.isTransactionExpired(original)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(rePrepared));
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            original,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: resolved against the re-preparing transaction (ANY_ID_1), not aborted as the original
+    assertThat(result.rolledBack).isTrue();
+    verify(coordinator).getState(ANY_ID_2);
+    verify(coordinator).getState(ANY_ID_1);
+    verify(recovery, never()).tryAbortExpiredTransaction(any());
+    verify(recovery).tryRecover(eq(selection), eq(rePrepared), eq(Optional.of(abortedState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordRePreparedByDifferentTransactionNotExpired_ShouldThrowUncommittedRecordException()
+          throws Exception {
+    // Arrange: the original writer's coordinator state is absent and it has expired; the re-read
+    // shows a DIFFERENT, still-in-flight transaction re-prepared the record (its coordinator state
+    // is absent AND it has NOT expired). The re-resolution must re-apply the expiry guard to the
+    // new
+    // writer rather than aborting it or returning the original writer's before-image: a live second
+    // writer must not be killed, so the loop throws UncommittedRecordException for it (retry).
+    TransactionResult original = prepareResult(TransactionState.PREPARED);
+    TransactionResult rePrepared = prepareResult(TransactionState.PREPARED, ANY_ID_1);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(original)).thenReturn(true);
+    when(recovery.isTransactionExpired(rePrepared)).thenReturn(false);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(rePrepared));
+
+    // Act Assert: the exception is raised for the re-preparing (new) writer, not the original.
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    original,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .isInstanceOfSatisfying(
+            UncommittedRecordException.class,
+            e -> assertThat(e.getResults()).containsExactly(rePrepared));
+
+    // The expiry guard was re-applied to the new writer (ANY_ID_1), and the live writer was neither
+    // aborted nor rolled back.
+    verify(coordinator).getState(ANY_ID_2);
+    verify(coordinator).getState(ANY_ID_1);
+    verify(recovery, never()).tryAbortExpiredTransaction(any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
+    verify(recovery, never()).rollbackRecord(any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_PreAbortReReadThrowsExecutionException_ShouldThrowCrudException()
+          throws Exception {
+    // Arrange: the coordinator state is absent and the writer expired, but the pre-abort physical
+    // re-read fails with an ExecutionException, which must surface as a CrudException.
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    transactionResult,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .isInstanceOf(CrudException.class);
+
+    // The abort is never attempted because the pre-abort re-read failed first.
+    verify(recovery, never()).tryAbortExpiredTransaction(any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_PostAbortReReadThrowsExecutionException_ShouldThrowCrudException()
+          throws Exception {
+    // Arrange: the pre-abort re-read sees the same writer PREPARED, so the ABORTED state is
+    // written.
+    // The post-abort re-read then fails with an ExecutionException, which must surface as a
+    // CrudException.
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(transactionResult))
+        .thenThrow(ExecutionException.class);
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    transactionResult,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .isInstanceOf(CrudException.class);
+
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_2);
+    verify(recovery, never()).rollbackRecord(any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordKeepsBeingRePreparedByDifferentTransactions_ShouldThrowCrudConflictExceptionAfterRetryLimit()
+          throws Exception {
+    // Arrange: the coordinator state stays absent and expired, and every physical re-read shows a
+    // DIFFERENT transaction has re-prepared the record (modeled by ping-ponging between two ids),
+    // so
+    // the loop keeps taking the re-prepare branch until MAX_RESOLUTION_ATTEMPTS is reached and a
+    // CrudConflictException is thrown. This exercises the retry limit via the re-prepare branch
+    // (the
+    // abort-conflict branch is covered by AbortKeepsConflicting above).
+    TransactionResult original = prepareResult(TransactionState.PREPARED);
+    TransactionResult rePreparedAs1 = prepareResult(TransactionState.PREPARED, ANY_ID_1);
+    TransactionResult rePreparedAs2 = prepareResult(TransactionState.PREPARED, ANY_ID_2);
+    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(any(TransactionResult.class))).thenReturn(true);
+    // current starts as ANY_ID_2; each re-read returns the opposite id so the re-prepare branch is
+    // taken on every pass.
+    when(storage.get(any(Get.class)))
+        .thenReturn(
+            Optional.of(rePreparedAs1),
+            Optional.of(rePreparedAs2),
+            Optional.of(rePreparedAs1),
+            Optional.of(rePreparedAs2),
+            Optional.of(rePreparedAs1));
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    original,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .isInstanceOf(CrudConflictException.class);
+
+    // The loop runs exactly MAX_RESOLUTION_ATTEMPTS passes, re-reading on each, and never aborts
+    // (it
+    // always takes the re-prepare branch).
+    verify(storage, times(RecoveryExecutor.MAX_RESOLUTION_ATTEMPTS)).get(any(Get.class));
+    verify(recovery, never()).tryAbortExpiredTransaction(any());
   }
 
   @Test

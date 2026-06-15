@@ -293,6 +293,23 @@ public class RecoveryHandler {
       return false;
     }
 
+    // Before writing the ABORTED state, physically re-read the record. A Coordinator state cleanup
+    // process can finalize the record and remove the writer's state row, so an expired writer with
+    // no coordinator state no longer implies the record is still uncommitted: the writer may have
+    // committed and been cleaned up. Only abort when the record is still uncommitted by this
+    // writer; otherwise writing the ABORTED state would leave a spurious tombstone for an
+    // already-resolved (possibly committed) transaction.
+    Optional<TransactionResult> latest =
+        ConsensusCommitUtils.rereadRecord(storage, tableMetadataManager, selection, result);
+    if (!latest.isPresent()
+        || latest.get().isCommitted()
+        || !result.getId().equals(latest.get().getId())) {
+      // The record is gone, already committed, or re-prepared by a different transaction — this
+      // writer's record has already been resolved (rolled and possibly replaced), so the record is
+      // consistent and no ABORTED state should be written.
+      return true;
+    }
+
     try {
       coordinator.putStateForLazyRecoveryRollback(result.getId());
     } catch (CoordinatorConflictException e) {

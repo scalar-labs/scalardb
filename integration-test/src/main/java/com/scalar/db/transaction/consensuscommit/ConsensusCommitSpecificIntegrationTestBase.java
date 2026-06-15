@@ -2337,9 +2337,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
     // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
-    // before the result is returned, then the record is rolled back in the background. tryRecover()
-    // is
-    // not used on this path.
+    // before the result is returned, then the record is rolled back in the background.
+    // tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
@@ -3052,8 +3051,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
     // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
     // before the records are returned, then the record is rolled back in the background.
-    // tryRecover()
-    // is not used on this path.
+    // tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
@@ -10675,7 +10673,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CrudHandler crud =
         new CrudHandler(
