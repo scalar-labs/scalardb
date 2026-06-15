@@ -2483,6 +2483,216 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
+  public void get_GetWithIndexForTransientDeletedAndPreparedRecords_ShouldResolveToSingleRecord(
+      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // A delete + insert on two records that have different primary keys but the same index value
+    // (BALANCE=NEW_BALANCE) leave two physical rows belonging to the same writer transaction: a
+    // DELETED record (the deleted one) and a PREPARED record (the inserted one). A single-row index
+    // Get would throw GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION here. Reading via a Scan
+    // with
+    // index lets lazy recovery (coordinator COMMITTED -> roll forward) resolve the transient
+    // duplicate so that exactly one record (the inserted one) survives.
+    // (This example happens to share a partition key, but the bug is about distinct primary keys
+    // sharing an index value, not about clustering keys.)
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    // Old record being deleted (account_type 0); its committed before-image is INITIAL_BALANCE.
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        0,
+        TransactionState.DELETED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    // New record being inserted (account_type 1).
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        1,
+        TransactionState.PREPARED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    coordinator.putState(new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED));
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    // The key assertion is that this does NOT throw
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION
+    // even though two physical rows transiently match the index value.
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // READ_COMMITTED returns committed (before-image) values (BALANCE=INITIAL_BALANCE), which do
+      // not match the queried index value NEW_BALANCE, so no record matches.
+      assertThat(result).isNotPresent();
+    } else {
+      // SNAPSHOT/SERIALIZABLE roll forward to the latest image: the old record is deleted and the
+      // inserted record (account_type 1, BALANCE=NEW_BALANCE) survives.
+      assertThat(result).isPresent();
+      assertThat(result.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+      assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur for both transient rows (DELETED old + PREPARED new) and roll them
+    // FORWARD (writer committed); nothing is rolled back.
+    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForTransientDeletedAndPreparedRecordsWhenWriterAborted_ShouldResolveToNoRecord(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // The same transient DELETED(old) + PREPARED(new) duplicate as the rollforward case, but the
+    // writer transaction ABORTED. Both rows roll back to their committed before-image
+    // (BALANCE=INITIAL_BALANCE), which no longer matches the queried index value NEW_BALANCE, so
+    // the
+    // index Get resolves to no record in every isolation - and still never throws
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION. (Correctness invariant case 2.)
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    // Old record being deleted (account_type 0); its committed before-image is INITIAL_BALANCE.
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        0,
+        TransactionState.DELETED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    // New record being inserted (account_type 1).
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        1,
+        TransactionState.PREPARED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    coordinator.putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert: both rows revert to INITIAL_BALANCE on rollback, so neither matches NEW_BALANCE.
+    assertThat(result).isNotPresent();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur for both transient rows (DELETED old + PREPARED new) and roll them BACK
+    // (writer aborted); nothing is rolled forward.
+    verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForExistingCommittedRecordAndTransientPreparedRecord_ShouldReturnCommittedRecordInAllIsolations(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // An already-committed record (account_type 0, BALANCE=NEW_BALANCE) exists. A concurrent
+    // transaction's in-flight insert (account_type 1, PREPARED, same BALANCE) transiently shares
+    // the
+    // index value, then aborts. A single-row index Get would throw
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION on the two physical rows; resolving via a
+    // Scan
+    // with index returns the existing committed record in every isolation -- including
+    // READ_COMMITTED, since the surviving record is genuinely committed (no before-image needed).
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    // Existing committed record (account_type 0).
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, NEW_BALANCE);
+    // In-flight insert (account_type 1) that will be aborted.
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        1,
+        TransactionState.PREPARED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    coordinator.putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert: the existing committed record is returned in every isolation (including
+    // READ_COMMITTED). The aborted in-flight insert is rolled back and filtered out.
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur once for the aborted in-flight record and roll it BACK; nothing is
+    // rolled forward (the surviving record is genuinely committed and needs no recovery).
+    verify(recovery, times(1)).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(1)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void get_GetWithIndexMatchingMultipleCommittedRecords_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws ExecutionException, TransactionException {
+    // Arrange
+    // Two genuinely committed records share the same index value (BALANCE=NEW_BALANCE). The
+    // exact-match Get-with-index contract cannot be satisfied, so the user is still told to use a
+    // Scan - this behavior is preserved (now enforced by ConsensusCommit after lazy recovery).
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, NEW_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, NEW_BALANCE);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    assertThatThrownBy(() -> transaction.get(get))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Please use scan() for non-exact match selection");
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
   public void
       scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
           Isolation isolation)
@@ -3364,6 +3574,51 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
         true, isolation);
+  }
+
+  // Writes a PREPARED/DELETED record at the given account_type with the given after-image BALANCE
+  // and writer transaction id, so that two records with different primary keys but the same BALANCE
+  // index value reproduce a transient index duplicate.
+  private void populatePreparedIndexRecord(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      int accountType,
+      TransactionState recordState,
+      int balance,
+      int beforeBalance,
+      String txId,
+      long preparedAt)
+      throws ExecutionException {
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+            .intValue(BALANCE, balance)
+            .textValue(Attribute.ID, txId)
+            .intValue(Attribute.STATE, recordState.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, beforeBalance)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry
+      }
+    }
   }
 
   @ParameterizedTest
