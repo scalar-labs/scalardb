@@ -237,7 +237,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
-        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
+        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation, false);
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(context, crud, commit, operationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
