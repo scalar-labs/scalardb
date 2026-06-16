@@ -40,7 +40,8 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
   @Override
   protected int getThreadNum() {
     // Optimized for a standard Github action runner
-    return 4;
+    //TODO revert before merging
+    return 8;
   }
 
   @Override

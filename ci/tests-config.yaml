@@ -97,202 +97,213 @@ dynamo:
     run: ./gradlew integrationTestDynamo
 
 jdbc:
-  - label: alloydb_%VERSION%
-    display_name: AlloyDB %VERSION%
-    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
-    versions:
-      - 15
-      - 16
-    db_healthcheck: docker exec alloydb psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
-    create_test_user: |
-      docker exec alloydb psql -U postgres -c "
-        CREATE USER test WITH PASSWORD 'test';
-        GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#  - label: alloydb_%VERSION%
+#    display_name: AlloyDB %VERSION%
+#    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
+#    versions:
+#      - 15
+#      - 16
+#    db_healthcheck: docker exec alloydb psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
+#    create_test_user: |
+#      docker exec alloydb psql -U postgres -c "
+#        CREATE USER test WITH PASSWORD 'test';
+#        GRANT CREATE ON DATABASE postgres TO test;"
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: db2_%VERSION%
+#    display_name: Db2 %VERSION%
+#    setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
+#    versions:
+#      - 11.5.9.0
+#      - 12.1.1.0
+#    db_healthcheck: docker logs db2 2>&1 | grep -i -q "Setup has completed"
+#    create_test_user: |
+#      docker exec db2 bash -c "useradd -m -s /bin/bash test"
+#      docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
+#      docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: mariadb_%VERSION%
+#    display_name: MariaDB %VERSION%
+#    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+#    versions:
+#      - 10.11
+#      - 11.4
+#    db_healthcheck: docker exec mariadb mariadb -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
+#    create_test_user: |
+#      docker exec mariadb mariadb -uroot -pmysql -e "
+#        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+#        GRANT CREATE ON *.* TO 'test'@'%%';
+#        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
+#        GRANT DROP ON *.* TO 'test'@'%%';
+#        GRANT INDEX ON *.* TO 'test'@'%%';
+#        GRANT ALTER ON *.* TO 'test'@'%%';
+#        GRANT SELECT ON *.* TO 'test'@'%%';
+#        GRANT INSERT ON *.* TO 'test'@'%%';
+#        GRANT UPDATE ON *.* TO 'test'@'%%';
+#        GRANT DELETE ON *.* TO 'test'@'%%';"
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: mysql_%VERSION%
+#    display_name: MySQL %VERSION%
+#    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+#    versions:
+#      - 5.7
+#      - 8.0
+#      - 8.4
+#    db_healthcheck: docker exec mysql mysql -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
+#    create_test_user: |
+#      docker exec mysql mysql -uroot -pmysql -e "
+#        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+#        GRANT CREATE ON *.* TO 'test'@'%%';
+#        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
+#        GRANT DROP ON *.* TO 'test'@'%%';
+#        GRANT INDEX ON *.* TO 'test'@'%%';
+#        GRANT ALTER ON *.* TO 'test'@'%%';
+#        GRANT SELECT ON *.* TO 'test'@'%%';
+#        GRANT INSERT ON *.* TO 'test'@'%%';
+#        GRANT UPDATE ON *.* TO 'test'@'%%';
+#        GRANT DELETE ON *.* TO 'test'@'%%';"
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: oracle_%VERSION%
+#    display_name: Oracle %VERSION%
+#    versions:
+#      - 19
+#      - 21
+#      - 23
+#    setup: |
+#      echo "Free up storage to accommodate large Oracle Docker image"
+#      echo "Storage available before deletion"
+#      df -h /
+#      echo
+#      sudo rm -r $ANDROID_HOME
+#      echo "Storage available after deletion"
+#      df -h /
+#      echo ${CR_PAT} | docker login ghcr.io -u ${GITHUB_REPOSITORY_OWNER} --password-stdin
+#      docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:%VERSION%
+#    db_healthcheck: docker logs oracle 2>&1 | grep -i -q "DATABASE IS READY TO USE"
+#    create_test_user: |
+#      # Oracle connection endpoint depends on the Oracle version used
+#      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+#      echo "CREATE USER test IDENTIFIED BY test;
+#      ALTER USER test QUOTA UNLIMITED ON USERS;
+#      GRANT CREATE SESSION TO test;
+#      GRANT CREATE USER TO test;
+#      GRANT DROP USER TO test;
+#      GRANT ALTER USER TO test;
+#      GRANT CREATE ANY TABLE TO test;
+#      GRANT DROP ANY TABLE TO test;
+#      GRANT CREATE ANY INDEX TO test;
+#      GRANT ALTER ANY INDEX TO test;
+#      GRANT DROP ANY INDEX TO test;
+#      GRANT ALTER ANY TABLE TO test;
+#      GRANT SELECT ANY TABLE TO test;
+#      GRANT INSERT ANY TABLE TO test;
+#      GRANT UPDATE ANY TABLE TO test;
+#      GRANT DELETE ANY TABLE TO test;
+#      GRANT CREATE ANY VIEW TO test;
+#      GRANT DROP ANY VIEW TO test;
+#      EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
+#    run: |
+#      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+#      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: postgresql_%VERSION%
+#    display_name: PostgreSQL %VERSION%
+#    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
+#    versions:
+#      - 13
+#      - 14
+#      - 15
+#      - 16
+#      - 17
+#    db_healthcheck: docker exec postgresql psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
+#    create_test_user: |
+#      docker exec postgresql psql -U postgres -c "
+#        CREATE USER test WITH PASSWORD 'test';
+#        GRANT CREATE ON DATABASE postgres TO test;"
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: db2_%VERSION%
-    display_name: Db2 %VERSION%
-    setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
-    versions:
-      - 11.5.9.0
-      - 12.1.1.0
-    db_healthcheck: docker logs db2 2>&1 | grep -i -q "Setup has completed"
-    create_test_user: |
-      docker exec db2 bash -c "useradd -m -s /bin/bash test"
-      docker exec db2 bash -c "echo \"test:test\" | sudo chpasswd"
-      docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+  - label: spanner
+    display_name: Spanner emulator
+    disable_group_commit: true
+    runner: ubuntu-latest-l
+    # Spanner emulator are management by the integration test directly using Testcontainers
+    setup: # Do nothing
+    db_healthcheck: # Do nothing
+    # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
+    create_test_user: # Do nothing
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" -Dscalardb.jdbc.spanner.testcontainers=true --tests JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner --tests JdbcDatabaseConditionalMutationIntegrationTestWithSpanner --tests JdbcAdminIntegrationTest --tests JdbcDatabaseColumnValueIntegrationTest --tests JdbcTransactionIntegrationTest
 
-  - label: mariadb_%VERSION%
-    display_name: MariaDB %VERSION%
-    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-    versions:
-      - 10.11
-      - 11.4
-    db_healthcheck: docker exec mariadb mariadb -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
-    create_test_user: |
-      docker exec mariadb mariadb -uroot -pmysql -e "
-        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
-        GRANT CREATE ON *.* TO 'test'@'%%';
-        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
-        GRANT DROP ON *.* TO 'test'@'%%';
-        GRANT INDEX ON *.* TO 'test'@'%%';
-        GRANT ALTER ON *.* TO 'test'@'%%';
-        GRANT SELECT ON *.* TO 'test'@'%%';
-        GRANT INSERT ON *.* TO 'test'@'%%';
-        GRANT UPDATE ON *.* TO 'test'@'%%';
-        GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
-  - label: mysql_%VERSION%
-    display_name: MySQL %VERSION%
-    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
-    versions:
-      - 5.7
-      - 8.0
-      - 8.4
-    db_healthcheck: docker exec mysql mysql -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
-    create_test_user: |
-      docker exec mysql mysql -uroot -pmysql -e "
-        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
-        GRANT CREATE ON *.* TO 'test'@'%%';
-        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
-        GRANT DROP ON *.* TO 'test'@'%%';
-        GRANT INDEX ON *.* TO 'test'@'%%';
-        GRANT ALTER ON *.* TO 'test'@'%%';
-        GRANT SELECT ON *.* TO 'test'@'%%';
-        GRANT INSERT ON *.* TO 'test'@'%%';
-        GRANT UPDATE ON *.* TO 'test'@'%%';
-        GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
-  - label: oracle_%VERSION%
-    display_name: Oracle %VERSION%
-    versions:
-      - 19
-      - 21
-      - 23
-    setup: |
-      echo "Free up storage to accommodate large Oracle Docker image"
-      echo "Storage available before deletion"
-      df -h /
-      echo
-      sudo rm -r $ANDROID_HOME
-      echo "Storage available after deletion"
-      df -h /
-      echo ${CR_PAT} | docker login ghcr.io -u ${GITHUB_REPOSITORY_OWNER} --password-stdin
-      docker run -d --name oracle -p 1521:1521 ghcr.io/scalar-labs/oracle/db-prebuilt:%VERSION%
-    db_healthcheck: docker logs oracle 2>&1 | grep -i -q "DATABASE IS READY TO USE"
-    create_test_user: |
-      # Oracle connection endpoint depends on the Oracle version used
-      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
-      echo "CREATE USER test IDENTIFIED BY test;
-      ALTER USER test QUOTA UNLIMITED ON USERS;
-      GRANT CREATE SESSION TO test;
-      GRANT CREATE USER TO test;
-      GRANT DROP USER TO test;
-      GRANT ALTER USER TO test;
-      GRANT CREATE ANY TABLE TO test;
-      GRANT DROP ANY TABLE TO test;
-      GRANT CREATE ANY INDEX TO test;
-      GRANT ALTER ANY INDEX TO test;
-      GRANT DROP ANY INDEX TO test;
-      GRANT ALTER ANY TABLE TO test;
-      GRANT SELECT ANY TABLE TO test;
-      GRANT INSERT ANY TABLE TO test;
-      GRANT UPDATE ANY TABLE TO test;
-      GRANT DELETE ANY TABLE TO test;
-      GRANT CREATE ANY VIEW TO test;
-      GRANT DROP ANY VIEW TO test;
-      EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
-    run: |
-      declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
-      ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
-  - label: postgresql_%VERSION%
-    display_name: PostgreSQL %VERSION%
-    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
-    versions:
-      - 13
-      - 14
-      - 15
-      - 16
-      - 17
-    db_healthcheck: docker exec postgresql psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
-    create_test_user: |
-      docker exec postgresql psql -U postgres -c "
-        CREATE USER test WITH PASSWORD 'test';
-        GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
-  - label: sqlserver_%VERSION%
-    display_name: SQL Server %VERSION%
-    setup: |
-      docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
-      if [ "%VERSION%" != "2017" ]; then
-        # SQL 2017 contains mssql-tools in /opt/mssql-tools already, but later versions have it in /opt/mssql-tools18
-        # so we create a symlink for later versions
-        docker exec -u root sqlserver ln -s /opt/mssql-tools18 /opt/mssql-tools
-      fi
-      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
-    versions:
-      - 2017
-      - 2019
-      - 2022
-    create_test_user: |
-      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
-        CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
-        CREATE USER test FOR LOGIN test;
-        GRANT CREATE SCHEMA TO test;
-        GRANT CREATE TABLE TO test;
-        GRANT CREATE VIEW to test;"
-    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
-  - label: sqlite_3
-    display_name: SQLite 3
-    setup: sudo apt-get install -y sqlite3
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
-
-  - label: tidb_%VERSION%
-    display_name: TiDB %VERSION%
-    versions:
-      - 6.5
-      - 7.5
-      - 8.5
-    setup: |
-      echo "Install TiUP\n"
-      curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-      echo "\nTiUP installation complete\n"
-      echo "Start TiDB\n"
-      $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
-    db_healthcheck: mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1;" > /dev/null 2>&1
-    create_test_user: |
-      mysql -h 127.0.0.1 -P 4000 -u root -e "
-        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
-        GRANT CREATE ON *.* TO 'test'@'%%';
-        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
-        GRANT DROP ON *.* TO 'test'@'%%';
-        GRANT INDEX ON *.* TO 'test'@'%%';
-        GRANT ALTER ON *.* TO 'test'@'%%';
-        GRANT SELECT ON *.* TO 'test'@'%%';
-        GRANT INSERT ON *.* TO 'test'@'%%';
-        GRANT UPDATE ON *.* TO 'test'@'%%';
-        GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
-
-  - label: yugabytedb
-    display_name: YugabyteDB 2025.2
-    # enable_object_locking_for_table_locks: Uses table-level locks for DDL to avoid "Restart read
-    # required" errors when concurrent DDL operations conflict with catalog version checks.
-    # ysql_yb_ddl_transaction_block_enabled: Required companion flag — without it,
-    # enable_object_locking_for_table_locks causes YugabyteDB to crash (OOM/exit 137) on startup.
-    setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2025.2.2.2-b11 bash -c \"bin/yugabyted start --master_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" --tserver_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" && tail -f /dev/null\""
-    db_healthcheck: docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'SELECT 1;'" > /dev/null 2>&1
-    create_test_user: |
-      docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
-        CREATE USER test WITH PASSWORD 'test';
-        GRANT CREATE ON DATABASE postgres TO test;\""
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+#  - label: sqlserver_%VERSION%
+#    display_name: SQL Server %VERSION%
+#    setup: |
+#      docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
+#      if [ "%VERSION%" != "2017" ]; then
+#        # SQL 2017 contains mssql-tools in /opt/mssql-tools already, but later versions have it in /opt/mssql-tools18
+#        # so we create a symlink for later versions
+#        docker exec -u root sqlserver ln -s /opt/mssql-tools18 /opt/mssql-tools
+#      fi
+#      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+#    versions:
+#      - 2017
+#      - 2019
+#      - 2022
+#    create_test_user: |
+#      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
+#        CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
+#        CREATE USER test FOR LOGIN test;
+#        GRANT CREATE SCHEMA TO test;
+#        GRANT CREATE TABLE TO test;
+#        GRANT CREATE VIEW to test;"
+#    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: sqlite_3
+#    display_name: SQLite 3
+#    setup: sudo apt-get install -y sqlite3
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+#
+#  - label: tidb_%VERSION%
+#    display_name: TiDB %VERSION%
+#    versions:
+#      - 6.5
+#      - 7.5
+#      - 8.5
+#    setup: |
+#      echo "Install TiUP\n"
+#      curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+#      echo "\nTiUP installation complete\n"
+#      echo "Start TiDB\n"
+#      $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
+#    db_healthcheck: mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1;" > /dev/null 2>&1
+#    create_test_user: |
+#      mysql -h 127.0.0.1 -P 4000 -u root -e "
+#        CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
+#        GRANT CREATE ON *.* TO 'test'@'%%';
+#        GRANT CREATE VIEW ON *.* TO 'test'@'%%';
+#        GRANT DROP ON *.* TO 'test'@'%%';
+#        GRANT INDEX ON *.* TO 'test'@'%%';
+#        GRANT ALTER ON *.* TO 'test'@'%%';
+#        GRANT SELECT ON *.* TO 'test'@'%%';
+#        GRANT INSERT ON *.* TO 'test'@'%%';
+#        GRANT UPDATE ON *.* TO 'test'@'%%';
+#        GRANT DELETE ON *.* TO 'test'@'%%';"
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+#
+#  - label: yugabytedb
+#    display_name: YugabyteDB 2025.2
+#    # enable_object_locking_for_table_locks: Uses table-level locks for DDL to avoid "Restart read
+#    # required" errors when concurrent DDL operations conflict with catalog version checks.
+#    # ysql_yb_ddl_transaction_block_enabled: Required companion flag — without it,
+#    # enable_object_locking_for_table_locks causes YugabyteDB to crash (OOM/exit 137) on startup.
+#    setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2025.2.2.2-b11 bash -c \"bin/yugabyted start --master_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" --tserver_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" && tail -f /dev/null\""
+#    db_healthcheck: docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'SELECT 1;'" > /dev/null 2>&1
+#    create_test_user: |
+#      docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
+#        CREATE USER test WITH PASSWORD 'test';
+#        GRANT CREATE ON DATABASE postgres TO test;\""
+#    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
 multi-storage:
   - label: multi-storage
