@@ -51,7 +51,6 @@ public class RecoveryHandler {
     }
   }
 
-  @VisibleForTesting
   void rollbackRecord(Selection selection, TransactionResult result) throws ExecutionException {
     assert selection.forFullTableName().isPresent();
 
@@ -156,7 +155,7 @@ public class RecoveryHandler {
    * @throws CoordinatorException if writing the ABORTED state fails for a reason other than a
    *     conflict
    */
-  public boolean tryAbortExpiredTransaction(String id) throws CoordinatorException {
+  boolean tryAbortExpiredTransaction(String id) throws CoordinatorException {
     try {
       coordinator.putStateForLazyRecoveryRollback(id);
       return true;
@@ -210,7 +209,7 @@ public class RecoveryHandler {
     storage.mutate(mutations);
   }
 
-  public boolean isTransactionExpired(TransactionResult result) {
+  boolean isTransactionExpired(TransactionResult result) {
     long current = System.currentTimeMillis();
     return current > result.getPreparedAt() + TRANSACTION_LIFETIME_MILLIS;
   }
