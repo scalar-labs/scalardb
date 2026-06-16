@@ -81,7 +81,25 @@ public class CommitHandler {
     }
   }
 
-  private Optional<Future<Void>> invokeBeforePreparationHook(TransactionContext context)
+  // Aborts the coordinator state and rolls back records as needed after a pre-commit failure. When
+  // the transaction has no writes and deletes, there are no records to roll back. In that case the
+  // coordinator state is still aborted unless coordinator write omission on read-only is enabled:
+  // when it is, a write-less transaction (a read-only one, or a non-read-only one with an empty
+  // write set) writes no coordinator state row on the commit path either, so there is nothing to
+  // abort.
+  private void abortStateAndRollbackRecordsIfNeeded(
+      TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
+      throws UnknownTransactionStatusException {
+    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+      abortState(context.transactionId);
+    }
+    if (hasWritesOrDeletesInSnapshot) {
+      rollbackRecords(context);
+    }
+  }
+
+  private Optional<Future<Void>> invokeBeforePreparationHook(
+      TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException, CommitException {
     if (beforePreparationHook == null) {
       return Optional.empty();
@@ -91,8 +109,9 @@ public class CommitHandler {
       return Optional.of(beforePreparationHook.handle(tableMetadataManager, context));
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
-      abortState(context.transactionId);
-      rollbackRecords(context);
+
+      abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
+
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
               e.getMessage()),
@@ -102,7 +121,9 @@ public class CommitHandler {
   }
 
   private void waitBeforePreparationHookFuture(
-      TransactionContext context, @Nullable Future<Void> beforePreparationHookFuture)
+      TransactionContext context,
+      @Nullable Future<Void> beforePreparationHookFuture,
+      boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException, CommitException {
     if (beforePreparationHookFuture == null) {
       return;
@@ -112,8 +133,9 @@ public class CommitHandler {
       beforePreparationHookFuture.get();
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
-      abortState(context.transactionId);
-      rollbackRecords(context);
+
+      abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
+
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
               e.getMessage()),
@@ -127,7 +149,8 @@ public class CommitHandler {
     boolean hasWritesOrDeletesInSnapshot =
         !context.readOnly && context.snapshot.hasWritesOrDeletes();
 
-    Optional<Future<Void>> beforePreparationHookFuture = invokeBeforePreparationHook(context);
+    Optional<Future<Void>> beforePreparationHookFuture =
+        invokeBeforePreparationHook(context, hasWritesOrDeletesInSnapshot);
 
     if (canOnePhaseCommit(context)) {
       try {
@@ -162,14 +185,7 @@ public class CommitHandler {
       } catch (ValidationException e) {
         safelyCallOnFailureBeforeCommit(context);
 
-        // If the transaction has no writes and deletes, we don't need to abort-state and
-        // rollback-records since there are no changes to be made.
-        if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-          abortState(context.transactionId);
-        }
-        if (hasWritesOrDeletesInSnapshot) {
-          rollbackRecords(context);
-        }
+        abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
 
         if (e instanceof ValidationConflictException) {
           throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
@@ -181,7 +197,8 @@ public class CommitHandler {
       }
     }
 
-    waitBeforePreparationHookFuture(context, beforePreparationHookFuture.orElse(null));
+    waitBeforePreparationHookFuture(
+        context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
       commitState(context);
@@ -329,6 +346,10 @@ public class CommitHandler {
   }
 
   public void validateRecords(TransactionContext context) throws ValidationException {
+    if (!context.isValidationRequired()) {
+      return;
+    }
+
     try {
       // validation is executed when SERIALIZABLE is chosen.
       context.snapshot.toSerializable(storage);
