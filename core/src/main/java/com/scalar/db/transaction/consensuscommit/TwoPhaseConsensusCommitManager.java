@@ -484,7 +484,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     } catch (CoordinatorException ignored) {
       // ignored
     }
-    // Either no state exists or the exception is thrown
+
+    // The Coordinator state row is absent (the transaction never existed, or it was finished and
+    // cleaned up) or could not be read. These are indistinguishable here, so report UNKNOWN.
     return TransactionState.UNKNOWN;
   }
 
