@@ -57,9 +57,9 @@ import javax.annotation.Nullable;
  * data.
  */
 final class WriteSetEncoder {
-  private final TransactionTableMetadataManager tableMetadataManager;
-  private final CoordinatorGroupCommitKeyManipulator keyManipulator =
+  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
       new CoordinatorGroupCommitKeyManipulator();
+  private final TransactionTableMetadataManager tableMetadataManager;
 
   WriteSetEncoder(TransactionTableMetadataManager tableMetadataManager) {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -108,7 +108,7 @@ final class WriteSetEncoder {
         // Skip read-only children: their EntryGroup would carry no entries.
         continue;
       }
-      String childId = keyManipulator.keysFromFullKey(context.transactionId).childKey;
+      String childId = KEY_MANIPULATOR.keysFromFullKey(context.transactionId).childKey;
       builder.addEntryGroups(encodeEntryGroup(context.snapshot, childId, includeColumns));
     }
     return builder.build();
