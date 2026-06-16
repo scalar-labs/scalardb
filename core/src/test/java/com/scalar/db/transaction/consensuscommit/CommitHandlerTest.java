@@ -643,8 +643,12 @@ public class CommitHandlerTest {
     TransactionState result = handler.abortStateForRollback(anyId());
 
     // Assert
-    // The abort goes through the lazy-recovery two-step protocol (which writes the parent-ID
-    // conflict marker before the full-ID record for a group commit full key), not a plain putState.
+    // The abort delegates to Coordinator#putStateForLazyRecoveryRollback rather than a plain
+    // putState. That method branches on the ID: it writes the parent-ID conflict marker before the
+    // full-ID record for a group commit full key (so the abort wins against an in-flight group
+    // commit), and falls back to a single putState for a non-group-commit ID. Which branch runs
+    // here depends on anyId(): a non-group-commit ID in this base class, a group commit full key in
+    // the group commit subclass that overrides anyId().
     assertThat(result).isEqualTo(TransactionState.ABORTED);
     verify(coordinator).putStateForLazyRecoveryRollback(anyId());
     verify(coordinator, never()).putState(any());
