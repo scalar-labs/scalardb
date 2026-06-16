@@ -1475,12 +1475,6 @@ public enum CoreError implements ScalarDbError {
       "Rolling back the transaction failed. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
-      "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
-      "",
-      ""),
   CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0002",
