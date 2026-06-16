@@ -251,9 +251,9 @@ public class RdbEngineStrategyExceptionIntegrationTest {
                 }
               });
 
-      assertThat((Object) thrown.get())
+      assertThat(thrown.get().getErrorCode())
           .as("Expected throwIfDuplicatedIndexWarning to throw for DB2 warning code 605")
-          .isNotNull();
+          .isEqualTo(605);
     } finally {
       executeIgnoringError(
           "DROP TABLE " + rdbEngine.encloseFullTableName(TEST_SCHEMA, DUP_INDEX_TABLE));
