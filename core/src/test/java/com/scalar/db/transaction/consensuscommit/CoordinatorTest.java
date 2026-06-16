@@ -952,6 +952,72 @@ public class CoordinatorTest {
   }
 
   @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenParentRowAlreadyCleanedUpAndNoFullIdRecord_ShouldInsertRecordWithFullId()
+          throws CoordinatorException {
+    // The parent-id insert conflicts because a finished group-commit row existed, but the
+    // Coordinator state cleanup process removed it before we re-read it. With no full-ID record,
+    // this transaction is genuinely uncommitted (e.g. a delayed group commit that never landed), so
+    // we fall through to insert the full-ID ABORTED record instead of crashing with AssertionError.
+
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(Optional.empty()).when(spiedCoordinator).getState(parentId);
+
+    // Act
+    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
+  void
+      putStateForLazyRecoveryRollback_FullIdGivenWhenParentRowAlreadyCleanedUpAndTransactionCommittedWithFullId_ShouldThrowCoordinatorConflictException()
+          throws CoordinatorException {
+    // The parent row was cleaned up after our parent-id insert conflicted, but this transaction
+    // actually committed via a full-ID record (a delayed, standalone commit). Falling through to
+    // insert the full-ID ABORTED record conflicts with that committed record, which propagates so
+    // the caller re-reads the committed outcome instead of treating the transaction as aborted.
+
+    // Arrange
+    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+    doReturn(Optional.empty()).when(spiedCoordinator).getState(parentId);
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putState(new State(fullId, TransactionState.ABORTED));
+
+    // Act
+    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+        .isInstanceOf(CoordinatorConflictException.class);
+
+    // Assert
+    verify(spiedCoordinator)
+        .putStateForGroupCommit(
+            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
+    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+  }
+
+  @Test
   public void state_WriteSetSerializationRoundTrip_ShouldPreserveContent()
       throws CoordinatorException {
     // Arrange — build a State that carries a populated WriteSet.
