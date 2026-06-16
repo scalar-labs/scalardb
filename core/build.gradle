@@ -296,6 +296,7 @@ task integrationTestJdbc(type: Test) {
     // Testcontainers (used by Spanner emulator tests) can connect to the local Docker daemon.
     // This property is ignored for non-Testcontainers test runs.
     jvmArgs "-Dapi.version=1.41"
+    maxParallelForks = 8
 }
 
 task integrationTestObjectStorage(type: Test) {

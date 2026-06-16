@@ -227,14 +227,14 @@ jdbc:
 
   - label: spanner
     display_name: Spanner emulator
-    disable_group_commit: true
+#    disable_group_commit: true
     runner: ubuntu-latest-l
     # Spanner emulator are management by the integration test directly using Testcontainers
     setup: # Do nothing
     db_healthcheck: # Do nothing
     # Spanner emulator does not support user management; authentication is bypassed with autoConfigEmulator=true
     create_test_user: # Do nothing
-    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" -Dscalardb.jdbc.spanner.testcontainers=true --tests JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner --tests JdbcDatabaseConditionalMutationIntegrationTestWithSpanner --tests JdbcAdminIntegrationTest --tests JdbcDatabaseColumnValueIntegrationTest --tests JdbcTransactionIntegrationTest
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" "-Dscalardb.jdbc.spanner.testcontainers=true"
 
 #  - label: sqlserver_%VERSION%
 #    display_name: SQL Server %VERSION%
