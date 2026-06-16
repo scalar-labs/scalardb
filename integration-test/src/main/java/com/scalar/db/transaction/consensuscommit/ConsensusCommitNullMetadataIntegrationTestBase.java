@@ -635,9 +635,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -690,9 +690,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -865,9 +865,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -920,9 +920,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
