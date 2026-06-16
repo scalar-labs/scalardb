@@ -33,6 +33,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean onePhaseCommitEnabled,
+      boolean txWriteSetIncludeColumnsEnabled,
       CoordinatorGroupCommitter groupCommitter) {
     super(
         storage,
@@ -41,10 +42,12 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         parallelExecutor,
         mutationsGrouper,
         coordinatorWriteOmissionOnReadOnlyEnabled,
-        onePhaseCommitEnabled);
+        onePhaseCommitEnabled,
+        txWriteSetIncludeColumnsEnabled);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(new Emitter(coordinator, writeSetEncoder));
+    groupCommitter.setEmitter(
+        new Emitter(coordinator, writeSetEncoder, txWriteSetIncludeColumnsEnabled));
     this.groupCommitter = groupCommitter;
   }
 
@@ -156,10 +159,15 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   static class Emitter implements Emittable<String, String, TransactionContext> {
     private final Coordinator coordinator;
     private final WriteSetEncoder writeSetEncoder;
+    private final boolean txWriteSetIncludeColumnsEnabled;
 
-    public Emitter(Coordinator coordinator, WriteSetEncoder writeSetEncoder) {
+    public Emitter(
+        Coordinator coordinator,
+        WriteSetEncoder writeSetEncoder,
+        boolean txWriteSetIncludeColumnsEnabled) {
       this.coordinator = coordinator;
       this.writeSetEncoder = writeSetEncoder;
+      this.txWriteSetIncludeColumnsEnabled = txWriteSetIncludeColumnsEnabled;
     }
 
     @Override
@@ -180,7 +188,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       coordinator.putStateForGroupCommit(
           parentId,
           transactionIds,
-          writeSetEncoder.encodeMultiGroupWriteSet(contexts, false),
+          writeSetEncoder.encodeMultiGroupWriteSet(contexts, txWriteSetIncludeColumnsEnabled),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
 
@@ -199,7 +207,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       coordinator.putState(
           new State(
               fullId,
-              writeSetEncoder.encodeSingleGroupWriteSet(context, false),
+              writeSetEncoder.encodeSingleGroupWriteSet(context, txWriteSetIncludeColumnsEnabled),
               TransactionState.COMMITTED));
 
       logger.debug(

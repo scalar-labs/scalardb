@@ -10714,6 +10714,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           mutationsGrouper,
           true,
           false,
+          false,
           groupCommitter);
     } else {
       return new CommitHandler(
@@ -10723,7 +10724,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           parallelExecutor,
           mutationsGrouper,
           true,
-          onePhaseCommitEnabled);
+          onePhaseCommitEnabled,
+          false);
     }
   }
 

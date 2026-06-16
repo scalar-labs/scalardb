@@ -59,6 +59,7 @@ sourceSets {
             include '**/com/scalar/db/common/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/cbrl/*.java'
             exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionTestUtils.java'
             exclude '**/com/scalar/db/storage/jdbc/JdbcPermissionIntegrationTest.java'
             exclude '**/com/scalar/db/storage/jdbc/JdbcAdminPermissionIntegrationTest.java'

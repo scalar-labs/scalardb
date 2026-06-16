@@ -211,6 +211,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
           config.isOnePhaseCommitEnabled(),
+          config.isTxWriteSetIncludeColumnsEnabled(),
           groupCommitter);
     } else {
       return new CommitHandler(
@@ -220,7 +221,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           parallelExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
-          config.isOnePhaseCommitEnabled());
+          config.isOnePhaseCommitEnabled(),
+          config.isTxWriteSetIncludeColumnsEnabled());
     }
   }
 

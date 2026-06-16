@@ -47,6 +47,8 @@ public class CommitHandler {
   final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
+  // CBRL spike: when true, tx_write_set records full (partial) after-image columns, not just keys.
+  final boolean txWriteSetIncludeColumnsEnabled;
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
 
@@ -58,7 +60,8 @@ public class CommitHandler {
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
-      boolean onePhaseCommitEnabled) {
+      boolean onePhaseCommitEnabled,
+      boolean txWriteSetIncludeColumnsEnabled) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -67,6 +70,7 @@ public class CommitHandler {
     this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
+    this.txWriteSetIncludeColumnsEnabled = txWriteSetIncludeColumnsEnabled;
   }
 
   /**
@@ -379,7 +383,9 @@ public class CommitHandler {
    */
   public void commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+    commitStateInternal(
+        context,
+        writeSetEncoder.encodeSingleGroupWriteSet(context, txWriteSetIncludeColumnsEnabled));
   }
 
   /**
@@ -445,7 +451,8 @@ public class CommitHandler {
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
     return abortStateInternal(
-        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+        context.transactionId,
+        writeSetEncoder.encodeSingleGroupWriteSet(context, txWriteSetIncludeColumnsEnabled));
   }
 
   /**

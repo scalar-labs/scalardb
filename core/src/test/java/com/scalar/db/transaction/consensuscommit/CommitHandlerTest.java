@@ -96,12 +96,20 @@ public class CommitHandlerTest {
         parallelExecutor,
         new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        false,
         false);
   }
 
   protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
     return new CommitHandler(
-        storage, coordinator, tableMetadataManager, parallelExecutor, mutationsGrouper, true, true);
+        storage,
+        coordinator,
+        tableMetadataManager,
+        parallelExecutor,
+        mutationsGrouper,
+        true,
+        true,
+        false);
   }
 
   @BeforeEach
