@@ -1,7 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -9,7 +7,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import org.junit.jupiter.api.AfterAll;
@@ -137,12 +134,5 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       }
     }
     return super.getColumnWithMaxValue(columnName, dataType);
-  }
-
-  @Override
-  protected List<DataType> getDataTypes() {
-        //TODO revert before merging
-    // TEMPORARY D-25 validation-run cardinality reduction — DO NOT COMMIT (reverted after run)
-    return java.util.Arrays.asList(DataType.INT, DataType.TEXT);
   }
 }

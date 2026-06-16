@@ -1,17 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.DistributedStorageConditionalMutationIntegrationTestBase;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.TestUtils;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.condition.DisabledIf;
 
@@ -80,18 +76,5 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
   @Override
   protected boolean isConditionOnBlobColumnSupported() {
     return !JdbcTestUtils.isOracle(rdbEngine);
-  }
-    protected List<OperatorAndDataType> getOperatorAndDataTypeListForTest() {
-    List<DataType> dataTypes = Lists.newArrayList(DataType.FLOAT, DataType.TEXT);
-
-    List<OperatorAndDataType> ret = new ArrayList<>();
-    for (Operator operator : Operator.values()) {
-      if (operator != Operator.LIKE && operator != Operator.NOT_LIKE) {
-        for (DataType dataType : dataTypes) {
-          ret.add(new OperatorAndDataType(operator, dataType));
-        }
-      }
-    }
-    return ret;
   }
 }
