@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorageMultipleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -7,6 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import org.junit.jupiter.api.AfterAll;
@@ -134,5 +137,22 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
       }
     }
     return super.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  @Override
+  protected List<DataType> getDataTypes() {
+    // TIMESTAMP WITH TIME ZONE type cannot be used as a primary key in Oracle
+    // BLOB type cannot be used as a clustering key in Db2
+    // FLOAT type cannot be used as clustering key column in Spanner
+    return JdbcTestUtils.filterDataTypes(
+        super.getDataTypes(),
+        rdbEngine,
+        ImmutableMap.of(
+            RdbEngineOracle.class,
+            ImmutableList.of(DataType.TIMESTAMPTZ, DataType.BLOB),
+            RdbEngineDb2.class,
+            ImmutableList.of(DataType.BLOB),
+            RdbEngineSpanner.class,
+            ImmutableList.of(DataType.FLOAT)));
   }
 }

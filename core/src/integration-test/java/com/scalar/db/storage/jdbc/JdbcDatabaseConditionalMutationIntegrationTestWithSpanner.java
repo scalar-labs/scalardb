@@ -40,7 +40,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
   @Override
   protected int getThreadNum() {
     // Optimized for a standard Github action runner
-    //TODO revert before merging
+    // TODO revert before merging
     return 8;
   }
 
