@@ -41,6 +41,10 @@ public class ConsensusCommitConfig {
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
   public static final String INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED =
       PREFIX + "index.eventually_consistent_read.enabled";
+  // CBRL PoC (temporary): sets the initial redo-logging mode (full write-set logging) so a
+  // benchmark can pick the mode via config. Default false. Not the production enablement — that is
+  // the dynamic backup-window flag.
+  public static final String REDO_LOGGING_ENABLED = PREFIX + "redo_logging.enabled";
 
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
   public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
@@ -79,6 +83,7 @@ public class ConsensusCommitConfig {
 
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
+  private final boolean redoLoggingEnabled;
   private final boolean parallelImplicitPreReadEnabled;
   private final boolean includeMetadataEnabled;
   private final boolean indexEventuallyConsistentReadEnabled;
@@ -151,6 +156,7 @@ public class ConsensusCommitConfig {
         getBoolean(properties, COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED, true);
 
     onePhaseCommitEnabled = getBoolean(properties, ONE_PHASE_COMMIT_ENABLED, false);
+    redoLoggingEnabled = getBoolean(properties, REDO_LOGGING_ENABLED, false);
 
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
@@ -230,6 +236,10 @@ public class ConsensusCommitConfig {
 
   public boolean isOnePhaseCommitEnabled() {
     return onePhaseCommitEnabled;
+  }
+
+  public boolean isRedoLoggingEnabled() {
+    return redoLoggingEnabled;
   }
 
   public boolean isParallelImplicitPreReadEnabled() {

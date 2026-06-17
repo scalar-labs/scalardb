@@ -42,6 +42,7 @@ import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -137,14 +138,29 @@ final class WriteSetEncoder {
     for (Map.Entry<Snapshot.Key, Put> e : snapshot.getWriteSet()) {
       Put put = e.getValue();
       TableMetadata tableMetadata = includeColumns ? getTableMetadata(put) : null;
+      Optional<TransactionResult> priorResult =
+          includeColumns ? readSetResult(snapshot, e.getKey()) : Optional.empty();
       builder.addEntries(
-          encodeEntry(put, Entry.EntryType.ENTRY_TYPE_WRITE, includeColumns, tableMetadata));
+          encodeEntry(
+              put, Entry.EntryType.ENTRY_TYPE_WRITE, includeColumns, tableMetadata, priorResult));
     }
     for (Map.Entry<Snapshot.Key, Delete> e : snapshot.getDeleteSet()) {
-      // Delete entries never carry non-key columns, so no meta-column filtering is needed.
-      builder.addEntries(encodeEntry(e.getValue(), Entry.EntryType.ENTRY_TYPE_DELETE, false, null));
+      // Delete entries never carry non-key columns, so no meta-column filtering is needed; but in
+      // full (redo) mode they still carry the prev_tx_id/tx_version chain metadata.
+      Optional<TransactionResult> priorResult =
+          includeColumns ? readSetResult(snapshot, e.getKey()) : Optional.empty();
+      builder.addEntries(
+          encodeEntry(
+              e.getValue(), Entry.EntryType.ENTRY_TYPE_DELETE, includeColumns, null, priorResult));
     }
     return builder.build();
+  }
+
+  // Snapshot.getFromReadSet returns null (not Optional.empty()) when the key was never read — e.g.,
+  // a blind insert. Normalize that to an empty Optional meaning "no prior committed version".
+  private static Optional<TransactionResult> readSetResult(Snapshot snapshot, Snapshot.Key key) {
+    Optional<TransactionResult> result = snapshot.getFromReadSet(key);
+    return result == null ? Optional.empty() : result;
   }
 
   private TableMetadata getTableMetadata(Mutation mutation) {
@@ -165,7 +181,8 @@ final class WriteSetEncoder {
       Mutation mutation,
       Entry.EntryType type,
       boolean includeColumns,
-      @Nullable TableMetadata tableMetadata) {
+      @Nullable TableMetadata tableMetadata,
+      Optional<TransactionResult> priorResult) {
     Entry.Builder builder = Entry.newBuilder().setEntryType(type);
     mutation.forNamespace().ifPresent(builder::setNamespaceName);
     mutation.forTable().ifPresent(builder::setTableName);
@@ -181,6 +198,13 @@ final class WriteSetEncoder {
         }
         builder.addColumns(encodeColumn(column));
       }
+    }
+    if (includeColumns) {
+      // Full (redo) mode: record the chain metadata CBRL replay needs. prev_tx_id is the prior
+      // committed version's transaction id (absent for a first insert); tx_version is the
+      // record's resulting version (prior version + 1, or 1 for a first insert).
+      priorResult.ifPresent(result -> builder.setPrevTxId(result.getId()));
+      builder.setTxVersion(priorResult.map(result -> result.getVersion() + 1).orElse(1));
     }
     return builder.build();
   }

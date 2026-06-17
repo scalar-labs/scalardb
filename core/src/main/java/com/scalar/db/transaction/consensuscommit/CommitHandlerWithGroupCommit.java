@@ -15,6 +15,7 @@ import com.scalar.db.util.groupcommit.GroupCommitException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         onePhaseCommitEnabled);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
-    groupCommitter.setEmitter(new Emitter(coordinator, writeSetEncoder));
+    groupCommitter.setEmitter(new Emitter(coordinator, writeSetEncoder, redoLoggingEnabled));
     this.groupCommitter = groupCommitter;
   }
 
@@ -156,10 +157,15 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   static class Emitter implements Emittable<String, String, TransactionContext> {
     private final Coordinator coordinator;
     private final WriteSetEncoder writeSetEncoder;
+    private final AtomicBoolean redoLoggingEnabled;
 
-    public Emitter(Coordinator coordinator, WriteSetEncoder writeSetEncoder) {
+    public Emitter(
+        Coordinator coordinator,
+        WriteSetEncoder writeSetEncoder,
+        AtomicBoolean redoLoggingEnabled) {
       this.coordinator = coordinator;
       this.writeSetEncoder = writeSetEncoder;
+      this.redoLoggingEnabled = redoLoggingEnabled;
     }
 
     @Override
@@ -180,7 +186,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       coordinator.putStateForGroupCommit(
           parentId,
           transactionIds,
-          writeSetEncoder.encodeMultiGroupWriteSet(contexts, false),
+          writeSetEncoder.encodeMultiGroupWriteSet(contexts, redoLoggingEnabled.get()),
           TransactionState.COMMITTED,
           System.currentTimeMillis());
 
@@ -199,7 +205,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       coordinator.putState(
           new State(
               fullId,
-              writeSetEncoder.encodeSingleGroupWriteSet(context, false),
+              writeSetEncoder.encodeSingleGroupWriteSet(context, redoLoggingEnabled.get()),
               TransactionState.COMMITTED));
 
       logger.debug(

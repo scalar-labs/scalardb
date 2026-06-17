@@ -237,4 +237,15 @@ message Entry {
   // the primary keys (e.g., the active-recovery use case) and leave this field empty.
   // `ENTRY_TYPE_DELETE` entries always leave this field empty.
   repeated Column columns = 6;
+
+  // The transaction id of the record's previous committed version — the chain link CBRL replay
+  // orders by. Empty when this write is the record's first version (an insert with no prior
+  // committed record). Only populated for the full (redo-logging) write set, not the keys-only
+  // active-recovery write set.
+  optional string prev_tx_id = 7;
+
+  // The record's resulting version after this write. Carried so CBRL restore can stamp the
+  // restored record with a coherent version (it is not used for replay ordering — the chain is).
+  // Only populated for the full (redo-logging) write set.
+  optional int32 tx_version = 8;
 }

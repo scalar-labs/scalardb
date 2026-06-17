@@ -586,6 +586,30 @@ public interface DistributedTransactionManager
       throws TransactionException;
 
   /**
+   * Enables redo logging (full write-set logging) at runtime, for the Coordinator-Based Redo
+   * Logging (CBRL) backup window. Tentative PoC API: a process-local toggle that makes subsequent
+   * commits record full after-image column values in the Coordinator's write set. The production
+   * mechanism is expected to be a dynamic, all-process backup-window flag instead.
+   *
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     redo logging
+   */
+  default void enableRedoLogging() {
+    throw new UnsupportedOperationException("Redo logging is not supported");
+  }
+
+  /**
+   * Disables redo logging (reverts to default write-set logging) at runtime. See {@link
+   * #enableRedoLogging()}.
+   *
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     redo logging
+   */
+  default void disableRedoLogging() {
+    throw new UnsupportedOperationException("Redo logging is not supported");
+  }
+
+  /**
    * Closes connections to the cluster. The connections are shared among multiple services such as
    * StorageService and TransactionService, thus this should only be used when closing applications.
    */

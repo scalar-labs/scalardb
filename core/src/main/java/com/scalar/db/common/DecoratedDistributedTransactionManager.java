@@ -312,6 +312,16 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
+  public void enableRedoLogging() {
+    transactionManager.enableRedoLogging();
+  }
+
+  @Override
+  public void disableRedoLogging() {
+    transactionManager.disableRedoLogging();
+  }
+
+  @Override
   public void close() {
     transactionManager.close();
   }

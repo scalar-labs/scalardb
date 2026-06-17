@@ -202,26 +202,33 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private CommitHandler createCommitHandler(
       ConsensusCommitConfig config, StorageInfoProvider storageInfoProvider) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(storageInfoProvider);
+    CommitHandler handler;
     if (isGroupCommitEnabled()) {
-      return new CommitHandlerWithGroupCommit(
-          storage,
-          coordinator,
-          tableMetadataManager,
-          parallelExecutor,
-          mutationsGrouper,
-          config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
-          config.isOnePhaseCommitEnabled(),
-          groupCommitter);
+      handler =
+          new CommitHandlerWithGroupCommit(
+              storage,
+              coordinator,
+              tableMetadataManager,
+              parallelExecutor,
+              mutationsGrouper,
+              config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+              config.isOnePhaseCommitEnabled(),
+              groupCommitter);
     } else {
-      return new CommitHandler(
-          storage,
-          coordinator,
-          tableMetadataManager,
-          parallelExecutor,
-          mutationsGrouper,
-          config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
-          config.isOnePhaseCommitEnabled());
+      handler =
+          new CommitHandler(
+              storage,
+              coordinator,
+              tableMetadataManager,
+              parallelExecutor,
+              mutationsGrouper,
+              config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
+              config.isOnePhaseCommitEnabled());
     }
+    // CBRL PoC: set the initial redo-logging mode from config so a benchmark can pick the mode
+    // without code. The runtime enable/disableRedoLogging() can still flip it afterward.
+    handler.setRedoLoggingEnabled(config.isRedoLoggingEnabled());
+    return handler;
   }
 
   @Override
@@ -802,6 +809,16 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   @VisibleForTesting
   boolean isGroupCommitEnabled() {
     return groupCommitter != null;
+  }
+
+  @Override
+  public void enableRedoLogging() {
+    commit.setRedoLoggingEnabled(true);
+  }
+
+  @Override
+  public void disableRedoLogging() {
+    commit.setRedoLoggingEnabled(false);
   }
 
   @Override
