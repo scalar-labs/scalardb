@@ -111,7 +111,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -129,7 +131,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -151,7 +155,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -173,7 +179,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -191,7 +198,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -214,7 +222,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -246,7 +255,8 @@ public class RecoveryHandlerTest {
     // Assert — the writer may still be in flight, so the record is not recovered.
     assertThat(recovered).isFalse();
     verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        .putState(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -285,7 +295,10 @@ public class RecoveryHandlerTest {
         .putStateForLazyRecoveryRollback(anyString());
     // A concurrent actor already aborted the writer; the re-read returns that ABORTED state.
     when(coordinator.getState(ANY_ID_1))
-        .thenReturn(Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED)));
+        .thenReturn(
+            Optional.of(
+                new Coordinator.State(
+                    ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis())));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -313,7 +326,10 @@ public class RecoveryHandlerTest {
     // A concurrent commit won the race; the re-read sees COMMITTED, which must be reported
     // instead of a false ABORTED.
     when(coordinator.getState(ANY_ID_1))
-        .thenReturn(Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED)));
+        .thenReturn(
+            Optional.of(
+                new Coordinator.State(
+                    ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis())));
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -596,7 +612,8 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED);
+    Coordinator.State state =
+        new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis());
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -613,7 +630,8 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
+    Coordinator.State state =
+        new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -635,7 +653,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -651,7 +671,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act

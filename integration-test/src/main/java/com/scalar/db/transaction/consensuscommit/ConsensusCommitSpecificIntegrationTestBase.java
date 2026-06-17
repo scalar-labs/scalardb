@@ -1672,14 +1672,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
       // via tryRecover()
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
       // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
       verify(recovery, never())
           .tryRecover(any(Selection.class), any(TransactionResult.class), any());
@@ -2170,14 +2176,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
       // via tryRecover()
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
       // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
       verify(recovery, never())
           .tryRecover(any(Selection.class), any(TransactionResult.class), any());
@@ -2348,7 +2360,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // before the result is returned, then the record is rolled back in the background.
     // tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+    verify(coordinator)
+        .putState(
+            new Coordinator.State(
+                ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
@@ -2532,7 +2547,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         INITIAL_BALANCE,
         ANY_ID_2,
         current);
-    coordinator.putState(new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED));
+    coordinator.putState(
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis()));
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2606,7 +2622,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         INITIAL_BALANCE,
         ANY_ID_2,
         current);
-    coordinator.putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
+    coordinator.putState(
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2659,7 +2676,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         INITIAL_BALANCE,
         ANY_ID_2,
         current);
-    coordinator.putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
+    coordinator.putState(
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2874,7 +2892,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build();
     storage.put(put);
 
-    coordinator.putState(new Coordinator.State(ANY_ID_2, coordinatorState));
+    coordinator.putState(
+        new Coordinator.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
   }
 
   private void
@@ -3106,7 +3125,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // before the records are returned, then the record is rolled back in the background.
     // tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+    verify(coordinator)
+        .putState(
+            new Coordinator.State(
+                ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
@@ -3457,7 +3479,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       return ANY_ID_2;
     }
 
-    coordinator.putState(new Coordinator.State(ANY_ID_2, coordinatorState));
+    coordinator.putState(
+        new Coordinator.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
     return ANY_ID_2;
   }
 
@@ -3495,7 +3518,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws CoordinatorException {
     doAnswer(
             invocation -> {
-              coordinator.putState(new Coordinator.State(ongoingTxId, TransactionState.COMMITTED));
+              coordinator.putState(
+                  new Coordinator.State(
+                      ongoingTxId, TransactionState.COMMITTED, System.currentTimeMillis()));
               return Optional.empty();
             })
         .doCallRealMethod()
@@ -4116,7 +4141,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws CoordinatorException {
     // The re-preparing transaction is aborted, so resolving it rolls the record back to its
     // before-image, restoring the intervening committed value as the record's committed image.
-    coordinator.putState(new Coordinator.State(REPREPARING_TX_ID, TransactionState.ABORTED));
+    coordinator.putState(
+        new Coordinator.State(
+            REPREPARING_TX_ID, TransactionState.ABORTED, System.currentTimeMillis()));
     doAnswer(
             invocation -> {
               rePrepareRecordByDifferentTransaction();
@@ -4665,14 +4692,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     if (isolation == Isolation.READ_COMMITTED) {
       // In READ_COMMITTED isolation, the record is recovered in the background via tryRecover()
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
       // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
       verify(recovery, never())
           .tryRecover(any(Selection.class), any(TransactionResult.class), any());
@@ -4894,14 +4927,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     if (isolation == Isolation.READ_COMMITTED) {
       // In READ_COMMITTED isolation, the record is recovered in the background via tryRecover()
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
       // (its ABORTED coordinator state is written) before the before-image is returned, then the
       // record is rolled back in the background. tryRecover() is not used on this path.
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(coordinator)
+          .putState(
+              new Coordinator.State(
+                  ongoingTxId, TransactionState.ABORTED, System.currentTimeMillis()));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
       verify(recovery, never())
           .tryRecover(any(Selection.class), any(TransactionResult.class), any());
@@ -10684,7 +10723,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                     .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0))
                     .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 1)))
             .build();
-    coordinator.putState(new Coordinator.State(txId, writeSet, TransactionState.ABORTED));
+    coordinator.putState(
+        new Coordinator.State(
+            txId, writeSet, TransactionState.ABORTED, System.currentTimeMillis()));
 
     // Sanity check
     Optional<Result> rawBefore = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -11304,7 +11345,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     switch (commitType) {
       case NORMAL_COMMIT:
-        Coordinator.State state = new Coordinator.State(ANY_ID_2, coordinatorState);
+        Coordinator.State state =
+            new Coordinator.State(ANY_ID_2, coordinatorState, System.currentTimeMillis());
         coordinator.putState(state);
         break;
       case GROUP_COMMIT:
@@ -11316,7 +11358,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             System.currentTimeMillis());
         break;
       case DELAYED_GROUP_COMMIT:
-        coordinator.putState(new Coordinator.State(ongoingTxId, coordinatorState));
+        coordinator.putState(
+            new Coordinator.State(ongoingTxId, coordinatorState, System.currentTimeMillis()));
         break;
     }
 

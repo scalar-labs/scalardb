@@ -445,7 +445,9 @@ public class CommitHandler {
       throws CommitConflictException, UnknownTransactionStatusException {
     String id = context.transactionId;
     try {
-      Coordinator.State state = new Coordinator.State(id, writeSet, TransactionState.COMMITTED);
+      Coordinator.State state =
+          new Coordinator.State(
+              id, writeSet, TransactionState.COMMITTED, System.currentTimeMillis());
       coordinator.putState(state);
       logger.debug(
           "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
@@ -521,7 +523,8 @@ public class CommitHandler {
   private TransactionState abortStateInternal(String id, @Nullable WriteSet writeSet)
       throws UnknownTransactionStatusException {
     try {
-      Coordinator.State state = new Coordinator.State(id, writeSet, TransactionState.ABORTED);
+      Coordinator.State state =
+          new Coordinator.State(id, writeSet, TransactionState.ABORTED, System.currentTimeMillis());
       coordinator.putState(state);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
