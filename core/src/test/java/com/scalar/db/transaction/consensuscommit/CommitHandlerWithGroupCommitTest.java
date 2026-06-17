@@ -1,834 +1,236 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.exception.transaction.ValidationConflictException;
-import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
-import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
-import com.scalar.db.util.groupcommit.GroupCommitConfig;
-import com.scalar.db.util.groupcommit.GroupCommitConflictException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
+import org.mockito.InOrder;
 
+/**
+ * Tests for {@link CommitHandlerWithGroupCommit}. Inherits the orchestration tests from {@link
+ * CommitHandlerTest} (which pin which participant / coordinator handler methods are called for each
+ * branch of {@code commit()}). The tests added here layer the group-commit-specific assertions on
+ * top -- specifically, when the orchestrator delegates {@code cancelGroupCommitIfNeeded} to the
+ * group-commit coordinator handler.
+ *
+ * <p>Both {@code participantCommitHandler} and the group-commit coordinator handler are mocks; the
+ * underlying group committer is never instantiated.
+ */
 class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
-  private final CoordinatorGroupCommitKeyManipulator keyManipulator =
-      new CoordinatorGroupCommitKeyManipulator();
-  private String parentKey;
-  private String childKey;
-  private CoordinatorGroupCommitter groupCommitter;
-  @Captor private ArgumentCaptor<List<String>> groupCommitFullIdsArgumentCaptor;
-
-  @Override
-  protected void extraInitialize() {
-    childKey = UUID.randomUUID().toString();
-    String fullKey = groupCommitter.reserve(childKey);
-    parentKey = keyManipulator.keysFromFullKey(fullKey).parentKey;
-  }
-
-  @Override
-  protected String anyId() {
-    return keyManipulator.fullKey(parentKey, childKey);
-  }
+  // Subclass-typed mock that doubles as the parent's coordinatorCommitHandler. Verifying
+  // cancelGroupCommitIfNeeded requires the subclass type.
+  private CoordinatorCommitHandlerWithGroupCommit groupCommitCoordinatorHandler;
 
   @Override
   protected TransactionContext createTransactionContext(
       String id, Snapshot snapshot, Isolation isolation, boolean readOnly, boolean oneOperation) {
-    // In the group commit tests a slot is reserved for the transaction (extraInitialize() and the
-    // per-test reserve() calls), so mark the context as holding a reserved slot. Tests that
-    // intentionally model an unreserved transaction build the context with the raw constructor.
+    // In the group commit tests a slot is reserved for the transaction (the orchestrator's
+    // group-commit-specific paths inspect this flag), so mark the context accordingly.
     return new TransactionContext(
         id, snapshot, isolation, readOnly, oneOperation, /* groupCommitSlotReserved= */ true);
   }
 
   @Override
-  protected void extraCleanup() {
-    groupCommitter.close();
-  }
-
-  private void createGroupCommitterIfNotExists() {
-    if (groupCommitter == null) {
-      groupCommitter =
-          spy(new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60000, 10)));
-    }
-  }
-
-  @Override
   protected CommitHandler createCommitHandler(boolean coordinatorWriteOmissionOnReadOnlyEnabled) {
-    createGroupCommitterIfNotExists();
+    groupCommitCoordinatorHandler = mock(CoordinatorCommitHandlerWithGroupCommit.class);
+    coordinatorCommitHandler = groupCommitCoordinatorHandler;
     return new CommitHandlerWithGroupCommit(
-        storage,
-        coordinator,
-        tableMetadataManager,
-        parallelExecutor,
-        new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
-        false,
-        groupCommitter);
+        participantCommitHandler,
+        groupCommitCoordinatorHandler);
   }
 
-  @Override
-  protected CommitHandler createCommitHandlerWithOnePhaseCommit() {
-    createGroupCommitterIfNotExists();
-    return new CommitHandlerWithGroupCommit(
-        storage,
-        coordinator,
-        tableMetadataManager,
-        parallelExecutor,
-        mutationsGrouper,
-        true,
-        true,
-        groupCommitter);
-  }
-
-  private String anyGroupCommitParentId() {
-    return parentKey;
-  }
-
-  @Override
-  protected void doThrowExceptionWhenCoordinatorPutState(
-      TransactionState targetState, Class<? extends Exception> exceptionClass, Snapshot snapshot)
-      throws CoordinatorException {
-
-    doThrow(exceptionClass)
-        .when(coordinator)
-        .putState(argThat(groupCommitStateMatcher(anyGroupCommitParentId(), targetState)));
-  }
-
-  @Override
-  protected void doNothingWhenCoordinatorPutState() throws CoordinatorException {
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
-  }
-
-  @Override
-  protected void verifyCoordinatorPutState(
-      TransactionState expectedTransactionState, Snapshot snapshot) throws CoordinatorException {
-
-    org.mockito.ArgumentCaptor<Coordinator.State> captor =
-        org.mockito.ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinator).putState(captor.capture());
-    Coordinator.State captured = captor.getValue();
-    assertThat(captured.getId()).isEqualTo(anyGroupCommitParentId());
-    assertThat(captured.getState()).isEqualTo(expectedTransactionState);
-    List<String> childIds = captured.getChildIds();
-    assertThat(childIds.size()).isEqualTo(1);
-    // The State's child IDs are the *child* portion of each full transaction id; verify the
-    // captured value matches the child of anyId().
-    assertThat(childIds.get(0))
-        .isEqualTo(
-            new CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator()
-                .keysFromFullKey(anyId())
-                .childKey);
-  }
-
-  /**
-   * Matcher for the group-commit parent-row State emitted by Emitter#emitNormalGroup: the id equals
-   * the parent key, childIds are non-empty (one entry per tx), and the txState matches.
-   */
-  private static org.mockito.ArgumentMatcher<Coordinator.State> groupCommitStateMatcher(
-      String parentId, TransactionState state) {
-    return actual ->
-        actual != null
-            && parentId.equals(actual.getId())
-            && !actual.getChildIds().isEmpty()
-            && actual.getState() == state;
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
-      boolean withBeforePreparationHook)
-      throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException, CrudException {
-    super.commit_SnapshotWithDifferentPartitionPutsGiven_ShouldCommitRespectively(
-        withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyId());
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(
-      boolean withBeforePreparationHook)
-      throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException, CrudException {
-    super.commit_SnapshotWithSamePartitionPutsGiven_ShouldCommitAtOnce(withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyId());
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-      boolean withBeforePreparationHook)
-      throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException, CrudException {
-    // Arrange
-    groupCommitter.remove(anyId());
-    clearInvocations(groupCommitter);
-
-    super.commit_InReadOnlyMode_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-        withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyId());
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void
-      commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-          boolean withBeforePreparationHook)
-          throws CommitException, UnknownTransactionStatusException, ExecutionException,
-              CoordinatorException, ValidationConflictException {
-
-    super.commit_NoWritesAndDeletesInSnapshot_ShouldNotPrepareRecordsAndCommitStateAndCommitRecords(
-        withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void
-      commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-          boolean withBeforePreparationHook)
-          throws CommitException, UnknownTransactionStatusException, ExecutionException,
-              CoordinatorException, ValidationConflictException {
-    super
-        .commit_NoWritesAndDeletesInSnapshot_CoordinatorWriteOmissionOnReadOnlyDisabled_ShouldNotPrepareRecordsAndCommitRecordsButShouldCommitState(
-            withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyId());
-  }
+  // =========================================================================
+  // Group-commit-specific assertions
+  //
+  // Inherited tests cover which participant / coordinator handler methods are called for each
+  // branch of commit(); the tests below add slot-cancel assertions specific to the override.
+  // =========================================================================
 
   @Test
-  public void commit_InReadOnlyModeWithWriteOmissionDisabled_ShouldCommitStateViaGroupCommit()
-      throws CommitException, UnknownTransactionStatusException, CoordinatorException,
-          ExecutionException {
+  public void commit_WithWrites_ShouldNotEarlyCancelGroupCommit() throws Exception {
+    // For a normal (writes) commit the slot is consumed by commitState via groupCommitter.ready,
+    // so the orchestrator's early-cancel optimization does NOT fire.
     // Arrange
-    // With coordinator write omission disabled, a read-only transaction writes a coordinator state
-    // row. ConsensusCommitManager.begin() reserves a group commit slot for it (so its transaction
-    // ID is a group commit full key), and the state must be committed through the group commit path
-    // like any other state-writing transaction.
-    CommitHandler handler = spy(createCommitHandler(false));
-    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    doNothingWhenCoordinatorPutState();
+    Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
-        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
     handler.commit(context);
 
     // Assert
-    verify(storage, never()).mutate(anyList());
-    // The COMMITTED state is written via the group commit path (putStateForGroupCommit).
-    verifyCoordinatorPutState(TransactionState.COMMITTED, snapshot);
-    verify(groupCommitter, never()).remove(anyId());
+    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommitIfNeeded(context);
   }
 
   @Test
-  @Override
-  public void
-      commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords()
-          throws ExecutionException, CoordinatorException, CrudException,
-              UnknownTransactionStatusException {
-    super
-        .commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords();
-
-    // Assert
-    // abortState is skipped (omission enabled), but the reserved group commit slot is still
-    // released once via onFailureBeforeCommit, so it does not leak.
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      commit_FailingBeforePreparationHookFutureGiven_InReadOnlyModeWithWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords()
-          throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
-              InterruptedException, UnknownTransactionStatusException {
-    super
-        .commit_FailingBeforePreparationHookFutureGiven_InReadOnlyModeWithWriteOmissionEnabled_ShouldNotAbortStateNorRollbackRecords();
-
-    // Assert
-    // abortState is skipped (omission enabled), but the reserved group commit slot is still
-    // released once via onFailureBeforeCommit, so it does not leak.
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  public void
-      commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionEnabledAndBareTransactionId_ShouldNotWriteCoordinatorRowNorTouchGroupCommitter()
-          throws ExecutionException, CoordinatorException, UnknownTransactionStatusException {
+  public void commit_NonReadOnlyNoWritesOmissionEnabled_ShouldEarlyCancelGroupCommit()
+      throws Exception {
+    // The reserved slot is NOT consumed by the commit (commitState is skipped because of write
+    // omission), so cancelGroupCommitIfCoordinatorStateOmitted delegates the cancel eagerly.
     // Arrange
-    // With coordinator write omission enabled, ConsensusCommitManager.begin() does not reserve a
-    // group commit slot for a read-only transaction, so the context's groupCommitSlotReserved stays
-    // false. This reproduces that production case (the inherited tests use
-    // createTransactionContext()
-    // which marks the slot as reserved instead). When the before-preparation hook fails, commit()
-    // must still fail with CommitException, write no coordinator row, and leave the group committer
-    // untouched: cancelGroupCommitIfNeeded skips remove() because no slot was reserved.
-    // Release the slot reserved by extraInitialize(); it is unrelated to this test's bare
-    // transaction ID, and leaving it outstanding would make groupCommitter.close() block on it
-    // during teardown. clearInvocations() then lets the remove() assertion count only the act
-    // phase.
-    groupCommitter.remove(anyId());
-    clearInvocations(groupCommitter);
-    String bareId = UUID.randomUUID().toString();
-    CommitHandler handler = spy(createCommitHandler(true));
-    Snapshot snapshot = spy(prepareSnapshotWithoutWrites());
-    doThrow(new RuntimeException("Something is wrong"))
-        .when(beforePreparationHook)
-        .handle(any(), any());
-    handler.setBeforePreparationHook(beforePreparationHook);
-    // This context deliberately did not reserve a group commit slot (groupCommitSlotReserved stays
-    // false), so it is built with the raw constructor rather than the createTransactionContext()
-    // helper that marks the slot as reserved.
-    TransactionContext context =
-        new TransactionContext(
-            bareId,
-            snapshot,
-            Isolation.SNAPSHOT,
-            true,
-            false,
-            /* groupCommitSlotReserved= */ false);
-
-    // Act
-    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
-
-    // Assert
-    verify(storage, never()).mutate(anyList());
-    verify(coordinator, never()).putState(any());
-    verify(handler, never()).abortState(any());
-    verify(handler, never()).rollbackRecords(any());
-    verify(handler).onFailureBeforeCommit(any());
-    // The bare ID never reserved a slot, so cancelGroupCommitIfNeeded skips remove() entirely.
-    verify(groupCommitter, never()).remove(anyString());
-  }
-
-  @Test
-  public void
-      handleCommitConflict_GroupCommitConflictExceptionGivenAndNoStatePersisted_ShouldRollbackRecordsAndThrowCommitConflict()
-          throws Exception {
-    // The group-commit conflict route (commitStateViaGroupCommit catches
-    // GroupCommitConflictException and calls handleCommitConflict) must, when the coordinator state
-    // is absent on re-read, resolve to a definitive conflict -- roll the records back and throw
-    // CommitConflictException -- the same outcome as the normal-commit conflict route. getState for
-    // a group-commit child checks both the parent and full-ID rows, so an absent state genuinely
-    // means the transaction never committed.
-
-    // Arrange
-    // This test resolves the conflict by calling handleCommitConflict directly and never emits or
-    // removes the group, so release the slot reserved by extraInitialize() up front. Leaving it
-    // outstanding would make groupCommitter.close() block on it during teardown.
-    groupCommitter.remove(anyId());
-    clearInvocations(groupCommitter);
-
-    CommitHandler handler = spy(createCommitHandler(true));
-    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    Snapshot snapshot = snapshotWithoutWrites();
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-    doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
-    when(coordinator.getState(anyId())).thenReturn(Optional.empty());
-    GroupCommitConflictException cause = new GroupCommitConflictException("conflict");
+
+    // Act
+    handler.commit(context);
+
+    // Assert
+    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+  }
+
+  @Test
+  public void commit_NonReadOnlyNoWritesOmissionDisabled_ShouldNotEarlyCancelGroupCommit()
+      throws Exception {
+    // With omission disabled, commitState still runs and needs the slot, so the early-cancel must
+    // not fire.
+    // Arrange
+    handler = spy(createCommitHandler(/* coordinatorWriteOmissionOnReadOnlyEnabled= */ false));
+    Snapshot snapshot = snapshotWithoutWrites();
+    TransactionContext context =
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    handler.commit(context);
+
+    // Assert
+    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommitIfNeeded(context);
+  }
+
+  @Test
+  public void commit_OnFailure_ShouldDelegateCancelGroupCommitViaOnFailureBeforeCommit()
+      throws Exception {
+    // The orchestrator's onFailureBeforeCommit override delegates to
+    // coordinatorHandler.cancelGroupCommitIfNeeded.
+    // Arrange
+    Snapshot snapshot = snapshotWithoutWrites();
+    doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHook).handle(any());
+    handler.setBeforePreparationHook(beforePreparationHook);
+    TransactionContext context =
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, true, false);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
-        .isInstanceOf(CommitConflictException.class)
-        .hasCause(cause);
-    verify(handler).rollbackRecords(context);
-    verify(coordinator).getState(anyId());
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
+
+    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
   }
 
   @Test
-  @Override
   public void
-      commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionDisabled_ShouldAbortStateButNotRollbackRecords()
-          throws ExecutionException, CoordinatorException, CrudException {
-    super
-        .commit_FailingBeforePreparationHookGiven_InReadOnlyModeWithWriteOmissionDisabled_ShouldAbortStateButNotRollbackRecords();
-
-    // Assert
-    // The reserved group commit slot is released twice — once via onFailureBeforeCommit and once
-    // via abortState (omission disabled) — both routing through cancelGroupCommitIfNeeded.
-    verify(groupCommitter, times(2)).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      commit_FailingBeforePreparationHookFutureGiven_InReadOnlyModeWithWriteOmissionDisabled_ShouldAbortStateButNotRollbackRecords()
-          throws ExecutionException, CoordinatorException, java.util.concurrent.ExecutionException,
-              InterruptedException, UnknownTransactionStatusException {
-    super
-        .commit_FailingBeforePreparationHookFutureGiven_InReadOnlyModeWithWriteOmissionDisabled_ShouldAbortStateButNotRollbackRecords();
-
-    // Assert
-    // The reserved group commit slot is released twice — once via onFailureBeforeCommit and once
-    // via abortState (omission disabled) — both routing through cancelGroupCommitIfNeeded.
-    verify(groupCommitter, times(2)).remove(anyId());
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(
-      boolean withBeforePreparationHook)
-      throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException, CrudException {
-    super.commit_SnapshotIsolationWithReads_ShouldNotValidateRecords(withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyId());
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  @Override
-  public void commit_SerializableIsolationWithReads_ShouldValidateRecords(
-      boolean withBeforePreparationHook)
-      throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException, ValidationConflictException, CrudException {
-    super.commit_SerializableIsolationWithReads_ShouldValidateRecords(withBeforePreparationHook);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void validateRecords_ValidationNotRequired_ShouldNotCallToSerializable()
-      throws ValidationException, ExecutionException, CrudException {
-    super.validateRecords_ValidationNotRequired_ShouldNotCallToSerializable();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void validateRecords_ValidationRequired_ShouldCallToSerializable()
-      throws ValidationException, ExecutionException, CrudException {
-    super.validateRecords_ValidationRequired_ShouldCallToSerializable();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations()
-      throws CommitConflictException, UnknownTransactionStatusException, ExecutionException,
-          CrudException {
-    super.onePhaseCommitRecords_WhenSuccessful_ShouldMutateUsingComposerMutations();
-
-    // Assert
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException, CrudException {
-    super.onePhaseCommitRecords_WhenNoMutationExceptionThrown_ShouldThrowCommitConflictException();
-
-    // Assert
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException()
-          throws ExecutionException, CrudException {
-    super
-        .onePhaseCommitRecords_WhenRetriableExecutionExceptionThrown_ShouldThrowCommitConflictException();
-
-    // Assert
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws ExecutionException, CrudException {
-    super
-        .onePhaseCommitRecords_WhenExecutionExceptionThrown_ShouldThrowUnknownTransactionStatusException();
-
-    // Assert
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse() throws Exception {
-    super.canOnePhaseCommit_WhenOnePhaseCommitDisabled_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse() throws Exception {
-    super.canOnePhaseCommit_WhenNoWritesAndDeletes_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse()
-      throws Exception {
-    super.canOnePhaseCommit_WhenDeleteWithoutExistingRecord_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue() throws Exception {
-    super.canOnePhaseCommit_WhenMutationsCanBeGrouped_ShouldReturnTrue();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse() throws Exception {
-    super.canOnePhaseCommit_WhenMutationsCannotBeGrouped_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse()
-      throws Exception {
-    super.canOnePhaseCommit_WhenSerializableIsolationWithReads_ShouldReturnFalse();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue() throws Exception {
-    super.canOnePhaseCommit_WhenSnapshotIsolationWithReads_ShouldReturnTrue();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException()
-          throws ExecutionException {
-    super
-        .canOnePhaseCommit_WhenMutationsGrouperThrowsExecutionException_ShouldThrowCommitException();
-
-    // Assert
-    verify(groupCommitter).remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void commit_OnePhaseCommitted_ShouldNotThrowAnyException()
-      throws CommitException, UnknownTransactionStatusException, CrudException {
-    super.commit_OnePhaseCommitted_ShouldNotThrowAnyException();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void
-      commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException()
-          throws CommitException, UnknownTransactionStatusException, CrudException {
-    super
-        .commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted()
-      throws CoordinatorException, UnknownTransactionStatusException {
-    super.abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted();
-
-    // abortStateForRollback(id) only writes the coordinator rollback marker; it never goes through
-    // the group commit path, so the slot reserved by extraInitialize() is not released. Release it
-    // here so the @AfterEach groupCommitter.close() does not block on the slot-abort timeout.
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted()
-      throws CoordinatorException, UnknownTransactionStatusException {
-    super.abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown()
-      throws CoordinatorException {
-    super.abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  @Override
-  public void abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown()
-      throws CoordinatorException {
-    super.abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown();
-    groupCommitter.remove(anyId());
-  }
-
-  @Test
-  void emitter_emitNormalGroup_WithMultipleWritingChildren_ShouldAggregatePerChild()
-      throws Exception {
-    // The slot reserved by extraInitialize is unused here — these emitter tests bypass the group
-    // committer and drive the Emitter directly — so release it now to keep the @AfterEach
-    // groupCommitter.close() from waiting out the slot-abort timeout.
-    groupCommitter.remove(anyId());
-
+      commit_FailingBeforePreparationHookGiven_BareTransactionId_ShouldNotTouchGroupCommitter()
+          throws Exception {
+    // With coordinator write omission enabled, ConsensusCommitManager.begin() does not reserve a
+    // group commit slot for a read-only transaction, so the context's groupCommitSlotReserved
+    // stays false. When the before-preparation hook fails, commit() must still fail with
+    // CommitException, and cancelGroupCommitIfNeeded internally skips remove() because no slot
+    // was reserved.
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
-    CommitHandlerWithGroupCommit.Emitter emitter =
-        new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
-
-    String parentId = keyManipulator.generateParentKey();
-    String fullTxId1 = keyManipulator.fullKey(parentId, "child-1");
-    String fullTxId2 = keyManipulator.fullKey(parentId, "child-2");
-
-    TransactionContext context1 =
-        createTransactionContext(
-            fullTxId1,
-            prepareSnapshotWithDifferentPartitionPut(),
+    Snapshot snapshot = snapshotWithoutWrites();
+    doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHook).handle(any());
+    handler.setBeforePreparationHook(beforePreparationHook);
+    // Override createTransactionContext's default reserved=true with reserved=false here.
+    TransactionContext context =
+        new TransactionContext(
+            anyId(),
+            snapshot,
             Isolation.SNAPSHOT,
-            false,
-            false);
-    TransactionContext context2 =
-        createTransactionContext(
-            fullTxId2, prepareSnapshotWithSamePartitionPut(), Isolation.SNAPSHOT, false, false);
+            /* readOnly= */ true,
+            /* oneOperation= */ false,
+            /* groupCommitSlotReserved= */ false);
 
-    // Act
-    emitter.emitNormalGroup(parentId, Arrays.asList(context1, context2));
+    // Act Assert
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
 
-    // Assert — capture the State and inspect its WriteSet content.
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinatorMock).putState(stateCaptor.capture());
-
-    Coordinator.State capturedState = stateCaptor.getValue();
-    assertThat(capturedState.getId()).isEqualTo(parentId);
-    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(capturedState.getWriteSet()).isPresent();
-    WriteSet captured = capturedState.getWriteSet().get();
-    assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).hasSize(2);
-    assertThat(captured.getEntryGroups(0).getChildId()).isEqualTo("child-1");
-    assertThat(captured.getEntryGroups(0).getEntriesList()).isNotEmpty();
-    assertThat(captured.getEntryGroups(1).getChildId()).isEqualTo("child-2");
-    assertThat(captured.getEntryGroups(1).getEntriesList()).isNotEmpty();
+    // The orchestrator still calls cancelGroupCommitIfNeeded; the coordinator handler internally
+    // no-ops when slot is not reserved. The contract we pin here is "called once", with the
+    // internal no-op behavior covered in CoordinatorCommitHandlerWithGroupCommitTest.
+    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
   }
 
-  @Test
-  void emitter_emitNormalGroup_WithReadOnlyChildMixed_ShouldOmitReadOnlyEntryGroups()
-      throws Exception {
-    groupCommitter.remove(anyId());
-
-    // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
-    CommitHandlerWithGroupCommit.Emitter emitter =
-        new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
-
-    String parentId = keyManipulator.generateParentKey();
-    String fullTxIdWriting = keyManipulator.fullKey(parentId, "writing");
-    String fullTxIdReadOnly = keyManipulator.fullKey(parentId, "read-only");
-
-    TransactionContext writingContext =
-        createTransactionContext(
-            fullTxIdWriting,
-            prepareSnapshotWithDifferentPartitionPut(),
-            Isolation.SNAPSHOT,
-            false,
-            false);
-    TransactionContext readOnlyContext =
-        createTransactionContext(
-            fullTxIdReadOnly, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
-
-    // Act
-    emitter.emitNormalGroup(parentId, Arrays.asList(writingContext, readOnlyContext));
-
-    // Assert — only the writing child appears in entry_groups.
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinatorMock).putState(stateCaptor.capture());
-    Coordinator.State capturedState = stateCaptor.getValue();
-    assertThat(capturedState.getId()).isEqualTo(parentId);
-    assertThat(capturedState.getWriteSet()).isPresent();
-
-    WriteSet captured = capturedState.getWriteSet().get();
-    assertThat(captured.getEntryGroupsList()).hasSize(1);
-    assertThat(captured.getEntryGroups(0).getChildId()).isEqualTo("writing");
-  }
+  // =========================================================================
+  // Override-specific behaviour for canOnePhaseCommit / onePhaseCommitRecords
+  // =========================================================================
 
   @Test
-  void emitter_emitNormalGroup_WithAllReadOnlyChildren_ShouldStillSetSchemaVersion()
-      throws Exception {
-    groupCommitter.remove(anyId());
-
+  public void onePhaseCommitRecords_ShouldCancelSlotBeforeDelegating() throws Exception {
+    // The group-commit override releases the reserved slot before delegating to
+    // super.onePhaseCommitRecords, so the storage mutation runs outside the group buffer.
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
-    CommitHandlerWithGroupCommit.Emitter emitter =
-        new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
-
-    String parentId = keyManipulator.generateParentKey();
-    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
-        createTransactionContext(
-            fullTxId, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    doNothing().when(participantCommitHandler).onePhaseCommitRecords(context);
 
     // Act
-    emitter.emitNormalGroup(parentId, Collections.singletonList(context));
+    handler.onePhaseCommitRecords(context);
 
-    // Assert — WriteSet is still non-null with schema_version set, but has no EntryGroups.
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinatorMock).putState(stateCaptor.capture());
-    Coordinator.State capturedState = stateCaptor.getValue();
-    assertThat(capturedState.getId()).isEqualTo(parentId);
-    assertThat(capturedState.getWriteSet()).isPresent();
-
-    WriteSet captured = capturedState.getWriteSet().get();
-    assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).isEmpty();
+    // Assert
+    InOrder inOrder = inOrder(groupCommitCoordinatorHandler, participantCommitHandler);
+    inOrder.verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    inOrder.verify(participantCommitHandler).onePhaseCommitRecords(context);
   }
 
   @Test
-  void emitter_emitNormalGroup_WithEmptyContexts_ShouldNotCallPutState() throws Exception {
-    groupCommitter.remove(anyId());
-
+  public void onePhaseCommitRecords_ShouldCancelSlotEvenWhenDelegateThrows() throws Exception {
+    // The slot is released before delegating, so the storage mutation throwing afterwards still
+    // leaves the slot released (cancel-before-delegate is unconditional).
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
-    CommitHandlerWithGroupCommit.Emitter emitter =
-        new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
-
-    String parentId = keyManipulator.generateParentKey();
-
-    // Act — all buffered transactions were manually rolled back, so emitNormalGroup is invoked
-    // with an empty context list.
-    emitter.emitNormalGroup(parentId, Collections.emptyList());
-
-    // Assert — putState must not be called; otherwise a spurious COMMITTED parent row would be
-    // written.
-    verify(coordinatorMock, never()).putState(any(Coordinator.State.class));
-  }
-
-  @Test
-  void emitter_emitDelayedGroup_WithWritingContext_ShouldPersistStateWithWriteSet()
-      throws Exception {
-    groupCommitter.remove(anyId());
-
-    // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
-    CommitHandlerWithGroupCommit.Emitter emitter =
-        new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
-
-    String parentId = keyManipulator.generateParentKey();
-    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
-        createTransactionContext(
-            fullTxId, prepareSnapshotWithDifferentPartitionPut(), Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    UnknownTransactionStatusException cause =
+        new UnknownTransactionStatusException("storage failure", anyId());
+    doThrow(cause).when(participantCommitHandler).onePhaseCommitRecords(context);
 
-    // Act
-    emitter.emitDelayedGroup(fullTxId, context);
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(context)).isSameAs(cause);
 
-    // Assert — putState is called with a State carrying the encoded WriteSet.
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinatorMock).putState(stateCaptor.capture());
-
-    Coordinator.State capturedState = stateCaptor.getValue();
-    assertThat(capturedState.getId()).isEqualTo(fullTxId);
-    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(capturedState.getWriteSet()).isPresent();
-
-    WriteSet captured = capturedState.getWriteSet().get();
-    assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).hasSize(1);
-    // Delayed group commit emits a single EntryGroup with child_id unset, distinguishing it from
-    // a normal group commit row where each EntryGroup carries the child id.
-    assertThat(captured.getEntryGroups(0).hasChildId()).isFalse();
-    assertThat(captured.getEntryGroups(0).getEntriesList()).isNotEmpty();
+    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
   }
 
   @Test
-  void emitter_emitDelayedGroup_WithReadOnlyContext_ShouldPersistStateWithEmptyWriteSet()
-      throws Exception {
-    groupCommitter.remove(anyId());
-
+  public void canOnePhaseCommit_WhenSuperThrows_ShouldCancelSlotAndRethrow() throws Exception {
+    // The group-commit override of canOnePhaseCommit cancels the slot on any CommitException from
+    // super (e.g., MutationsGrouper throws ExecutionException → wrapped as CommitException) so the
+    // slot does not stay reserved when one-phase commit will not be attempted.
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
-    CommitHandlerWithGroupCommit.Emitter emitter =
-        new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
-
-    String parentId = keyManipulator.generateParentKey();
-    String fullTxId = keyManipulator.fullKey(parentId, "child");
+    Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
-        createTransactionContext(
-            fullTxId, prepareSnapshotWithoutWrites(), Isolation.SNAPSHOT, false, false);
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    CommitException cause = new CommitException("grouper failure", anyId());
+    doThrow(cause).when(participantCommitHandler).canOnePhaseCommit(context);
 
-    // Act
-    emitter.emitDelayedGroup(fullTxId, context);
+    // Act Assert
+    assertThatThrownBy(() -> handler.canOnePhaseCommit(context)).isSameAs(cause);
 
-    // Assert — WriteSet is still non-null with schema_version set, but has no EntryGroups.
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinatorMock).putState(stateCaptor.capture());
+    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+  }
 
-    Coordinator.State capturedState = stateCaptor.getValue();
-    assertThat(capturedState.getId()).isEqualTo(fullTxId);
-    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(capturedState.getWriteSet()).isPresent();
+  // We replace the snapshot mock builders to also wire up the participant's hasWritesOrDeletes
+  // view, since the orchestrator hits the snapshot through context only (already covered by the
+  // parent mock helpers).
+  @Override
+  protected Snapshot snapshotWithWrites() {
+    Snapshot snapshot = mock(Snapshot.class);
+    when(snapshot.hasWritesOrDeletes()).thenReturn(true);
+    return snapshot;
+  }
 
-    WriteSet captured = capturedState.getWriteSet().get();
-    assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).isEmpty();
+  @Override
+  protected Snapshot snapshotWithoutWrites() {
+    Snapshot snapshot = mock(Snapshot.class);
+    when(snapshot.hasWritesOrDeletes()).thenReturn(false);
+    return snapshot;
   }
 }
