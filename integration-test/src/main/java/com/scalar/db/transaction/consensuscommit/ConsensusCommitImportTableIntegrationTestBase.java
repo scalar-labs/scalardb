@@ -166,7 +166,6 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
           mutationsGrouper,
           true,
           false,
-          false,
           groupCommitter);
     } else {
       return new CommitHandler(
@@ -176,7 +175,6 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
           parallelExecutor,
           mutationsGrouper,
           true,
-          false,
           false);
     }
   }

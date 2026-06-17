@@ -158,8 +158,6 @@ public class CbrlBackupRestoreIntegrationTest {
     properties.setProperty(
         DatabaseConfig.TRANSACTION_MANAGER, ConsensusCommitConfig.TRANSACTION_MANAGER_NAME);
     properties.setProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, COORDINATOR_NAMESPACE);
-    // The CBRL spike toggle: log full (partial) column values in tx_write_set, not just keys.
-    properties.setProperty(ConsensusCommitConfig.TX_WRITE_SET_INCLUDE_COLUMNS_ENABLED, "true");
     return properties;
   }
 

@@ -41,11 +41,6 @@ public class ConsensusCommitConfig {
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
   public static final String INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED =
       PREFIX + "index.eventually_consistent_read.enabled";
-  // CBRL spike toggle: when true, the Coordinator's tx_write_set records full (partial)
-  // after-image column values, not just primary keys. Default false. Intended to be replaced by
-  // a backup-window flag later.
-  public static final String TX_WRITE_SET_INCLUDE_COLUMNS_ENABLED =
-      PREFIX + "tx_write_set.include_columns.enabled";
 
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
   public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
@@ -84,7 +79,6 @@ public class ConsensusCommitConfig {
 
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
-  private final boolean txWriteSetIncludeColumnsEnabled;
   private final boolean parallelImplicitPreReadEnabled;
   private final boolean includeMetadataEnabled;
   private final boolean indexEventuallyConsistentReadEnabled;
@@ -157,8 +151,6 @@ public class ConsensusCommitConfig {
         getBoolean(properties, COORDINATOR_WRITE_OMISSION_ON_READ_ONLY_ENABLED, true);
 
     onePhaseCommitEnabled = getBoolean(properties, ONE_PHASE_COMMIT_ENABLED, false);
-    txWriteSetIncludeColumnsEnabled =
-        getBoolean(properties, TX_WRITE_SET_INCLUDE_COLUMNS_ENABLED, false);
 
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
@@ -238,10 +230,6 @@ public class ConsensusCommitConfig {
 
   public boolean isOnePhaseCommitEnabled() {
     return onePhaseCommitEnabled;
-  }
-
-  public boolean isTxWriteSetIncludeColumnsEnabled() {
-    return txWriteSetIncludeColumnsEnabled;
   }
 
   public boolean isParallelImplicitPreReadEnabled() {
