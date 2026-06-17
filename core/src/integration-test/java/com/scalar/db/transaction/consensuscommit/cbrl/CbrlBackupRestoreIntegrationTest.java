@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.protobuf.ByteString;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
@@ -10,6 +11,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
@@ -38,9 +40,11 @@ import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,26 +65,25 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 /**
- * CBRL backup/restore integration test (spike, §6.1 of the PoC plan).
+ * CBRL backup/restore integration test (spike, §6.1 of the PoC plan): non-pausing backup with
+ * <b>windowed repair of a torn copy</b>.
  *
- * <p>Non-pausing backup: the coordinator is backed up while the workload is still committing, and
- * closed over the {@code prev_tx_id} chain at backup time so it is self-contained (restore never
- * re-reads the source). Each transaction writes a shared {@code token} to {@code table_a[i]} and
- * {@code table_b[i]} (or deletes both), so a transactionally-consistent image has matching presence
- * and equal tokens per key.
+ * <p>A live raw copy of the user tables is taken while the workload commits (the torn base); the
+ * coordinator is backed up (self-contained, closed over the chain); PREPARED records in the torn
+ * copy are recovered (C4); and the committed redo is replayed <b>forward from each record's
+ * torn-copy version</b> onto the copy via the §5 core — not a full rebuild. Each transaction writes
+ * a shared {@code token} to {@code table_a[i]} and {@code table_b[i]} (or deletes both), so a
+ * consistent image has matching presence and equal tokens per key.
  *
- * <p>Validated four ways: <b>consistency</b> (the two tables never disagree), <b>correctness</b>
- * (matches an independent reference computed over the same backup), <b>point-in-time</b> (tokens
- * committed after the backup are absent), and <b>idempotency</b> (re-restoring is identical).
- * {@link #consistencyCheckDetectsTornImage_negativeControl()} proves the consistency check has
- * teeth.
+ * <p>Validated: consistency (the two tables never disagree), correctness (matches an independent
+ * reference over the same backup), point-in-time (post-backup tokens absent), idempotency, and that
+ * the backup ran without pausing the workload. {@link
+ * #consistencyCheckDetectsTornImage_negativeControl()} proves the consistency check has teeth.
  *
- * <p>Scope of this harness: it logs the full history and reconstructs {@code cbrl_restore} from the
- * backup (full rebuild). Genuine <b>windowed repair of a torn physical copy</b> — anchoring each
- * record at its torn-copy version and replaying only the window's redo forward — is NOT done here:
- * reconciling a live torn copy to a consistent point in time is the open hard problem (the plan's
- * R-risk-1), and an attempt produced inconsistent images. The window gate (R2/R3) is covered by the
- * unit test {@code BackupWindowGateTest}, not wired into this flow.
+ * <p>Scope note: logging is full-history (the window gate, R2/R3, is unit-tested in {@code
+ * BackupWindowGateTest}, not wired into the commit path), so the torn copy is exercised as the
+ * repair base/anchor but is not strictly load-bearing — every key also has redo. Window-scoped
+ * logging that makes the torn copy load-bearing is the remaining piece.
  *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
@@ -99,6 +102,7 @@ public class CbrlBackupRestoreIntegrationTest {
   private static final String A_TEXT = "col_text";
   private static final String A_BOOL = "col_bool";
   private static final String A_BLOB = "col_blob";
+  private static final String[] A_USER_COLUMNS = {A_TOKEN, A_INT, A_TEXT, A_BOOL, A_BLOB};
   private static final TableMetadata TABLE_A_METADATA =
       TableMetadata.newBuilder()
           .addColumn(A_PK, DataType.INT)
@@ -115,6 +119,7 @@ public class CbrlBackupRestoreIntegrationTest {
   private static final String B_CK = "ck";
   private static final String B_TOKEN = "col_token";
   private static final String B_TEXT = "col_text";
+  private static final String[] B_USER_COLUMNS = {B_TOKEN, B_TEXT};
   private static final TableMetadata TABLE_B_METADATA =
       TableMetadata.newBuilder()
           .addColumn(B_PK, DataType.INT)
@@ -128,7 +133,8 @@ public class CbrlBackupRestoreIntegrationTest {
   private static final int RECORD_COUNT = 40;
   private static final int WORKLOAD_THREADS = 4;
   private static final int DELETE_PERCENTAGE = 30;
-  private static final Duration WORKLOAD_WARMUP = Duration.ofMillis(600);
+  private static final Duration WORKLOAD_WARMUP = Duration.ofMillis(400);
+  private static final Duration WORKLOAD_AFTER_COPY = Duration.ofMillis(400);
   private static final int REPLAY_BUCKETS = 8;
   private static final int REPLAY_WORKERS = 4;
 
@@ -217,23 +223,22 @@ public class CbrlBackupRestoreIntegrationTest {
     }
   }
 
-  /**
-   * CBRL acceptance test (§6.1): a coordinator backup taken under live load reconstructs a
-   * transactionally-consistent, point-in-time image.
-   */
+  /** CBRL acceptance test (§6.1): non-pausing backup + windowed repair of a torn copy. */
   @Test
-  void liveBackup_reconstructsConsistentPointInTimeImage() throws Exception {
+  void liveBackup_windowedRepairReconstructsConsistentPointInTimeImage() throws Exception {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
 
-    // Back up the coordinator WHILE the workload commits (non-pausing); closed over the chain at
-    // backup time, so restore is self-contained.
+    // Torn physical copy of the user tables WHILE the workload commits — the repair base.
+    copyUserTables();
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY); // copy falls behind the source
+
+    // Back up the coordinator WHILE live; closed over the chain at backup time (self-contained).
     long commitsBeforeBackup = committedCount.get();
     Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
 
-    // Prove the backup did not pause the workload: commits keep advancing across it. The workload
-    // is still running here, so this resolves quickly; the bounded wait only guards a fast scan.
+    // Prove the backup did not pause the workload: commits keep advancing across it.
     long deadlineMillis = System.currentTimeMillis() + 5_000;
     while (committedCount.get() <= commitsBeforeBackup
         && System.currentTimeMillis() < deadlineMillis) {
@@ -250,6 +255,7 @@ public class CbrlBackupRestoreIntegrationTest {
     }
     Set<Long> postBackupTokens = runPostBackupUpdates();
 
+    // Restore: recover the torn copy (C4) and replay the redo forward onto it (windowed repair).
     restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
@@ -316,6 +322,42 @@ public class CbrlBackupRestoreIntegrationTest {
     return ThreadLocalRandom.current().nextInt(100) < DELETE_PERCENTAGE;
   }
 
+  /**
+   * Raw, storage-level copy of the user tables (with metadata) into cbrl_restore — the torn base.
+   */
+  private void copyUserTables() throws Exception {
+    for (String table : new String[] {TABLE_A, TABLE_B}) {
+      List<Put> puts = new ArrayList<>();
+      Scan scan = Scan.newBuilder().namespace(SRC_NAMESPACE).table(table).all().build();
+      try (Scanner scanner = storage.scan(scan)) {
+        for (Result result : scanner.all()) {
+          PutBuilder.Buildable builder =
+              Put.newBuilder()
+                  .namespace(RESTORE_NAMESPACE)
+                  .table(table)
+                  .partitionKey(result.getPartitionKey().orElseThrow(IllegalStateException::new));
+          result.getClusteringKey().ifPresent(builder::clusteringKey);
+          for (Column<?> column : result.getColumns().values()) {
+            if (!isKeyColumn(column.getName(), table)) {
+              builder.value(column); // copy user + transaction-metadata columns verbatim
+            }
+          }
+          puts.add(builder.build());
+        }
+      }
+      for (Put put : puts) {
+        storage.put(put);
+      }
+    }
+  }
+
+  private static boolean isKeyColumn(String name, String table) {
+    if (table.equals(TABLE_A)) {
+      return name.equals(A_PK);
+    }
+    return name.equals(B_PK) || name.equals(B_CK);
+  }
+
   /** Backs up the coordinator WHILE live and closes it over the chain (self-contained). */
   private Map<String, CoordinatorBackupRow> backUpCoordinator() throws Exception {
     Map<String, CoordinatorBackupRow> committedById = new HashMap<>();
@@ -346,11 +388,13 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Restores by replaying the backup's committed write sets onto a freshly-truncated {@code
-   * cbrl_restore} via the §5 replay core, written back transactionally so restored records carry
-   * proper ConsensusCommit metadata.
+   * Windowed repair: recover the torn copy's PREPARED records (C4, via ScalarDB's own recovery),
+   * then replay the backup's committed redo onto the torn copy via the §5 core. Each key's cursor
+   * anchors at its torn-copy version, so only the redo after that version is applied.
    */
   private void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
+    recoverTornCopy(); // C4: resolve any PREPARED records in the torn copy.
+
     List<RedoOp> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
       for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
@@ -366,16 +410,108 @@ public class CbrlBackupRestoreIntegrationTest {
 
     List<List<RedoOp>> buckets = new RecordShuffler().shuffle(redoOps, REPLAY_BUCKETS);
     Map<RecordKey, RecordState> finalStates =
-        new RecordApplier(key -> RecordState.absent()).apply(buckets, REPLAY_WORKERS);
+        new RecordApplier(this::readTornCopyState).apply(buckets, REPLAY_WORKERS);
 
-    admin.truncateTable(RESTORE_NAMESPACE, TABLE_A);
-    admin.truncateTable(RESTORE_NAMESPACE, TABLE_B);
     withRetry(
         tx -> {
           for (Map.Entry<RecordKey, RecordState> entry : finalStates.entrySet()) {
             applyToRestore(tx, entry.getKey(), entry.getValue());
           }
         });
+  }
+
+  /** C4: read every key transactionally so ScalarDB resolves any PREPARED torn-copy records. */
+  private void recoverTornCopy() {
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
+      getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+    }
+  }
+
+  /**
+   * Reads the (recovered) torn-copy record as the repair base: its committed tx id + user columns.
+   */
+  private RecordState readTornCopyState(RecordKey key) {
+    try {
+      Optional<Result> result = storage.get(rawGet(key));
+      if (!result.isPresent() || result.get().isNull(Attribute.ID)) {
+        return RecordState.absent();
+      }
+      Result record = result.get();
+      String currentTxId = record.getText(Attribute.ID);
+      String[] userColumns = key.table().equals(TABLE_A) ? A_USER_COLUMNS : B_USER_COLUMNS;
+      Map<String, com.scalar.db.transaction.consensuscommit.proto.v1.Column> columns =
+          new LinkedHashMap<>();
+      for (String name : userColumns) {
+        Column<?> column = record.getColumns().get(name);
+        if (column != null) {
+          columns.put(name, ioColumnToProto(column));
+        }
+      }
+      return RecordState.of(currentTxId, false, columns, Collections.emptySet());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to read torn-copy base for " + key, e);
+    }
+  }
+
+  private Get rawGet(RecordKey key) {
+    GetBuilder.BuildableGet builder =
+        Get.newBuilder()
+            .namespace(RESTORE_NAMESPACE)
+            .table(key.table())
+            .partitionKey(toIoKey(key.partitionKey()));
+    if (key.clusteringKey() != null) {
+      builder.clusteringKey(toIoKey(key.clusteringKey()));
+    }
+    return builder.build();
+  }
+
+  private static com.scalar.db.transaction.consensuscommit.proto.v1.Column ioColumnToProto(
+      Column<?> column) {
+    String name = column.getName();
+    com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder =
+        com.scalar.db.transaction.consensuscommit.proto.v1.Column.newBuilder().setName(name);
+    if (column instanceof IntColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.IntValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.IntValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(((IntColumn) column).getIntValue());
+      }
+      return builder.setIntValue(value).build();
+    }
+    if (column instanceof BigIntColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.BigIntValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.BigIntValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(((BigIntColumn) column).getBigIntValue());
+      }
+      return builder.setBigintValue(value).build();
+    }
+    if (column instanceof BooleanColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.BooleanValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.BooleanValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(((BooleanColumn) column).getBooleanValue());
+      }
+      return builder.setBooleanValue(value).build();
+    }
+    if (column instanceof TextColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.TextValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.TextValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(((TextColumn) column).getTextValue());
+      }
+      return builder.setTextValue(value).build();
+    }
+    if (column instanceof BlobColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.BlobValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.BlobValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(ByteString.copyFrom(((BlobColumn) column).getBlobValueAsBytes()));
+      }
+      return builder.setBlobValue(value).build();
+    }
+    throw new IllegalStateException("Unsupported column type for " + name + ": " + column);
   }
 
   private void closeOverChain(Map<String, CoordinatorBackupRow> committedById) throws Exception {
@@ -421,12 +557,15 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Applies one replayed record state to the (truncated) {@code cbrl_restore} within {@code tx}.
+   * Applies one replayed record state to {@code cbrl_restore} within {@code tx} (read-then-write).
    */
   private void applyToRestore(DistributedTransaction tx, RecordKey key, RecordState state)
       throws Exception {
     Key partitionKey = toIoKey(key.partitionKey());
     Key clusteringKey = key.clusteringKey() == null ? null : toIoKey(key.clusteringKey());
+
+    tx.get(rawGet(key)); // read first so the put/delete is an update, not insert-mode
+
     if (state.present()) {
       PutBuilder.Buildable put =
           Put.newBuilder()

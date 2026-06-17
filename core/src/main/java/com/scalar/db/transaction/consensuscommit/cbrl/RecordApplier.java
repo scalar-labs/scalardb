@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import javax.annotation.Nullable;
 
 /**
  * Pass 2: replays each bucket's redo ops onto the records being restored. A worker owns whole
@@ -113,16 +114,18 @@ public final class RecordApplier {
     Deque<RedoOp> insertQueue = new ArrayDeque<>(insertList);
 
     RecordState.Builder state = current.toBuilder();
+    // Created-at of the last applied op (chain order is created-at-monotonic). After a DELETE we
+    // resume only from an INSERT root that genuinely follows it — never one already reflected in a
+    // mid-chain base (which is the case during windowed repair onto a torn copy).
+    long lastCreatedAtMillis = Long.MIN_VALUE;
     while (true) {
       RedoOp op;
       if (state.currentTxId() == null || state.deleted()) {
-        // Record absent or deleted: the next op must be an INSERT root.
-        op = insertQueue.poll();
+        // Record absent or deleted: resume from the oldest not-yet-applied INSERT root that comes
+        // after the current position.
+        op = nextInsert(insertQueue, lastCreatedAtMillis, state);
         if (op == null) {
           break;
-        }
-        if (state.isInsertApplied(op.txId())) {
-          continue; // Root already applied on a prior run — dedup (idempotency).
         }
       } else {
         // Follow the chain from the record's current version.
@@ -141,7 +144,30 @@ public final class RecordApplier {
         state.applyDelete();
       }
       state.advanceCursor(op.txId());
+      lastCreatedAtMillis = op.createdAtMillis();
     }
     return state.build();
+  }
+
+  /**
+   * The next INSERT root to apply: the oldest one created after {@code lastCreatedAtMillis} (so an
+   * insert already reflected in a mid-chain base is not re-applied) that has not already been
+   * applied (idempotency). Inserts failing either test are discarded — chain order is
+   * created-at-monotonic, so they can never apply on a later iteration.
+   */
+  @Nullable
+  private static RedoOp nextInsert(
+      Deque<RedoOp> insertQueue, long lastCreatedAtMillis, RecordState.Builder state) {
+    while (!insertQueue.isEmpty()) {
+      RedoOp candidate = insertQueue.poll();
+      if (candidate.createdAtMillis() <= lastCreatedAtMillis) {
+        continue; // Predates the current position — already reflected.
+      }
+      if (state.isInsertApplied(candidate.txId())) {
+        continue; // Already applied (idempotent re-run).
+      }
+      return candidate;
+    }
+    return null;
   }
 }
