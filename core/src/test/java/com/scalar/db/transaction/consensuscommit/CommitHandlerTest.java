@@ -650,20 +650,20 @@ public class CommitHandlerTest {
   public void abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted()
       throws CoordinatorException, UnknownTransactionStatusException {
     // Arrange
-    doNothing().when(coordinator).putStateForLazyRecoveryRollback(anyId());
+    doNothing().when(coordinator).forceAbort(anyId());
 
     // Act
     TransactionState result = handler.abortStateForRollback(anyId());
 
     // Assert
-    // The abort delegates to Coordinator#putStateForLazyRecoveryRollback rather than a plain
+    // The abort delegates to Coordinator#forceAbort rather than a plain
     // putState. That method branches on the ID: it writes the parent-ID conflict marker before the
     // full-ID record for a group commit full key (so the abort wins against an in-flight group
     // commit), and falls back to a single putState for a non-group-commit ID. Which branch runs
     // here depends on anyId(): a non-group-commit ID in this base class, a group commit full key in
     // the group commit subclass that overrides anyId().
     assertThat(result).isEqualTo(TransactionState.ABORTED);
-    verify(coordinator).putStateForLazyRecoveryRollback(anyId());
+    verify(coordinator).forceAbort(anyId());
     verify(coordinator, never()).putState(any());
   }
 
@@ -671,9 +671,7 @@ public class CommitHandlerTest {
   public void abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted()
       throws CoordinatorException, UnknownTransactionStatusException {
     // Arrange
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyId());
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyId());
     doReturn(
             Optional.of(
                 new Coordinator.State(
@@ -698,9 +696,7 @@ public class CommitHandlerTest {
     // UnknownTransactionStatusException is thrown, preserving the original conflict as the cause.
 
     // Arrange
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyId());
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyId());
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act Assert
@@ -714,7 +710,7 @@ public class CommitHandlerTest {
   public void abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown()
       throws CoordinatorException {
     // Arrange
-    doThrow(CoordinatorException.class).when(coordinator).putStateForLazyRecoveryRollback(anyId());
+    doThrow(CoordinatorException.class).when(coordinator).forceAbort(anyId());
 
     // Act Assert
     assertThatThrownBy(() -> handler.abortStateForRollback(anyId()))

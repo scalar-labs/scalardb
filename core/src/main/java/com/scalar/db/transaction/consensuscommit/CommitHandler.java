@@ -597,11 +597,11 @@ public class CommitHandler {
    * DistributedTransactionManager.rollback(String)} / {@code abort(String)} path), where only the
    * transaction ID is known.
    *
-   * <p>This delegates to {@link Coordinator#putStateForLazyRecoveryRollback(String)}, which
-   * branches on the given ID: for a group commit full key it uses the same two-step protocol as
-   * lazy recovery, writing the parent-ID conflict marker before the full-ID ABORTED record so the
-   * abort wins against an in-flight normal group commit (which writes the COMMITTED state under the
-   * parent ID); for a non-group-commit ID it just writes the ABORTED record.
+   * <p>This delegates to {@link Coordinator#forceAbort(String)}, which branches on the given ID:
+   * for a group commit full key it uses the same two-step protocol as lazy recovery, writing the
+   * parent-ID conflict marker before the full-ID ABORTED record so the abort wins against an
+   * in-flight normal group commit (which writes the COMMITTED state under the parent ID); for a
+   * non-group-commit ID it just writes the ABORTED record.
    *
    * @param id the transaction ID
    * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
@@ -612,7 +612,7 @@ public class CommitHandler {
   public TransactionState abortStateForRollback(String id)
       throws UnknownTransactionStatusException {
     try {
-      coordinator.putStateForLazyRecoveryRollback(id);
+      coordinator.forceAbort(id);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
       // Resolves the final transaction state after our ABORTED putIfNotExists lost the race, for

@@ -257,7 +257,7 @@ public class RecoveryHandler {
    */
   boolean tryAbortExpiredTransaction(String id) throws CoordinatorException {
     try {
-      coordinator.putStateForLazyRecoveryRollback(id);
+      coordinator.forceAbort(id);
       return true;
     } catch (CoordinatorConflictException e) {
       logger.info(
@@ -314,7 +314,7 @@ public class RecoveryHandler {
     }
 
     try {
-      coordinator.putStateForLazyRecoveryRollback(txId);
+      coordinator.forceAbort(txId);
     } catch (CoordinatorConflictException e) {
       TransactionTableMetadata tableMetadata =
           getTransactionTableMetadata(tableMetadataManager, selection);

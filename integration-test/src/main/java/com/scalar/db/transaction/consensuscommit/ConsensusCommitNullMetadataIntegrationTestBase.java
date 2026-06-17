@@ -723,9 +723,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     // ABORTED coordinator state is written) before returning the result, then rolls the record back
     // in the background. tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
-    verify(coordinator)
-        .putState(
-            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
@@ -955,9 +953,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     // ABORTED coordinator state is written) before returning the result, then rolls the record back
     // in the background. tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
-    verify(coordinator)
-        .putState(
-            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }

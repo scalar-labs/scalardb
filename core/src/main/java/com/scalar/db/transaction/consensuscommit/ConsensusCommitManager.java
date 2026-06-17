@@ -672,10 +672,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       }
     }
 
-    // Perform the Coordinator state cleanup (delete the state row). state.getId() is the parent ID
-    // for group-commit rows because Coordinator#getState(fullChildId) routes through
-    // getStateForGroupCommit() and returns the parent row, so the delete targets the right row in
-    // both single and group cases.
+    // Perform the Coordinator state cleanup (delete the state row). state.getId() is the key the
+    // row actually lives under: the parent ID for a normal group commit, or the full ID for a
+    // single or delayed commit (Coordinator#getState routes a full child ID through
+    // getStateForGroupCommit and returns the resolved row). Coordinator#deleteState handles full
+    // keys internally, so the delete targets the right row in both cases.
     // Coordinator#deleteState is unconditional and benign on a concurrent delete.
     try {
       coordinator.deleteState(state.getId());
