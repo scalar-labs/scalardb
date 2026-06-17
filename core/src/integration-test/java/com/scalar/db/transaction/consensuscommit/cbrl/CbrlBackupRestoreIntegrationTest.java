@@ -68,22 +68,28 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * CBRL backup/restore integration test (spike, §6.1 of the PoC plan): non-pausing backup with
  * <b>windowed repair of a torn copy</b>.
  *
- * <p>A live raw copy of the user tables is taken while the workload commits (the torn base); the
- * coordinator is backed up (self-contained, closed over the chain); PREPARED records in the torn
- * copy are recovered (C4); and the committed redo is replayed <b>forward from each record's
- * torn-copy version</b> onto the copy via the §5 core — not a full rebuild. Each transaction writes
- * a shared {@code token} to {@code table_a[i]} and {@code table_b[i]} (or deletes both), so a
- * consistent image has matching presence and equal tokens per key.
+ * <p><b>Logging is window-scoped</b>: a pre-window base is seeded with redo logging OFF (those
+ * commits carry no redo), then the backup window opens (logging ON) and only in-window commits are
+ * logged. A live raw copy of the user tables is taken while the in-window workload commits (the
+ * torn base); the coordinator is backed up (self-contained, closed over the chain); PREPARED
+ * records in the torn copy are recovered (C4); and the committed redo is replayed <b>forward from
+ * each record's torn-copy version</b> onto the copy via the §5 core — not a full rebuild. Each
+ * transaction writes a shared {@code token} to {@code table_a[i]} and {@code table_b[i]} (or
+ * deletes both), so a consistent image has matching presence and equal tokens per key.
+ *
+ * <p>Because pre-window state is never logged, the torn copy is the <b>only</b> source for it — it
+ * is genuinely <b>load-bearing</b>, not merely an anchor. This is asserted directly:
+ * pre-window-only keys (untouched in the window) have zero redo yet restore to their seeded value,
+ * and mid-chain keys (seeded pre-window, updated once in-window) have redo with <b>no insert
+ * root</b> yet restore correctly — proof the chain anchored on the torn copy. {@link
+ * #tornCopyIsLoadBearing_negativeControl()} restores the same backup <b>without</b> the torn copy
+ * and shows the pre-window data is then unrecoverable.
  *
  * <p>Validated: consistency (the two tables never disagree), correctness (matches an independent
- * reference over the same backup), point-in-time (post-backup tokens absent), idempotency, and that
- * the backup ran without pausing the workload. {@link
+ * reference: the pre-window seed the test recorded, overlaid with the in-window redo),
+ * point-in-time (post-backup tokens absent), idempotency, load-bearing torn copy, and that the
+ * backup ran without pausing the workload. {@link
  * #consistencyCheckDetectsTornImage_negativeControl()} proves the consistency check has teeth.
- *
- * <p>Scope note: logging is full-history (the window gate, R2/R3, is unit-tested in {@code
- * BackupWindowGateTest}, not wired into the commit path), so the torn copy is exercised as the
- * repair base/anchor but is not strictly load-bearing — every key also has redo. Window-scoped
- * logging that makes the torn copy load-bearing is the remaining piece.
  *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
@@ -131,6 +137,16 @@ public class CbrlBackupRestoreIntegrationTest {
           .build();
 
   private static final int RECORD_COUNT = 40;
+  // Key partitions (disjoint, in order) used to exercise and assert the windowed property:
+  //   [0, PRE_WINDOW_ONLY)                       seeded pre-window, never touched in-window —
+  //                                              zero redo, restored from the torn copy alone.
+  //   [PRE_WINDOW_ONLY, MID_CHAIN_END)           seeded pre-window, updated exactly once in-window
+  // —
+  //                                              redo has no insert root, restored via torn-copy
+  //                                              anchor (mid-chain).
+  //   [MID_CHAIN_END, RECORD_COUNT)              the random concurrent in-window workload.
+  private static final int PRE_WINDOW_ONLY_KEYS = 4;
+  private static final int MID_CHAIN_END = PRE_WINDOW_ONLY_KEYS + 4;
   private static final int WORKLOAD_THREADS = 4;
   private static final int DELETE_PERCENTAGE = 30;
   private static final Duration WORKLOAD_WARMUP = Duration.ofMillis(400);
@@ -170,7 +186,9 @@ public class CbrlBackupRestoreIntegrationTest {
     properties.setProperty(
         DatabaseConfig.TRANSACTION_MANAGER, ConsensusCommitConfig.TRANSACTION_MANAGER_NAME);
     properties.setProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, COORDINATOR_NAMESPACE);
-    properties.setProperty(ConsensusCommitConfig.REDO_LOGGING_ENABLED, "true");
+    // Start with redo logging OFF; the test opens the backup window (enables it) explicitly so the
+    // pre-window base is unlogged and the torn copy is load-bearing.
+    properties.setProperty(ConsensusCommitConfig.REDO_LOGGING_ENABLED, "false");
     return properties;
   }
 
@@ -216,6 +234,7 @@ public class CbrlBackupRestoreIntegrationTest {
 
   @BeforeEach
   void beforeEach() throws Exception {
+    manager.disableRedoLogging(); // Clean baseline: the window is closed until a test opens it.
     admin.truncateCoordinatorTables();
     for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
       admin.truncateTable(namespace, TABLE_A);
@@ -223,9 +242,19 @@ public class CbrlBackupRestoreIntegrationTest {
     }
   }
 
-  /** CBRL acceptance test (§6.1): non-pausing backup + windowed repair of a torn copy. */
+  /**
+   * CBRL acceptance test (§6.1): non-pausing backup + windowed repair of a load-bearing torn copy.
+   */
   @Test
   void liveBackup_windowedRepairReconstructsConsistentPointInTimeImage() throws Exception {
+    // Seed a pre-window base with redo logging OFF: these commits carry no redo, so the torn copy
+    // is the only source for this state.
+    Map<Integer, Long> preWindowSeed = seedPreWindowBase();
+
+    // Open the backup window: redo logging ON. Only in-window commits are logged from here.
+    manager.enableRedoLogging();
+
+    // In-window workload on the random partition, concurrent with the torn copy.
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
@@ -233,6 +262,10 @@ public class CbrlBackupRestoreIntegrationTest {
     // Torn physical copy of the user tables WHILE the workload commits — the repair base.
     copyUserTables();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY); // copy falls behind the source
+
+    // Mid-chain keys: exactly one in-window update each, AFTER the copy, so the torn copy holds
+    // their pre-window version and the redo (an UPDATE with no insert root) must anchor on it.
+    Map<Integer, Long> midChainTokens = applyMidChainUpdates();
 
     // Back up the coordinator WHILE live; closed over the chain at backup time (self-contained).
     long commitsBeforeBackup = committedCount.get();
@@ -260,16 +293,52 @@ public class CbrlBackupRestoreIntegrationTest {
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
     assertThat(presentKeyCount()).as("restored some records").isGreaterThan(0);
-    assertThat(findCorrectnessViolations(coordinatorBackup))
+    assertThat(findCorrectnessViolations(coordinatorBackup, preWindowSeed))
         .as("correctness vs reference")
         .isEmpty();
     assertThat(readRestoredTokens().values())
         .as("point-in-time: post-backup tokens excluded")
         .doesNotContainAnyElementsOf(postBackupTokens);
 
+    assertTornCopyLoadBearing(coordinatorBackup, preWindowSeed, midChainTokens);
+
     Map<Integer, Long> image = readRestoredTokens();
     restore(coordinatorBackup);
     assertThat(readRestoredTokens()).as("idempotent restore").isEqualTo(image);
+  }
+
+  /**
+   * Asserts the torn copy is genuinely load-bearing, not just an anchor: pre-window-only keys carry
+   * no redo yet are restored from the copy, and mid-chain keys have redo with no insert root yet
+   * are restored — both impossible without the torn copy supplying the base.
+   */
+  private void assertTornCopyLoadBearing(
+      Map<String, CoordinatorBackupRow> backup,
+      Map<Integer, Long> preWindowSeed,
+      Map<Integer, Long> midChainTokens) {
+    Map<Integer, RedoStat> stats = redoStatsForTableA(backup);
+    Map<Integer, Long> restored = readRestoredTokens();
+
+    for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
+      assertThat(stats.containsKey(i))
+          .as("pre-window-only key %d has no redo in the backup", i)
+          .isFalse();
+      assertThat(restored.get(i))
+          .as("pre-window-only key %d restored from the torn copy alone", i)
+          .isEqualTo(preWindowSeed.get(i));
+    }
+
+    for (int i = PRE_WINDOW_ONLY_KEYS; i < MID_CHAIN_END; i++) {
+      RedoStat stat = stats.get(i);
+      assertThat(stat).as("mid-chain key %d has in-window redo", i).isNotNull();
+      assertThat(stat.count).as("mid-chain key %d in-window redo op count", i).isPositive();
+      assertThat(stat.hasInsertRoot)
+          .as("mid-chain key %d redo has no insert root (its base is pre-window)", i)
+          .isFalse();
+      assertThat(restored.get(i))
+          .as("mid-chain key %d restored via the torn-copy anchor", i)
+          .isEqualTo(midChainTokens.get(i));
+    }
   }
 
   /** Negative control: proves the consistency check detects a torn image. */
@@ -288,18 +357,93 @@ public class CbrlBackupRestoreIntegrationTest {
     assertThat(violations.toString()).contains("key 0").contains("key 1");
   }
 
+  /**
+   * Negative control for the load-bearing claim: restoring the same backup WITHOUT the torn copy
+   * leaves the pre-window-only keys unrecoverable, since they have no redo and no other base.
+   */
+  @Test
+  void tornCopyIsLoadBearing_negativeControl() throws Exception {
+    Map<Integer, Long> seed = seedPreWindowBase(PRE_WINDOW_ONLY_KEYS); // logging still OFF
+
+    // Open the window and do a little in-window work on OTHER keys, so the backup has redo (the
+    // restore path runs) but nothing touches the seeded keys.
+    manager.enableRedoLogging();
+    for (int i = PRE_WINDOW_ONLY_KEYS; i < PRE_WINDOW_ONLY_KEYS + 2; i++) {
+      long token = tokenCounter.incrementAndGet();
+      int key = i;
+      withRetry(
+          tx -> {
+            tx.put(putForTableA(SRC_NAMESPACE, key, token));
+            tx.put(putForTableB(SRC_NAMESPACE, key, token));
+          });
+    }
+
+    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+
+    // Restore WITHOUT taking a torn copy: the restore tables stay empty as the repair base.
+    restore(backup);
+
+    for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
+      assertThat(getWithRetry(getForTableA(RESTORE_NAMESPACE, i)))
+          .as("without the torn copy, pre-window-only key %d is unrecoverable", i)
+          .isEmpty();
+    }
+    assertThat(seed).hasSize(PRE_WINDOW_ONLY_KEYS); // sanity: the keys were in fact seeded
+  }
+
   private List<Future<?>> startWorkload(AtomicBoolean stop) {
     List<Future<?>> futures = new ArrayList<>(WORKLOAD_THREADS);
+    int randomKeyCount = RECORD_COUNT - MID_CHAIN_END;
     for (int t = 0; t < WORKLOAD_THREADS; t++) {
       futures.add(
           workerExecutor.submit(
               () -> {
                 while (!stop.get()) {
-                  mutateOnce(ThreadLocalRandom.current().nextInt(RECORD_COUNT));
+                  // Restricted to the random partition so the pre-window-only and mid-chain keys
+                  // stay untouched in the window.
+                  mutateOnce(MID_CHAIN_END + ThreadLocalRandom.current().nextInt(randomKeyCount));
                 }
               }));
     }
     return futures;
+  }
+
+  /** Seeds all keys with a pre-window base (redo logging OFF). Returns key -> seeded token. */
+  private Map<Integer, Long> seedPreWindowBase() {
+    return seedPreWindowBase(RECORD_COUNT);
+  }
+
+  private Map<Integer, Long> seedPreWindowBase(int keyCount) {
+    Map<Integer, Long> seed = new HashMap<>();
+    for (int i = 0; i < keyCount; i++) {
+      long token = tokenCounter.incrementAndGet();
+      int key = i;
+      seed.put(i, token);
+      withRetry(
+          tx -> {
+            tx.put(putForTableA(SRC_NAMESPACE, key, token));
+            tx.put(putForTableB(SRC_NAMESPACE, key, token));
+          });
+    }
+    return seed;
+  }
+
+  /** One in-window UPDATE per mid-chain key (read-then-put). Returns key -> in-window token. */
+  private Map<Integer, Long> applyMidChainUpdates() {
+    Map<Integer, Long> tokens = new HashMap<>();
+    for (int i = PRE_WINDOW_ONLY_KEYS; i < MID_CHAIN_END; i++) {
+      long token = tokenCounter.incrementAndGet();
+      int key = i;
+      tokens.put(i, token);
+      withRetry(
+          tx -> {
+            tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links to the seed
+            tx.get(getForTableB(SRC_NAMESPACE, key));
+            tx.put(putForTableA(SRC_NAMESPACE, key, token));
+            tx.put(putForTableB(SRC_NAMESPACE, key, token));
+          });
+    }
+    return tokens;
   }
 
   /** One transaction that atomically writes a shared token to both tables, or deletes both. */
@@ -403,6 +547,11 @@ public class CbrlBackupRestoreIntegrationTest {
               "Group-commit child ids are not handled in this PoC restore");
         }
         for (Entry entry : group.getEntriesList()) {
+          if (!entry.hasTxVersion()) {
+            // Key-only write set from outside the backup window (logging was off): not redo. The
+            // torn copy carries that state instead.
+            continue;
+          }
           redoOps.add(new RedoOp(row.txId, row.createdAtMillis, entry));
         }
       }
@@ -690,8 +839,9 @@ public class CbrlBackupRestoreIntegrationTest {
     return tokens;
   }
 
-  private List<String> findCorrectnessViolations(Map<String, CoordinatorBackupRow> backup) {
-    Map<Integer, Long> expected = expectedTableATokens(backup);
+  private List<String> findCorrectnessViolations(
+      Map<String, CoordinatorBackupRow> backup, Map<Integer, Long> preWindowSeed) {
+    Map<Integer, Long> expected = expectedTableATokens(backup, preWindowSeed);
     List<String> violations = new ArrayList<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
       Optional<Result> a = getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
@@ -711,14 +861,21 @@ public class CbrlBackupRestoreIntegrationTest {
     return violations;
   }
 
-  private Map<Integer, Long> expectedTableATokens(Map<String, CoordinatorBackupRow> backup) {
+  /**
+   * Independent reference for {@code table_a}: the pre-window seed the test recorded (the base the
+   * torn copy must carry), overlaid with the in-window redo applied in commit order. Deliberately
+   * derived from the test's own ground truth plus the backup's redo entries — not from the restore
+   * path — so a bug in the applier cannot hide.
+   */
+  private Map<Integer, Long> expectedTableATokens(
+      Map<String, CoordinatorBackupRow> backup, Map<Integer, Long> preWindowSeed) {
     Map<Integer, Long> latestCreatedAt = new HashMap<>();
-    Map<Integer, Long> token = new HashMap<>();
+    Map<Integer, Long> token = new HashMap<>(preWindowSeed); // base: the unlogged pre-window state
     for (CoordinatorBackupRow row : backup.values()) {
       for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
         for (Entry entry : group.getEntriesList()) {
-          if (!entry.getTableName().equals(TABLE_A)) {
-            continue;
+          if (!entry.hasTxVersion() || !entry.getTableName().equals(TABLE_A)) {
+            continue; // Only in-window redo entries (logged) overlay the seed.
           }
           int pk = entry.getPartitionKey().getColumns(0).getIntValue().getValue();
           Long prev = latestCreatedAt.get(pk);
@@ -735,6 +892,32 @@ public class CbrlBackupRestoreIntegrationTest {
       }
     }
     return token;
+  }
+
+  /** Per-key redo summary for {@code table_a} computed from the backup (in-window entries only). */
+  private static final class RedoStat {
+    private int count;
+    private boolean hasInsertRoot;
+  }
+
+  private Map<Integer, RedoStat> redoStatsForTableA(Map<String, CoordinatorBackupRow> backup) {
+    Map<Integer, RedoStat> stats = new HashMap<>();
+    for (CoordinatorBackupRow row : backup.values()) {
+      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+        for (Entry entry : group.getEntriesList()) {
+          if (!entry.hasTxVersion() || !entry.getTableName().equals(TABLE_A)) {
+            continue;
+          }
+          int pk = entry.getPartitionKey().getColumns(0).getIntValue().getValue();
+          RedoStat stat = stats.computeIfAbsent(pk, k -> new RedoStat());
+          stat.count++;
+          if (entry.getEntryType() == Entry.EntryType.ENTRY_TYPE_WRITE && !entry.hasPrevTxId()) {
+            stat.hasInsertRoot = true;
+          }
+        }
+      }
+    }
+    return stats;
   }
 
   private static long tokenOf(Entry entry) {

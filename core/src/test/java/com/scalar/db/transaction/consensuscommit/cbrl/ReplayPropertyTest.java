@@ -1,7 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.cbrl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
@@ -100,17 +99,26 @@ class ReplayPropertyTest {
     assertThat(second).as("completed buckets are skipped on re-apply").isEmpty();
   }
 
-  /** P3: dropping a mid-chain op makes the next op dangle — replay must fail loud, naming it. */
+  /**
+   * P3 (connectivity): a dropped mid-chain op leaves its successor unreachable. Like SSR, replay
+   * tolerates it — the unreachable op is skipped, not applied, and no exception is thrown. Under
+   * window-scoped logging an op dangling off an uncaptured (pre-window or deleted) version is
+   * legitimate and indistinguishable from a true drop, so completeness is the backup capture's job,
+   * not this primitive's.
+   */
   @Test
-  void p3_connectivity_droppedMidChainOpFailsLoud() {
-    // INSERT t0 -> UPDATE t1(prev t0) -> UPDATE t2(prev t1). Drop t1 so t2 dangles.
+  void p3_connectivity_unreachableOpIsSkipped() {
+    // INSERT t0 -> UPDATE t1(prev t0) -> UPDATE t2(prev t1). Drop t1 so t2 dangles off t1.
     RedoOp t0 = new RedoOp("t0", 1, write(0, null, 10));
     RedoOp t2 = new RedoOp("t2", 3, write(0, "t1", 30));
     List<RedoOp> withGap = new ArrayList<>(ImmutableList.of(t0, t2));
 
-    assertThatThrownBy(() -> new RecordApplier(ABSENT).replayKey(t0.key(), withGap))
-        .isInstanceOf(CbrlReplayException.class)
-        .hasMessageContaining("t1");
+    RecordState result = new RecordApplier(ABSENT).replayKey(t0.key(), withGap);
+
+    assertThat(result.present()).isTrue();
+    assertThat(result.columns().get(RedoLogGenerator.COL_V).getIntValue().getValue())
+        .as("the unreachable successor is skipped, leaving the reachable prefix")
+        .isEqualTo(10);
   }
 
   /** P4: every op of a given key maps to exactly one bucket, for any bucket count. */

@@ -92,6 +92,42 @@ class ReplayCoreTest {
   }
 
   @Test
+  void windowScopedRedo_danglingRootBelowBase_tolerated() {
+    // Windowed repair: the torn-copy base is at an in-window version "v1", and the op that produced
+    // it links to a pre-window (unlogged) root the backup never captured. That op is unreachable
+    // from the base and must be tolerated — left unapplied — not rejected as a broken chain.
+    RecordState base = present("v1", ImmutableMap.of(COL_V, 5, COL_W, 9));
+    List<RedoOp> ops =
+        ImmutableList.of(
+            op(
+                "v1",
+                10,
+                write("preWindowRoot", ImmutableMap.of(COL_V, 5))), // dangling: prev unlogged
+            op("v2", 11, write("v1", ImmutableMap.of(COL_V, 6)))); // chains forward off the base
+    RecordState result = new RecordApplier(k -> base).replayKey(key(), ops);
+    assertThat(result.present()).isTrue();
+    assertThat(intOf(result, COL_V)).isEqualTo(6); // forward update applied
+    assertThat(intOf(result, COL_W)).isEqualTo(9); // carried from the torn-copy base
+  }
+
+  @Test
+  void midChainAnchor_deleteThenReinsert_skipsStaleInsertRoot() {
+    // Repair anchored mid-chain on a torn-copy base "I0". After the delete, replay must resume from
+    // the re-insert that follows it — never the original insert root, whose created-at predates the
+    // delete (it is already reflected in the base). This is the created-at skip the windowed repair
+    // depends on; without it the stale root is re-applied and the record reverts.
+    RecordState base = present("I0", ImmutableMap.of(COL_V, 1));
+    List<RedoOp> ops =
+        ImmutableList.of(
+            op("I0", 1, write(null, ImmutableMap.of(COL_V, 1))), // original (stale) insert root
+            op("d1", 10, delete("I0")),
+            op("I2", 11, write(null, ImmutableMap.of(COL_V, 7)))); // re-insert after the delete
+    RecordState result = new RecordApplier(k -> base).replayKey(key(), ops);
+    assertThat(result.present()).isTrue();
+    assertThat(intOf(result, COL_V)).isEqualTo(7); // the re-insert, not the stale root's 1
+  }
+
+  @Test
   void reorderedInput_sameResult() {
     RedoOp a = op("t0", 1, write(null, ImmutableMap.of(COL_V, 1, COL_W, 2)));
     RedoOp b = op("t1", 2, write("t0", ImmutableMap.of(COL_V, 3)));

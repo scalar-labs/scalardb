@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
  */
 public final class RecordApplier {
   private final RestoredRecordReader reader;
-  private final IntegrityChecker integrityChecker = new IntegrityChecker();
   // Per-bucket completion, so a crashed re-run skips done buckets (idempotency requirement). The
   // primitive is itself idempotent, so re-running a bucket is also safe; this just avoids the work.
   private final Set<Integer> completedBuckets = ConcurrentHashMap.newKeySet();
@@ -81,12 +80,26 @@ public final class RecordApplier {
 
   /**
    * The replay primitive (PoC plan §5). Given the key's current state in the database being
-   * restored and that key's ops, follows the {@code prevTxId -> txId} chain to the final state.
-   * Order- and input-independent within a key, and idempotent.
+   * restored and that key's ops, follows the {@code prevTxId -> txId} chain forward from the
+   * record's current version to the final state. Order- and input-independent within a key, and
+   * idempotent.
+   *
+   * <p>An op that does not connect to the chain reachable forward from the current version is left
+   * unapplied, mirroring SSR's {@code findWriteOperationsToApply} (which keeps such ops as {@code
+   * remainingWriteOperations} rather than rejecting them). This is what makes <b>windowed
+   * repair</b> work: under window-scoped logging a record's chain root predates the logging window
+   * and is never captured, so the first in-window op links to a {@code prev_tx_id} that is neither
+   * another op nor — once the torn-copy base has advanced past it — the current version. That op
+   * sits below the base, whose state already reflects it, and is correctly skipped. The torn copy
+   * may also have captured a deleted or arbitrarily-advanced version, which carries no position
+   * information, so — like SSR — replay does not try to tell a legitimately-below op apart from a
+   * genuinely dropped mid-chain op; completeness is the backup capture's responsibility (full
+   * coordinator scan + chain closure), not this primitive's. The one structural anomaly still
+   * rejected is a fork (two ops sharing a {@code prev_tx_id}), which serializable commit cannot
+   * produce.
    */
   RecordState replayKey(RecordKey key, List<RedoOp> ops) {
     RecordState current = reader.get(key);
-    integrityChecker.check(key, ops, current);
 
     // divideWriteOperations: INSERT roots vs the prevTxId-keyed chain of UPDATE/DELETE ops.
     List<RedoOp> insertList = new ArrayList<>();
@@ -146,6 +159,8 @@ public final class RecordApplier {
       state.advanceCursor(op.txId());
       lastCreatedAtMillis = op.createdAtMillis();
     }
+    // Ops left in nonInsertOps were never reached (window-boundary or below-base links). They are
+    // tolerated, as in SSR — see the method comment.
     return state.build();
   }
 
