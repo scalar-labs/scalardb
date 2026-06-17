@@ -200,7 +200,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
           new State(
               fullId,
               writeSetEncoder.encodeSingleGroupWriteSet(context, false),
-              TransactionState.COMMITTED));
+              TransactionState.COMMITTED,
+              System.currentTimeMillis()));
 
       logger.debug(
           "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());

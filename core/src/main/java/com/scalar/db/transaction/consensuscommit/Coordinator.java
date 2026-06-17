@@ -206,7 +206,7 @@ public class Coordinator {
       return;
     }
 
-    putState(new Coordinator.State(id, TransactionState.ABORTED));
+    putState(new Coordinator.State(id, TransactionState.ABORTED, System.currentTimeMillis()));
   }
 
   private void putStateForLazyRecoveryRollbackForGroupCommit(String id)
@@ -311,7 +311,7 @@ public class Coordinator {
     }
 
     // This record is to intend the transaction is aborted.
-    putState(new Coordinator.State(id, TransactionState.ABORTED));
+    putState(new Coordinator.State(id, TransactionState.ABORTED, System.currentTimeMillis()));
   }
 
   @VisibleForTesting
@@ -463,29 +463,16 @@ public class Coordinator {
       createdAt = result.getBigInt(Attribute.CREATED_AT);
     }
 
-    public State(String id, TransactionState state) {
-      this(id, state, System.currentTimeMillis());
-    }
-
-    public State(String id, List<String> childIds, TransactionState state) {
-      this(id, childIds, null, state, System.currentTimeMillis());
-    }
-
-    public State(String id, @Nullable WriteSet writeSet, TransactionState state) {
-      this(id, EMPTY_CHILD_IDS, writeSet, state, System.currentTimeMillis());
-    }
-
-    @VisibleForTesting
-    State(String id, TransactionState state, long createdAt) {
+    public State(String id, TransactionState state, long createdAt) {
       this(id, EMPTY_CHILD_IDS, null, state, createdAt);
     }
 
-    @VisibleForTesting
-    State(String id, List<String> childIds, TransactionState state, long createdAt) {
-      this(id, childIds, null, state, createdAt);
+    public State(String id, @Nullable WriteSet writeSet, TransactionState state, long createdAt) {
+      this(id, EMPTY_CHILD_IDS, writeSet, state, createdAt);
     }
 
-    private State(
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
+    public State(
         String id,
         List<String> childIds,
         @Nullable WriteSet writeSet,
@@ -558,17 +545,16 @@ public class Coordinator {
         return false;
       }
       State other = (State) o;
-      // NOTICE: createdAt is not taken into account
       return Objects.equals(id, other.id)
           && Objects.equals(childIds, other.childIds)
           && Objects.equals(writeSet, other.writeSet)
-          && state == other.state;
+          && state == other.state
+          && createdAt == other.createdAt;
     }
 
     @Override
     public int hashCode() {
-      // NOTICE: createdAt is not taken into account
-      return Objects.hash(id, childIds, writeSet, state);
+      return Objects.hash(id, childIds, writeSet, state, createdAt);
     }
 
     @Nullable

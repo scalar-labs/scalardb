@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -61,7 +62,6 @@ public class CoordinatorTest {
   @Mock private DistributedStorage storage;
   @Mock private ConsensusCommitConfig config;
   private Coordinator coordinator;
-  @Captor private ArgumentCaptor<State> stateArgumentCaptor;
   @Captor private ArgumentCaptor<Get> getArgumentCaptor;
 
   @BeforeEach
@@ -767,7 +767,7 @@ public class CoordinatorTest {
     spiedCoordinator.putStateForLazyRecoveryRollback(ANY_ID_1);
 
     // Assert
-    verify(spiedCoordinator).putState(new State(ANY_ID_1, TransactionState.ABORTED));
+    verify(spiedCoordinator).putState(argThat(stateMatcher(ANY_ID_1, TransactionState.ABORTED)));
   }
 
   @Test
@@ -793,7 +793,9 @@ public class CoordinatorTest {
         .verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    inOrder
+        .verify(spiedCoordinator)
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
@@ -815,6 +817,7 @@ public class CoordinatorTest {
                 new State(
                     parentId,
                     Collections.singletonList(ANY_ID_1),
+                    null,
                     TransactionState.COMMITTED,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
@@ -828,7 +831,8 @@ public class CoordinatorTest {
     verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+    verify(spiedCoordinator, never())
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
@@ -850,6 +854,7 @@ public class CoordinatorTest {
                 new State(
                     parentId,
                     Collections.singletonList(ANY_ID_1),
+                    null,
                     TransactionState.ABORTED,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
@@ -862,7 +867,8 @@ public class CoordinatorTest {
     verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+    verify(spiedCoordinator, never())
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @ParameterizedTest
@@ -887,6 +893,7 @@ public class CoordinatorTest {
                 new State(
                     parentId,
                     Collections.singletonList("other-id"),
+                    null,
                     transactionState,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
@@ -903,7 +910,9 @@ public class CoordinatorTest {
         .verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    inOrder
+        .verify(spiedCoordinator)
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @ParameterizedTest
@@ -928,13 +937,14 @@ public class CoordinatorTest {
                 new State(
                     parentId,
                     Collections.singletonList("other-id"),
+                    null,
                     transactionState,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
         .getState(parentId);
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putState(new State(fullId, TransactionState.ABORTED));
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
 
     // Act
     assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
@@ -948,7 +958,9 @@ public class CoordinatorTest {
         .verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    inOrder
+        .verify(spiedCoordinator)
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
@@ -979,7 +991,7 @@ public class CoordinatorTest {
     verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    verify(spiedCoordinator).putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
@@ -1004,7 +1016,7 @@ public class CoordinatorTest {
     doReturn(Optional.empty()).when(spiedCoordinator).getState(parentId);
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putState(new State(fullId, TransactionState.ABORTED));
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
 
     // Act
     assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
@@ -1014,7 +1026,7 @@ public class CoordinatorTest {
     verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    verify(spiedCoordinator).putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
@@ -1039,7 +1051,9 @@ public class CoordinatorTest {
             .setSchemaVersion(1)
             .addEntryGroups(EntryGroup.newBuilder().addEntries(writeEntry))
             .build();
-    State state = new State(ANY_ID_1, originalWriteSet, TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_ID_1, originalWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Serialize via createPutWith
     Put put = coordinator.createPutWith(state);
@@ -1066,7 +1080,7 @@ public class CoordinatorTest {
   @Test
   public void state_NullWriteSet_ShouldNotPersistColumn() {
     // Arrange — State with null writeSet (lazy-recovery abort, etc.)
-    State state = new State(ANY_ID_1, TransactionState.ABORTED);
+    State state = new State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
 
     // Act
     Put put = coordinator.createPutWith(state);
@@ -1081,7 +1095,8 @@ public class CoordinatorTest {
     List<String> childIds = Arrays.asList("child-1", "child-2");
 
     // Act
-    State state = new State(ANY_ID_1, childIds, TransactionState.COMMITTED);
+    State state =
+        new State(ANY_ID_1, childIds, null, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Assert
     assertThat(state.getId()).isEqualTo(ANY_ID_1);
@@ -1097,7 +1112,8 @@ public class CoordinatorTest {
     // schema_version, mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for
     // read-only commits.
     WriteSet emptyWriteSet = WriteSet.newBuilder().setSchemaVersion(1).build();
-    State state = new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED);
+    State state =
+        new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Serialize
     Put put = coordinator.createPutWith(state);
@@ -1145,16 +1161,57 @@ public class CoordinatorTest {
             .setSchemaVersion(1)
             .addEntryGroups(EntryGroup.newBuilder().setChildId("child-1"))
             .build();
-    State stateWithNullWriteSet = new State(ANY_ID_1, TransactionState.COMMITTED);
-    State stateWithWriteSet1 = new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED);
-    State stateWithWriteSet1Again = new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED);
-    State stateWithWriteSet2 = new State(ANY_ID_1, writeSet2, TransactionState.COMMITTED);
+    long createdAt = System.currentTimeMillis();
+    State stateWithNullWriteSet = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);
+    State stateWithWriteSet1 =
+        new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED, createdAt);
+    State stateWithWriteSet1Again =
+        new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED, createdAt);
+    State stateWithWriteSet2 =
+        new State(ANY_ID_1, writeSet2, TransactionState.COMMITTED, createdAt);
 
     // Assert
     assertThat(stateWithNullWriteSet).isNotEqualTo(stateWithWriteSet1);
     assertThat(stateWithWriteSet1).isNotEqualTo(stateWithWriteSet2);
     assertThat(stateWithWriteSet1).isEqualTo(stateWithWriteSet1Again);
     assertThat(stateWithWriteSet1.hashCode()).isEqualTo(stateWithWriteSet1Again.hashCode());
+  }
+
+  @Test
+  public void state_EqualityWithDifferentCreatedAt_ShouldNotBeEqual() {
+    // Arrange — same id, childIds, writeSet, state but different createdAt
+    State s1 = new State(ANY_ID_1, TransactionState.COMMITTED, 100L);
+    State s2 = new State(ANY_ID_1, TransactionState.COMMITTED, 200L);
+
+    // Assert — createdAt is part of equality
+    assertThat(s1).isNotEqualTo(s2);
+    assertThat(s1.hashCode()).isNotEqualTo(s2.hashCode());
+  }
+
+  @Test
+  public void state_EqualityWithSameCreatedAt_ShouldBeEqual() {
+    // Arrange — same fields including createdAt
+    long createdAt = 12345L;
+    State s1 = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);
+    State s2 = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);
+
+    // Assert
+    assertThat(s1).isEqualTo(s2);
+    assertThat(s1.hashCode()).isEqualTo(s2.hashCode());
+  }
+
+  @Test
+  public void newState_ChildIdContainingDelimiterGiven_ShouldThrowIllegalArgumentException() {
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                new Coordinator.State(
+                    ANY_ID_1,
+                    Collections.singletonList("child" + "," + "id"),
+                    null,
+                    TransactionState.COMMITTED,
+                    ANY_TIME_1))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -1207,5 +1264,15 @@ public class CoordinatorTest {
     assertThatThrownBy(() -> coordinator.deleteState(ANY_ID_1))
         .isInstanceOf(CoordinatorException.class)
         .hasCauseInstanceOf(ExecutionException.class);
+  }
+
+  /**
+   * Mockito matcher that compares Coordinator.State by id and TransactionState only — ignoring
+   * createdAt. Used to verify putState calls without relying on the production code's wall-clock
+   * timestamp.
+   */
+  private static org.mockito.ArgumentMatcher<State> stateMatcher(
+      String id, TransactionState state) {
+    return actual -> actual != null && id.equals(actual.getId()) && actual.getState() == state;
   }
 }
