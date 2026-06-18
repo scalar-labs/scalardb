@@ -98,11 +98,12 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  *
  * <p>Validated: consistency (the two tables never disagree), correctness (matches an independent
  * reference: the pre-window seed the test recorded, overlaid with the in-window redo),
- * point-in-time (post-backup tokens absent), idempotency, load-bearing copy, the
- * backup-window-start ≤ copy precondition (an alignment key whose copied version is itself an
- * in-window version, repaired forward to the consistency point), and that the backup ran without
- * pausing the workload. {@link #consistencyCheckDetectsInconsistentImage_negativeControl()} proves
- * the consistency check has teeth.
+ * point-in-time (post-backup tokens absent), idempotency, load-bearing copy, partial-column updates
+ * (untouched columns carried forward, not nulled), the backup-window-start ≤ copy precondition (an
+ * alignment key whose copied version is itself an in-window version, repaired forward to the
+ * consistency point), and that the backup ran without pausing the workload. {@link
+ * #consistencyCheckDetectsInconsistentImage_negativeControl()} proves the consistency check has
+ * teeth.
  *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
@@ -488,6 +489,112 @@ public class CbrlBackupRestoreIntegrationTest {
           .isEmpty();
     }
     assertThat(seed).hasSize(PRE_WINDOW_ONLY_KEYS); // sanity: the keys were in fact seeded
+  }
+
+  /**
+   * Partial-column coverage: a transaction that writes only SOME columns of a key logs a partial
+   * after-image (just those columns — confirmed against the backup), and restore must MERGE it onto
+   * the copied version, carrying the untouched columns forward rather than overwriting them with
+   * nulls. {@code ReplayCoreTest.partialColumnMerge} covers the merge on synthetic input; this
+   * proves a real partial {@code Put} produces a partial redo entry and the end-to-end merge holds.
+   */
+  @Test
+  void partialColumnUpdate_mergesUnchangedColumnsForward() throws Exception {
+    int key = 0;
+
+    // Seed a full row pre-window (logging off); capture its non-token columns to assert
+    // carry-forward.
+    long seedToken = tokenCounter.incrementAndGet();
+    withRetry(
+        tx -> {
+          tx.put(putForTableA(SRC_NAMESPACE, key, seedToken));
+          tx.put(putForTableB(SRC_NAMESPACE, key, seedToken));
+        });
+    Result seedA =
+        storage.get(getForTableA(SRC_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+    int seedInt = seedA.getInt(A_INT);
+    String seedText = seedA.getText(A_TEXT);
+    boolean seedBool = seedA.getBoolean(A_BOOL);
+    byte[] seedBlob = seedA.getBlobAsBytes(A_BLOB);
+    String seedTextB =
+        storage
+            .get(getForTableB(SRC_NAMESPACE, key))
+            .orElseThrow(IllegalStateException::new)
+            .getText(B_TEXT);
+
+    // Open the window, copy the full seed, then a PARTIAL in-window update: only the token column.
+    manager.enableRedoLogging();
+    copyUserTables();
+    long newToken = tokenCounter.incrementAndGet();
+    withRetry(
+        tx -> {
+          tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links to the seed
+          tx.get(getForTableB(SRC_NAMESPACE, key));
+          tx.put(tokenOnlyPutForTableA(SRC_NAMESPACE, key, newToken));
+          tx.put(tokenOnlyPutForTableB(SRC_NAMESPACE, key, newToken));
+        });
+
+    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    assertThat(loggedColumnNamesForTableA(backup, key))
+        .as("the partial put logs only the changed column, not the whole row")
+        .containsExactly(A_TOKEN);
+
+    restore(backup);
+
+    Result restoredA =
+        getWithRetry(getForTableA(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+    assertThat(restoredA.getBigInt(A_TOKEN)).as("token updated").isEqualTo(newToken);
+    assertThat(restoredA.getInt(A_INT)).as("int carried forward").isEqualTo(seedInt);
+    assertThat(restoredA.getText(A_TEXT)).as("text carried forward").isEqualTo(seedText);
+    assertThat(restoredA.getBoolean(A_BOOL)).as("bool carried forward").isEqualTo(seedBool);
+    assertThat(restoredA.getBlobAsBytes(A_BLOB)).as("blob carried forward").isEqualTo(seedBlob);
+
+    Result restoredB =
+        getWithRetry(getForTableB(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+    assertThat(restoredB.getBigInt(B_TOKEN)).as("token_b updated").isEqualTo(newToken);
+    assertThat(restoredB.getText(B_TEXT)).as("text_b carried forward").isEqualTo(seedTextB);
+  }
+
+  private Put tokenOnlyPutForTableA(String namespace, int i, long token) {
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE_A)
+        .partitionKey(Key.ofInt(A_PK, i))
+        .bigIntValue(A_TOKEN, token)
+        .build();
+  }
+
+  private Put tokenOnlyPutForTableB(String namespace, int i, long token) {
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE_B)
+        .partitionKey(Key.ofInt(B_PK, i))
+        .clusteringKey(Key.ofInt(B_CK, i))
+        .bigIntValue(B_TOKEN, token)
+        .build();
+  }
+
+  /** User-column names logged in the backup's redo entries for table_a + the given key. */
+  private static List<String> loggedColumnNamesForTableA(
+      Map<String, CoordinatorBackupRow> backup, int key) {
+    List<String> names = new ArrayList<>();
+    for (CoordinatorBackupRow row : backup.values()) {
+      if (row.writeSet == null) {
+        continue;
+      }
+      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+        for (Entry entry : group.getEntriesList()) {
+          if (entry.getTableName().equals(TABLE_A)
+              && entry.getPartitionKey().getColumns(0).getIntValue().getValue() == key) {
+            for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
+                entry.getColumnsList()) {
+              names.add(column.getName());
+            }
+          }
+        }
+      }
+    }
+    return names;
   }
 
   /**
