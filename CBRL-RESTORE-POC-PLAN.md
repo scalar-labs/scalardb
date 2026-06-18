@@ -202,9 +202,9 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
 ### 4.5 `RestoredRecordReader` (seam for C4: PREPARED-record recovery)
 - `RecordState get(RecordKey)` → the key's current `RecordState` in the **database being
   restored** (the loaded primary backup image) — the replay cursor's origin and merge target,
-  one state per key. PoC supplies synthetic states; in production this read happens **after**
-  PREPARED records are resolved via the consistency point + `before_*` (concern #4a — recovered baseline). Seam only, not implemented
-  in the spike.
+  one state per key. The §6.2 unit tests supply states directly; the §6.1 IT supplies the **real
+  recovered copy** state (`readCopyState`), read **after** the copy's PREPARED records are resolved
+  against the reloaded backup coordinator + `before_*` (concern #4a — recovered baseline; see §6.1).
 - "Restored" is load-bearing: this reads the *user-table* record in the DB being restored — not
   the *coordinator* rows that the redo-op stream is read from (the Q1 read-path decision), and not core's
   `consensuscommit.Snapshot`. Both of those are also "reading records"; the name must not blur
@@ -515,9 +515,9 @@ remain open.
 
   The shipped design — derive the writing-txn id from the coordinator row id + `EntryGroup.child_id` rather than a per-`Entry` `tx_id` field — is sound; only §7's wording is stale. The real design question it gestures at (group-commit child-id chain-linking) is the item below.
 
-- **Group-commit child-id chain-linking + no IT coverage** — restore core / §6.1 (design/impl + IT test, P1)
+- ✅ **RESOLVED — Group-commit child-id chain-linking + IT coverage** — restore core / §6.1 (design/impl + IT test, P1)
 
-  Restore throws `UnsupportedOperationException` on `EntryGroup` child ids, and the IT never enables group commit. A group-commit child's full tx id = parent coordinator row id + `EntryGroup.child_id`; replay must build `RedoOp`s with that full id so they match the `prev_tx_id` other ops chain to (the bare parent id never matches → broken chain). Implement the child-id derivation in the redo→`RedoOp` explosion and add a group-commit IT scenario (including a delete→re-insert spread across a group row).
+  *Resolved 2026-06-18:* the redo→`RedoOp` explosion previously threw `UnsupportedOperationException` on `EntryGroup` child ids, and no IT exercised group commit. The explosion now derives the writing transaction's **full id** — `keyManipulator.fullKey(parentRowId, childId)` for a normal group-commit child (row keyed by the parent, `child_id` set), else the row key itself (non-group-commit, or a delayed group commit keyed by the full id) — so `RedoOp.txId` matches the full id that records store and other ops' `prev_tx_id` chains to. `closeOverChain` resolves a child's full `prev_tx_id` to its parent-keyed coordinator row, and the self-contained reload (#1) preserves a parent row's `child_ids` so recovery can resolve a child. New IT `groupCommit_windowedRepairLinksChainAcrossGroupRows` commits transactions concurrently through a group-commit-enabled manager so they batch into normal groups (parent row + children), updates keys across successive group rows (cross-group chain links), and deletes then re-inserts a key across group rows; it asserts a real group row was captured and that restore matches the reference. The test has teeth: without the full-id derivation the post-`batch1` redo is dropped and the correctness check fails. (Copy taken clean between quiesced batches, isolating chain-linking from in-flight recovery; combining group commit with non-quiescent in-flight recovery — in-doubt group-commit child aborts — is a further step.)
 
 - ✅ **OUT OF SCOPE (process) — milestone sequencing** — §1 / §9 (scope-guardian)
 
@@ -531,9 +531,9 @@ remain open.
 
   2PC's "scope choice vs known gap" framing is a scope/wording question; the underlying limitation (2PC commits log no write-set → invisible to replay) is already an acknowledged out-of-scope gap in §10. Not an open design/impl item for this PoC.
 
-- **C4: PREPARED-record recovery reads the live coordinator, not the backup (self-containment unproven)** — §4.5 / §6.1 (design/impl + IT test, P1)
+- ✅ **RESOLVED — C4: PREPARED-record recovery is now self-contained (recovers against the backup, not the live coordinator)** — §4.5 / §6.1 (design/impl + IT test, P1)
 
-  In the IT, C4: PREPARED-record recovery (`recoverPreparedRecords`) issues transactional gets that trigger ScalarDB's real lazy recovery, which reads the **live** coordinator. A real restore (source DBs + original coordinator gone) must resolve PREPARED records from the **backed-up** coordinator + `before_*` images. So the IT proves replay-onto-a-recovered-base, not self-contained recovery. (§4.5's "synthetic states" wording is also stale — the IT uses real recovery.) Resolve the PREPARED-record recovery against the coordinator backup and test PREPARED resolution with the live coordinator absent.
+  *Resolved 2026-06-18:* the IT previously recovered the copy by reading the **live** coordinator, so it proved only replay-onto-a-recovered-base. The restore now reloads the coordinator **table** from the backup before recovery (`reloadCoordinatorFromBackup`): every backed-up transaction as COMMITTED, and every transaction still PREPARED/DELETED in the copy but absent from the backup as ABORTED — the restore's decision that an in-flight-at-copy transaction which never reached the consistency point is discarded (a fast, faithful stand-in for the hardcoded 15-second `TRANSACTION_LIFETIME_MILLIS` expiry recovery would otherwise wait out). ScalarDB's own recovery then resolves the copy against **that** coordinator, and `awaitCopyRecovered` drives it to quiescence so the raw replay base reads resolved values. The live coordinator — diverged past the consistency point by the post-backup updates — is truncated before recovery, so the restore provably uses only the backup; the existing point-in-time + correctness assertions now carry that stronger meaning. Verified green across two runs (different random schedules).
 
 - ✅ **OUT OF SCOPE (process; gate has run) — viability threshold** — §6.3 / §9 Milestone 2 (scope-guardian)
 

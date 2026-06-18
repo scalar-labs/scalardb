@@ -34,12 +34,14 @@ import com.scalar.db.storage.jdbc.JdbcEnv;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -50,6 +52,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -75,13 +78,15 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * <p><b>Logging is window-scoped</b>: a pre-window base is seeded with redo logging OFF (those
  * commits carry no redo), then the backup window opens (logging ON) and only in-window commits are
  * logged. The non-snapshot-consistent copy of the user tables is taken while the in-window workload
- * commits; the coordinator is backed up (self-contained, closed over the chain); records left
- * in-flight in the copy are recovered (<b>C4: PREPARED-record recovery</b>: resolving records the
- * copy caught mid-commit, in the PREPARED state, to a clean committed-or-absent state before replay
- * anchors on them); and the committed redo is replayed <b>forward from each record's copied
- * version</b> onto the copy via the §5 core — not a full rebuild. Each transaction writes a shared
- * {@code token} to {@code table_a[i]} and {@code table_b[i]} (or deletes both), so a consistent
- * image has matching presence and equal tokens per key.
+ * commits; the coordinator is backed up (self-contained, closed over the chain); at restore the
+ * coordinator table is reloaded from that backup and the copy's in-flight records are recovered
+ * against it (<b>C4: PREPARED-record recovery</b>: resolving records the copy caught mid-commit, in
+ * the PREPARED state, to a clean committed-or-absent state — using the backed-up coordinator, never
+ * the live one, which has diverged past the consistency point — before replay anchors on them); and
+ * the committed redo is replayed <b>forward from each record's copied version</b> onto the copy via
+ * the §5 core — not a full rebuild. Each transaction writes a shared {@code token} to {@code
+ * table_a[i]} and {@code table_b[i]} (or deletes both), so a consistent image has matching presence
+ * and equal tokens per key.
  *
  * <p>Because pre-window state is never logged, the copy is the <b>only</b> source for it — it is
  * genuinely <b>load-bearing</b>, not merely an anchor. This is asserted directly: pre-window-only
@@ -164,6 +169,10 @@ public class CbrlBackupRestoreIntegrationTest {
   private DistributedTransactionManager manager;
   private DistributedTransactionAdmin admin;
   private DistributedStorage storage;
+  private Coordinator coordinator;
+  private DistributedTransactionManager groupCommitManager;
+  private final CoordinatorGroupCommitKeyManipulator keyManipulator =
+      new CoordinatorGroupCommitKeyManipulator();
   private ExecutorService workerExecutor;
   private final AtomicLong tokenCounter = new AtomicLong();
   private final AtomicLong committedCount = new AtomicLong();
@@ -177,13 +186,19 @@ public class CbrlBackupRestoreIntegrationTest {
     private final String txId;
     private final int state;
     private final long createdAtMillis;
+    private final List<String> childIds; // non-empty only for normal group-commit parent rows
     @Nullable private final WriteSet writeSet;
 
     private CoordinatorBackupRow(
-        String txId, int state, long createdAtMillis, @Nullable WriteSet writeSet) {
+        String txId,
+        int state,
+        long createdAtMillis,
+        List<String> childIds,
+        @Nullable WriteSet writeSet) {
       this.txId = txId;
       this.state = state;
       this.createdAtMillis = createdAtMillis;
+      this.childIds = childIds;
       this.writeSet = writeSet;
     }
   }
@@ -199,6 +214,19 @@ public class CbrlBackupRestoreIntegrationTest {
     return properties;
   }
 
+  private Properties groupCommitProperties() {
+    Properties properties = properties();
+    properties.setProperty(ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED, "true");
+    // Give concurrently-committing transactions time to gather into one normal group (a parent row
+    // with multiple children) and keep them out of delayed (full-id-keyed) groups, so the scenario
+    // reliably exercises the child-id chain-linking path.
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS, "200");
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS, "2000");
+    return properties;
+  }
+
   @BeforeAll
   void beforeAll() throws Exception {
     Properties properties = properties();
@@ -206,6 +234,9 @@ public class CbrlBackupRestoreIntegrationTest {
     manager = transactionFactory.getTransactionManager();
     admin = transactionFactory.getTransactionAdmin();
     storage = StorageFactory.create(properties).getStorage();
+    coordinator =
+        new Coordinator(storage, new ConsensusCommitConfig(new DatabaseConfig(properties)));
+    groupCommitManager = TransactionFactory.create(groupCommitProperties()).getTransactionManager();
     workerExecutor = Executors.newFixedThreadPool(WORKLOAD_THREADS);
 
     admin.createCoordinatorTables(true);
@@ -234,6 +265,9 @@ public class CbrlBackupRestoreIntegrationTest {
     if (manager != null) {
       manager.close();
     }
+    if (groupCommitManager != null) {
+      groupCommitManager.close();
+    }
     if (storage != null) {
       storage.close();
     }
@@ -242,6 +276,7 @@ public class CbrlBackupRestoreIntegrationTest {
   @BeforeEach
   void beforeEach() throws Exception {
     manager.disableRedoLogging(); // Clean baseline: the window is closed until a test opens it.
+    groupCommitManager.disableRedoLogging();
     admin.truncateCoordinatorTables();
     for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
       admin.truncateTable(namespace, TABLE_A);
@@ -397,6 +432,121 @@ public class CbrlBackupRestoreIntegrationTest {
     assertThat(seed).hasSize(PRE_WINDOW_ONLY_KEYS); // sanity: the keys were in fact seeded
   }
 
+  /**
+   * Group-commit coverage (P1): restore must link the chain across group-committed transactions. A
+   * child's full id is {@code parent + child_id}, and other ops' {@code prev_tx_id} chains to that
+   * full id, so the redo→{@link RedoOp} explosion must rebuild it (the bare parent id never matches
+   * → broken chain, and the redo after the break is dropped). Several transactions commit
+   * concurrently so they batch into normal groups (a parent coordinator row with children); keys
+   * are updated across successive group rows (cross-group chain links) and one key is deleted in
+   * one group row then re-inserted in the next (delete→re-insert across group rows). The copy is
+   * taken clean (between quiesced batches), so this isolates chain-linking from in-flight recovery
+   * (§6.1's main test covers that).
+   */
+  @Test
+  void groupCommit_windowedRepairLinksChainAcrossGroupRows() throws Exception {
+    int keyCount = WORKLOAD_THREADS; // one transaction per worker, so a batch can form one group
+    int reinsertKey = keyCount - 1;
+    Set<Integer> allKeys = new HashSet<>();
+    for (int i = 0; i < keyCount; i++) {
+      allKeys.add(i);
+    }
+    Set<Integer> exceptReinsert = new HashSet<>(allKeys);
+    exceptReinsert.remove(reinsertKey);
+
+    // Pre-window seed (logging off): the copy is the only source for it.
+    Map<Integer, Long> preWindowSeed = commitGroupBatch(allKeys, Collections.emptySet());
+
+    // Open the backup window, then take the copy BEFORE any in-window write: the copy holds the
+    // group-committed seed versions (full ids), which the in-window chain must anchor on.
+    groupCommitManager.enableRedoLogging();
+    copyUserTables();
+
+    // In-window group batches after the copy: two rounds of updates (cross-group chain links), with
+    // the last key deleted in one group row and re-inserted in the next.
+    commitGroupBatch(allKeys, Collections.emptySet());
+    commitGroupBatch(exceptReinsert, Collections.singleton(reinsertKey)); // delete reinsertKey
+    Map<Integer, Long> lastBatch = commitGroupBatch(allKeys, Collections.emptySet()); // re-insert
+
+    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
+    assertThat(hasGroupCommitChild(coordinatorBackup))
+        .as("a normal group-commit row (parent + child_id) was captured")
+        .isTrue();
+
+    restore(coordinatorBackup);
+
+    assertThat(findConsistencyViolations()).as("consistency").isEmpty();
+    assertThat(presentKeyCount()).as("restored some records").isGreaterThan(0);
+    assertThat(findCorrectnessViolations(coordinatorBackup, preWindowSeed))
+        .as("correctness vs reference")
+        .isEmpty();
+    assertThat(readRestoredTokens().get(reinsertKey))
+        .as("delete→re-insert across group rows restores the re-inserted value")
+        .isEqualTo(lastBatch.get(reinsertKey));
+  }
+
+  /**
+   * Commits one transaction per key concurrently through the group-commit manager so they batch
+   * into a normal group (a parent coordinator row with one child per transaction). Each transaction
+   * reads then writes its key in both tables (a fresh token), or deletes it. Returns key → token
+   * for the written keys.
+   */
+  private Map<Integer, Long> commitGroupBatch(Set<Integer> putKeys, Set<Integer> deleteKeys)
+      throws Exception {
+    Map<Integer, Long> tokens = new HashMap<>();
+    List<Integer> keys = new ArrayList<>(putKeys);
+    keys.addAll(deleteKeys);
+    CountDownLatch ready = new CountDownLatch(keys.size());
+    CountDownLatch go = new CountDownLatch(1);
+    List<Future<?>> futures = new ArrayList<>();
+    for (int key : keys) {
+      boolean delete = deleteKeys.contains(key);
+      long token = delete ? 0 : tokenCounter.incrementAndGet();
+      if (!delete) {
+        tokens.put(key, token);
+      }
+      futures.add(
+          workerExecutor.submit(
+              () -> {
+                ready.countDown();
+                Uninterruptibles.awaitUninterruptibly(go); // release together so they batch
+                withRetry(
+                    groupCommitManager,
+                    tx -> {
+                      tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links
+                      tx.get(getForTableB(SRC_NAMESPACE, key));
+                      if (delete) {
+                        tx.delete(deleteForTableA(SRC_NAMESPACE, key));
+                        tx.delete(deleteForTableB(SRC_NAMESPACE, key));
+                      } else {
+                        tx.put(putForTableA(SRC_NAMESPACE, key, token));
+                        tx.put(putForTableB(SRC_NAMESPACE, key, token));
+                      }
+                    });
+              }));
+    }
+    ready.await();
+    go.countDown();
+    for (Future<?> future : futures) {
+      future.get();
+    }
+    return tokens;
+  }
+
+  private static boolean hasGroupCommitChild(Map<String, CoordinatorBackupRow> backup) {
+    for (CoordinatorBackupRow row : backup.values()) {
+      if (row.writeSet == null) {
+        continue;
+      }
+      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+        if (!group.getChildId().isEmpty()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   private List<Future<?>> startWorkload(AtomicBoolean stop) {
     List<Future<?>> futures = new ArrayList<>(WORKLOAD_THREADS);
     int randomKeyCount = RECORD_COUNT - MID_CHAIN_END;
@@ -531,37 +681,46 @@ public class CbrlBackupRestoreIntegrationTest {
     int state = result.isNull(Attribute.STATE) ? 0 : result.getInt(Attribute.STATE);
     long createdAt =
         result.isNull(Attribute.CREATED_AT) ? 0 : result.getBigInt(Attribute.CREATED_AT);
+    String childIdsStr =
+        result.isNull(Attribute.CHILD_IDS) ? null : result.getText(Attribute.CHILD_IDS);
+    List<String> childIds =
+        (childIdsStr == null || childIdsStr.isEmpty())
+            ? Collections.emptyList()
+            : Arrays.asList(childIdsStr.split(","));
     WriteSet writeSet =
         result.isNull(Attribute.WRITE_SET)
             ? null
             : WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
-    return new CoordinatorBackupRow(txId, state, createdAt, writeSet);
+    return new CoordinatorBackupRow(txId, state, createdAt, childIds, writeSet);
   }
 
   /**
-   * Windowed repair: C4: PREPARED-record recovery — resolve records the copy caught in the PREPARED
-   * state, via ScalarDB's own recovery — then replay the backup's committed redo onto the copy via
-   * the §5 core. Each key's cursor anchors at its copy version, so only the redo after that version
-   * is applied.
+   * Windowed repair: C4: PREPARED-record recovery (self-contained) — resolve the copy's in-flight
+   * records against the BACKED-UP coordinator reloaded into the coordinator table, never the live
+   * one — then replay the backup's committed redo onto the copy via the §5 core. Each key's cursor
+   * anchors at its copy version, so only the redo after that version is applied.
    */
   private void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
-    recoverPreparedRecords(); // C4: PREPARED-record recovery: resolve any PREPARED records in the
-    // copy.
+    recoverCopyAgainstBackupCoordinator(coordinatorBackup);
 
     List<RedoOp> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
       for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
-        if (!group.getChildId().isEmpty()) {
-          throw new UnsupportedOperationException(
-              "Group-commit child ids are not handled in this PoC restore");
-        }
+        // The writing transaction's full id is what records store and what other ops' prev_tx_id
+        // chains to. For a normal group commit the coordinator row is keyed by the parent id and
+        // each child's EntryGroup carries its child_id, so the full id = parent + child. Otherwise
+        // (non-group-commit, or a delayed group commit) the row's key already is the full id.
+        String txId =
+            group.getChildId().isEmpty()
+                ? row.txId
+                : keyManipulator.fullKey(row.txId, group.getChildId());
         for (Entry entry : group.getEntriesList()) {
           if (!entry.hasTxVersion()) {
             // Key-only write set from outside the backup window (logging was off): not redo. The
             // copy carries that state instead.
             continue;
           }
-          redoOps.add(new RedoOp(row.txId, row.createdAtMillis, entry));
+          redoOps.add(new RedoOp(txId, row.createdAtMillis, entry));
         }
       }
     }
@@ -579,13 +738,108 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * C4: PREPARED-record recovery: read every key transactionally so ScalarDB resolves any records
-   * the copy caught in the PREPARED state.
+   * C4: PREPARED-record recovery, self-contained. Reloads the coordinator table from the backup —
+   * the as-of-consistency-point decision set — and recovers the copy's in-flight records against
+   * it, never against the live coordinator (which by now has diverged past the consistency point).
+   * This models a real restore, where the original coordinator is gone and only the backup remains.
    */
-  private void recoverPreparedRecords() {
-    for (int i = 0; i < RECORD_COUNT; i++) {
-      getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
-      getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+  private void recoverCopyAgainstBackupCoordinator(Map<String, CoordinatorBackupRow> backup)
+      throws Exception {
+    reloadCoordinatorFromBackup(backup);
+    awaitCopyRecovered();
+  }
+
+  /**
+   * Truncates the coordinator and reloads it from the backup: every backed-up transaction as
+   * COMMITTED, and every transaction still PREPARED/DELETED in the copy but absent from the backup
+   * as ABORTED. An absent-from-backup in-flight transaction was mid-commit at copy time and never
+   * reached the consistency point, so the restore discards it — a fast, faithful stand-in for the
+   * 15-second transaction-lifetime expiry ScalarDB's recovery would otherwise wait out before
+   * rolling such a record back.
+   */
+  private void reloadCoordinatorFromBackup(Map<String, CoordinatorBackupRow> backup)
+      throws Exception {
+    admin.truncateCoordinatorTables();
+    for (CoordinatorBackupRow row : backup.values()) {
+      // For a normal group-commit parent row, preserve its child ids so recovery can resolve a
+      // child by its full id; the write set is not needed in the reloaded coordinator (the redo is
+      // replayed from the in-memory backup). Non-group rows reload with their write set.
+      Coordinator.State state =
+          row.childIds.isEmpty()
+              ? new Coordinator.State(row.txId, row.writeSet, TransactionState.COMMITTED)
+              : new Coordinator.State(row.txId, row.childIds, TransactionState.COMMITTED);
+      coordinator.putState(state);
+    }
+    for (String txId : inDoubtCopyTxIds(backup.keySet())) {
+      coordinator.putState(new Coordinator.State(txId, TransactionState.ABORTED));
+    }
+  }
+
+  /**
+   * Transaction ids of copy records still in an in-flight state (PREPARED/DELETED) whose
+   * transaction is not in the backup — in flight at copy time and never committed by the
+   * consistency point.
+   */
+  private Set<String> inDoubtCopyTxIds(Set<String> committedInBackup) throws Exception {
+    Set<String> inDoubt = new HashSet<>();
+    for (String table : new String[] {TABLE_A, TABLE_B}) {
+      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+      try (Scanner scanner = storage.scan(scan)) {
+        for (Result result : scanner.all()) {
+          if (result.isNull(Attribute.ID)
+              || result.isNull(Attribute.STATE)
+              || result.getInt(Attribute.STATE) == TransactionState.COMMITTED.get()) {
+            continue;
+          }
+          String txId = result.getText(Attribute.ID);
+          if (!committedInBackup.contains(txId)) {
+            inDoubt.add(txId);
+          }
+        }
+      }
+    }
+    return inDoubt;
+  }
+
+  /**
+   * Drives ScalarDB's recovery by reading every key transactionally, then waits until no copy
+   * record is left in a PREPARED/DELETED state in storage — so the raw-storage replay base reads
+   * resolved values. Recovery is asynchronous and conditional, so it is re-triggered until storage
+   * settles.
+   */
+  private void awaitCopyRecovered() {
+    long deadlineMillis = System.currentTimeMillis() + 15_000;
+    while (true) {
+      for (int i = 0; i < RECORD_COUNT; i++) {
+        getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
+        getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+      }
+      if (!anyInFlightCopyRecord()) {
+        return;
+      }
+      if (System.currentTimeMillis() > deadlineMillis) {
+        throw new IllegalStateException("Copy did not become recovery-quiescent within 15s");
+      }
+      Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
+    }
+  }
+
+  private boolean anyInFlightCopyRecord() {
+    try {
+      for (String table : new String[] {TABLE_A, TABLE_B}) {
+        Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+        try (Scanner scanner = storage.scan(scan)) {
+          for (Result result : scanner.all()) {
+            if (!result.isNull(Attribute.STATE)
+                && result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to scan copy state for recovery quiescence", e);
     }
   }
 
@@ -680,14 +934,20 @@ public class CbrlBackupRestoreIntegrationTest {
     }
     while (!pending.isEmpty()) {
       String prevTxId = pending.poll();
-      if (committedById.containsKey(prevTxId)) {
+      // A prev_tx_id may be a group-commit child's full id, but its coordinator row is keyed by the
+      // parent id; resolve to the row key before looking it up or fetching it.
+      String rowKey =
+          keyManipulator.isFullKey(prevTxId)
+              ? keyManipulator.keysFromFullKey(prevTxId).parentKey
+              : prevTxId;
+      if (committedById.containsKey(rowKey)) {
         continue;
       }
-      CoordinatorBackupRow row = fetchCoordinatorRow(prevTxId);
+      CoordinatorBackupRow row = fetchCoordinatorRow(rowKey);
       if (row == null || row.state != TransactionState.COMMITTED.get() || row.writeSet == null) {
         continue;
       }
-      committedById.put(prevTxId, row);
+      committedById.put(rowKey, row);
       collectPrevTxIds(row, committedById, pending);
     }
   }
@@ -941,11 +1201,15 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   private void withRetry(TxBody body) {
+    withRetry(manager, body);
+  }
+
+  private void withRetry(DistributedTransactionManager mgr, TxBody body) {
     RuntimeException last = null;
     for (int retry = 0; retry < 100; retry++) {
       DistributedTransaction tx = null;
       try {
-        tx = manager.begin();
+        tx = mgr.begin();
         body.run(tx);
         tx.commit();
         return;
