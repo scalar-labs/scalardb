@@ -523,9 +523,11 @@ remain open.
 
   IT-first vs replay-core-first, and where the perf gate sits, is PoC planning/sequencing, not a CBRL design/impl issue. Set aside.
 
-- **Backup-window-start vs copy alignment (R-risk-1), and whether the IT oracle exercises it** — §6.1 (design + IT test, P1)
+- ✅ **RESOLVED — Backup-window-start ≤ copy alignment, deterministically exercised (R-risk-1)** — §6.1 (design + IT test, P1)
 
-  Restore is correct only if the redo covers every key whose copied version differs from its consistency-point value — i.e., the backup window must start no later than the copy point. State this precondition explicitly, and confirm the IT's correctness oracle actually tests it (a key written *between* window-open and the copy, so the copy is a strictly-earlier version repaired forward) rather than passing trivially because the window always opens before the copy.
+  **Precondition (now stated):** restore is correct only if the backup window opens **no later than** the copy point. Replay anchors each key on its copied version and walks the redo forward to the consistency point; every op on that path committed at or after the copy, so it is logged **iff** the window was already open when the copy was taken. If the window opened after the copy, a key whose copied version differs from its consistency-point value would have a gap the redo can't cover.
+
+  *Resolved 2026-06-18:* the IT now exercises this deterministically instead of relying on the random workload. A dedicated **alignment** key partition is seeded pre-window, updated in-window **before** the copy (so the copy captures an in-window version, strictly earlier than the consistency point), and updated again **after** the copy. `assertAlignmentRepairedForward` checks the copied version is exactly that in-window pre-copy version (not the pre-window seed), that its redo carries both updates with no insert root, and that restore repairs it forward to the post-copy value. The assertion has teeth: had the window opened after the copy (copied version unlogged) or the redo not covered the gap, the copied-version or repaired-forward check would fail.
 
 - ✅ **OUT OF SCOPE (scope) — 2PC** — §0 / §10 (coherence)
 

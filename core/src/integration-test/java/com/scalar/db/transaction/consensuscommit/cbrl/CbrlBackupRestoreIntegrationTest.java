@@ -98,10 +98,11 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  *
  * <p>Validated: consistency (the two tables never disagree), correctness (matches an independent
  * reference: the pre-window seed the test recorded, overlaid with the in-window redo),
- * point-in-time (post-backup tokens absent), idempotency, load-bearing copy, and that the backup
- * ran without pausing the workload. {@link
- * #consistencyCheckDetectsInconsistentImage_negativeControl()} proves the consistency check has
- * teeth.
+ * point-in-time (post-backup tokens absent), idempotency, load-bearing copy, the
+ * backup-window-start ≤ copy precondition (an alignment key whose copied version is itself an
+ * in-window version, repaired forward to the consistency point), and that the backup ran without
+ * pausing the workload. {@link #consistencyCheckDetectsInconsistentImage_negativeControl()} proves
+ * the consistency check has teeth.
  *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
@@ -152,13 +153,19 @@ public class CbrlBackupRestoreIntegrationTest {
   // Key partitions (disjoint, in order) used to exercise and assert the windowed property:
   //   [0, PRE_WINDOW_ONLY)                       seeded pre-window, never touched in-window —
   //                                              zero redo, restored from the copy alone.
-  //   [PRE_WINDOW_ONLY, MID_CHAIN_END)           seeded pre-window, updated exactly once in-window
-  // —
-  //                                              redo has no insert root, restored via copy
-  //                                              anchor (mid-chain).
-  //   [MID_CHAIN_END, RECORD_COUNT)              the random concurrent in-window workload.
+  //   [PRE_WINDOW_ONLY, MID_CHAIN_END)           seeded pre-window, updated once in-window AFTER
+  // the
+  //                                              copy — copy holds the pre-window version, redo (an
+  //                                              UPDATE, no insert root) anchors on it (mid-chain).
+  //   [MID_CHAIN_END, ALIGNMENT_END)             seeded pre-window, updated in-window BEFORE the
+  //                                              copy (copy holds that in-window version) and again
+  //                                              AFTER — exercises backup-window-start <= copy: the
+  //                                              copied version is itself logged and repaired
+  //                                              forward to the consistency point.
+  //   [ALIGNMENT_END, RECORD_COUNT)              the random concurrent in-window workload.
   private static final int PRE_WINDOW_ONLY_KEYS = 4;
   private static final int MID_CHAIN_END = PRE_WINDOW_ONLY_KEYS + 4;
+  private static final int ALIGNMENT_END = MID_CHAIN_END + 4;
   private static final int WORKLOAD_THREADS = 4;
   private static final int DELETE_PERCENTAGE = 30;
   private static final Duration WORKLOAD_WARMUP = Duration.ofMillis(400);
@@ -294,6 +301,12 @@ public class CbrlBackupRestoreIntegrationTest {
     // Open the backup window: redo logging ON. Only in-window commits are logged from here.
     manager.enableRedoLogging();
 
+    // Alignment keys: a first in-window update BEFORE the copy, so the copy captures an in-window
+    // version (strictly earlier than the consistency point). This exercises the precondition that
+    // the backup window opens no later than the copy: the copied version is itself logged and the
+    // redo can repair it forward — impossible had the window opened after the copy.
+    Map<Integer, Long> alignmentPreCopy = applyInWindowUpdates(MID_CHAIN_END, ALIGNMENT_END);
+
     // In-window workload on the random partition, concurrent with the copy.
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startWorkload(stop);
@@ -301,11 +314,17 @@ public class CbrlBackupRestoreIntegrationTest {
 
     // Non-snapshot-consistent copy of the user tables, taken WHILE the workload commits — the base.
     copyUserTables();
+    // The alignment keys' copied versions: each must be the in-window pre-copy version.
+    Map<Integer, Long> copyAlignmentTokens = readCopyTokens(MID_CHAIN_END, ALIGNMENT_END);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY); // copy falls behind the source
 
     // Mid-chain keys: exactly one in-window update each, AFTER the copy, so the copy holds
     // their pre-window version and the redo (an UPDATE with no insert root) must anchor on it.
     Map<Integer, Long> midChainTokens = applyMidChainUpdates();
+    // Alignment keys: a second in-window update AFTER the copy, so the copied (in-window) version
+    // is
+    // strictly earlier than the consistency point and must be repaired forward by the redo.
+    Map<Integer, Long> alignmentPostCopy = applyInWindowUpdates(MID_CHAIN_END, ALIGNMENT_END);
 
     // Back up the coordinator WHILE live; closed over the chain at backup time (self-contained).
     long commitsBeforeBackup = committedCount.get();
@@ -342,6 +361,8 @@ public class CbrlBackupRestoreIntegrationTest {
         .doesNotContainAnyElementsOf(postBackupTokens);
 
     assertCopyLoadBearing(coordinatorBackup, preWindowSeed, midChainTokens);
+    assertAlignmentRepairedForward(
+        coordinatorBackup, preWindowSeed, alignmentPreCopy, copyAlignmentTokens, alignmentPostCopy);
 
     Map<Integer, Long> image = readRestoredTokens();
     restore(coordinatorBackup);
@@ -379,6 +400,43 @@ public class CbrlBackupRestoreIntegrationTest {
       assertThat(restored.get(i))
           .as("mid-chain key %d restored via the copy anchor", i)
           .isEqualTo(midChainTokens.get(i));
+    }
+  }
+
+  /**
+   * Asserts the backup-window-start ≤ copy precondition is exercised, not passed trivially: each
+   * alignment key's copied version is an in-window version (written after the window opened but
+   * before the copy), strictly earlier than its consistency-point value, and the redo repairs it
+   * forward. Had the window opened after the copy, the copied version's producing op would be
+   * unlogged and this repair impossible.
+   */
+  private void assertAlignmentRepairedForward(
+      Map<String, CoordinatorBackupRow> backup,
+      Map<Integer, Long> preWindowSeed,
+      Map<Integer, Long> alignmentPreCopy,
+      Map<Integer, Long> copyAlignmentTokens,
+      Map<Integer, Long> alignmentPostCopy) {
+    Map<Integer, RedoStat> stats = redoStatsForTableA(backup);
+    Map<Integer, Long> restored = readRestoredTokens();
+
+    for (int i = MID_CHAIN_END; i < ALIGNMENT_END; i++) {
+      assertThat(copyAlignmentTokens.get(i))
+          .as("alignment key %d: copy holds the in-window pre-copy version", i)
+          .isEqualTo(alignmentPreCopy.get(i));
+      assertThat(alignmentPreCopy.get(i))
+          .as("alignment key %d: the copied version is in-window, not the pre-window seed", i)
+          .isNotEqualTo(preWindowSeed.get(i));
+      RedoStat stat = stats.get(i);
+      assertThat(stat).as("alignment key %d has in-window redo", i).isNotNull();
+      assertThat(stat.count)
+          .as("alignment key %d redo carries both the pre- and post-copy updates", i)
+          .isGreaterThanOrEqualTo(2);
+      assertThat(stat.hasInsertRoot)
+          .as("alignment key %d redo has no insert root (its base is pre-window)", i)
+          .isFalse();
+      assertThat(restored.get(i))
+          .as("alignment key %d repaired forward to the consistency-point value", i)
+          .isEqualTo(alignmentPostCopy.get(i));
     }
   }
 
@@ -549,15 +607,15 @@ public class CbrlBackupRestoreIntegrationTest {
 
   private List<Future<?>> startWorkload(AtomicBoolean stop) {
     List<Future<?>> futures = new ArrayList<>(WORKLOAD_THREADS);
-    int randomKeyCount = RECORD_COUNT - MID_CHAIN_END;
+    int randomKeyCount = RECORD_COUNT - ALIGNMENT_END;
     for (int t = 0; t < WORKLOAD_THREADS; t++) {
       futures.add(
           workerExecutor.submit(
               () -> {
                 while (!stop.get()) {
-                  // Restricted to the random partition so the pre-window-only and mid-chain keys
-                  // stay untouched in the window.
-                  mutateOnce(MID_CHAIN_END + ThreadLocalRandom.current().nextInt(randomKeyCount));
+                  // Restricted to the random partition so the pre-window-only, mid-chain, and
+                  // alignment keys stay untouched by the workload.
+                  mutateOnce(ALIGNMENT_END + ThreadLocalRandom.current().nextInt(randomKeyCount));
                 }
               }));
     }
@@ -586,18 +644,35 @@ public class CbrlBackupRestoreIntegrationTest {
 
   /** One in-window UPDATE per mid-chain key (read-then-put). Returns key -> in-window token. */
   private Map<Integer, Long> applyMidChainUpdates() {
+    return applyInWindowUpdates(PRE_WINDOW_ONLY_KEYS, MID_CHAIN_END);
+  }
+
+  /** One in-window UPDATE per key in [from, to) (read-then-put). Returns key -> in-window token. */
+  private Map<Integer, Long> applyInWindowUpdates(int from, int to) {
     Map<Integer, Long> tokens = new HashMap<>();
-    for (int i = PRE_WINDOW_ONLY_KEYS; i < MID_CHAIN_END; i++) {
+    for (int i = from; i < to; i++) {
       long token = tokenCounter.incrementAndGet();
       int key = i;
       tokens.put(i, token);
       withRetry(
           tx -> {
-            tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links to the seed
+            tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links to the prior
             tx.get(getForTableB(SRC_NAMESPACE, key));
             tx.put(putForTableA(SRC_NAMESPACE, key, token));
             tx.put(putForTableB(SRC_NAMESPACE, key, token));
           });
+    }
+    return tokens;
+  }
+
+  /** Raw-reads the table_a token of each present key in [from, to) from the copy (cbrl_restore). */
+  private Map<Integer, Long> readCopyTokens(int from, int to) throws Exception {
+    Map<Integer, Long> tokens = new HashMap<>();
+    for (int i = from; i < to; i++) {
+      Optional<Result> result = storage.get(getForTableA(RESTORE_NAMESPACE, i));
+      if (result.isPresent() && !result.get().isNull(A_TOKEN)) {
+        tokens.put(i, result.get().getBigInt(A_TOKEN));
+      }
     }
     return tokens;
   }
