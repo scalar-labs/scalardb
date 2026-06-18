@@ -6,8 +6,9 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
  * reads the user-table record in the DB being restored, not the coordinator rows the redo stream
  * comes from, and not ConsensusCommit's own {@code Snapshot}.
  *
- * <p>In production this read happens after PREPARED records are resolved via the cut and {@code
- * before_*} images (a C4 seam). The PoC supplies states directly.
+ * <p>In production this read happens after copy recovery (C4): records the copy caught in the
+ * PREPARED state are resolved via the consistency point and {@code before_*} images before replay
+ * anchors on them. The PoC supplies states directly.
  */
 public interface RestoredRecordReader {
   RecordState get(RecordKey key);

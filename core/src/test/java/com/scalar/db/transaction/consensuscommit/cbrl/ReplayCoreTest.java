@@ -93,7 +93,7 @@ class ReplayCoreTest {
 
   @Test
   void windowScopedRedo_danglingRootBelowBase_tolerated() {
-    // Windowed repair: the torn-copy base is at an in-window version "v1", and the op that produced
+    // Windowed repair: the copy's base is at an in-window version "v1", and the op that produced
     // it links to a pre-window (unlogged) root the backup never captured. That op is unreachable
     // from the base and must be tolerated — left unapplied — not rejected as a broken chain.
     RecordState base = present("v1", ImmutableMap.of(COL_V, 5, COL_W, 9));
@@ -107,15 +107,16 @@ class ReplayCoreTest {
     RecordState result = new RecordApplier(k -> base).replayKey(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(6); // forward update applied
-    assertThat(intOf(result, COL_W)).isEqualTo(9); // carried from the torn-copy base
+    assertThat(intOf(result, COL_W)).isEqualTo(9); // carried from the copy's base
   }
 
   @Test
   void midChainAnchor_deleteThenReinsert_skipsStaleInsertRoot() {
-    // Repair anchored mid-chain on a torn-copy base "I0". After the delete, replay must resume from
-    // the re-insert that follows it — never the original insert root, whose created-at predates the
-    // delete (it is already reflected in the base). This is the created-at skip the windowed repair
-    // depends on; without it the stale root is re-applied and the record reverts.
+    // Repair anchored mid-chain on the copy's base "I0". After the delete, replay must resume from
+    // the re-insert that follows it — never the original insert root "I0", which the base already
+    // reflects (it is the base's own version / a chain-ancestor of it). The stale root is skipped
+    // by
+    // walking prev_tx_id back from the cursor — never by created_at. Without it the record reverts.
     RecordState base = present("I0", ImmutableMap.of(COL_V, 1));
     List<RedoOp> ops =
         ImmutableList.of(

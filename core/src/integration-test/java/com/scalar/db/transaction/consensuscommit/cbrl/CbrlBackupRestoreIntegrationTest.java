@@ -66,30 +66,37 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 /**
  * CBRL backup/restore integration test (spike, §6.1 of the PoC plan): non-pausing backup with
- * <b>windowed repair of a torn copy</b>.
+ * <b>windowed repair of a non-snapshot-consistent copy</b>.
+ *
+ * <p>The user-table backup here is a <b>non-snapshot-consistent copy</b>: a live, raw {@code scan}
+ * taken while the workload commits, so it is not an atomic point-in-time snapshot — different rows
+ * reflect different instants, some are stale or missing, and some are caught mid-commit (PREPARED).
  *
  * <p><b>Logging is window-scoped</b>: a pre-window base is seeded with redo logging OFF (those
  * commits carry no redo), then the backup window opens (logging ON) and only in-window commits are
- * logged. A live raw copy of the user tables is taken while the in-window workload commits (the
- * torn base); the coordinator is backed up (self-contained, closed over the chain); PREPARED
- * records in the torn copy are recovered (C4); and the committed redo is replayed <b>forward from
- * each record's torn-copy version</b> onto the copy via the §5 core — not a full rebuild. Each
- * transaction writes a shared {@code token} to {@code table_a[i]} and {@code table_b[i]} (or
- * deletes both), so a consistent image has matching presence and equal tokens per key.
+ * logged. The non-snapshot-consistent copy of the user tables is taken while the in-window workload
+ * commits; the coordinator is backed up (self-contained, closed over the chain); records left
+ * in-flight in the copy are recovered (<b>C4 — copy recovery</b>: resolving records the copy caught
+ * mid-commit, in the PREPARED state, to a clean committed-or-absent state before replay anchors on
+ * them); and the committed redo is replayed <b>forward from each record's copied version</b> onto
+ * the copy via the §5 core — not a full rebuild. Each transaction writes a shared {@code token} to
+ * {@code table_a[i]} and {@code table_b[i]} (or deletes both), so a consistent image has matching
+ * presence and equal tokens per key.
  *
- * <p>Because pre-window state is never logged, the torn copy is the <b>only</b> source for it — it
- * is genuinely <b>load-bearing</b>, not merely an anchor. This is asserted directly:
- * pre-window-only keys (untouched in the window) have zero redo yet restore to their seeded value,
- * and mid-chain keys (seeded pre-window, updated once in-window) have redo with <b>no insert
- * root</b> yet restore correctly — proof the chain anchored on the torn copy. {@link
- * #tornCopyIsLoadBearing_negativeControl()} restores the same backup <b>without</b> the torn copy
- * and shows the pre-window data is then unrecoverable.
+ * <p>Because pre-window state is never logged, the copy is the <b>only</b> source for it — it is
+ * genuinely <b>load-bearing</b>, not merely an anchor. This is asserted directly: pre-window-only
+ * keys (untouched in the window) have zero redo yet restore to their seeded value, and mid-chain
+ * keys (seeded pre-window, updated once in-window) have redo with <b>no insert root</b> yet restore
+ * correctly — proof the chain anchored on the copy. {@link #copyIsLoadBearing_negativeControl()}
+ * restores the same backup <b>without</b> the copy and shows the pre-window data is then
+ * unrecoverable.
  *
  * <p>Validated: consistency (the two tables never disagree), correctness (matches an independent
  * reference: the pre-window seed the test recorded, overlaid with the in-window redo),
- * point-in-time (post-backup tokens absent), idempotency, load-bearing torn copy, and that the
- * backup ran without pausing the workload. {@link
- * #consistencyCheckDetectsTornImage_negativeControl()} proves the consistency check has teeth.
+ * point-in-time (post-backup tokens absent), idempotency, load-bearing copy, and that the backup
+ * ran without pausing the workload. {@link
+ * #consistencyCheckDetectsInconsistentImage_negativeControl()} proves the consistency check has
+ * teeth.
  *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
@@ -139,10 +146,10 @@ public class CbrlBackupRestoreIntegrationTest {
   private static final int RECORD_COUNT = 40;
   // Key partitions (disjoint, in order) used to exercise and assert the windowed property:
   //   [0, PRE_WINDOW_ONLY)                       seeded pre-window, never touched in-window —
-  //                                              zero redo, restored from the torn copy alone.
+  //                                              zero redo, restored from the copy alone.
   //   [PRE_WINDOW_ONLY, MID_CHAIN_END)           seeded pre-window, updated exactly once in-window
   // —
-  //                                              redo has no insert root, restored via torn-copy
+  //                                              redo has no insert root, restored via copy
   //                                              anchor (mid-chain).
   //   [MID_CHAIN_END, RECORD_COUNT)              the random concurrent in-window workload.
   private static final int PRE_WINDOW_ONLY_KEYS = 4;
@@ -187,7 +194,7 @@ public class CbrlBackupRestoreIntegrationTest {
         DatabaseConfig.TRANSACTION_MANAGER, ConsensusCommitConfig.TRANSACTION_MANAGER_NAME);
     properties.setProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, COORDINATOR_NAMESPACE);
     // Start with redo logging OFF; the test opens the backup window (enables it) explicitly so the
-    // pre-window base is unlogged and the torn copy is load-bearing.
+    // pre-window base is unlogged and the copy is load-bearing.
     properties.setProperty(ConsensusCommitConfig.REDO_LOGGING_ENABLED, "false");
     return properties;
   }
@@ -242,28 +249,26 @@ public class CbrlBackupRestoreIntegrationTest {
     }
   }
 
-  /**
-   * CBRL acceptance test (§6.1): non-pausing backup + windowed repair of a load-bearing torn copy.
-   */
+  /** CBRL acceptance test (§6.1): non-pausing backup + windowed repair of a load-bearing copy. */
   @Test
   void liveBackup_windowedRepairReconstructsConsistentPointInTimeImage() throws Exception {
-    // Seed a pre-window base with redo logging OFF: these commits carry no redo, so the torn copy
+    // Seed a pre-window base with redo logging OFF: these commits carry no redo, so the copy
     // is the only source for this state.
     Map<Integer, Long> preWindowSeed = seedPreWindowBase();
 
     // Open the backup window: redo logging ON. Only in-window commits are logged from here.
     manager.enableRedoLogging();
 
-    // In-window workload on the random partition, concurrent with the torn copy.
+    // In-window workload on the random partition, concurrent with the copy.
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
 
-    // Torn physical copy of the user tables WHILE the workload commits — the repair base.
+    // Non-snapshot-consistent copy of the user tables, taken WHILE the workload commits — the base.
     copyUserTables();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY); // copy falls behind the source
 
-    // Mid-chain keys: exactly one in-window update each, AFTER the copy, so the torn copy holds
+    // Mid-chain keys: exactly one in-window update each, AFTER the copy, so the copy holds
     // their pre-window version and the redo (an UPDATE with no insert root) must anchor on it.
     Map<Integer, Long> midChainTokens = applyMidChainUpdates();
 
@@ -288,7 +293,7 @@ public class CbrlBackupRestoreIntegrationTest {
     }
     Set<Long> postBackupTokens = runPostBackupUpdates();
 
-    // Restore: recover the torn copy (C4) and replay the redo forward onto it (windowed repair).
+    // Restore: copy recovery (C4) then replay the redo forward onto it (windowed repair).
     restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
@@ -300,7 +305,7 @@ public class CbrlBackupRestoreIntegrationTest {
         .as("point-in-time: post-backup tokens excluded")
         .doesNotContainAnyElementsOf(postBackupTokens);
 
-    assertTornCopyLoadBearing(coordinatorBackup, preWindowSeed, midChainTokens);
+    assertCopyLoadBearing(coordinatorBackup, preWindowSeed, midChainTokens);
 
     Map<Integer, Long> image = readRestoredTokens();
     restore(coordinatorBackup);
@@ -308,11 +313,11 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Asserts the torn copy is genuinely load-bearing, not just an anchor: pre-window-only keys carry
-   * no redo yet are restored from the copy, and mid-chain keys have redo with no insert root yet
-   * are restored — both impossible without the torn copy supplying the base.
+   * Asserts the copy is genuinely load-bearing, not just an anchor: pre-window-only keys carry no
+   * redo yet are restored from the copy, and mid-chain keys have redo with no insert root yet are
+   * restored — both impossible without the copy supplying the base.
    */
-  private void assertTornCopyLoadBearing(
+  private void assertCopyLoadBearing(
       Map<String, CoordinatorBackupRow> backup,
       Map<Integer, Long> preWindowSeed,
       Map<Integer, Long> midChainTokens) {
@@ -324,7 +329,7 @@ public class CbrlBackupRestoreIntegrationTest {
           .as("pre-window-only key %d has no redo in the backup", i)
           .isFalse();
       assertThat(restored.get(i))
-          .as("pre-window-only key %d restored from the torn copy alone", i)
+          .as("pre-window-only key %d restored from the copy alone", i)
           .isEqualTo(preWindowSeed.get(i));
     }
 
@@ -336,14 +341,14 @@ public class CbrlBackupRestoreIntegrationTest {
           .as("mid-chain key %d redo has no insert root (its base is pre-window)", i)
           .isFalse();
       assertThat(restored.get(i))
-          .as("mid-chain key %d restored via the torn-copy anchor", i)
+          .as("mid-chain key %d restored via the copy anchor", i)
           .isEqualTo(midChainTokens.get(i));
     }
   }
 
-  /** Negative control: proves the consistency check detects a torn image. */
+  /** Negative control: proves the consistency check detects an inconsistent image. */
   @Test
-  void consistencyCheckDetectsTornImage_negativeControl() {
+  void consistencyCheckDetectsInconsistentImage_negativeControl() {
     withRetry(
         tx -> {
           tx.put(putForTableA(RESTORE_NAMESPACE, 0, 111L));
@@ -358,11 +363,11 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Negative control for the load-bearing claim: restoring the same backup WITHOUT the torn copy
-   * leaves the pre-window-only keys unrecoverable, since they have no redo and no other base.
+   * Negative control for the load-bearing claim: restoring the same backup WITHOUT the copy leaves
+   * the pre-window-only keys unrecoverable, since they have no redo and no other base.
    */
   @Test
-  void tornCopyIsLoadBearing_negativeControl() throws Exception {
+  void copyIsLoadBearing_negativeControl() throws Exception {
     Map<Integer, Long> seed = seedPreWindowBase(PRE_WINDOW_ONLY_KEYS); // logging still OFF
 
     // Open the window and do a little in-window work on OTHER keys, so the backup has redo (the
@@ -380,12 +385,12 @@ public class CbrlBackupRestoreIntegrationTest {
 
     Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
 
-    // Restore WITHOUT taking a torn copy: the restore tables stay empty as the repair base.
+    // Restore WITHOUT taking a copy: the restore tables stay empty as the repair base.
     restore(backup);
 
     for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
       assertThat(getWithRetry(getForTableA(RESTORE_NAMESPACE, i)))
-          .as("without the torn copy, pre-window-only key %d is unrecoverable", i)
+          .as("without the copy, pre-window-only key %d is unrecoverable", i)
           .isEmpty();
     }
     assertThat(seed).hasSize(PRE_WINDOW_ONLY_KEYS); // sanity: the keys were in fact seeded
@@ -467,7 +472,8 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Raw, storage-level copy of the user tables (with metadata) into cbrl_restore — the torn base.
+   * Raw, storage-level copy of the user tables (with metadata) into cbrl_restore — the
+   * non-snapshot-consistent base.
    */
   private void copyUserTables() throws Exception {
     for (String table : new String[] {TABLE_A, TABLE_B}) {
@@ -532,12 +538,13 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Windowed repair: recover the torn copy's PREPARED records (C4, via ScalarDB's own recovery),
-   * then replay the backup's committed redo onto the torn copy via the §5 core. Each key's cursor
-   * anchors at its torn-copy version, so only the redo after that version is applied.
+   * Windowed repair: copy recovery (C4) — resolve records the copy caught in the PREPARED state,
+   * via ScalarDB's own recovery — then replay the backup's committed redo onto the copy via the §5
+   * core. Each key's cursor anchors at its copy version, so only the redo after that version is
+   * applied.
    */
   private void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
-    recoverTornCopy(); // C4: resolve any PREPARED records in the torn copy.
+    recoverPreparedRecords(); // C4 (copy recovery): resolve any PREPARED records in the copy.
 
     List<RedoOp> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
@@ -549,7 +556,7 @@ public class CbrlBackupRestoreIntegrationTest {
         for (Entry entry : group.getEntriesList()) {
           if (!entry.hasTxVersion()) {
             // Key-only write set from outside the backup window (logging was off): not redo. The
-            // torn copy carries that state instead.
+            // copy carries that state instead.
             continue;
           }
           redoOps.add(new RedoOp(row.txId, row.createdAtMillis, entry));
@@ -559,7 +566,7 @@ public class CbrlBackupRestoreIntegrationTest {
 
     List<List<RedoOp>> buckets = new RecordShuffler().shuffle(redoOps, REPLAY_BUCKETS);
     Map<RecordKey, RecordState> finalStates =
-        new RecordApplier(this::readTornCopyState).apply(buckets, REPLAY_WORKERS);
+        new RecordApplier(this::readCopyState).apply(buckets, REPLAY_WORKERS);
 
     withRetry(
         tx -> {
@@ -569,18 +576,19 @@ public class CbrlBackupRestoreIntegrationTest {
         });
   }
 
-  /** C4: read every key transactionally so ScalarDB resolves any PREPARED torn-copy records. */
-  private void recoverTornCopy() {
+  /**
+   * C4 (copy recovery): read every key transactionally so ScalarDB resolves any records the copy
+   * caught in the PREPARED state.
+   */
+  private void recoverPreparedRecords() {
     for (int i = 0; i < RECORD_COUNT; i++) {
       getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
       getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
     }
   }
 
-  /**
-   * Reads the (recovered) torn-copy record as the repair base: its committed tx id + user columns.
-   */
-  private RecordState readTornCopyState(RecordKey key) {
+  /** Reads the (recovered) copy record as the repair base: its committed tx id + user columns. */
+  private RecordState readCopyState(RecordKey key) {
     try {
       Optional<Result> result = storage.get(rawGet(key));
       if (!result.isPresent() || result.get().isNull(Attribute.ID)) {
@@ -599,7 +607,7 @@ public class CbrlBackupRestoreIntegrationTest {
       }
       return RecordState.of(currentTxId, false, columns, Collections.emptySet());
     } catch (Exception e) {
-      throw new RuntimeException("Failed to read torn-copy base for " + key, e);
+      throw new RuntimeException("Failed to read copy base for " + key, e);
     }
   }
 
@@ -863,7 +871,7 @@ public class CbrlBackupRestoreIntegrationTest {
 
   /**
    * Independent reference for {@code table_a}: the pre-window seed the test recorded (the base the
-   * torn copy must carry), overlaid with the in-window redo applied in commit order. Deliberately
+   * copy must carry), overlaid with the in-window redo applied in commit order. Deliberately
    * derived from the test's own ground truth plus the backup's redo entries — not from the restore
    * path — so a bug in the applier cannot hide.
    */

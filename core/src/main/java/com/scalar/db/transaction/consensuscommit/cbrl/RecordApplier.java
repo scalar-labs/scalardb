@@ -3,9 +3,9 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
 import com.google.common.base.Preconditions;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,30 +81,34 @@ public final class RecordApplier {
   /**
    * The replay primitive (PoC plan §5). Given the key's current state in the database being
    * restored and that key's ops, follows the {@code prevTxId -> txId} chain forward from the
-   * record's current version to the final state. Order- and input-independent within a key, and
-   * idempotent.
+   * record's current version to the final state. Restore is ordered solely by this chain — never by
+   * {@code created_at} or {@code tx_version} (the PoC plan's highest rule). Order- and
+   * input-independent within a key, and idempotent.
    *
    * <p>An op that does not connect to the chain reachable forward from the current version is left
    * unapplied, mirroring SSR's {@code findWriteOperationsToApply} (which keeps such ops as {@code
    * remainingWriteOperations} rather than rejecting them). This is what makes <b>windowed
    * repair</b> work: under window-scoped logging a record's chain root predates the logging window
    * and is never captured, so the first in-window op links to a {@code prev_tx_id} that is neither
-   * another op nor — once the torn-copy base has advanced past it — the current version. That op
-   * sits below the base, whose state already reflects it, and is correctly skipped. The torn copy
-   * may also have captured a deleted or arbitrarily-advanced version, which carries no position
-   * information, so — like SSR — replay does not try to tell a legitimately-below op apart from a
-   * genuinely dropped mid-chain op; completeness is the backup capture's responsibility (full
-   * coordinator scan + chain closure), not this primitive's. The one structural anomaly still
-   * rejected is a fork (two ops sharing a {@code prev_tx_id}), which serializable commit cannot
-   * produce.
+   * another op nor — once the copy's base has advanced past it — the current version. That op sits
+   * below the base, whose state already reflects it, and is correctly skipped. The copy may also
+   * have captured a deleted or arbitrarily-advanced version, which carries no position information,
+   * so — like SSR — replay does not try to tell a legitimately-below op apart from a genuinely
+   * dropped mid-chain op; completeness is the backup capture's responsibility (full coordinator
+   * scan + chain closure), not this primitive's. The one structural anomaly still rejected is a
+   * fork (two ops sharing a {@code prev_tx_id}), which serializable commit cannot produce.
    */
   RecordState replayKey(RecordKey key, List<RedoOp> ops) {
     RecordState current = reader.get(key);
 
     // divideWriteOperations: INSERT roots vs the prevTxId-keyed chain of UPDATE/DELETE ops.
+    // producedBy maps each op's resulting version (its tx id) to the op, so the chain can be walked
+    // backward from the base to find the versions it already reflects.
     List<RedoOp> insertList = new ArrayList<>();
     Map<String, RedoOp> nonInsertOps = new HashMap<>();
+    Map<String, RedoOp> producedBy = new HashMap<>();
     for (RedoOp op : ops) {
+      producedBy.put(op.txId(), op);
       if (op.isInsert()) {
         insertList.add(op);
       } else {
@@ -123,20 +127,22 @@ public final class RecordApplier {
         }
       }
     }
-    insertList.sort(Comparator.comparingLong(RedoOp::createdAtMillis));
+    // INSERT roots are applied in any order — the chain converges to the same final version, so
+    // they
+    // are NOT sorted by created_at. Restore never consults created_at or tx_version (highest rule).
     Deque<RedoOp> insertQueue = new ArrayDeque<>(insertList);
+    // Versions the base already reflects: its current tx id and every chain-ancestor reachable by
+    // walking prev_tx_id back through the captured ops. A root in this set was applied before the
+    // backup and must not be re-applied after a DELETE during windowed repair — identified purely
+    // from the chain, never from a timestamp.
+    Set<String> reflected = reflectedVersions(current.currentTxId(), producedBy);
 
     RecordState.Builder state = current.toBuilder();
-    // Created-at of the last applied op (chain order is created-at-monotonic). After a DELETE we
-    // resume only from an INSERT root that genuinely follows it — never one already reflected in a
-    // mid-chain base (which is the case during windowed repair onto a torn copy).
-    long lastCreatedAtMillis = Long.MIN_VALUE;
     while (true) {
       RedoOp op;
       if (state.currentTxId() == null || state.deleted()) {
-        // Record absent or deleted: resume from the oldest not-yet-applied INSERT root that comes
-        // after the current position.
-        op = nextInsert(insertQueue, lastCreatedAtMillis, state);
+        // Record absent or deleted: resume from an INSERT root the base does not already reflect.
+        op = nextInsert(insertQueue, reflected, state);
         if (op == null) {
           break;
         }
@@ -157,7 +163,6 @@ public final class RecordApplier {
         state.applyDelete();
       }
       state.advanceCursor(op.txId());
-      lastCreatedAtMillis = op.createdAtMillis();
     }
     // Ops left in nonInsertOps were never reached (window-boundary or below-base links). They are
     // tolerated, as in SSR — see the method comment.
@@ -165,18 +170,34 @@ public final class RecordApplier {
   }
 
   /**
-   * The next INSERT root to apply: the oldest one created after {@code lastCreatedAtMillis} (so an
-   * insert already reflected in a mid-chain base is not re-applied) that has not already been
-   * applied (idempotency). Inserts failing either test are discarded — chain order is
-   * created-at-monotonic, so they can never apply on a later iteration.
+   * The versions the base already reflects: the base's current tx id and its chain-ancestors,
+   * reached by walking {@code prev_tx_id} back through the captured ops until the link leaves the
+   * captured set (the window boundary) or a root is hit. Used to skip INSERT roots that predate the
+   * base — chain-only, no {@code created_at}/{@code tx_version} (highest rule).
+   */
+  private static Set<String> reflectedVersions(
+      @Nullable String baseTxId, Map<String, RedoOp> producedBy) {
+    Set<String> reflected = new HashSet<>();
+    String txId = baseTxId;
+    while (txId != null && producedBy.containsKey(txId) && reflected.add(txId)) {
+      txId = producedBy.get(txId).prevTxId();
+    }
+    return reflected;
+  }
+
+  /**
+   * The next INSERT root to apply: one that is neither already reflected in the base (a
+   * chain-ancestor of the base's current version) nor already applied this run (idempotency).
+   * Inserts failing either test are discarded. Selection is order-independent — the chain converges
+   * to the same final version regardless of which root is taken first.
    */
   @Nullable
   private static RedoOp nextInsert(
-      Deque<RedoOp> insertQueue, long lastCreatedAtMillis, RecordState.Builder state) {
+      Deque<RedoOp> insertQueue, Set<String> reflected, RecordState.Builder state) {
     while (!insertQueue.isEmpty()) {
       RedoOp candidate = insertQueue.poll();
-      if (candidate.createdAtMillis() <= lastCreatedAtMillis) {
-        continue; // Predates the current position — already reflected.
+      if (reflected.contains(candidate.txId())) {
+        continue; // Already reflected in the base (chain-ancestor of the current version).
       }
       if (state.isInsertApplied(candidate.txId())) {
         continue; // Already applied (idempotent re-run).

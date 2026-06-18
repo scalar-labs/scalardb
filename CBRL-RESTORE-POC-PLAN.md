@@ -5,6 +5,21 @@ module and using real ScalarDB types, fed by **synthetic** redo-log input. Build
 `CBRL-RESTORE-DESIGN.md`, `REDO-LOGGING-IMPL-FINDINGS.md`, and the handoff `CBRL-HANDOFF.md`.
 SSR (`~/src/scalardb-cluster/replication`) is reference only.
 
+> **CRITICAL RULES (highest priority — these override every other section):**
+>
+> 1. **Restore MUST NOT use `tx_version` or `created_at`** for ordering or for any replay decision.
+>    `created_at` is wall-clock and clock-skew-prone (CBRL is multi-primary — different processes
+>    commit the same key with unsynchronized clocks), and `tx_version` resets on delete→re-insert;
+>    neither is a reliable per-key order. Restore is ordered **only** by the `prev_tx_id → tx_id`
+>    chain. Both fields may be *carried* on the redo so a restored record stays valid for
+>    post-restore core, but the replay must never read them to decide what, or in what order, to
+>    apply. Any code path that consults `created_at`/`tx_version` to order or gate replay is a bug.
+> 2. **Use precise, authorized terminology — no jargon or ambiguous coinages.** Do not write "cut"
+>    or "torn". Use the established unambiguous term: a backup taken by a live, non-atomic scan is a
+>    **non-snapshot-consistent** copy (never "torn"); the committed-transaction boundary is the
+>    **consistency point** (never "cut"). Prefer the vocabulary the source documents already use and
+>    negate or extend it precisely.
+
 ---
 
 ## 0. The decisive finding (read first)
@@ -53,9 +68,9 @@ core is validated **independently** of how D1 is resolved.
 `replication:e2e`'s `E2ETest`, that drives the whole backup/restore lifecycle on a live
 ScalarDB (JDBC/Postgres) and proves the restored tables are correct:
 
-> start a write workload → back up the user DB (a *torn* copy, taken while writes run) → back
+> start a write workload → back up the user DB (a *non-snapshot-consistent* copy, taken while writes run) → back
 > up the coordinator DB **last** (= the consistency point) → stop the workload → restore into a separate
-> target by replaying the coordinator's `tx_write_set` window onto the torn copy → **compare
+> target by replaying the coordinator's `tx_write_set` window onto the non-snapshot-consistent copy → **compare
 > the target tables to the expected state at the consistency point.**
 
 This test is the executable spec: the replay core below exists to make it pass. It exercises
@@ -186,12 +201,16 @@ key's ops:
    `WRITE` entry with `prev_tx_id == null` is an INSERT, with `prev_tx_id != null` an UPDATE; a
    `DELETE` entry is a delete. No new enum/oneof — this rests on the encoder invariant that
    `prev_tx_id` is set iff a before-image exists (true at the single `WriteSetEncoder` site).
-   - `insertOperations` — a `Deque<RedoOp>` of INSERTs, sorted oldest-first (by `createdAtMillis`).
+   - `insertOperations` — a `Deque<RedoOp>` of INSERT roots (`prev_tx_id == null`). Order is
+     irrelevant — the chain converges to the same final version — so they are **not** sorted by
+     `created_at` (highest rule).
    - `nonInsertOperations` — a `Map<String, RedoOp>` of UPDATE/DELETE ops **keyed by their
      `prevTxId`**, so the chain is traversed by looking the current tx id up in the map.
 2. **Walk the chain** (`while (true)`):
-   - if `currentTxId == null || deleted`: `op = insertOperations.poll()`; if empty, stop. Skip an
-     INSERT whose txId is already applied to this record (idempotent re-run — see `insertTxIds`).
+   - if `currentTxId == null || deleted`: poll the next INSERT root, skipping any whose txId is
+     already applied (idempotent re-run — see `insertTxIds`) **or** already reflected in the base
+     (a chain-ancestor of the base's current version, found by walking `prev_tx_id` back from the
+     cursor — this replaces the old, incorrect `created_at` skip). If none remain, stop.
    - else: `op = nonInsertOperations.remove(currentTxId)`; if none, stop.
    - apply `op`: INSERT/UPDATE ⇒ merge `op.entry.columns` (INSERT also fills unset columns null),
      `deleted = false`; DELETE ⇒ clear columns + fill null, `deleted = true` (logical tombstone;
@@ -201,17 +220,19 @@ key's ops:
 
 Why it's safe regardless of input order or re-runs:
 - **Order-independent within a key:** the chain is followed by `prevTxId → txId`, so
-  `nonInsertOperations` can be built in any order; INSERTs are sorted oldest-first only to match
-  the likely commit order. A re-INSERT after a DELETE is a **new INSERT root**, reached via the
-  `deleted` flag — not chained to the delete (SSR's loop only polls inserts once `deleted`).
+  `nonInsertOperations` can be built in any order, and INSERT roots are applied in any order (the
+  chain converges to the same final version — there is no `created_at` ordering). A re-INSERT after
+  a DELETE is a **new INSERT root**, reached via the `deleted` flag — not chained to the delete
+  (SSR's loop only polls inserts once `deleted`); a stale root already reflected in the base is
+  skipped by walking the chain back from the cursor, never by timestamp.
 - **Idempotent:** re-running from the produced state is a no-op — UPDATE/DELETE are already past
   the cursor, and INSERT roots are deduped via a per-record applied-insert-txId set
   (`insertTxIds`), the only way to dedup roots since they have no inbound chain link. CBRL replay
   carries the same `insertTxIds` for the §6.2 P2 idempotency property.
 
-Notes: `tx_version` is **not** used for ordering — only carried on the final record so
-post-restore core stays valid (concern #6, left as a TODO seam for the exact `tx_id`/`tx_version`
-core needs to resume).
+Notes: per the highest rule, **neither `tx_version` nor `created_at` is used for ordering or any
+replay decision** — both are only *carried* on the final record so post-restore core stays valid
+(concern #6, left as a TODO seam for the exact `tx_id`/`tx_version` core needs to resume).
 
 ---
 
@@ -234,7 +255,7 @@ own `tx_write_set`.
    each commit logs its write set to the Coordinator's `tx_write_set`.
 2. **back up the user DB** — while writes continue, copy every `cbrl_src` row → `cbrl_restore`
    via `storage.scan`+`put` (cf. `copyAllRecordFromPrimaryToBackupSite`). Intentionally
-   **torn**: taken mid-flight, so some keys are stale or missing.
+   **non-snapshot-consistent**: a live scan taken mid-flight, so some keys are stale or missing.
 3. **back up the coordinator DB** — snapshot the Coordinator table (id, state, `tx_write_set`)
    into an in-test copy, taken **after** step 2 ⇒ this defines **the consistency point** (C3).
 4. **stop workload** — quiesce; run lazy recovery so PREPARED records resolve.
@@ -246,7 +267,7 @@ own `tx_write_set`.
 
 **The comparison oracle.** "Expected state at the consistency point" needs a deterministic reference. Take the
 coordinator backup *after* the workload quiesces (consistency point = everything committed), then **compare
-`cbrl_restore` to the live `cbrl_src`**: the torn user-DB copy is repaired by chain replay up
+`cbrl_restore` to the live `cbrl_src`**: the non-snapshot-consistent user-DB copy is repaired by chain replay up
 to the consistency point, so it must equal the fully-committed source. Workload is unconstrained
 (multi-write keys, delete→re-insert, like E2ETest), so this exercises the real chain (needs
 D1 + D1′).
@@ -398,7 +419,7 @@ core/src/integration-test/java/com/scalar/db/transaction/consensuscommit/cbrl/
 ## 9. Milestones (integration test first)
 
 1. **Harness + `includeColumns=true` path** — `E2ETest`-style env on Postgres (source +
-   restore-target tables, workload, torn user-DB copy, coordinator-DB copy, per-key compare).
+   restore-target tables, workload, non-snapshot-consistent user-DB copy, coordinator-DB copy, per-key compare).
    `tx_write_set` is already logged keys-only on every commit; this milestone adds the
    `includeColumns=true` code path at the commit call sites (D1′ — a code change, no flag
    exists), optionally behind a window gate.
@@ -428,3 +449,65 @@ left as a TODO seam).
 `commitStateWithoutWriteSet`, so 2PC transactions log no write-set and would be invisible to
 replay. The spike targets single/normal + group commit only; covering 2PC is a separate
 follow-up.
+
+## Deferred / Open Questions
+
+### From 2026-06-18 review
+
+Findings from a multi-persona document review (coherence, feasibility, scope-guardian,
+adversarial, product-lens), the source-grounded pass reading the original slide deck
+(`_Coordinator-Based Redo Logging in ScalarDB.pdf`), `CBRL-RESTORE-DESIGN.md`,
+`REDO-LOGGING-IMPL-FINDINGS.md`, and `CBRL-HANDOFF.md`. Captured for the owner's judgment;
+the plan body is unchanged.
+
+**Divergence from the source documents:**
+
+- **Restore is now chain-only; logical-delete remains a live-window (logging) question** — §5 / `REDO-LOGGING-IMPL-FINDINGS` §4 + #1 vs `CBRL-HANDOFF` (P2, coherence, adversarial, confidence 75)
+
+  *Resolved (restore side, 2026-06-18):* an earlier replay-core fix ordered disconnected re-insert roots by `created_at` (and could drop a root on a millisecond/group-commit tie or under clock skew), reintroducing the commit-time ordering D1c rejected. That is removed — restore now skips stale roots by walking the `prev_tx_id` chain back from the base, and the new **highest rule** forbids `created_at`/`tx_version` in restore. Offline single-owner replay under physical-delete is therefore chain-only and clock-independent (verified by the §6.2 + §6.1 tests). *Still open (logging side):* `REDO-LOGGING-IMPL-FINDINGS` concern #1 — during the live window, a concurrent reader's lazy recovery can *physically* delete a committed tombstone the chain depends on, breaking the chain at the source before restore runs. That is why §4 calls window-scoped logical-delete load-bearing; it is a commit/read-path concern (out of this spike), not a restore-replay one. Confirm the live window suppresses physical delete, or document why physical-delete is safe there.
+
+- **Spike scopes out the source's two CRITICAL mechanisms** — §1/§10 (P1, product-lens, confidence 75)
+
+  The slides spend half the deck establishing the backup-mode flag + cache-wait + fail-closed visibility as what makes the approach correct, and `REDO-LOGGING-IMPL-FINDINGS` marks logical-delete (#1) and the fail-closed boundary (#2) as CRITICAL ("the worst silently hand you a corrupt backup"). The plan scopes both out. A green §6.1 test under these exclusions validates the replay core on a quiesced source, not the owner's non-pausing scenario — so spike success must not be read as approach validation. State this explicitly in §1.
+
+- **Released shared `Entry` proto changed ahead of its own viability gate** — §7 D1a / §9 M2 (P1, product-lens, confidence 75)
+
+  D1a added `prev_tx_id` (field 7) and `tx_version` (field 8) to the released, shared `Entry` proto (also used by keys-only active recovery) and shipped ahead of the §6.3 viability gate the plan designates as "run before investing in replay." This forecloses the cleaner dedicated-CBRL-message option §7 reserves and bakes CBRL ordering metadata into a released wire format before performance has validated the approach. Either revert the additions until the gate clears, or state the rollback cost in §7.
+
+- **Non-snapshot-consistent copy contradicts the snapshot-consistent backup requirement** — §6.1 vs slides slide 10 / `REDO-LOGGING-IMPL-FINDINGS` #3 (P2, coherence, adversarial, confidence 75)
+
+  The slides require each database backup to be snapshot-consistent (`pg_dump --single-transaction`) and #3 calls a non-consistent snapshot "unrepairable if violated." §6.1 deliberately takes a non-snapshot-consistent mid-flight scan copy, and the correctness argument (the cursor anchors on a clean per-record baseline) is asserted, not proven, for such a base. Note that production requires snapshot-consistent backups and that the non-snapshot-consistent copy is a deliberately harder PoC test, and confirm the per-record baseline precondition holds.
+
+**Plan vs. implemented branch (the plan has been overtaken by code):**
+
+- **Plan is stale relative to the implemented branch** — Header / §9 (P1, feasibility, confidence 100)
+
+  The plan reads as forward-looking ("Plan only, no code yet"), but the `cbrl` core, tests, IT, and `window/` package already exist and have diverged: the commit path already has a runtime redo-logging flag (the "no flag exists" claim in §0/D1′ is stale), the fail-closed `BackupWindowGate` already ships (listed out-of-scope in §10), D1a already shipped, and the `IntegrityChecker` described in §4.4/§5/§6.2-P3/§8 was removed (replay is now SSR-tolerant). Re-baseline the plan to as-built, or mark it superseded by the code + design docs.
+
+- **D1a says "add `tx_id`"; the shipped proto adds `prev_tx_id` + `tx_version`** — §7 D1a / §0 (P1, feasibility, adversarial, confidence 100)
+
+  There is no per-`Entry` `tx_id` field; the writing-txn id is derived from the enclosing coordinator row id + `EntryGroup.child_id` (per the §0 table). Reword D1a to "add `prev_tx_id` (and `tx_version`)" and make the child-id derivation an explicit, tested step.
+
+- **Group commit claimed in scope but unimplemented** — §6.1 / §9 / §10 (P1, feasibility, confidence 100)
+
+  §10 lists only 2PC as the commit-path gap and §6.1 implies group commit is covered, but the restore throws `UnsupportedOperationException` on child ids and the IT never enables group commit. Correct handling requires reconstructing each child's full tx id (parent + `child_id`) so it matches the `prev_tx_id` other ops chain to — unspecified. Move group commit to the known-gaps list and specify the child-id chain-linking.
+
+- **"Integration test first" contradicts the milestone ordering** — §1 / §9 (P1, scope-guardian, confidence 100)
+
+  The IT cannot go green until milestone 3 (the replay core), and the milestone-2 perf gate runs before any green IT exists. Reorder so the IT harness lands in M1 with a stub core (red but runnable), or reframe the perf gate as a sub-step of M3.
+
+- **Comparison oracle assumes the non-snapshot-consistent copy is monotone-repairable** — §6.1 (P1, adversarial, confidence 75)
+
+  The oracle ("restored must equal live `cbrl_src`") assumes every key is forward-repairable by chain replay, but the copy may hold a version newer than the oldest in-window op's `prev` for a key, or a version the window's first op does not chain onto. Define the redo window-start relative to the user-DB copy so a failed equality is attributable, and assert the window covers every key whose copied version differs from its consistency-point version.
+
+- **2PC framed as both deliberate scope and a defect** — §0 / §10 (P2, coherence, confidence 75)
+
+  2PC appears both as "targets single/normal + group commit only" (a scope choice) and as a "known gap" (2PC txns log no write-set, invisible to replay). A reader cannot tell whether 2PC blocks production. Pick one framing (recommend: deferred concern) and state when/whether it is addressed.
+
+- **C4 seam: synthetic vs consistency-point semantics unclear** — §4.5 / §6.1 (P2, coherence, confidence 75)
+
+  §4.5 says the C4 seam "supplies synthetic states" in the PoC while production resolves PREPARED via the consistency point + `before_*`, but §6.1 wires it to read the real `cbrl_restore`. It is unclear whether the e2e test exercises the replay core in isolation (synthetic) or the full pipeline (real DB). Clarify the §6.1 wiring.
+
+- **Viability gate has no pass/fail threshold** — §6.3 / §9 M2 (P2, scope-guardian, confidence 75)
+
+  Milestone 2 is a "viability gate," but §6.3 lists only measurement axes with no threshold, so it cannot gate. Add a concrete criterion (e.g., "if full-columns degrades TPS by more than X% vs baseline, close the spike"), referencing the existing ~7%-at-2-ops/tx benchmark as a baseline.
