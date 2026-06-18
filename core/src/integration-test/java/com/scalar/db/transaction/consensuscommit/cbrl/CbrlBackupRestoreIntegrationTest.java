@@ -76,12 +76,12 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * commits carry no redo), then the backup window opens (logging ON) and only in-window commits are
  * logged. The non-snapshot-consistent copy of the user tables is taken while the in-window workload
  * commits; the coordinator is backed up (self-contained, closed over the chain); records left
- * in-flight in the copy are recovered (<b>C4 — copy recovery</b>: resolving records the copy caught
- * mid-commit, in the PREPARED state, to a clean committed-or-absent state before replay anchors on
- * them); and the committed redo is replayed <b>forward from each record's copied version</b> onto
- * the copy via the §5 core — not a full rebuild. Each transaction writes a shared {@code token} to
- * {@code table_a[i]} and {@code table_b[i]} (or deletes both), so a consistent image has matching
- * presence and equal tokens per key.
+ * in-flight in the copy are recovered (<b>C4: PREPARED-record recovery</b>: resolving records the
+ * copy caught mid-commit, in the PREPARED state, to a clean committed-or-absent state before replay
+ * anchors on them); and the committed redo is replayed <b>forward from each record's copied
+ * version</b> onto the copy via the §5 core — not a full rebuild. Each transaction writes a shared
+ * {@code token} to {@code table_a[i]} and {@code table_b[i]} (or deletes both), so a consistent
+ * image has matching presence and equal tokens per key.
  *
  * <p>Because pre-window state is never logged, the copy is the <b>only</b> source for it — it is
  * genuinely <b>load-bearing</b>, not merely an anchor. This is asserted directly: pre-window-only
@@ -293,7 +293,8 @@ public class CbrlBackupRestoreIntegrationTest {
     }
     Set<Long> postBackupTokens = runPostBackupUpdates();
 
-    // Restore: copy recovery (C4) then replay the redo forward onto it (windowed repair).
+    // Restore: C4: PREPARED-record recovery, then replay the redo forward onto it (windowed
+    // repair).
     restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
@@ -538,13 +539,14 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Windowed repair: copy recovery (C4) — resolve records the copy caught in the PREPARED state,
-   * via ScalarDB's own recovery — then replay the backup's committed redo onto the copy via the §5
-   * core. Each key's cursor anchors at its copy version, so only the redo after that version is
-   * applied.
+   * Windowed repair: C4: PREPARED-record recovery — resolve records the copy caught in the PREPARED
+   * state, via ScalarDB's own recovery — then replay the backup's committed redo onto the copy via
+   * the §5 core. Each key's cursor anchors at its copy version, so only the redo after that version
+   * is applied.
    */
   private void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
-    recoverPreparedRecords(); // C4 (copy recovery): resolve any PREPARED records in the copy.
+    recoverPreparedRecords(); // C4: PREPARED-record recovery: resolve any PREPARED records in the
+    // copy.
 
     List<RedoOp> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
@@ -577,8 +579,8 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * C4 (copy recovery): read every key transactionally so ScalarDB resolves any records the copy
-   * caught in the PREPARED state.
+   * C4: PREPARED-record recovery: read every key transactionally so ScalarDB resolves any records
+   * the copy caught in the PREPARED state.
    */
   private void recoverPreparedRecords() {
     for (int i = 0; i < RECORD_COUNT; i++) {
