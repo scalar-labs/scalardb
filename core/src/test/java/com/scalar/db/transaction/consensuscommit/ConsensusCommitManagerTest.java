@@ -158,14 +158,18 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler()).isEqualTo(crud);
     assertThat(transaction.getCommitHandler()).isEqualTo(commit);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    assertThat(transaction.getTransactionContext().groupCommitSlotReserved).isTrue();
     verify(groupCommitter).reserve(ANY_TX_ID);
   }
 
   @Test
   public void
-      beginReadOnly_TxIdGivenWithGroupCommitter_ReturnWithSpecifiedTxIdAndSnapshotIsolation()
+      beginReadOnly_TxIdGivenWithGroupCommitterAndWriteOmissionEnabled_ShouldNotReserveGroupCommitSlot()
           throws TransactionException {
     // Arrange
+    // With coordinator write omission enabled (default), a read-only transaction writes no
+    // coordinator state row, so it must not reserve a group commit slot and keeps its bare tx ID.
+    when(consensusCommitConfig.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
@@ -196,7 +200,53 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction.getCrudHandler()).isEqualTo(crud);
     assertThat(transaction.getCommitHandler()).isEqualTo(commit);
     assertThat(keyManipulator.isFullKey(transaction.getId())).isFalse();
+    assertThat(transaction.getTransactionContext().groupCommitSlotReserved).isFalse();
     verify(groupCommitter, never()).reserve(ANY_TX_ID);
+  }
+
+  @Test
+  public void
+      beginReadOnly_TxIdGivenWithGroupCommitterAndWriteOmissionDisabled_ShouldReserveGroupCommitSlot()
+          throws TransactionException {
+    // Arrange
+    // With coordinator write omission disabled, a read-only transaction writes a coordinator state
+    // row, so it must reserve a group commit slot just like a writing transaction and get a group
+    // commit full key. Otherwise its state would be committed via the non-group-commit path with a
+    // bare (unreserved) transaction ID, which crashes the group committer.
+    when(consensusCommitConfig.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(false);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    String parentKey = keyManipulator.generateParentKey();
+    String fullKey = keyManipulator.fullKey(parentKey, ANY_TX_ID);
+    doReturn(fullKey).when(groupCommitter).reserve(anyString());
+    ConsensusCommitManager managerWithGroupCommit =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recoveryExecutor,
+            crud,
+            commit,
+            Isolation.SNAPSHOT,
+            groupCommitter);
+
+    // Act
+    ConsensusCommit transaction =
+        (ConsensusCommit)
+            ((DecoratedDistributedTransaction) managerWithGroupCommit.beginReadOnly(ANY_TX_ID))
+                .getOriginalTransaction();
+
+    // Assert
+    assertThat(transaction.getTransactionContext().transactionId).isEqualTo(fullKey);
+    assertThat(transaction.getTransactionContext().isolation).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(transaction.getTransactionContext().readOnly).isTrue();
+    assertThat(keyManipulator.isFullKey(transaction.getId())).isTrue();
+    assertThat(transaction.getTransactionContext().groupCommitSlotReserved).isTrue();
+    verify(groupCommitter).reserve(ANY_TX_ID);
   }
 
   @Test
@@ -645,7 +695,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -659,7 +709,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -672,7 +722,8 @@ public class ConsensusCommitManagerTest {
   public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortStateForRollback(ANY_TX_ID))
+        .thenThrow(UnknownTransactionStatusException.class);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -685,7 +736,7 @@ public class ConsensusCommitManagerTest {
   public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -699,7 +750,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortState(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -712,7 +763,8 @@ public class ConsensusCommitManagerTest {
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortStateForRollback(ANY_TX_ID))
+        .thenThrow(UnknownTransactionStatusException.class);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
