@@ -50,7 +50,6 @@ public class RecoveryHandler {
     }
   }
 
-  @VisibleForTesting
   void rollbackRecord(Selection selection, TransactionResult result) throws ExecutionException {
     logger.debug(
         "Rollback for {}, {} mutated by {}",
@@ -104,6 +103,36 @@ public class RecoveryHandler {
     return composer;
   }
 
+  /**
+   * Aborts the transaction that wrote a record, for the read path, when that transaction has
+   * expired and has no coordinator state, by writing its ABORTED coordinator state (the
+   * lazy-recovery rollback). The before-image of such a record is only the correct value to return
+   * once that transaction is known to be aborted, which this confirms.
+   *
+   * @param id the transaction id of the transaction that wrote the record. The caller must have
+   *     already confirmed the transaction is expired and has no coordinator state; this method does
+   *     not check either condition
+   * @return {@code true} if the ABORTED state was written — the transaction is now aborted, so
+   *     returning the before-image is correct; {@code false} if writing it conflicted because a
+   *     concurrent actor resolved the transaction (e.g. it committed), in which case the caller
+   *     must re-read the coordinator state and resolve the read from that outcome instead of
+   *     returning a stale before-image
+   * @throws CoordinatorException if writing the ABORTED state fails for a reason other than a
+   *     conflict
+   */
+  boolean tryAbortExpiredTransaction(String id) throws CoordinatorException {
+    try {
+      coordinator.putStateForLazyRecoveryRollback(id);
+      return true;
+    } catch (CoordinatorConflictException e) {
+      logger.info(
+          "Putting state in coordinator for a record conflicted; a concurrent actor resolved the transaction. Transaction ID: {}",
+          id,
+          e);
+      return false;
+    }
+  }
+
   private void abortIfExpired(Selection selection, TransactionResult result)
       throws CoordinatorException, ExecutionException {
     if (!isTransactionExpired(result)) {
@@ -128,7 +157,7 @@ public class RecoveryHandler {
     storage.mutate(mutations);
   }
 
-  public boolean isTransactionExpired(TransactionResult result) {
+  boolean isTransactionExpired(TransactionResult result) {
     long current = System.currentTimeMillis();
     return current > result.getPreparedAt() + TRANSACTION_LIFETIME_MILLIS;
   }
