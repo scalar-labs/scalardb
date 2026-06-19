@@ -437,7 +437,7 @@ public class CommitHandler {
       throw new UnknownTransactionStatusException(
           CoreError
               .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-              .buildMessage(e.getMessage()),
+              .buildMessage(),
           e,
           id);
     } catch (CoordinatorException e1) {
@@ -492,9 +492,7 @@ public class CommitHandler {
       return resolveAbortStateConflict(id, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
-          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
-          e,
-          id);
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(), e, id);
     }
   }
 
