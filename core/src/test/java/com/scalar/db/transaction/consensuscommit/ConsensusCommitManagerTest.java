@@ -695,7 +695,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortStateWithoutWriteSet(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -709,7 +709,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortStateWithoutWriteSet(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -722,7 +722,7 @@ public class ConsensusCommitManagerTest {
   public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortStateWithoutWriteSet(ANY_TX_ID))
+    when(commit.abortStateForRollback(ANY_TX_ID))
         .thenThrow(UnknownTransactionStatusException.class);
 
     // Act
@@ -736,7 +736,7 @@ public class ConsensusCommitManagerTest {
   public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortStateWithoutWriteSet(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -750,7 +750,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortStateWithoutWriteSet(ANY_TX_ID)).thenReturn(expected);
+    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -763,7 +763,7 @@ public class ConsensusCommitManagerTest {
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortStateWithoutWriteSet(ANY_TX_ID))
+    when(commit.abortStateForRollback(ANY_TX_ID))
         .thenThrow(UnknownTransactionStatusException.class);
 
     // Act
