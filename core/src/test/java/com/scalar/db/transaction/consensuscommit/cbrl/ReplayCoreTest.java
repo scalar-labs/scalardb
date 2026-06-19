@@ -5,6 +5,7 @@ import static com.scalar.db.transaction.consensuscommit.cbrl.RedoLogGenerator.CO
 import static com.scalar.db.transaction.consensuscommit.cbrl.RedoLogGenerator.PK;
 import static com.scalar.db.transaction.consensuscommit.cbrl.RedoLogGenerator.intColumn;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -131,6 +132,21 @@ class ReplayCoreTest {
     RecordState forward = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of(a, b, c));
     RecordState reversed = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of(c, b, a));
     assertThat(reversed).isEqualTo(forward);
+  }
+
+  @Test
+  void fork_twoOpsShareAPrevTxId_rejected() {
+    // A fork — two ops superseding the same prior version — cannot arise from serializable commit
+    // (the prepare CAS linearizes each record's history). This is a defensive guard against a
+    // corrupt backup or an encoder bug: replay must reject it loudly, not silently pick a branch.
+    List<RedoOp> ops =
+        ImmutableList.of(
+            op("t0", write(null, ImmutableMap.of(COL_V, 1))),
+            op("t1", write("t0", ImmutableMap.of(COL_V, 2))),
+            op("t2", write("t0", ImmutableMap.of(COL_V, 3)))); // also chains off t0 -> fork
+    assertThatThrownBy(() -> new RecordApplier(ABSENT).replayKey(key(), ops))
+        .isInstanceOf(CbrlReplayException.class)
+        .hasMessageContaining("share prev_tx_id");
   }
 
   private static Key keyProto() {
