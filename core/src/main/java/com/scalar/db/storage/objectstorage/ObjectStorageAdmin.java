@@ -309,12 +309,16 @@ public class ObjectStorageAdmin implements DistributedStorageAdmin {
       String tableMetadataKey = getTableMetadataKey(namespace, table);
       Map<String, String> readVersionMap = new HashMap<>();
       Map<String, ObjectStorageTableMetadata> metadataTable = getTableMetadataTable(readVersionMap);
-      if (metadataTable.isEmpty()) {
+      ObjectStorageTableMetadata desired = new ObjectStorageTableMetadata(metadata);
+      if (desired.equals(metadataTable.get(tableMetadataKey))) {
+        logger.debug(
+            "The metadata for the {} table is already up to date; skipping the metadata update",
+            ScalarDbUtils.getFullTableName(namespace, table));
+      } else if (metadataTable.isEmpty()) {
         insertMetadataTable(
-            TABLE_METADATA_TABLE,
-            Collections.singletonMap(tableMetadataKey, new ObjectStorageTableMetadata(metadata)));
+            TABLE_METADATA_TABLE, Collections.singletonMap(tableMetadataKey, desired));
       } else {
-        metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(metadata));
+        metadataTable.put(tableMetadataKey, desired);
         updateMetadataTable(
             TABLE_METADATA_TABLE, metadataTable, readVersionMap.get(TABLE_METADATA_TABLE));
       }
