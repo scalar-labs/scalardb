@@ -61,6 +61,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final Isolation isolation;
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
+  private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -78,6 +79,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    coordinatorWriteOmissionOnReadOnlyEnabled =
+        config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
     crud =
         new CrudHandler(
             storage,
@@ -116,6 +119,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
+    coordinatorWriteOmissionOnReadOnlyEnabled =
+        config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
     crud =
         new CrudHandler(
             storage,
@@ -165,6 +170,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.crud = crud;
     this.commit = commit;
     this.groupCommitter = groupCommitter;
+    this.coordinatorWriteOmissionOnReadOnlyEnabled =
+        config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
     this.isolation = isolation;
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -280,9 +287,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
-    if (!readOnly && isGroupCommitEnabled()) {
+    // Reserve a group commit slot for every non-read-only transaction, and for a read-only
+    // transaction only when coordinator write omission is disabled. Such a read-only transaction
+    // writes a coordinator state row, so without a slot it would reach the group commit path with a
+    // bare (unreserved) transaction ID and fail. A non-read-only transaction that turns out to be
+    // write-less under write omission still reserves a slot here but cancels it later on the commit
+    // path.
+    boolean groupCommitSlotReserved = false;
+    if (isGroupCommitEnabled() && (!readOnly || !coordinatorWriteOmissionOnReadOnlyEnabled)) {
       assert groupCommitter != null;
       txId = groupCommitter.reserve(txId);
+      groupCommitSlotReserved = true;
     }
     if (!this.isolation.equals(isolation)) {
       logger.warn(
@@ -291,7 +306,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     }
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
-        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
+        new TransactionContext(
+            txId, snapshot, isolation, readOnly, oneOperation, groupCommitSlotReserved);
     DistributedTransaction transaction =
         new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
     if (readOnly) {
@@ -544,7 +560,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abortState(txId);
+      return commit.abortStateForRollback(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }
