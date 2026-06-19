@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -49,9 +50,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
@@ -8007,9 +8006,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(Isolation.class)
   void
       commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowShouldBehaveCorrectly(
-          Isolation isolation)
-          throws UnknownTransactionStatusException, CrudException, RollbackException,
-              CommitException, TransactionException {
+          Isolation isolation) throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -10036,6 +10033,41 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                         .setName(ACCOUNT_TYPE)
                         .setIntValue(Column.IntValue.newBuilder().setValue(clusteringKeyValue))))
         .build();
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      rollback_forOngoingGroupCommitTransactionWhenNormalGroupCommitInFlight_ShouldRollbackCorrectly()
+          throws Exception {
+    // Rolling back an in-flight, group-committed transaction by ID must win against the in-flight
+    // normal group commit, which writes the COMMITTED state under the parent ID. The race is made
+    // deterministic by rolling the transaction back by ID just before the group commit writes its
+    // COMMITTED state under the parent ID, so the two writes genuinely conflict.
+
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    String ongoingTxId = transaction.getId();
+    String parentId =
+        new CoordinatorGroupCommitKeyManipulator().keysFromFullKey(ongoingTxId).parentKey;
+
+    doAnswer(
+            invocation -> {
+              // The rollback writes the parent-ID ABORTED marker (not a COMMITTED state), so it
+              // does not match this stub and runs against the real coordinator.
+              manager.rollback(ongoingTxId);
+              return invocation.callRealMethod();
+            })
+        .when(coordinator)
+        .putStateForGroupCommit(
+            eq(parentId), anyList(), any(), eq(TransactionState.COMMITTED), anyLong());
+
+    // Act Assert
+    assertThatCode(transaction::commit).isInstanceOf(CommitConflictException.class);
+    assertThat(manager.getState(ongoingTxId)).isEqualTo(TransactionState.ABORTED);
   }
 
   private DistributedTransaction prepareTransfer(

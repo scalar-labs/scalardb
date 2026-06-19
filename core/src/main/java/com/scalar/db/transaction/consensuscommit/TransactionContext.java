@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,12 @@ public class TransactionContext {
   // a transaction.
   public final boolean oneOperation;
 
+  // Whether a group commit slot was reserved for this transaction at begin time. It is true only
+  // when the group commit feature is enabled and a slot was actually reserved (see
+  // ConsensusCommitManager.begin()). The rollback and commit paths check this flag to decide
+  // whether the reserved slot must be released.
+  public final boolean groupCommitSlotReserved;
+
   // A list of scanners opened in the transaction
   public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
@@ -36,12 +43,24 @@ public class TransactionContext {
       Snapshot snapshot,
       Isolation isolation,
       boolean readOnly,
-      boolean oneOperation) {
+      boolean oneOperation,
+      boolean groupCommitSlotReserved) {
     this.transactionId = transactionId;
     this.snapshot = snapshot;
     this.isolation = isolation;
     this.readOnly = readOnly;
     this.oneOperation = oneOperation;
+    this.groupCommitSlotReserved = groupCommitSlotReserved;
+  }
+
+  @VisibleForTesting
+  TransactionContext(
+      String transactionId,
+      Snapshot snapshot,
+      Isolation isolation,
+      boolean readOnly,
+      boolean oneOperation) {
+    this(transactionId, snapshot, isolation, readOnly, oneOperation, false);
   }
 
   public boolean isSnapshotReadRequired() {

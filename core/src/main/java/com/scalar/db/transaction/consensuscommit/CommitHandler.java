@@ -84,7 +84,25 @@ public class CommitHandler {
     }
   }
 
-  private Optional<Future<Void>> invokeBeforePreparationHook(TransactionContext context)
+  // Aborts the coordinator state and rolls back records as needed after a pre-commit failure. When
+  // the transaction has no writes and deletes, there are no records to roll back. In that case the
+  // coordinator state is still aborted unless coordinator write omission on read-only is enabled:
+  // when it is, a write-less transaction (a read-only one, or a non-read-only one with an empty
+  // write set) writes no coordinator state row on the commit path either, so there is nothing to
+  // abort.
+  private void abortStateAndRollbackRecordsIfNeeded(
+      TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
+      throws UnknownTransactionStatusException {
+    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+      abortState(context);
+    }
+    if (hasWritesOrDeletesInSnapshot) {
+      rollbackRecords(context);
+    }
+  }
+
+  private Optional<Future<Void>> invokeBeforePreparationHook(
+      TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException, CommitException {
     if (beforePreparationHook == null) {
       return Optional.empty();
@@ -94,8 +112,9 @@ public class CommitHandler {
       return Optional.of(beforePreparationHook.handle(tableMetadataManager, context));
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
-      abortState(context);
-      rollbackRecords(context);
+
+      abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
+
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
               e.getMessage()),
@@ -105,7 +124,9 @@ public class CommitHandler {
   }
 
   private void waitBeforePreparationHookFuture(
-      TransactionContext context, @Nullable Future<Void> beforePreparationHookFuture)
+      TransactionContext context,
+      @Nullable Future<Void> beforePreparationHookFuture,
+      boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException, CommitException {
     if (beforePreparationHookFuture == null) {
       return;
@@ -115,8 +136,9 @@ public class CommitHandler {
       beforePreparationHookFuture.get();
     } catch (Exception e) {
       safelyCallOnFailureBeforeCommit(context);
-      abortState(context);
-      rollbackRecords(context);
+
+      abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
+
       throw new CommitException(
           CoreError.CONSENSUS_COMMIT_HANDLING_BEFORE_PREPARATION_HOOK_FAILED.buildMessage(
               e.getMessage()),
@@ -130,7 +152,8 @@ public class CommitHandler {
     boolean hasWritesOrDeletesInSnapshot =
         !context.readOnly && context.snapshot.hasWritesOrDeletes();
 
-    Optional<Future<Void>> beforePreparationHookFuture = invokeBeforePreparationHook(context);
+    Optional<Future<Void>> beforePreparationHookFuture =
+        invokeBeforePreparationHook(context, hasWritesOrDeletesInSnapshot);
 
     if (canOnePhaseCommit(context)) {
       try {
@@ -164,14 +187,7 @@ public class CommitHandler {
     } catch (ValidationException e) {
       safelyCallOnFailureBeforeCommit(context);
 
-      // If the transaction has no writes and deletes, we don't need to abort-state and
-      // rollback-records since there are no changes to be made.
-      if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-        abortState(context);
-      }
-      if (hasWritesOrDeletesInSnapshot) {
-        rollbackRecords(context);
-      }
+      abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
 
       if (e instanceof ValidationConflictException) {
         throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
@@ -182,7 +198,8 @@ public class CommitHandler {
       throw e;
     }
 
-    waitBeforePreparationHookFuture(context, beforePreparationHookFuture.orElse(null));
+    waitBeforePreparationHookFuture(
+        context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
       commitState(context);
@@ -432,9 +449,8 @@ public class CommitHandler {
   }
 
   /**
-   * Writes the ABORTED state without persisting a {@code tx_write_set}. Intended for callers that
-   * don't have the originating transaction context (lazy recovery, manager-level rollback) or that
-   * don't want per-transaction write-set logging.
+   * Writes the ABORTED state without persisting a {@code tx_write_set} using a single {@code
+   * putState}. Intended for callers that don't want per-transaction write-set logging.
    *
    * @param id the transaction ID
    * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
@@ -454,28 +470,36 @@ public class CommitHandler {
       coordinator.putState(state);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
-      try {
-        Optional<Coordinator.State> state = coordinator.getState(id);
-        if (state.isPresent()) {
-          // successfully COMMITTED or ABORTED
-          return state.get().getState();
-        }
-        throw new UnknownTransactionStatusException(
-            CoreError
-                .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-                .buildMessage(e.getMessage()),
-            e,
-            id);
-      } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException(
-            CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
-            e1,
-            id);
-      }
+      return resolveAbortStateConflict(id, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
           e,
+          id);
+    }
+  }
+
+  // Resolves the final transaction state after a conflict while writing the ABORTED state: a
+  // concurrent writer beat us, so follow whatever state is already persisted.
+  private TransactionState resolveAbortStateConflict(String id, CoordinatorConflictException e)
+      throws UnknownTransactionStatusException {
+    try {
+      Optional<Coordinator.State> state = coordinator.getState(id);
+      if (state.isPresent()) {
+        // successfully COMMITTED or ABORTED
+        return state.get().getState();
+      }
+      throw new UnknownTransactionStatusException(
+          CoreError
+              .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
+              .buildMessage(e.getMessage()),
+          e,
+          id);
+    } catch (CoordinatorException e1) {
+      e1.addSuppressed(e);
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
+          e1,
           id);
     }
   }
@@ -496,6 +520,38 @@ public class CommitHandler {
     } catch (Exception e) {
       logger.info("Rolling back records failed. Transaction ID: {}", context.transactionId, e);
       // ignore since records are recovered lazily
+    }
+  }
+
+  /**
+   * Writes the ABORTED state for a manager-level rollback/abort by transaction ID (the {@code
+   * DistributedTransactionManager.rollback(String)} / {@code abort(String)} path), where only the
+   * transaction ID is known.
+   *
+   * <p>This delegates to {@link Coordinator#putStateForLazyRecoveryRollback(String)}, which
+   * branches on the given ID: for a group commit full key it uses the same two-step protocol as
+   * lazy recovery, writing the parent-ID conflict marker before the full-ID ABORTED record so the
+   * abort wins against an in-flight normal group commit (which writes the COMMITTED state under the
+   * parent ID); for a non-group-commit ID it just writes the ABORTED record.
+   *
+   * @param id the transaction ID
+   * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
+   *     concurrent writer beat us, whatever state ({@link TransactionState#COMMITTED} or {@link
+   *     TransactionState#ABORTED}) is already persisted
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
+  public TransactionState abortStateForRollback(String id)
+      throws UnknownTransactionStatusException {
+    try {
+      coordinator.putStateForLazyRecoveryRollback(id);
+      return TransactionState.ABORTED;
+    } catch (CoordinatorConflictException e) {
+      return resolveAbortStateConflict(id, e);
+    } catch (CoordinatorException e) {
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
+          e,
+          id);
     }
   }
 
