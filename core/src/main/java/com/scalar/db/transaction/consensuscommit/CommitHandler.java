@@ -91,7 +91,7 @@ public class CommitHandler {
       TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException {
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-      abortState(context.transactionId);
+      abortState(context);
     }
     if (hasWritesOrDeletesInSnapshot) {
       rollbackRecords(context);
@@ -167,7 +167,7 @@ public class CommitHandler {
         prepareRecords(context);
       } catch (PreparationException e) {
         safelyCallOnFailureBeforeCommit(context);
-        abortState(context.transactionId);
+        abortState(context);
         rollbackRecords(context);
         if (e instanceof PreparationConflictException) {
           throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
@@ -391,6 +391,24 @@ public class CommitHandler {
       logger.info("Committing records failed. Transaction ID: {}", context.transactionId, e);
       // ignore since records are recovered lazily
     }
+  }
+
+  /**
+   * Writes the ABORTED state for the given transaction context.
+   *
+   * <p>Subclasses can override this to perform context-aware cleanup (e.g., releasing a reserved
+   * group commit slot, which requires the {@link TransactionContext#groupCommitSlotReserved} flag
+   * that a bare transaction ID does not carry) before delegating to {@link #abortState(String)}.
+   *
+   * @param context the transaction context
+   * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
+   *     concurrent writer beat us, whatever state ({@link TransactionState#COMMITTED} or {@link
+   *     TransactionState#ABORTED}) is already persisted
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
+  public TransactionState abortState(TransactionContext context)
+      throws UnknownTransactionStatusException {
+    return abortState(context.transactionId);
   }
 
   public TransactionState abortState(String id) throws UnknownTransactionStatusException {

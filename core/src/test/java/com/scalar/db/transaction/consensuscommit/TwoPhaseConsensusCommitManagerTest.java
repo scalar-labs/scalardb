@@ -396,7 +396,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     TwoPhaseCommitTransactionManager manager =
         new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
 
-    doThrow(UnknownTransactionStatusException.class).when(commit).abortState(any());
+    doThrow(UnknownTransactionStatusException.class).when(commit).abortState(anyString());
 
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
     try {

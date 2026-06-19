@@ -317,7 +317,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     verify(coordinator, never()).putState(any());
     verify(coordinator, never())
         .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
-    verify(handler, never()).abortState(any());
+    verify(handler, never()).abortState(any(TransactionContext.class));
     verify(handler, never()).rollbackRecords(any());
     verify(handler).onFailureBeforeCommit(any());
     // The bare ID never reserved a slot, so cancelGroupCommitIfNeeded skips remove() entirely.

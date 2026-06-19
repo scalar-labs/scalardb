@@ -145,17 +145,15 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   }
 
   @Override
-  public TransactionState abortState(String id) throws UnknownTransactionStatusException {
-    // This abort path only carries the transaction ID (e.g., lazy recovery or an explicit abort via
-    // the manager), so there is no TransactionContext to consult for slot reservation. Removing the
-    // slot by ID is idempotent and safe even when no slot was reserved.
-    try {
-      groupCommitter.remove(id);
-    } catch (Exception e) {
-      logger.warn(
-          "Unexpectedly failed to remove the snapshot ID from the group committer. ID: {}", id, e);
-    }
-    return super.abortState(id);
+  public TransactionState abortState(TransactionContext context)
+      throws UnknownTransactionStatusException {
+    // Release the reserved group commit slot before writing the ABORTED state. The context carries
+    // the groupCommitSlotReserved flag, so cancelGroupCommitIfNeeded() only removes the slot when
+    // one was actually reserved (and the transaction ID is a full key). The manager-level
+    // abort/rollback-by-ID path goes through abortStateForRollback(String) instead, which is not
+    // overridden here, so a bare transaction ID never reaches groupCommitter.remove().
+    cancelGroupCommitIfNeeded(context);
+    return super.abortState(context);
   }
 
   private static class Emitter implements Emittable<String, String, TransactionContext> {

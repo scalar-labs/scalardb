@@ -1154,7 +1154,7 @@ public class CommitHandlerTest {
     // coordinator row even when the before-preparation hook fails.
     verify(storage, never()).mutate(anyList());
     verify(coordinator, never()).putState(any());
-    verify(handler, never()).abortState(any());
+    verify(handler, never()).abortState(any(TransactionContext.class));
     verify(handler, never()).rollbackRecords(any());
     verify(handler).onFailureBeforeCommit(any());
   }
@@ -1176,7 +1176,7 @@ public class CommitHandlerTest {
 
     // Assert
     verify(coordinator, never()).putState(any());
-    verify(handler, never()).abortState(any());
+    verify(handler, never()).abortState(any(TransactionContext.class));
     verify(handler, never()).rollbackRecords(any());
     verify(handler).onFailureBeforeCommit(context);
   }
@@ -1254,7 +1254,7 @@ public class CommitHandlerTest {
     // the state. There are also no records to roll back.
     verify(storage, never()).mutate(anyList());
     verify(coordinator, never()).putState(any());
-    verify(handler, never()).abortState(any());
+    verify(handler, never()).abortState(any(TransactionContext.class));
     verify(handler, never()).rollbackRecords(any());
     verify(handler).onFailureBeforeCommit(any());
   }
@@ -1277,7 +1277,7 @@ public class CommitHandlerTest {
     // Assert
     // Same as above for the before-preparation hook future failure path.
     verify(coordinator, never()).putState(any());
-    verify(handler, never()).abortState(any());
+    verify(handler, never()).abortState(any(TransactionContext.class));
     verify(handler, never()).rollbackRecords(any());
     verify(handler).onFailureBeforeCommit(context);
   }
