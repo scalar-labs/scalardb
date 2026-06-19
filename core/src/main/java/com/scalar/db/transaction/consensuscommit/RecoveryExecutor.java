@@ -79,21 +79,62 @@ public class RecoveryExecutor implements AutoCloseable {
       case RETURN_LATEST_RESULT_AND_RECOVER:
         Optional<Coordinator.State> state = getCoordinatorState(result.getId());
 
+        if (state.isPresent()) {
+          rolledBack = state.get().getState() == TransactionState.ABORTED;
+          recoveredResult = createRecoveredResult(state, selection, result, transactionId);
+          future =
+              executorService.submit(
+                  () -> {
+                    recovery.recover(selection, result, state);
+                    return null;
+                  });
+          break;
+        }
+
+        // The coordinator state is absent. Throw if the transaction that wrote the record has not
+        // expired (it may still be in flight); otherwise it has expired and must be aborted.
         throwUncommittedRecordExceptionIfTransactionNotExpired(
             state, selection, result, transactionId);
 
-        rolledBack = !state.isPresent() || state.get().getState() == TransactionState.ABORTED;
+        // The transaction that wrote the record has expired and has no coordinator state. The
+        // before-image is only the correct value to return once that transaction is confirmed
+        // aborted, so abort it synchronously (write its ABORTED coordinator state) first.
+        boolean aborted;
+        try {
+          aborted = recovery.tryAbortExpiredTransaction(result.getId());
+        } catch (CoordinatorException e) {
+          throw new CrudException(
+              CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(e.getMessage()),
+              e,
+              transactionId);
+        }
 
-        // Return the latest result
-        recoveredResult = createRecoveredResult(state, selection, result, transactionId);
-
-        // Recover the record
-        future =
-            executorService.submit(
-                () -> {
-                  recovery.recover(selection, result, state);
-                  return null;
-                });
+        if (aborted) {
+          // The transaction that wrote the record is now aborted (its ABORTED coordinator state was
+          // written). Return the before-image and roll the record back in the background.
+          rolledBack = true;
+          recoveredResult = createRecordFromBeforeImage(selection, result, transactionId);
+          future =
+              executorService.submit(
+                  () -> {
+                    recovery.rollbackRecord(selection, result);
+                    return null;
+                  });
+        } else {
+          // Writing the ABORTED state conflicted: a concurrent actor resolved the transaction (e.g.
+          // it committed). Re-read the coordinator state and resolve the read from that outcome
+          // instead of returning a stale before-image.
+          Optional<Coordinator.State> winnerState = getCoordinatorState(result.getId());
+          assert winnerState.isPresent();
+          rolledBack = winnerState.get().getState() == TransactionState.ABORTED;
+          recoveredResult = createRecoveredResult(winnerState, selection, result, transactionId);
+          future =
+              executorService.submit(
+                  () -> {
+                    recovery.recover(selection, result, winnerState);
+                    return null;
+                  });
+        }
 
         break;
       case RETURN_COMMITTED_RESULT_AND_RECOVER:
