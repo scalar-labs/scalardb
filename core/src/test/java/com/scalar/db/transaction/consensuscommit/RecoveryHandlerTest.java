@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -293,5 +294,42 @@ public class RecoveryHandlerTest {
     // Assert
     verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
     verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void tryAbortExpiredTransaction_MarkerWritten_ShouldReturnTrue()
+      throws CoordinatorException {
+    // Act
+    boolean aborted = handler.tryAbortExpiredTransaction(ANY_ID_1);
+
+    // Assert
+    assertThat(aborted).isTrue();
+    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+  }
+
+  @Test
+  public void tryAbortExpiredTransaction_Conflict_ShouldReturnFalse() throws CoordinatorException {
+    // Arrange
+    doThrow(CoordinatorConflictException.class)
+        .when(coordinator)
+        .putStateForLazyRecoveryRollback(ANY_ID_1);
+
+    // Act
+    boolean aborted = handler.tryAbortExpiredTransaction(ANY_ID_1);
+
+    // Assert
+    assertThat(aborted).isFalse();
+    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+  }
+
+  @Test
+  public void tryAbortExpiredTransaction_CoordinatorException_ShouldThrow()
+      throws CoordinatorException {
+    // Arrange
+    doThrow(CoordinatorException.class).when(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.tryAbortExpiredTransaction(ANY_ID_1))
+        .isInstanceOf(CoordinatorException.class);
   }
 }
