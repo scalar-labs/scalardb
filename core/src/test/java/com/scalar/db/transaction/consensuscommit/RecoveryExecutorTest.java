@@ -369,12 +369,13 @@ public class RecoveryExecutorTest {
 
   @Test
   public void
-      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_ShouldRollback()
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerWritten_ShouldReturnBeforeImageAndRollback()
           throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
     RecoveryExecutor.Result result =
@@ -388,21 +389,23 @@ public class RecoveryExecutorTest {
     // Wait for recovery to complete
     result.recoveryFuture.get();
 
-    // Assert
+    // Assert: only after the ABORTED state is written do we return the before-image and roll back
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
+    verify(recovery).rollbackRecord(selection, transactionResult);
+    verify(recovery, never()).recover(any(), any(), any());
   }
 
   @Test
   public void
-      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_RecordWithoutBeforeImage_ShouldRollback()
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerWritten_RecordWithoutBeforeImage_ShouldReturnEmptyAndRollback()
           throws Exception {
     // Arrange
     TransactionResult transactionResult =
         prepareResultWithoutBeforeImage(TransactionState.PREPARED);
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
     RecoveryExecutor.Result result =
@@ -419,7 +422,91 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).isEmpty();
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
+    verify(recovery).rollbackRecord(selection, transactionResult);
+    verify(recovery, never()).recover(any(), any(), any());
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerConflictAndWinnerCommitted_ShouldReturnAfterImage()
+          throws Exception {
+    // Arrange: writing the ABORTED state conflicts because the transaction committed concurrently
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    Coordinator.State committedState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(committedState));
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
+
+    executor = spy(executor);
+    doReturn(ANY_TIME_MILLIS_4).when(executor).getCommittedAt();
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert: the committed after-image is returned -- not the stale before-image
+    assertThat(result.recoveredResult).hasValue(prepareRolledForwardResult());
+    assertThat(result.rolledBack).isFalse();
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(committedState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_AbortMarkerConflictAndWinnerAborted_ShouldReturnBeforeImage()
+          throws Exception {
+    // Arrange: writing the ABORTED state conflicts because another actor aborted the transaction
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(abortedState));
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
+
+    // Act
+    RecoveryExecutor.Result result =
+        executor.execute(
+            snapshotKey,
+            selection,
+            transactionResult,
+            ANY_ID_3,
+            RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER);
+    result.recoveryFuture.get();
+
+    // Assert
+    assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
+    assertThat(result.rolledBack).isTrue();
+    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+  }
+
+  @Test
+  public void
+      execute_ReturnLatestResultAndRecoverType_TransactionExpiredAndNoCoordinatorState_TryAbortThrowsCoordinatorException_ShouldThrowCrudException()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
+    when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
+    when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenThrow(CoordinatorException.class);
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                executor.execute(
+                    snapshotKey,
+                    selection,
+                    transactionResult,
+                    ANY_ID_3,
+                    RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER))
+        .isInstanceOf(CrudException.class);
+
+    // Verify no recovery attempted
+    verify(recovery, never()).rollbackRecord(any(), any());
+    verify(recovery, never()).recover(any(), any(), any());
   }
 
   @Test
