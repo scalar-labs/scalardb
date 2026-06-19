@@ -520,4 +520,40 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         .commit_OnePhaseCommitted_UnknownTransactionStatusExceptionThrown_ShouldThrowUnknownTransactionStatusException();
     groupCommitter.remove(anyId());
   }
+
+  @Test
+  @Override
+  public void abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted()
+      throws CoordinatorException, UnknownTransactionStatusException {
+    super.abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted();
+
+    // abortStateForRollback(id) only writes the coordinator rollback marker; it never goes through
+    // the group commit path, so the slot reserved by extraInitialize() is not released. Release it
+    // here so the @AfterEach groupCommitter.close() does not block on the slot-abort timeout.
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted()
+      throws CoordinatorException, UnknownTransactionStatusException {
+    super.abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown()
+      throws CoordinatorException {
+    super.abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown()
+      throws CoordinatorException {
+    super.abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown();
+    groupCommitter.remove(anyId());
+  }
 }

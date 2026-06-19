@@ -407,28 +407,36 @@ public class CommitHandler {
       coordinator.putState(state);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
-      try {
-        Optional<Coordinator.State> state = coordinator.getState(id);
-        if (state.isPresent()) {
-          // successfully COMMITTED or ABORTED
-          return state.get().getState();
-        }
-        throw new UnknownTransactionStatusException(
-            CoreError
-                .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
-                .buildMessage(e.getMessage()),
-            e,
-            id);
-      } catch (CoordinatorException e1) {
-        throw new UnknownTransactionStatusException(
-            CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
-            e1,
-            id);
-      }
+      return resolveAbortStateConflict(id, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
           e,
+          id);
+    }
+  }
+
+  // Resolves the final transaction state after a conflict while writing the ABORTED state: a
+  // concurrent writer beat us, so follow whatever state is already persisted.
+  private TransactionState resolveAbortStateConflict(String id, CoordinatorConflictException e)
+      throws UnknownTransactionStatusException {
+    try {
+      Optional<Coordinator.State> state = coordinator.getState(id);
+      if (state.isPresent()) {
+        // successfully COMMITTED or ABORTED
+        return state.get().getState();
+      }
+      throw new UnknownTransactionStatusException(
+          CoreError
+              .CONSENSUS_COMMIT_ABORTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST
+              .buildMessage(e.getMessage()),
+          e,
+          id);
+    } catch (CoordinatorException e1) {
+      e1.addSuppressed(e);
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(e1.getMessage()),
+          e1,
           id);
     }
   }
@@ -449,6 +457,38 @@ public class CommitHandler {
     } catch (Exception e) {
       logger.info("Rolling back records failed. Transaction ID: {}", context.transactionId, e);
       // ignore since records are recovered lazily
+    }
+  }
+
+  /**
+   * Writes the ABORTED state for a manager-level rollback/abort by transaction ID (the {@code
+   * DistributedTransactionManager.rollback(String)} / {@code abort(String)} path), where only the
+   * transaction ID is known.
+   *
+   * <p>This delegates to {@link Coordinator#putStateForLazyRecoveryRollback(String)}, which
+   * branches on the given ID: for a group commit full key it uses the same two-step protocol as
+   * lazy recovery, writing the parent-ID conflict marker before the full-ID ABORTED record so the
+   * abort wins against an in-flight normal group commit (which writes the COMMITTED state under the
+   * parent ID); for a non-group-commit ID it just writes the ABORTED record.
+   *
+   * @param id the transaction ID
+   * @return the resulting transaction state — either {@link TransactionState#ABORTED} or, if a
+   *     concurrent writer beat us, whatever state ({@link TransactionState#COMMITTED} or {@link
+   *     TransactionState#ABORTED}) is already persisted
+   * @throws UnknownTransactionStatusException if the final transaction status cannot be determined
+   */
+  public TransactionState abortStateForRollback(String id)
+      throws UnknownTransactionStatusException {
+    try {
+      coordinator.putStateForLazyRecoveryRollback(id);
+      return TransactionState.ABORTED;
+    } catch (CoordinatorConflictException e) {
+      return resolveAbortStateConflict(id, e);
+    } catch (CoordinatorException e) {
+      throw new UnknownTransactionStatusException(
+          CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
+          e,
+          id);
     }
   }
 
