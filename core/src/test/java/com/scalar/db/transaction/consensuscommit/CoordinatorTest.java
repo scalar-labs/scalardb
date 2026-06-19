@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -48,6 +49,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -783,10 +785,15 @@ public class CoordinatorTest {
     spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
 
     // Assert
-    verify(spiedCoordinator)
+    // The parent-ID conflict marker must be written before the full-ID ABORTED record. This way the
+    // abort conflicts with, and wins against, an in-flight normal group commit, which writes the
+    // COMMITTED state under the parent ID.
+    InOrder inOrder = inOrder(spiedCoordinator);
+    inOrder
+        .verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
   }
 
   @Test
@@ -889,10 +896,14 @@ public class CoordinatorTest {
     spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
 
     // Assert
-    verify(spiedCoordinator)
+    // The parent-ID conflict marker must be written before the full-ID ABORTED record (see
+    // putStateForLazyRecoveryRollback_...WhenGroupCommitIsNotCommitted_... above).
+    InOrder inOrder = inOrder(spiedCoordinator);
+    inOrder
+        .verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
   }
 
   @ParameterizedTest
@@ -930,10 +941,14 @@ public class CoordinatorTest {
         .isInstanceOf(CoordinatorConflictException.class);
 
     // Assert
-    verify(spiedCoordinator)
+    // The parent-ID conflict marker must be written before the full-ID ABORTED record (see
+    // putStateForLazyRecoveryRollback_...WhenGroupCommitIsNotCommitted_... above).
+    InOrder inOrder = inOrder(spiedCoordinator);
+    inOrder
+        .verify(spiedCoordinator)
         .putStateForGroupCommit(
             eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
   }
 
   @Test
