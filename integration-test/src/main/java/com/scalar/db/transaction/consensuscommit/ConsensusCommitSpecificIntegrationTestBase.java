@@ -10,6 +10,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -3694,6 +3696,39 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.ABORTED);
     assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      rollback_forOngoingGroupCommitTransactionWhenNormalGroupCommitInFlight_ShouldRollbackCorrectly()
+          throws Exception {
+    // Rolling back an in-flight, group-committed transaction by ID must win against the in-flight
+    // normal group commit, which writes the COMMITTED state under the parent ID. The race is made
+    // deterministic by rolling the transaction back by ID just before the group commit writes its
+    // COMMITTED state under the parent ID, so the two writes genuinely conflict.
+
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    String ongoingTxId = transaction.getId();
+    String parentId =
+        new CoordinatorGroupCommitKeyManipulator().keysFromFullKey(ongoingTxId).parentKey;
+
+    doAnswer(
+            invocation -> {
+              // The rollback writes the parent-ID ABORTED marker (not a COMMITTED state), so it
+              // does not match this stub and runs against the real coordinator.
+              manager.rollback(ongoingTxId);
+              return invocation.callRealMethod();
+            })
+        .when(coordinator)
+        .putStateForGroupCommit(eq(parentId), anyList(), eq(TransactionState.COMMITTED), anyLong());
+
+    // Act Assert
+    assertThatCode(transaction::commit).isInstanceOf(CommitConflictException.class);
+    assertThat(manager.getState(ongoingTxId)).isEqualTo(TransactionState.ABORTED);
   }
 
   private DistributedTransaction prepareTransfer(

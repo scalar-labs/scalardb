@@ -11,10 +11,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 
@@ -91,5 +93,41 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     List<String> fullIds = groupCommitFullIdsArgumentCaptor.getValue();
     assertThat(fullIds.size()).isEqualTo(1);
     assertThat(fullIds.get(0)).isEqualTo(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted()
+      throws CoordinatorException, UnknownTransactionStatusException {
+    super.abortStateForRollback_ShouldPutStateForLazyRecoveryRollbackAndReturnAborted();
+
+    // abortStateForRollback(id) only writes the coordinator rollback marker; it never goes through
+    // the group commit path, so the slot reserved by extraInitialize() is not released. Release it
+    // here so the @AfterEach groupCommitter.close() does not block on the slot-abort timeout.
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted()
+      throws CoordinatorException, UnknownTransactionStatusException {
+    super.abortStateForRollback_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown()
+      throws CoordinatorException {
+    super.abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown()
+      throws CoordinatorException {
+    super.abortStateForRollback_WhenCoordinatorExceptionThrown_ShouldThrowUnknown();
+    groupCommitter.remove(anyId());
   }
 }
