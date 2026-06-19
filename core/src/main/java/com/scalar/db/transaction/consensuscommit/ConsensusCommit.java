@@ -241,8 +241,18 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       logger.warn("Failed to close the scanner", e);
     }
 
-    if (groupCommitter != null && !context.readOnly) {
-      groupCommitter.remove(getId());
+    // Release the reserved group commit slot if this transaction holds one.
+    if (groupCommitter != null && context.groupCommitSlotReserved) {
+      // This is best-effort cleanup; never let a failure here mask the rollback or propagate out of
+      // this cleanup path.
+      try {
+        groupCommitter.remove(getId());
+      } catch (Exception e) {
+        logger.warn(
+            "Failed to remove the transaction ID from the group committer. Transaction ID: {}",
+            getId(),
+            e);
+      }
     }
   }
 
