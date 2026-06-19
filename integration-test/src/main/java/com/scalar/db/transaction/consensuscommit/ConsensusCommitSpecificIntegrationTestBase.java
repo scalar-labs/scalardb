@@ -1738,12 +1738,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator, never()).putState(any(Coordinator.State.class));
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    } else {
-      // In other cases, recovery should occur
-
+    } else if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
+      // via recover()
       verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. recover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -2326,11 +2334,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
       verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    } else {
-      // In other cases, recovery should occur
+    } else if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
+      // via recover()
       verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
       verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. recover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -2518,10 +2535,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     waitForRecoveryCompletion(transaction);
 
-    // Recovery should occur (abort due to expiry, then roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
+    // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
+    // before the result is returned, then the record is rolled back in the background. recover() is
+    // not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @ParameterizedTest
@@ -3224,10 +3245,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     waitForRecoveryCompletion(transaction);
 
-    // Recovery should occur (abort due to expiry, then roll-back)
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
+    // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
+    // before the records are returned, then the record is rolled back in the background. recover()
+    // is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
     verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @ParameterizedTest
@@ -3604,6 +3629,158 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     storage.put(put);
   }
 
+  // Sets up the lazy-recovery-rollback race for the transaction that wrote a record: the read path
+  // first looks up the coordinator state and finds none, so it tries to abort the expired
+  // transaction. Intercept only that first lookup to return empty while writing the COMMITTED
+  // coordinator state (the winner) as a side effect. The real lazy-recovery rollback that follows
+  // then genuinely conflicts against this committed state, and the real re-read resolves the read
+  // from the winner's outcome (the after-image).
+  private void simulateLazyRecoveryRollbackConflict(String ongoingTxId)
+      throws CoordinatorException {
+    doAnswer(
+            invocation -> {
+              coordinator.putState(new Coordinator.State(ongoingTxId, TransactionState.COMMITTED));
+              return Optional.empty();
+            })
+        .doCallRealMethod()
+        .when(coordinator)
+        .getState(ongoingTxId);
+  }
+
+  private void assertPreparedRecordAfterLazyRecoveryRollbackConflict(
+      TransactionResult result, Isolation isolation, String ongoingTxId)
+      throws ExecutionException, CoordinatorException {
+    if (isolation == Isolation.READ_COMMITTED) {
+      // READ_COMMITTED uses RETURN_COMMITTED_RESULT_AND_RECOVER: it always returns the committed
+      // (before-image) result and recovers the record in the background. It does not perform the
+      // lazy-recovery-rollback conflict resolution, so the winner's after-image is not surfaced on
+      // this path.
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(1);
+      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      verify(recovery, never()).tryAbortExpiredTransaction(anyString());
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    } else {
+      // SNAPSHOT/SERIALIZABLE use RETURN_LATEST_RESULT_AND_RECOVER. The lazy-recovery rollback
+      // loses the race, so the read resolves from the winner's COMMITTED outcome. The after-image
+      // is returned (not the before-image), and the record is rolled forward instead of back.
+      assertThat(result.getId()).isEqualTo(ongoingTxId);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(2);
+      assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
+  }
+
+  private void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
+          boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    // Three records in partition 0: (0,0) and (0,2) are COMMITTED, while (0,1) is an expired
+    // PREPARED record with no coordinator state (the conflict target).
+    String ongoingTxId =
+        populateRecordsForBeforeIndexTest(
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
+    simulateLazyRecoveryRollbackConflict(ongoingTxId);
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+    List<Result> results;
+    if (!useScanner) {
+      results = transaction.scan(scan);
+    } else {
+      try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+        results = scanner.all();
+      }
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    // All three records are returned, ordered by clustering key.
+    assertThat(results.size()).isEqualTo(3);
+
+    // The committed records (0,0) and (0,2) are returned unchanged.
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(results.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    // The expired PREPARED record (0,1) is resolved according to the isolation level.
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    TransactionResult result =
+        (TransactionResult) ((FilteredResult) results.get(1)).getOriginalResult();
+    assertPreparedRecordAfterLazyRecoveryRollbackConflict(result, isolation, ongoingTxId);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldBehaveCorrectly(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            prepared_at,
+            null,
+            CommitType.NORMAL_COMMIT);
+    simulateLazyRecoveryRollbackConflict(ongoingTxId);
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Optional<Result> r = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(r).isPresent();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    assertPreparedRecordAfterLazyRecoveryRollbackConflict(result, isolation, ongoingTxId);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldBehaveCorrectly(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
+        false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldBehaveCorrectly(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
+        true, isolation);
+  }
+
   // Writes a PREPARED/DELETED record at the given account_type with the given after-image BALANCE
   // and writer transaction id, so that two records with different primary keys but the same BALANCE
   // index value reproduce a transient index duplicate.
@@ -3903,10 +4080,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.isPresent()).isTrue();
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
-    // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the record is recovered in the background via recover()
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. recover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    }
   }
 
   @ParameterizedTest
@@ -4145,10 +4332,20 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.isPresent()).isTrue();
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
-    // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the record is recovered in the background via recover()
+      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. recover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    }
   }
 
   @ParameterizedTest
