@@ -22,6 +22,12 @@ SSR (`~/src/scalardb-cluster/replication`) is reference only.
 >    mutation logging is enabled) for the logging phase, and on the restore side say **"the backup
 >    window's redo"** or **"restore replay"**, never just "window". Prefer the vocabulary the source
 >    documents already use and negate or extend it precisely.
+> 3. **Keep the non-test (impl) code as simple as the passing IT allows, and change it only to make
+>    a *failing* integration test pass — never from code reasoning alone.** If a code path *looks*
+>    wrong, first write the IT that fails without the fix; if no IT fails, leave the impl unchanged.
+>    Speculative impl changes — modifying logic with no IT failure demonstrating the need — are
+>    **prohibited** (this PoC repeatedly changed impl on the strength of reasoning that later proved
+>    wrong or unexercised; let the test, not the argument, justify every impl change).
 
 ---
 
@@ -142,7 +148,14 @@ tests (`src/test`) must both call the replay core — so the core goes in `src/m
 - **Env:** the integration test needs **PostgreSQL on localhost:5432** (the project's standard
   IT backend); a self-contained IT class wiring storage directly via `StorageFactory` /
   `TransactionFactory` (like `E2ETest`), not the per-backend abstract-base pattern — lighter
-  for a spike, promote to the base-class pattern later.
+  for a spike, promote to the base-class pattern later. **But the with/without-group-commit axis
+  must be config-transparent — the *same* scenarios under different config, not a bespoke
+  group-commit manager or a group-commit-only test** (see the group-commit open question for the
+  required rework). `E2ETest` does this with an abstract base plus two thin subclasses overriding a
+  `withCoordinatorGroupCommit()` hook (no `@EnabledIf`, no GC-specific test); the in-repo
+  `ConsensusCommitSpecificIntegrationTestBase` does it via `isGroupCommitEnabled()` (reads
+  `ConsensusCommitConfig`) + `ConsensusCommitTestUtils.loadConsensusCommitProperties` +
+  `@EnabledIf("isGroupCommitEnabled")` for GC-only assertions.
 - **Run:** unit/property `./gradlew :core:test --tests '*.cbrl.*'`; integration
   `./gradlew :core:integrationTestJdbc --tests '*.cbrl.*'`.
 
@@ -267,6 +280,16 @@ TABLE1 no-CK / TABLE2 multi-PK / TABLE3 with-CK schemas), a `withRetry(manager, 
 helper, and a worker thread pool. Differences from SSR's e2e: **no backup site, no
 `LogApplier`, no `transaction_groups`, no repl-record tables** — CBRL replays the coordinator's
 own `tx_write_set`.
+
+**Structure — group commit is a config axis, not a separate test.** Mirror `E2ETest`, which is an
+**abstract** base holding every scenario once (no `@EnabledIf`, no group-commit-only test) plus two
+~12-line subclasses (`E2EWith…`/`E2EWithoutCoordinatorGroupCommit…Test`) that override a
+`withCoordinatorGroupCommit()` hook (`E2ETestEnv` maps it to `COORDINATOR_GROUP_COMMIT_ENABLED`). So
+`CbrlBackupRestoreIntegrationTest` is abstract; a `withCoordinatorGroupCommit()` hook feeds the
+**single** `manager`'s properties; two thin subclasses select with/without group commit. The same
+scenarios run under **both** configs — no second manager, no GC-only test. (The shipped code does
+**not** yet follow this — it uses a bespoke `groupCommitManager` + a dedicated `groupCommit_*` test;
+see the group-commit open question for the rework.)
 
 **Fixtures.** One ScalarDB primary on JDBC/Postgres with the Coordinator, window logging on and
 `includeColumns=true` (D1′). Source tables in namespace `cbrl_src`; restore-target tables
@@ -515,9 +538,13 @@ remain open.
 
   The shipped design — derive the writing-txn id from the coordinator row id + `EntryGroup.child_id` rather than a per-`Entry` `tx_id` field — is sound; only §7's wording is stale. The real design question it gestures at (group-commit child-id chain-linking) is the item below.
 
-- ✅ **RESOLVED — Group-commit child-id chain-linking + IT coverage** — restore core / §6.1 (design/impl + IT test, P1)
+- **Group commit: chain-linking fix landed, but the IT structure is wrong and the in-doubt child abort is buggy/untested** — restore core / §6.1 (design/impl + IT test, P1)
 
-  *Resolved 2026-06-18:* the redo→`RedoOp` explosion previously threw `UnsupportedOperationException` on `EntryGroup` child ids, and no IT exercised group commit. The explosion now derives the writing transaction's **full id** — `keyManipulator.fullKey(parentRowId, childId)` for a normal group-commit child (row keyed by the parent, `child_id` set), else the row key itself (non-group-commit, or a delayed group commit keyed by the full id) — so `RedoOp.txId` matches the full id that records store and other ops' `prev_tx_id` chains to. `closeOverChain` resolves a child's full `prev_tx_id` to its parent-keyed coordinator row, and the self-contained reload (#1) preserves a parent row's `child_ids` so recovery can resolve a child. New IT `groupCommit_windowedRepairLinksChainAcrossGroupRows` commits transactions concurrently through a group-commit-enabled manager so they batch into normal groups (parent row + children), updates keys across successive group rows (cross-group chain links), and deletes then re-inserts a key across group rows; it asserts a real group row was captured and that restore matches the reference. The test has teeth: without the full-id derivation the post-`batch1` redo is dropped and the correctness check fails. (Copy taken clean between quiesced batches, isolating chain-linking from in-flight recovery; combining group commit with non-quiescent in-flight recovery — in-doubt group-commit child aborts — is a further step.)
+  **Landed (2026-06-18) — keep.** The redo→`RedoOp` explosion derives the writing transaction's **full id** — `keyManipulator.fullKey(parentRowId, childId)` for a normal group-commit child (row keyed by the parent, `child_id` set), else the row key itself (non-group-commit, or a delayed group commit keyed by the full id) — so `RedoOp.txId` matches the full id records store and other ops' `prev_tx_id` chains to. `closeOverChain` resolves a child's full `prev_tx_id` to its parent-keyed row; the `#1` reload preserves a parent row's `child_ids`. This chain-linking fix is correct.
+
+  **OPEN — the IT structure violates the config-transparent convention (investigation 2026-06-19).** The shipped IT enables group commit with a **bespoke** second manager (`groupCommitManager`) and a **dedicated** `groupCommit_windowedRepairLinksChainAcrossGroupRows` test. With/without group commit must instead be the **same** scenarios under different config. Reference patterns (read from latest main): `replication:e2e` is an abstract `E2ETest` holding the test methods (no `@EnabledIf`, no GC-specific test) plus two ~12-line subclasses (`E2EWith…`/`E2EWithoutCoordinatorGroupCommit…Test`) that override only `withCoordinatorGroupCommit()`/`getCompressionType()`, which `E2ETestEnv` maps to `COORDINATOR_GROUP_COMMIT_ENABLED`; the in-repo `ConsensusCommitSpecificIntegrationTestBase` keys `isGroupCommitEnabled()` off `ConsensusCommitConfig`, loads `scalardb.consensus_commit.coordinator.group_commit.*` via `ConsensusCommitTestUtils.loadConsensusCommitProperties`, and gates GC-only assertions with `@EnabledIf("isGroupCommitEnabled")`. **Rework:** make `CbrlBackupRestoreIntegrationTest` abstract with a `withCoordinatorGroupCommit()` hook feeding the single `manager`; add two thin subclasses (with/without GC); delete `groupCommitManager`/`commitGroupBatch`/`groupCommit_*`. The existing scenarios then exercise full-child-id chain-linking transparently under the GC-on subclass (the concurrent workload forms groups and spreads delete→re-insert across group rows).
+
+  **OPEN — in-doubt group-commit child abort is buggy and untested.** `#1`'s `inDoubtCopyTxIds` aborts an in-flight copy record via `putState(new State(fullChildId, ABORTED))`, but recovery resolves a child through `getStateForGroupCommit` (the **parent** row), so a full-id-keyed abort is never found → recovery throws `UncommittedRecordException`. Found by code reading, **not** by a failing test — the in-doubt abort branch is exercised by **no** current scenario (the group-commit test uses a clean copy; in the main test every PREPARED-at-copy transaction commits before the backup, so they all roll forward). **Per critical rule 3, do not touch the abort impl speculatively.** First write a deterministic test that **forces** an in-doubt record — e.g., a group-commit transaction that blocks in `commit()` during its group window, so the copy captures it PREPARED while the backup (taken before it commits) excludes it. Only if that test **fails** is an impl change justified, and then only the minimal fix that makes it pass (likely `Coordinator.putStateForLazyRecoveryRollback(txId)`, which writes the parent-id + full-id abort markers the group-commit way). Until such a test exists, the in-doubt-abort code added in `#1` is unexercised — keep it minimal, and treat its current group-commit incorrectness as latent, not a live failure.
 
 - ✅ **OUT OF SCOPE (process) — milestone sequencing** — §1 / §9 (scope-guardian)
 

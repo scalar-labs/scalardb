@@ -52,7 +52,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -105,10 +104,24 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * #consistencyCheckDetectsInconsistentImage_negativeControl()} proves the consistency check has
  * teeth.
  *
+ * <p>This is an abstract base; concrete subclasses select the config axis — {@code
+ * CbrlBackupRestoreWithoutGroupCommitIntegrationTest} and {@code
+ * CbrlBackupRestoreWithGroupCommitIntegrationTest} run the same scenarios with coordinator group
+ * commit off and on. With group commit on, committed writes carry full child ids (parent + child)
+ * that the redo explosion and recovery handle transparently — there is no group-commit-specific
+ * test.
+ *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
 @TestInstance(Lifecycle.PER_CLASS)
-public class CbrlBackupRestoreIntegrationTest {
+public abstract class CbrlBackupRestoreIntegrationTest {
+
+  /**
+   * Whether coordinator group commit is enabled, supplied by the concrete subclass. The same
+   * scenarios run with it false ({@code CbrlBackupRestoreWithoutGroupCommitIntegrationTest}) and
+   * true ({@code CbrlBackupRestoreWithGroupCommitIntegrationTest}).
+   */
+  protected abstract boolean withCoordinatorGroupCommit();
 
   private static final String TEST_NAME = "cbrl";
   private static final String SRC_NAMESPACE = "cbrl_src";
@@ -178,7 +191,6 @@ public class CbrlBackupRestoreIntegrationTest {
   private DistributedTransactionAdmin admin;
   private DistributedStorage storage;
   private Coordinator coordinator;
-  private DistributedTransactionManager groupCommitManager;
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private ExecutorService workerExecutor;
@@ -219,19 +231,12 @@ public class CbrlBackupRestoreIntegrationTest {
     // Start with redo logging OFF; the test opens the backup window (enables it) explicitly so the
     // pre-window base is unlogged and the copy is load-bearing.
     properties.setProperty(ConsensusCommitConfig.REDO_LOGGING_ENABLED, "false");
-    return properties;
-  }
-
-  private Properties groupCommitProperties() {
-    Properties properties = properties();
-    properties.setProperty(ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED, "true");
-    // Give concurrently-committing transactions time to gather into one normal group (a parent row
-    // with multiple children) and keep them out of delayed (full-id-keyed) groups, so the scenario
-    // reliably exercises the child-id chain-linking path.
-    properties.setProperty(
-        ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_GROUP_SIZE_FIX_TIMEOUT_MILLIS, "200");
-    properties.setProperty(
-        ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_DELAYED_SLOT_MOVE_TIMEOUT_MILLIS, "2000");
+    // Group commit is a config axis: the concrete subclass selects it. The same scenarios run with
+    // it off and on (group-committed writes get full child ids — parent + child — which the redo
+    // explosion and recovery must handle).
+    if (withCoordinatorGroupCommit()) {
+      properties.setProperty(ConsensusCommitConfig.COORDINATOR_GROUP_COMMIT_ENABLED, "true");
+    }
     return properties;
   }
 
@@ -244,7 +249,6 @@ public class CbrlBackupRestoreIntegrationTest {
     storage = StorageFactory.create(properties).getStorage();
     coordinator =
         new Coordinator(storage, new ConsensusCommitConfig(new DatabaseConfig(properties)));
-    groupCommitManager = TransactionFactory.create(groupCommitProperties()).getTransactionManager();
     workerExecutor = Executors.newFixedThreadPool(WORKLOAD_THREADS);
 
     admin.createCoordinatorTables(true);
@@ -273,9 +277,6 @@ public class CbrlBackupRestoreIntegrationTest {
     if (manager != null) {
       manager.close();
     }
-    if (groupCommitManager != null) {
-      groupCommitManager.close();
-    }
     if (storage != null) {
       storage.close();
     }
@@ -284,7 +285,6 @@ public class CbrlBackupRestoreIntegrationTest {
   @BeforeEach
   void beforeEach() throws Exception {
     manager.disableRedoLogging(); // Clean baseline: the window is closed until a test opens it.
-    groupCommitManager.disableRedoLogging();
     admin.truncateCoordinatorTables();
     for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
       admin.truncateTable(namespace, TABLE_A);
@@ -595,121 +595,6 @@ public class CbrlBackupRestoreIntegrationTest {
       }
     }
     return names;
-  }
-
-  /**
-   * Group-commit coverage (P1): restore must link the chain across group-committed transactions. A
-   * child's full id is {@code parent + child_id}, and other ops' {@code prev_tx_id} chains to that
-   * full id, so the redo→{@link RedoOp} explosion must rebuild it (the bare parent id never matches
-   * → broken chain, and the redo after the break is dropped). Several transactions commit
-   * concurrently so they batch into normal groups (a parent coordinator row with children); keys
-   * are updated across successive group rows (cross-group chain links) and one key is deleted in
-   * one group row then re-inserted in the next (delete→re-insert across group rows). The copy is
-   * taken clean (between quiesced batches), so this isolates chain-linking from in-flight recovery
-   * (§6.1's main test covers that).
-   */
-  @Test
-  void groupCommit_windowedRepairLinksChainAcrossGroupRows() throws Exception {
-    int keyCount = WORKLOAD_THREADS; // one transaction per worker, so a batch can form one group
-    int reinsertKey = keyCount - 1;
-    Set<Integer> allKeys = new HashSet<>();
-    for (int i = 0; i < keyCount; i++) {
-      allKeys.add(i);
-    }
-    Set<Integer> exceptReinsert = new HashSet<>(allKeys);
-    exceptReinsert.remove(reinsertKey);
-
-    // Pre-window seed (logging off): the copy is the only source for it.
-    Map<Integer, Long> preWindowSeed = commitGroupBatch(allKeys, Collections.emptySet());
-
-    // Open the backup window, then take the copy BEFORE any in-window write: the copy holds the
-    // group-committed seed versions (full ids), which the in-window chain must anchor on.
-    groupCommitManager.enableRedoLogging();
-    copyUserTables();
-
-    // In-window group batches after the copy: two rounds of updates (cross-group chain links), with
-    // the last key deleted in one group row and re-inserted in the next.
-    commitGroupBatch(allKeys, Collections.emptySet());
-    commitGroupBatch(exceptReinsert, Collections.singleton(reinsertKey)); // delete reinsertKey
-    Map<Integer, Long> lastBatch = commitGroupBatch(allKeys, Collections.emptySet()); // re-insert
-
-    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
-    assertThat(hasGroupCommitChild(coordinatorBackup))
-        .as("a normal group-commit row (parent + child_id) was captured")
-        .isTrue();
-
-    restore(coordinatorBackup);
-
-    assertThat(findConsistencyViolations()).as("consistency").isEmpty();
-    assertThat(presentKeyCount()).as("restored some records").isGreaterThan(0);
-    assertThat(findCorrectnessViolations(coordinatorBackup, preWindowSeed))
-        .as("correctness vs reference")
-        .isEmpty();
-    assertThat(readRestoredTokens().get(reinsertKey))
-        .as("delete→re-insert across group rows restores the re-inserted value")
-        .isEqualTo(lastBatch.get(reinsertKey));
-  }
-
-  /**
-   * Commits one transaction per key concurrently through the group-commit manager so they batch
-   * into a normal group (a parent coordinator row with one child per transaction). Each transaction
-   * reads then writes its key in both tables (a fresh token), or deletes it. Returns key → token
-   * for the written keys.
-   */
-  private Map<Integer, Long> commitGroupBatch(Set<Integer> putKeys, Set<Integer> deleteKeys)
-      throws Exception {
-    Map<Integer, Long> tokens = new HashMap<>();
-    List<Integer> keys = new ArrayList<>(putKeys);
-    keys.addAll(deleteKeys);
-    CountDownLatch ready = new CountDownLatch(keys.size());
-    CountDownLatch go = new CountDownLatch(1);
-    List<Future<?>> futures = new ArrayList<>();
-    for (int key : keys) {
-      boolean delete = deleteKeys.contains(key);
-      long token = delete ? 0 : tokenCounter.incrementAndGet();
-      if (!delete) {
-        tokens.put(key, token);
-      }
-      futures.add(
-          workerExecutor.submit(
-              () -> {
-                ready.countDown();
-                Uninterruptibles.awaitUninterruptibly(go); // release together so they batch
-                withRetry(
-                    groupCommitManager,
-                    tx -> {
-                      tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links
-                      tx.get(getForTableB(SRC_NAMESPACE, key));
-                      if (delete) {
-                        tx.delete(deleteForTableA(SRC_NAMESPACE, key));
-                        tx.delete(deleteForTableB(SRC_NAMESPACE, key));
-                      } else {
-                        tx.put(putForTableA(SRC_NAMESPACE, key, token));
-                        tx.put(putForTableB(SRC_NAMESPACE, key, token));
-                      }
-                    });
-              }));
-    }
-    ready.await();
-    go.countDown();
-    for (Future<?> future : futures) {
-      future.get();
-    }
-    return tokens;
-  }
-
-  private static boolean hasGroupCommitChild(Map<String, CoordinatorBackupRow> backup) {
-    for (CoordinatorBackupRow row : backup.values()) {
-      if (row.writeSet == null) {
-        continue;
-      }
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
-        if (!group.getChildId().isEmpty()) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   private List<Future<?>> startWorkload(AtomicBoolean stop) {
@@ -1383,15 +1268,11 @@ public class CbrlBackupRestoreIntegrationTest {
   }
 
   private void withRetry(TxBody body) {
-    withRetry(manager, body);
-  }
-
-  private void withRetry(DistributedTransactionManager mgr, TxBody body) {
     RuntimeException last = null;
     for (int retry = 0; retry < 100; retry++) {
       DistributedTransaction tx = null;
       try {
-        tx = mgr.begin();
+        tx = manager.begin();
         body.run(tx);
         tx.commit();
         return;
